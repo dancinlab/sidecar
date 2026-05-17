@@ -39,7 +39,7 @@ primitives 1:1.
 
 | Plugin | CC hook | Behavior |
 |---|---|---|
-| `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Deny dangerous-path / SSOT-append-only / domain-lint violations |
+| `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | Three dancinlab-workflow guards in one bundle — `ssot-lock` (deny editing a file matched by an `ssot-lock:` bullet in the nearest `AGENTS.md ## Governance`), `tape-append-only` (a `.tape` trace is append-only — deny a rewriting Edit / overwriting Write), `domain-lint` (a root `UPPERCASE.md` topic roadmap must be `Head + --- + ## Log`) — standalone port, **working**; each guard inert unless its convention is present (opt out: `SIDECAR_NO_GUARDS=1`) |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Inject `AGENTS.md` walk-up SSOT as context (wilson `agents-md` equivalent) — **working** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Deny a repo-root `README.md` violating readme-format anti-patterns (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — standalone port of wilson `guard-readme-format`, **working** |
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI. PostToolUse: when `hexa verify` reports a new SUPPORTED equation (🔵/🟢), **opens a PR** to `dancinlab/hexa-lang` baking the equation into the binary built-in atlas (fills `hexa atlas promote`'s stubbed `pr` step; PR left for human review, never auto-merged) — falls back to prompting the `worktree-pr` workflow if the autonomous PR isn't possible. Standalone port + extension of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
@@ -67,7 +67,9 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 
 ## Status
 
-**v0.1.0 — ten plugins working.** `wilson-ssot` (AGENTS.md walk-up),
+**v0.1.0 — eleven plugins working.** `wilson-guards` (ssot-lock /
+tape-append-only / domain-lint bundle, inert unless its convention is
+present), `wilson-ssot` (AGENTS.md walk-up),
 `wilson-readme-format` (4-lint README guard, faithful standalone port of
 wilson's `guard-readme-format`), `wilson-hexa-verify` (non-hexa-verifier
 Bash guard, inert without `hexa`), `wilson-dangerous-path` (protected
@@ -82,19 +84,13 @@ user-synced workdir) **work**, plus `wilson-lsp` (wires LSP — `.hexa`
 via `hexa lsp`; `.tape`/`.n6`/`.hxc`/`.kosmos` via the canonical per-repo
 servers) and the `sidecar` **control plugin**
 (`/sidecar off <name>` toggles any of them at runtime, persists,
-complements `/plugin`). `wilson-guards` is still a **stub**
-(passthrough — never fabricates fake blocks). Because wilson is a single static
-binary (plugin dispatch is an internal ABI), the remaining `wilson-guards` port
-path is one of two, to be decided:
-
-1. **via harness-rpc** — a thin wrapper that calls wilson's `harness-rpc`
-   (JSONL stdin/stdout) for a specific guard plugin action.
-2. **standalone port** — re-implement the guard predicates (dangerous-path /
-   SSOT append-only / domain-lint) here directly, with no wilson binary
-   dependency (marketplace works on its own).
-
-Until that is decided, the hook passes through without denying — it does **not
-fabricate fake blocks** (honest by design).
+complements `/plugin`). `wilson-guards` is now a **standalone port** —
+its three guards (`ssot-lock` / `tape-append-only` / `domain-lint`)
+re-implement the wilson predicates directly, with no wilson binary
+dependency. Each guard is **inert unless its convention is present** in
+the project (no `ssot-lock:` bullet / no `.tape` file / no root topic
+roadmap → zero behaviour), so the bundle is safe for general use and is
+only meaningful inside a dancinlab-style workflow.
 
 ## Repo layout
 
@@ -104,8 +100,9 @@ sidecar/
 ├── plugins/
 │   ├── wilson-guards/
 │   │   ├── .claude-plugin/plugin.json
-│   │   ├── hooks/hooks.json          # PreToolUse wiring
-│   │   └── bin/guard.sh              # stub (TODO: wilson port)
+│   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) wiring
+│   │   ├── bin/guard.sh              # hook wrapper
+│   │   └── bin/_guards.py            # ssot-lock + tape-append-only + domain-lint (working)
 │   ├── wilson-ssot/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit wiring

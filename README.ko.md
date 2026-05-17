@@ -40,6 +40,7 @@
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 위험 경로·SSOT append-only·도메인 린트 위반 차단 |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) — **작동** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
+| `wilson-hexa-verify` | `PreToolUse` (`Bash`) | 비-hexa 검증기(sympy/PyPhi/wolframscript/mathematica) Bash 호출 차단 → hexa CLI로 유도 — wilson `guard-hexa-verify` standalone 포팅, **작동**. ⚠ `hexa`가 PATH에 없으면 inert |
 | `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash 명령을 재작성(`updatedInput`)해 stdout이 TF-IDF salience + MinHash 중복제거 필터를 거친 뒤 모델에 들어가게 함 — wilson `compaction-prefilter` 정신 포팅, **작동** (작은 출력 verbatim · exit code `pipefail`로 보존) |
 | `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 호스트로 ssh 라우팅 — wilson `pool` 정신 포팅, **작동**. ⚠ host+workdir 설정 전 OFF · Bash만 라우팅 · 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
@@ -89,6 +90,9 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 배선
 │   │   └── bin/_readme_format.py     # 4-lint README 가드 (작동)
+│   ├── wilson-hexa-verify/
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 배선
+│   │   └── bin/_hexa_verify.py       # 비-hexa 검증기 가드 (작동)
 │   ├── wilson-prefs/
 │   │   ├── commands/prefs.md         # /wilson-prefs:prefs 슬래시 커맨드
 │   │   ├── bin/_prefs.py             # 설정 set/show (작동)

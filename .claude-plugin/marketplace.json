@@ -29,6 +29,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-hexa-verify",
+      "source": "./plugins/wilson-hexa-verify",
+      "description": "Deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica / mathkernel) and redirect to the hexa CLI. Standalone port of wilson guard-hexa-verify — working. INERT unless the `hexa` binary is on PATH.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-output-trim",
       "source": "./plugins/wilson-output-trim",
       "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",

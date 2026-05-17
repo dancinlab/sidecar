@@ -1,0 +1,10 @@
+{
+  "name": "wilson-hexa-verify",
+  "description": "Deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica / mathkernel) and redirect to the hexa CLI. Standalone port of wilson's guard-hexa-verify. INERT unless the `hexa` binary is on PATH (a redirect to hexa is meaningless without it).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "guardrail", "hexa", "verification", "wilson"],
+  "hooks": "./hooks/hooks.json"
+}

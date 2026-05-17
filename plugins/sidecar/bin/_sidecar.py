@@ -10,7 +10,8 @@ import json
 import os
 import sys
 
-PLUGINS = ["ssot", "readme-format", "prefs", "output-trim", "pool", "guards"]
+PLUGINS = ["ssot", "readme-format", "hexa-verify", "prefs",
+           "output-trim", "pool", "guards"]
 
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".claude", "sidecar")
 STATE = os.path.join(STATE_DIR, "disabled.json")

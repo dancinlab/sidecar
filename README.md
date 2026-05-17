@@ -42,6 +42,7 @@ primitives 1:1.
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Deny dangerous-path / SSOT-append-only / domain-lint violations |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Inject `AGENTS.md` walk-up SSOT as context (wilson `agents-md` equivalent) — **working** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Deny a repo-root `README.md` violating readme-format anti-patterns (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — standalone port of wilson `guard-readme-format`, **working** |
+| `wilson-hexa-verify` | `PreToolUse` (`Bash`) | Deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI — standalone port of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
 | `wilson-prefs` | `/wilson-prefs:prefs` command + `SessionStart`·`UserPromptSubmit` | Set reply language / code language / response style; persisted to plugin data, injected as context. Standalone port of wilson `prefs` — **working** (injects nothing until you set one) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Rewrites a Bash command (`updatedInput`) so stdout passes a TF-IDF salience + MinHash near-dup filter before the model ingests it — spirit-port of wilson `compaction-prefilter`, **working** (small output verbatim; exit code preserved via `pipefail`) |
 | `wilson-pool` | `/wilson-pool:pool` command + `PreToolUse` (`Bash`) + `SessionStart`·`UserPromptSubmit` | Route heavy Bash commands to a remote host via ssh — spirit-port of wilson `pool`, **working**. ⚠ OFF until host+workdir set; only Bash is routed; **you** keep the remote workdir synced (a CC hook can't mount the fs like wilson's 9P/sshfs) |
@@ -60,9 +61,10 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 
 ## Status
 
-**v0.1.0 — five plugins working.** `wilson-ssot` (AGENTS.md walk-up),
+**v0.1.0 — six plugins working.** `wilson-ssot` (AGENTS.md walk-up),
 `wilson-readme-format` (4-lint README guard, faithful standalone port of
-wilson's `guard-readme-format`), `wilson-prefs` (`/wilson-prefs:prefs`
+wilson's `guard-readme-format`), `wilson-hexa-verify` (non-hexa-verifier
+Bash guard, inert without `hexa`), `wilson-prefs` (`/wilson-prefs:prefs`
 slash command → persisted language/style, injected as context),
 `wilson-output-trim` (Bash stdout → TF-IDF/MinHash salience filter via
 `PreToolUse updatedInput`), and `wilson-pool` (heavy Bash → remote ssh,
@@ -100,6 +102,10 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) wiring
 │   │   └── bin/_readme_format.py     # 4-lint README guard (working)
+│   ├── wilson-hexa-verify/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) wiring
+│   │   └── bin/_hexa_verify.py       # non-hexa-verifier guard (working)
 │   ├── wilson-prefs/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── commands/prefs.md         # /wilson-prefs:prefs slash command

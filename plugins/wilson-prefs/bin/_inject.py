@@ -55,10 +55,19 @@ style = prefs.get("response_style")
 
 lines = ["## Prefs", ""]
 if resp:
-    lines.append("- Reply to the user in **%s**." % resp)
+    if resp.strip().lower() == "auto":
+        lines.append("- Reply in the same language the user writes their "
+                      "message in.")
+    else:
+        lines.append("- Reply to the user in **%s**." % resp)
 if code:
-    lines.append("- When writing or editing code, comments, documentation: "
-                  "use **%s**." % code)
+    if code.strip().lower() == "auto":
+        lines.append("- When writing or editing code, comments, "
+                      "documentation: match the language already used in "
+                      "the surrounding file / project.")
+    else:
+        lines.append("- When writing or editing code, comments, "
+                      "documentation: use **%s**." % code)
 lines.append("- Technical terms and code identifiers may stay as-is "
              "regardless of reply language.")
 if style:

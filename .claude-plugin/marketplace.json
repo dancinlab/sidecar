@@ -25,8 +25,8 @@
     {
       "name": "wilson-prefs",
       "source": "./plugins/wilson-prefs",
-      "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context at SessionStart + UserPromptSubmit. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
-      "version": "0.1.0"
+      "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context. SessionStart injects the full `## Prefs` block including the style file body; UserPromptSubmit re-asserts only the compact directive lines (no multi-KB body) so a long session does not bloat the prompt. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
+      "version": "0.1.1"
     },
     {
       "name": "wilson-hexa-verify",

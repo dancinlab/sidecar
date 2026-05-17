@@ -74,10 +74,15 @@ if style:
     lines.append("- Active response style: **%s**." % style)
 lines.append("")
 
-# inline the style file body. Resolution order: a language-localized
-# variant for the active reply language wins, then the canonical file;
-# user-custom (DATA) overrides shipped (ROOT) at each step.
-if style:
+# inline the style file body — ONLY at SessionStart. The body is multi-KB
+# (friendly.md ≈ 5–8 KB); re-sending it on every UserPromptSubmit bloats
+# the prompt linearly over a long session ("Prompt is too long"). The
+# compact `## Prefs` directive lines above are re-asserted every turn
+# (cheap, survives compaction); the full style guide is established once
+# per session. Resolution order: a language-localized variant for the
+# active reply language wins, then the canonical file; user-custom (DATA)
+# overrides shipped (ROOT) at each step.
+if style and event == "SessionStart":
     body = ""
     root = plugin_root()
     cands = []

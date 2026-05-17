@@ -87,6 +87,8 @@ def show():
         print("sidecar/wilson-prefs: no preferences set "
               "(nothing is injected — the host's defaults apply).")
         print("Set with: /wilson-prefs:prefs lang ko | code en | style concise")
+        print("`lang` / `code` also accept `auto` — mirror the user's "
+              "language.")
         return
     print("sidecar/wilson-prefs — current preferences:")
     for k in KEYS:

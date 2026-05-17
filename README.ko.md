@@ -45,9 +45,9 @@
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push 차단 — `git push`에 `--force`/`-f`/`+refspec`(및 `--force-with-lease`, `SIDECAR_ALLOW_FORCE_WITH_LEASE=1` 아니면) 있으면 차단 — wilson `git-guard` standalone 포팅, **작동** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | 실제 `.env` 파일 쓰기, 또는 고신뢰 크리덴셜(AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe 토큰, PEM 개인키)을 담은 내용 차단; 그런 크리덴셜을 붙여넣은 프롬프트 차단 — 고신뢰 패턴만, false positive 거의 없음, **작동** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
 | `wilson-bash-guard` | `PreToolUse` (`Bash`) | 파괴적 셸 명령 차단 — pipe-to-shell(`curl … \| sh`), 루트/홈 경로 `rm -rf`, fork bomb, 디스크 파괴자(`dd of=/dev/disk`·`mkfs`·`>/dev/sd*`), `/` `~` `.` 대상 재귀 `chmod`/`chown` — 고신뢰 파괴 패턴만, false positive 거의 없음, **작동** (opt out: `SIDECAR_NO_BASH_GUARD=1`) |
-| `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
+| `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 — 언어 값은 `auto`(사용자가 쓰는 언어 미러) 허용 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash 명령을 재작성(`updatedInput`)해 stdout이 TF-IDF salience + MinHash 중복제거 필터를 거친 뒤 모델에 들어가게 함 — wilson `compaction-prefilter` 정신 포팅, **작동** (작은 출력 verbatim · exit code `pipefail`로 보존) |
-| `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 **호스트 roster**로 ssh 라우팅 — 호스트마다 platform 태그가 있어 macOS 전용·Linux 전용 명령은 해당 플랫폼 호스트로, 나머지는 round-robin 분산 — wilson `pool` roster 정신 포팅, **작동**. ⚠ roster에 호스트 1개+workdir 설정 전 OFF · Bash만 라우팅 · 모든 호스트의 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
+| `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 **호스트 roster**로 ssh 라우팅 — 호스트마다 platform 태그가 있어 macOS 전용·Linux 전용 명령은 해당 플랫폼 호스트로, 나머지는 round-robin 분산 — wilson `pool` roster 정신 포팅, **작동**. ⚠ roster에 호스트 1개+workdir 설정 전 OFF (`workdir auto`는 현재 프로젝트를 호스트별 미러링) · Bash만 라우팅 · 모든 호스트의 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
 | `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
 | `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
 | `worktree-pr` | `/worktree-pr:wt` 커맨드 (워크플로) | 안전한 **worktree → PR → merge → 정리** 워크플로 — `start <name>`(origin 기본 브랜치에서 격리 worktree+브랜치), `ship <name> "<title>"`(push + PR 생성), `finish <name>`(PR merge + worktree 제거 + 브랜치 삭제 + base 갱신), `status`, `abort`. 메인 워킹트리·동시세션 브랜치 무접촉 |
@@ -173,9 +173,11 @@ sidecar/
 │   │   ├── bin/_trim.py              # updatedInput로 명령 재작성 (작동)
 │   │   └── bin/_salience.py          # TF-IDF + MinHash 필터 (작동)
 │   ├── wilson-pool/
+│   │   ├── .claude-plugin/plugin.json
 │   │   ├── commands/pool.md          # /wilson-pool:pool 슬래시 커맨드
 │   │   ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart 배선
-│   │   ├── bin/_route.py             # 무거운 명령 → ssh 재작성 (작동)
+│   │   ├── bin/_pool.py              # 호스트 roster / workdir 설정 (작동)
+│   │   ├── bin/_route.py             # platform 라우팅 ssh 재작성 (작동)
 │   │   └── bin/_inject.py            # ## Pool 블록 (작동)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json

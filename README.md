@@ -53,8 +53,9 @@ primitives 1:1.
 | `wilson-checkpoint` | `Stop`·`PreCompact`·`SessionEnd`·`SessionStart` | Never lose work to a usage limit / crash — every turn, `git stash create` snapshots WIP (a dangling commit; working tree / index / branches untouched), pinned under `refs/wilson-checkpoint/`, + a resume note; `SessionStart` re-injects an unconsumed snapshot. `/wilson-checkpoint:checkpoint` to status/restore/clear (restore is printed, never auto-applied) — **working**, git-only, debounced (opt out: `SIDECAR_NO_CHECKPOINT=1`) |
 | `wilson-gpu` | `/wilson-gpu` command + `SessionStart` | Rented-GPU cost guardrail for RunPod / Vast.ai — `SessionStart` surfaces every still-billing instance (uptime + ~cost so far) so a forgotten pod never leaks money; `down` is the kill switch, `attach` wires an instance into the `wilson-pool` roster. Strategies `watch`/`budget`/`idle-reaper`/`ephemeral`; money & auto-down are double-gated by separate off-by-default switches (`provisioning`+`--yes` for `up`, `reaping` for auto-stop); `fanout` = cost-tolerance decision aid for shardable jobs. **working**, inert unless `runpodctl`/`vastai` on PATH (opt out: `SIDECAR_NO_GPU=1`) |
 | `wilson-decision-gate` | `SessionStart` · `UserPromptSubmit` + `/wilson-decision-gate` | Step-by-step decision gate — multi-decision work is **one user-confirmation gate per decision, never batched** (options + recommendation + 3+ rationale → wait for the pick → next), logged as a `### Decision N` block in `design.md`. Standalone port of wilson's `step-by-step-decision-gate` (text-only, like wilson). `SessionStart` injects the principle once; `UserPromptSubmit` adds a short reminder **only on branch-point-looking prompts** (not every prompt). `/wilson-decision-gate decide\|log\|on\|off\|sample`; ships a 5-language canonical sample — **working**, default ON (opt out: `SIDECAR_NO_DECISION_GATE=1`) |
+| `wilson-tape-recorder` | `SessionStart`·`UserPromptSubmit`·`PreToolUse`·`PostToolUse`·`SessionEnd` + `/wilson-tape-recorder` | Records the Claude Code session as a `.tape` v1.2 execution trace (the dancinlab `tape` format) — one file per session under `<DATA>/sessions/<id>.tape`: SessionStart `@S start` · UserPromptSubmit `@U` · PreToolUse `@T` · PostToolUse `@R` · SessionEnd `@S end`. Honest subset of the 17-type alphabet — only what CC hooks actually deliver (no `@A` assistant text, no `@K` cost — those signals aren't exposed). Pairs with `wilson-guards/tape-append-only` (the recorder **produces** `.tape`, the guard **protects** it). `/wilson-tape-recorder status\|ls\|tail\|cat\|on\|off` — **working**, default ON (opt out: `SIDECAR_NO_TAPE_RECORDER=1`) |
 | `wilson-lsp` | `.lsp.json` LSP servers (not a hook) | Wires `.hexa` → `hexa lsp` and `.tape`·`.n6`·`.hxc`·`.kosmos` → the canonical per-repo servers (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, shipped in `github.com/dancinlab/{tape,n6,hxc,kosmos}`). Graceful — a server not on PATH just shows in `/plugin` Errors. LSP lifecycle is CC-managed (toggle via `/plugin`, not `/sidecar`) |
-| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
+| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
 | `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
@@ -81,6 +82,7 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 /plugin install wilson-checkpoint@sidecar       # WIP snapshot every turn (limit/crash safe)
 /plugin install wilson-gpu@sidecar              # RunPod/Vast cost guardrail + kill switch
 /plugin install wilson-decision-gate@sidecar    # step-by-step decision gate + design.md ledger
+/plugin install wilson-tape-recorder@sidecar    # record the session as a .tape v1.2 trace
 /plugin install wilson-lsp@sidecar              # LSP for .hexa / .tape / .n6 / .hxc / .kosmos
 /plugin install worktree-pr@sidecar             # /worktree-pr:wt workflow command
 /plugin install sidecar@sidecar                 # /sidecar runtime on/off control
@@ -120,6 +122,7 @@ plugin on the next start:
     "wilson-checkpoint@sidecar": true,
     "wilson-gpu@sidecar": true,
     "wilson-decision-gate@sidecar": true,
+    "wilson-tape-recorder@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -129,7 +132,7 @@ plugin on the next start:
 
 ## Status
 
-**v0.1.0 — fourteen plugins working.** `wilson-guards` (ssot-lock /
+**v0.1.0 — fifteen plugins working.** `wilson-guards` (ssot-lock /
 tape-append-only / domain-lint bundle, inert unless its convention is
 present), `wilson-ssot` (AGENTS.md walk-up),
 `wilson-readme-format` (4-lint README guard, faithful standalone port of
@@ -148,7 +151,9 @@ usage limit / crash never loses work), and `wilson-gpu` (RunPod/Vast
 rented-GPU cost guardrail + kill switch; provisioning behind a separate
 off-by-default switch), and `wilson-decision-gate` (step-by-step
 decision gate — one user-confirmation gate per decision, never batched;
-`design.md` ledger; default ON, quiet) **work**, plus
+`design.md` ledger; default ON, quiet), and `wilson-tape-recorder`
+(records each session as a `.tape` v1.2 execution trace — `@S`/`@U`/`@T`
+/`@R` — pairs with `wilson-guards/tape-append-only`) **work**, plus
 `wilson-lsp` (wires LSP — `.hexa`
 via `hexa lsp`; `.tape`/`.n6`/`.hxc`/`.kosmos` via the canonical per-repo
 servers) and the `sidecar` **control plugin**
@@ -241,6 +246,12 @@ sidecar/
 │   │   ├── bin/dg.sh                 # hook + command entrypoint
 │   │   ├── bin/_dg.py                # principle inject + design.md ledger (working)
 │   │   └── samples/step-by-step-decision-gate.{md,ko,ja,zh,ru}.md
+│   ├── wilson-tape-recorder/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/tape-recorder.md # /wilson-tape-recorder
+│   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/SessionEnd
+│   │   ├── bin/tr.sh                 # hook + command entrypoint
+│   │   └── bin/_tr.py                # .tape v1.2 emitter (@S/@U/@T/@R) (working)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # wires hexa lsp + tape/n6/hxc/kosmos repo LSPs

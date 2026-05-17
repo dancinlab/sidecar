@@ -51,8 +51,9 @@
 | `wilson-checkpoint` | `Stop`·`PreCompact`·`SessionEnd`·`SessionStart` | usage limit / 崩溃也不丢工作 —— 每轮 `git stash create` 快照 WIP（dangling commit · 工作树/index/分支无接触），固定到 `refs/wilson-checkpoint/` + resume 笔记;`SessionStart` 重新注入未消费快照。`/wilson-checkpoint:checkpoint` 进行 status/restore/clear（restore 仅打印 · 不自动应用）—— **可用** · 仅 git · 去抖（opt out: `SIDECAR_NO_CHECKPOINT=1`） |
 | `wilson-gpu` | `/wilson-gpu` 命令 + `SessionStart` | RunPod / Vast.ai 租用 GPU 成本护栏 —— `SessionStart` 显示计费中实例（运行时长 + 累计估算成本）→ 防止遗忘的 pod 漏钱;`down` 是急停开关，`attach` 把实例接入 `wilson-pool` roster。策略 `watch`/`budget`/`idle-reaper`/`ephemeral`;花钱·自动 down 由独立默认-OFF 开关双重门控（`up` 需 `provisioning`+`--yes`，自动停止需 `reaping`）;`fanout` 是 shardable 作业的成本容差决策辅助。**可用** · 无 `runpodctl`/`vastai` 时 inert（opt out: `SIDECAR_NO_GPU=1`） |
 | `wilson-decision-gate` | `SessionStart`·`UserPromptSubmit` + `/wilson-decision-gate` | 逐步决策门 —— 多决策工作是 **一个决策一个用户确认门、禁止批处理**（选项+推荐+理由 3+ → 等待选择 → 下一个），在 `design.md` 以 `### Decision N` 块记录。wilson `step-by-step-decision-gate` 独立移植（同 wilson 仅 text）。SessionStart 注入原则一次 · UserPromptSubmit 仅在 **像 branch-point 的提示** 加简短提醒（非每条提示）。`/wilson-decision-gate decide\|log\|on\|off\|sample` · 5 语言 canonical 样例同梱 —— **可用** · 默认 ON（opt out: `SIDECAR_NO_DECISION_GATE=1`） |
+| `wilson-tape-recorder` | `SessionStart`·`UserPromptSubmit`·`PreToolUse`·`PostToolUse`·`SessionEnd` + `/wilson-tape-recorder` | 把 Claude Code 会话记录为 `.tape` v1.2 执行轨迹（dancinlab `tape` 格式）—— 每会话一文件 `<DATA>/sessions/<id>.tape`：SessionStart `@S start` · UserPromptSubmit `@U` · PreToolUse `@T` · PostToolUse `@R` · SessionEnd `@S end`。17-type 字母表中 CC 钩子实际给的诚实子集（`@A` 响应文本·`@K` 成本无信号 → 排除）。**与 `wilson-guards/tape-append-only` 成对**（录像机 produces、护栏 protects）。`/wilson-tape-recorder status\|ls\|tail\|cat\|on\|off` —— **可用** · 默认 ON（opt out: `SIDECAR_NO_TAPE_RECORDER=1`） |
 | `wilson-lsp` | `.lsp.json` LSP 服务器（非 hook） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 接到各格式 repo 的 canonical 服务器（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`，随 `github.com/dancinlab/{tape,n6,hxc,kosmos}` 提供）。graceful —— 不在 PATH 只在 `/plugin` Errors 显示。LSP 生命周期由 CC 管理（用 `/plugin` 切换，非 `/sidecar`） |
-| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
+| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
 | `worktree-pr` | `/worktree-pr:wt` 命令（工作流） | 安全的 **worktree → PR → merge → 清理** 工作流 —— `start <name>`（从 origin 默认分支建隔离 worktree+分支）、`ship <name> "<title>"`（push + 开 PR）、`finish <name>`（合并 PR + 移除 worktree + 删除分支 + 刷新 base）、`status`、`abort`。绝不触碰主工作树或并行会话的分支 |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
@@ -79,6 +80,7 @@
 /plugin install wilson-checkpoint@sidecar      # 每轮 WIP 快照 (limit/崩溃安全)
 /plugin install wilson-gpu@sidecar             # RunPod/Vast 成本护栏 + 急停开关
 /plugin install wilson-decision-gate@sidecar   # 逐步决策门 + design.md 账本
+/plugin install wilson-tape-recorder@sidecar   # 把会话记录为 .tape v1.2 轨迹
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
 /plugin install worktree-pr@sidecar            # /worktree-pr:wt 工作流命令
 /plugin install sidecar@sidecar                # /sidecar 运行时 on/off 控制
@@ -117,6 +119,7 @@
     "wilson-checkpoint@sidecar": true,
     "wilson-gpu@sidecar": true,
     "wilson-decision-gate@sidecar": true,
+    "wilson-tape-recorder@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -206,6 +209,12 @@ sidecar/
 │   │   ├── bin/dg.sh                 # hook + 命令入口
 │   │   ├── bin/_dg.py                # 原则注入 + design.md 账本 (可用)
 │   │   └── samples/step-by-step-decision-gate.{md,ko,ja,zh,ru}.md
+│   ├── wilson-tape-recorder/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/tape-recorder.md # /wilson-tape-recorder
+│   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/SessionEnd
+│   │   ├── bin/tr.sh                 # hook + 命令入口
+│   │   └── bin/_tr.py                # .tape v1.2 emitter (@S/@U/@T/@R) (可用)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # 接 hexa lsp + tape/n6/hxc/kosmos repo LSP

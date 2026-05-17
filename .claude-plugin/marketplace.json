@@ -89,6 +89,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-tape-recorder",
+      "source": "./plugins/wilson-tape-recorder",
+      "description": "Record the Claude Code session as a `.tape` v1.2 execution trace (the dancinlab tape format — github.com/dancinlab/tape). One file per session at <DATA>/sessions/<id>.tape: SessionStart writes `@S start`, UserPromptSubmit writes `@U`, PreToolUse writes `@T`, PostToolUse writes `@R`, SessionEnd writes `@S end`. Honest subset of the 17-type alphabet — only what CC hooks actually deliver (no @A assistant text, no @K cost — those signals aren't exposed). Pairs with `wilson-guards/tape-append-only` (the recorder PRODUCES `.tape`, the guard PROTECTS it). /wilson-tape-recorder for status / ls / tail / cat / on / off. Default ON. Opt out: SIDECAR_NO_TAPE_RECORDER=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
       "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",

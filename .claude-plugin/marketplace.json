@@ -33,6 +33,12 @@
       "source": "./plugins/wilson-output-trim",
       "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",
       "version": "0.1.0"
+    },
+    {
+      "name": "wilson-pool",
+      "source": "./plugins/wilson-pool",
+      "description": "Route heavy Bash commands to a remote pool host via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Spirit-port of wilson pool. CAVEAT: a CC hook cannot mount the caller fs (wilson uses 9P/sshfs) — the user must keep the remote workdir synced; routing is OFF until host AND workdir are set; only Bash is routed.",
+      "version": "0.1.0"
     }
   ]
 }

@@ -42,6 +42,7 @@
 | `wilson-readme-format` | `PreToolUse`（`Write`·`Edit`） | 拒绝违反 readme-format 的仓库根 `README.md`（散文中表情 / 多字形 H1 / 非英文 At-a-glance / `####`）— wilson `guard-readme-format` 的独立移植，**可用** |
 | `wilson-prefs` | `/wilson-prefs:prefs` 命令 + `SessionStart`·`UserPromptSubmit` | 设置回复语言 / 代码语言 / 回复风格 → 持久化到插件数据，注入上下文。wilson `prefs` 的独立移植 —— **可用**（未设置前不注入任何内容） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | 重写 Bash 命令（`updatedInput`），让 stdout 先经 TF-IDF 显著性 + MinHash 去重过滤再进入模型 —— wilson `compaction-prefilter` 精神移植，**可用**（小输出原样 · 退出码经 `pipefail` 保留） |
+| `wilson-pool` | `/wilson-pool:pool` 命令 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 把重型 Bash 命令经 ssh 路由到远程主机 —— wilson `pool` 精神移植，**可用**。⚠ 未设置 host+workdir 前 OFF · 仅 Bash · 远程 workdir 同步由**用户负责**（CC hook 无法像 wilson 的 9P/sshfs 那样挂载 fs） |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
 `wilson-recap`（PreCompact/SessionEnd 摘要）。
@@ -92,10 +93,15 @@ sidecar/
 │   │   ├── bin/_prefs.py             # 设置 set/show (可用)
 │   │   ├── bin/_inject.py            # 设置上下文注入 (可用)
 │   │   └── styles/friendly.{md,*.md} # 回复风格样本 (5 语言)
-│   └── wilson-output-trim/
-│       ├── hooks/hooks.json          # PreToolUse (Bash) 接线
-│       ├── bin/_trim.py              # 用 updatedInput 重写命令 (可用)
-│       └── bin/_salience.py          # TF-IDF + MinHash 过滤 (可用)
+│   ├── wilson-output-trim/
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 接线
+│   │   ├── bin/_trim.py              # 用 updatedInput 重写命令 (可用)
+│   │   └── bin/_salience.py          # TF-IDF + MinHash 过滤 (可用)
+│   └── wilson-pool/
+│       ├── commands/pool.md          # /wilson-pool:pool 斜杠命令
+│       ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart 接线
+│       ├── bin/_route.py             # 重型命令 → ssh 重写 (可用)
+│       └── bin/_inject.py            # ## Pool 块 (可用)
 └── LICENSE
 ```
 

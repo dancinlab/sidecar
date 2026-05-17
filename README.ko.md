@@ -42,6 +42,7 @@
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
 | `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash 명령을 재작성(`updatedInput`)해 stdout이 TF-IDF salience + MinHash 중복제거 필터를 거친 뒤 모델에 들어가게 함 — wilson `compaction-prefilter` 정신 포팅, **작동** (작은 출력 verbatim · exit code `pipefail`로 보존) |
+| `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 호스트로 ssh 라우팅 — wilson `pool` 정신 포팅, **작동**. ⚠ host+workdir 설정 전 OFF · Bash만 라우팅 · 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
 `wilson-recap`(PreCompact/SessionEnd 요약).
@@ -92,10 +93,15 @@ sidecar/
 │   │   ├── bin/_prefs.py             # 설정 set/show (작동)
 │   │   ├── bin/_inject.py            # 설정 컨텍스트 주입 (작동)
 │   │   └── styles/friendly.{md,*.md} # 응답 스타일 샘플 (5개국어)
-│   └── wilson-output-trim/
-│       ├── hooks/hooks.json          # PreToolUse (Bash) 배선
-│       ├── bin/_trim.py              # updatedInput로 명령 재작성 (작동)
-│       └── bin/_salience.py          # TF-IDF + MinHash 필터 (작동)
+│   ├── wilson-output-trim/
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 배선
+│   │   ├── bin/_trim.py              # updatedInput로 명령 재작성 (작동)
+│   │   └── bin/_salience.py          # TF-IDF + MinHash 필터 (작동)
+│   └── wilson-pool/
+│       ├── commands/pool.md          # /wilson-pool:pool 슬래시 커맨드
+│       ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart 배선
+│       ├── bin/_route.py             # 무거운 명령 → ssh 재작성 (작동)
+│       └── bin/_inject.py            # ## Pool 블록 (작동)
 └── LICENSE
 ```
 

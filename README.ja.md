@@ -44,6 +44,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo ルート `README.md` の readme-format 違反を拒否（emoji-in-prose / multi-glyph H1 / 非英語 At-a-glance / `####`）— wilson `guard-readme-format` の standalone 移植、**動作** |
 | `wilson-prefs` | `/wilson-prefs:prefs` コマンド + `SessionStart`·`UserPromptSubmit` | 応答言語 / コード言語 / 応答スタイルを設定 → プラグインデータに永続化、コンテキスト注入。wilson `prefs` の standalone 移植 — **動作**（設定するまで何も注入しない） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash コマンドを書き換え（`updatedInput`）、stdout を TF-IDF salience + MinHash 重複除去フィルタに通してからモデルに渡す — wilson `compaction-prefilter` の精神移植、**動作**（小出力は verbatim・exit code は `pipefail` で保持） |
+| `wilson-pool` | `/wilson-pool:pool` コマンド + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 重い Bash コマンドをリモートホストへ ssh ルーティング — wilson `pool` の精神移植、**動作**。⚠ host+workdir 設定まで OFF・Bash のみ・リモート workdir の同期は**ユーザー責任**（CC hook は wilson の 9P/sshfs のように fs マウント不可） |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
 `wilson-recap`（PreCompact/SessionEnd 要約）。
@@ -94,10 +95,15 @@ sidecar/
 │   │   ├── bin/_prefs.py             # 設定 set/show (動作)
 │   │   ├── bin/_inject.py            # 設定コンテキスト注入 (動作)
 │   │   └── styles/friendly.{md,*.md} # 応答スタイル サンプル (5言語)
-│   └── wilson-output-trim/
-│       ├── hooks/hooks.json          # PreToolUse (Bash) 配線
-│       ├── bin/_trim.py              # updatedInput でコマンド書換 (動作)
-│       └── bin/_salience.py          # TF-IDF + MinHash フィルタ (動作)
+│   ├── wilson-output-trim/
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 配線
+│   │   ├── bin/_trim.py              # updatedInput でコマンド書換 (動作)
+│   │   └── bin/_salience.py          # TF-IDF + MinHash フィルタ (動作)
+│   └── wilson-pool/
+│       ├── commands/pool.md          # /wilson-pool:pool スラッシュコマンド
+│       ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart 配線
+│       ├── bin/_route.py             # 重いコマンド → ssh 書換 (動作)
+│       └── bin/_inject.py            # ## Pool ブロック (動作)
 └── LICENSE
 ```
 

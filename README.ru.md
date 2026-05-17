@@ -44,6 +44,7 @@
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
 | `wilson-prefs` | команда `/wilson-prefs:prefs` + `SessionStart`·`UserPromptSubmit` | Задаёт язык ответа / язык кода / стиль ответа → сохраняется в данных плагина, внедряется в контекст. Standalone-порт wilson `prefs` — **работает** (ничего не внедряет, пока не задано) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Переписывает Bash-команду (`updatedInput`), чтобы stdout прошёл фильтр TF-IDF значимости + MinHash дедупликации до попадания в модель — порт духа wilson `compaction-prefilter`, **работает** (малый вывод дословно · код выхода сохранён через `pipefail`) |
+| `wilson-pool` | команда `/wilson-pool:pool` + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | Маршрутизирует тяжёлые Bash-команды на удалённый хост по ssh — порт духа wilson `pool`, **работает**. ⚠ OFF, пока не заданы host+workdir · только Bash · синхронизация удалённого workdir — **ответственность пользователя** (CC-хук не может смонтировать fs, как 9P/sshfs у wilson) |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
 SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
@@ -97,10 +98,15 @@ sidecar/
 │   │   ├── bin/_prefs.py             # set/show настроек (работает)
 │   │   ├── bin/_inject.py            # внедрение настроек в контекст (работает)
 │   │   └── styles/friendly.{md,*.md} # образцы стиля ответа (5 языков)
-│   └── wilson-output-trim/
-│       ├── hooks/hooks.json          # проводка PreToolUse (Bash)
-│       ├── bin/_trim.py              # переписывает команду через updatedInput (работает)
-│       └── bin/_salience.py          # фильтр TF-IDF + MinHash (работает)
+│   ├── wilson-output-trim/
+│   │   ├── hooks/hooks.json          # проводка PreToolUse (Bash)
+│   │   ├── bin/_trim.py              # переписывает команду через updatedInput (работает)
+│   │   └── bin/_salience.py          # фильтр TF-IDF + MinHash (работает)
+│   └── wilson-pool/
+│       ├── commands/pool.md          # слэш-команда /wilson-pool:pool
+│       ├── hooks/hooks.json          # проводка PreToolUse(Bash)+SessionStart
+│       ├── bin/_route.py             # тяжёлая команда → ssh-переписывание (работает)
+│       └── bin/_inject.py            # блок ## Pool (работает)
 └── LICENSE
 ```
 

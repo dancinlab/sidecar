@@ -44,6 +44,7 @@ primitives 1:1.
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Deny a repo-root `README.md` violating readme-format anti-patterns (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — standalone port of wilson `guard-readme-format`, **working** |
 | `wilson-prefs` | `/wilson-prefs:prefs` command + `SessionStart`·`UserPromptSubmit` | Set reply language / code language / response style; persisted to plugin data, injected as context. Standalone port of wilson `prefs` — **working** (injects nothing until you set one) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Rewrites a Bash command (`updatedInput`) so stdout passes a TF-IDF salience + MinHash near-dup filter before the model ingests it — spirit-port of wilson `compaction-prefilter`, **working** (small output verbatim; exit code preserved via `pipefail`) |
+| `wilson-pool` | `/wilson-pool:pool` command + `PreToolUse` (`Bash`) + `SessionStart`·`UserPromptSubmit` | Route heavy Bash commands to a remote host via ssh — spirit-port of wilson `pool`, **working**. ⚠ OFF until host+workdir set; only Bash is routed; **you** keep the remote workdir synced (a CC hook can't mount the fs like wilson's 9P/sshfs) |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 `wilson-recap` (PreCompact/SessionEnd summarization).
@@ -58,12 +59,13 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 
 ## Status
 
-**v0.1.0 — four plugins working.** `wilson-ssot` (AGENTS.md walk-up),
+**v0.1.0 — five plugins working.** `wilson-ssot` (AGENTS.md walk-up),
 `wilson-readme-format` (4-lint README guard, faithful standalone port of
 wilson's `guard-readme-format`), `wilson-prefs` (`/wilson-prefs:prefs`
-slash command → persisted language/style, injected as context), and
+slash command → persisted language/style, injected as context),
 `wilson-output-trim` (Bash stdout → TF-IDF/MinHash salience filter via
-`PreToolUse updatedInput`) **work**. `wilson-guards` is still a **stub**
+`PreToolUse updatedInput`), and `wilson-pool` (heavy Bash → remote ssh,
+user-synced workdir) **work**. `wilson-guards` is still a **stub**
 (passthrough — never fabricates fake blocks). Because wilson is a single static
 binary (plugin dispatch is an internal ABI), the remaining `wilson-guards` port
 path is one of two, to be decided:
@@ -102,11 +104,16 @@ sidecar/
 │   │   ├── bin/_prefs.py             # set/show prefs (working)
 │   │   ├── bin/_inject.py            # inject prefs as context (working)
 │   │   └── styles/friendly.{md,*.md} # response-style samples (5 languages)
-│   └── wilson-output-trim/
-│       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # PreToolUse (Bash) wiring
-│       ├── bin/_trim.py              # rewrites cmd via updatedInput (working)
-│       └── bin/_salience.py          # TF-IDF + MinHash filter (working)
+│   ├── wilson-output-trim/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) wiring
+│   │   ├── bin/_trim.py              # rewrites cmd via updatedInput (working)
+│   │   └── bin/_salience.py          # TF-IDF + MinHash filter (working)
+│   └── wilson-pool/
+│       ├── commands/pool.md          # /wilson-pool:pool slash command
+│       ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart wiring
+│       ├── bin/_route.py             # heavy cmd → ssh rewrite (working)
+│       └── bin/_inject.py            # ## Pool block (working)
 └── LICENSE
 ```
 

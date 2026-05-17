@@ -1,0 +1,10 @@
+{
+  "name": "wilson-pool",
+  "description": "Route heavy Bash commands to a remote pool host via ssh (PreToolUse updatedInput). Spirit-port of wilson's pool plugin. CAVEAT: Claude Code hooks cannot mount the caller filesystem (wilson uses 9P/sshfs) — YOU must keep the remote workdir in sync. Routing is OFF until both host and workdir are set; only the Bash tool is routed.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "pool", "ssh", "remote-exec", "wilson"],
+  "hooks": "./hooks/hooks.json"
+}

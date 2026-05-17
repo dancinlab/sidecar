@@ -48,6 +48,7 @@
 | `wilson-pool` | `/wilson-pool:pool` 命令 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 把重型 Bash 命令经 ssh 路由到远程主机 —— wilson `pool` 精神移植，**可用**。⚠ 未设置 host+workdir 前 OFF · 仅 Bash · 远程 workdir 同步由**用户负责**（CC hook 无法像 wilson 的 9P/sshfs 那样挂载 fs） |
 | `wilson-lsp` | `.lsp.json` LSP 服务器（非 hook） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 接到各格式 repo 的 canonical 服务器（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`，随 `github.com/dancinlab/{tape,n6,hxc,kosmos}` 提供）。graceful —— 不在 PATH 只在 `/plugin` Errors 显示。LSP 生命周期由 CC 管理（用 `/plugin` 切换，非 `/sidecar`） |
 | `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify prefs output-trim pool guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
+| `worktree-pr` | `/worktree-pr:wt` 命令（工作流） | 安全的 **worktree → PR → merge → 清理** 工作流 —— `start <name>`（从 origin 默认分支建隔离 worktree+分支）、`ship <name> "<title>"`（push + 开 PR）、`finish <name>`（合并 PR + 移除 worktree + 删除分支 + 刷新 base）、`status`、`abort`。绝不触碰主工作树或并行会话的分支 |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
 `wilson-recap`（PreCompact/SessionEnd 摘要）。
@@ -119,9 +120,12 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # 接 hexa lsp + tape/n6/hxc/kosmos repo LSP
-│   └── sidecar/                      # 控制插件
-│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│       └── bin/_sidecar.py           # 写共享 disabled.json (可用)
+│   ├── sidecar/                      # 控制插件
+│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│   │   └── bin/_sidecar.py           # 写共享 disabled.json (可用)
+│   └── worktree-pr/
+│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
+│       └── bin/worktree-pr.sh        # worktree → PR → merge → 清理 (可用)
 └── LICENSE
 ```
 

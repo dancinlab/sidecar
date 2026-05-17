@@ -50,6 +50,7 @@ primitives 1:1.
 | `wilson-pool` | `/wilson-pool:pool` command + `PreToolUse` (`Bash`) + `SessionStart`·`UserPromptSubmit` | Route heavy Bash commands to a remote host via ssh — spirit-port of wilson `pool`, **working**. ⚠ OFF until host+workdir set; only Bash is routed; **you** keep the remote workdir synced (a CC hook can't mount the fs like wilson's 9P/sshfs) |
 | `wilson-lsp` | `.lsp.json` LSP servers (not a hook) | Wires `.hexa` → `hexa lsp` and `.tape`·`.n6`·`.hxc`·`.kosmos` → the canonical per-repo servers (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, shipped in `github.com/dancinlab/{tape,n6,hxc,kosmos}`). Graceful — a server not on PATH just shows in `/plugin` Errors. LSP lifecycle is CC-managed (toggle via `/plugin`, not `/sidecar`) |
 | `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard prefs output-trim pool guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
+| `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 `wilson-recap` (PreCompact/SessionEnd summarization).
@@ -141,9 +142,12 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # wires hexa lsp + tape/n6/hxc/kosmos repo LSPs
-│   └── sidecar/                      # control plugin
-│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│       └── bin/_sidecar.py           # writes shared disabled.json (working)
+│   ├── sidecar/                      # control plugin
+│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│   │   └── bin/_sidecar.py           # writes shared disabled.json (working)
+│   └── worktree-pr/
+│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
+│       └── bin/worktree-pr.sh        # worktree → PR → merge → cleanup (working)
 └── LICENSE
 ```
 

@@ -50,6 +50,7 @@
 | `wilson-pool` | команда `/wilson-pool:pool` + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | Маршрутизирует тяжёлые Bash-команды на удалённый хост по ssh — порт духа wilson `pool`, **работает**. ⚠ OFF, пока не заданы host+workdir · только Bash · синхронизация удалённого workdir — **ответственность пользователя** (CC-хук не может смонтировать fs, как 9P/sshfs у wilson) |
 | `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → канонические серверы из repo каждого формата (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, поставляются в `github.com/dancinlab/{tape,n6,hxc,kosmos}`). graceful — сервер не в PATH просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
 | `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify prefs output-trim pool guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
+| `worktree-pr` | команда `/worktree-pr:wt` (workflow) | Безопасный процесс **worktree → PR → merge → очистка** — `start <name>` (изолированный worktree+ветка от ветки origin по умолчанию), `ship <name> "<title>"` (push + открыть PR), `finish <name>` (merge PR + удалить worktree + удалить ветку + обновить base), `status`, `abort`. Никогда не трогает основное рабочее дерево или ветку параллельной сессии |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
 SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
@@ -124,9 +125,12 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + LSP repo tape/n6/hxc/kosmos
-│   └── sidecar/                      # контрольный плагин
-│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│       └── bin/_sidecar.py           # пишет общий disabled.json (работает)
+│   ├── sidecar/                      # контрольный плагин
+│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│   │   └── bin/_sidecar.py           # пишет общий disabled.json (работает)
+│   └── worktree-pr/
+│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
+│       └── bin/worktree-pr.sh        # worktree → PR → merge → очистка (работает)
 └── LICENSE
 ```
 

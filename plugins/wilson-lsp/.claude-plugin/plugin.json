@@ -1,7 +1,7 @@
 {
   "name": "wilson-lsp",
-  "description": "LSP servers for the dancinlab formats: .hexa (wires the first-class `hexa lsp`), and minimal spec-grounded diagnostics servers for .tape / .n6 / .hxc / .kosmos (bundled, no deps). Each is graceful: if its binary is absent ( .hexa needs `hexa` on PATH ) Claude Code just surfaces it in the /plugin Errors tab.",
-  "version": "0.1.0",
+  "description": "Wires LSP servers for the dancinlab formats into Claude Code via .lsp.json: .hexa → `hexa lsp`, and .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: any server not on PATH simply shows in the /plugin Errors tab. Not a hook plugin — LSP lifecycle is CC-managed.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

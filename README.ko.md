@@ -44,7 +44,7 @@
 | `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash 명령을 재작성(`updatedInput`)해 stdout이 TF-IDF salience + MinHash 중복제거 필터를 거친 뒤 모델에 들어가게 함 — wilson `compaction-prefilter` 정신 포팅, **작동** (작은 출력 verbatim · exit code `pipefail`로 보존) |
 | `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 호스트로 ssh 라우팅 — wilson `pool` 정신 포팅, **작동**. ⚠ host+workdir 설정 전 OFF · Bash만 라우팅 · 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
-| `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → 기존 `hexa lsp` 연결 · `.tape`·`.n6`·`.hxc`·`.kosmos` → 번들된 최소 스펙기반 진단 서버(무의존). graceful — 바이너리 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
+| `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
 | `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify prefs output-trim pool guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
@@ -109,8 +109,8 @@ sidecar/
 │   │   ├── bin/_route.py             # 무거운 명령 → ssh 재작성 (작동)
 │   │   └── bin/_inject.py            # ## Pool 블록 (작동)
 │   ├── wilson-lsp/
-│   │   ├── .lsp.json                 # .hexa→hexa lsp · tape/n6/hxc/kosmos→번들
-│   │   └── bin/_lsp.py + sidecar-*-lsp   # 최소 JSON-RPC 진단 (작동)
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 연결
 │   └── sidecar/                      # 컨트롤 플러그인
 │       ├── commands/sidecar.md       # /sidecar status|on|off <name>
 │       └── bin/_sidecar.py           # 공유 disabled.json 기록 (작동)

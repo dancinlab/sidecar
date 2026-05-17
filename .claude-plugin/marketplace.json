@@ -49,8 +49,8 @@
     {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
-      "description": "LSP servers for dancinlab formats: .hexa wires the first-class `hexa lsp`; .tape / .n6 / .hxc / .kosmos get bundled minimal spec-grounded diagnostics servers (no deps). Graceful: a missing binary just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",
-      "version": "0.1.0"
+      "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",
+      "version": "0.2.0"
     },
     {
       "name": "sidecar",

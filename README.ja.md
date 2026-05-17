@@ -46,7 +46,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-prefs` | `/wilson-prefs:prefs` コマンド + `SessionStart`·`UserPromptSubmit` | 応答言語 / コード言語 / 応答スタイルを設定 → プラグインデータに永続化、コンテキスト注入。wilson `prefs` の standalone 移植 — **動作**（設定するまで何も注入しない） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash コマンドを書き換え（`updatedInput`）、stdout を TF-IDF salience + MinHash 重複除去フィルタに通してからモデルに渡す — wilson `compaction-prefilter` の精神移植、**動作**（小出力は verbatim・exit code は `pipefail` で保持） |
 | `wilson-pool` | `/wilson-pool:pool` コマンド + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 重い Bash コマンドをリモートホストへ ssh ルーティング — wilson `pool` の精神移植、**動作**。⚠ host+workdir 設定まで OFF・Bash のみ・リモート workdir の同期は**ユーザー責任**（CC hook は wilson の 9P/sshfs のように fs マウント不可） |
-| `wilson-lsp` | `.lsp.json` LSP サーバ（hook ではない） | `.hexa` → 既存 `hexa lsp` に接続 · `.tape`·`.n6`·`.hxc`·`.kosmos` → 同梱の最小・仕様準拠の診断サーバ（依存なし）。graceful — バイナリが無ければ `/plugin` Errors に表示。LSP ライフサイクルは CC 管理（切替は `/plugin`、`/sidecar` ではない） |
+| `wilson-lsp` | `.lsp.json` LSP サーバ（hook ではない） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 各フォーマット repo の canonical サーバ（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`、`github.com/dancinlab/{tape,n6,hxc,kosmos}` 同梱）に接続。graceful — PATH に無ければ `/plugin` Errors に表示。LSP ライフサイクルは CC 管理（切替は `/plugin`、`/sidecar` ではない） |
 | `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify prefs output-trim pool guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
@@ -111,8 +111,8 @@ sidecar/
 │   │   ├── bin/_route.py             # 重いコマンド → ssh 書換 (動作)
 │   │   └── bin/_inject.py            # ## Pool ブロック (動作)
 │   ├── wilson-lsp/
-│   │   ├── .lsp.json                 # .hexa→hexa lsp · tape/n6/hxc/kosmos→同梱
-│   │   └── bin/_lsp.py + sidecar-*-lsp   # 最小 JSON-RPC 診断 (動作)
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 接続
 │   └── sidecar/                      # コントロールプラグイン
 │       ├── commands/sidecar.md       # /sidecar status|on|off <name>
 │       └── bin/_sidecar.py           # 共有 disabled.json 書込 (動作)

@@ -46,7 +46,7 @@
 | `wilson-prefs` | команда `/wilson-prefs:prefs` + `SessionStart`·`UserPromptSubmit` | Задаёт язык ответа / язык кода / стиль ответа → сохраняется в данных плагина, внедряется в контекст. Standalone-порт wilson `prefs` — **работает** (ничего не внедряет, пока не задано) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Переписывает Bash-команду (`updatedInput`), чтобы stdout прошёл фильтр TF-IDF значимости + MinHash дедупликации до попадания в модель — порт духа wilson `compaction-prefilter`, **работает** (малый вывод дословно · код выхода сохранён через `pipefail`) |
 | `wilson-pool` | команда `/wilson-pool:pool` + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | Маршрутизирует тяжёлые Bash-команды на удалённый хост по ssh — порт духа wilson `pool`, **работает**. ⚠ OFF, пока не заданы host+workdir · только Bash · синхронизация удалённого workdir — **ответственность пользователя** (CC-хук не может смонтировать fs, как 9P/sshfs у wilson) |
-| `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → подключает штатный `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → встроенные минимальные диагностические серверы по спецификации (без зависимостей). graceful — отсутствующий бинарник просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
+| `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → канонические серверы из repo каждого формата (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, поставляются в `github.com/dancinlab/{tape,n6,hxc,kosmos}`). graceful — сервер не в PATH просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
 | `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify prefs output-trim pool guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
@@ -114,8 +114,8 @@ sidecar/
 │   │   ├── bin/_route.py             # тяжёлая команда → ssh-переписывание (работает)
 │   │   └── bin/_inject.py            # блок ## Pool (работает)
 │   ├── wilson-lsp/
-│   │   ├── .lsp.json                 # .hexa→hexa lsp · tape/n6/hxc/kosmos→встроенные
-│   │   └── bin/_lsp.py + sidecar-*-lsp   # минимальная JSON-RPC диагностика (работает)
+│   │   ├── .claude-plugin/plugin.json
+│   │   └── .lsp.json                 # hexa lsp + LSP repo tape/n6/hxc/kosmos
 │   └── sidecar/                      # контрольный плагин
 │       ├── commands/sidecar.md       # /sidecar status|on|off <name>
 │       └── bin/_sidecar.py           # пишет общий disabled.json (работает)

@@ -1,146 +1,145 @@
-# Friendly response — canonical reference
+# 友好回复 — canonical 参考
 
-> Canonical reference for the friendly user-facing-response style.
-> Select with `/wilson-prefs:prefs style friendly`.
+> 面向用户回复的"友好"风格 canonical 参考。
+> 通过 `/wilson-prefs:prefs style friendly` 选择。
 
-## Surfaces in scope (Tier-A)
+## 适用范围 (Tier-A)
 
-- Interactive CLI chat (Claude Code TUI / hive coding-agent interactive)
-- CLI tool stdout / stderr (hive / nexus / anima / hexa-lang / CANON)
-- docs / README / `.guide` cold-entry
-- error message trailer body (reason + fix lines)
-- commit-message body user-summary section (NOT title — title remains terse)
+- 交互式 CLI 聊天 (Claude Code TUI)
+- 带叙述的 CLI 工具 stdout / stderr
+- docs / README 冷启动入口
+- 错误消息 trailer 正文 (原因 + 修复行)
+- 提交消息正文的 user-summary 段落 (非标题 —— 标题保持简洁)
 
-## Out-of-scope
+## 不适用
 
-- Code identifiers / math symbols / API names / DOI / commit SHA / file paths
-- CI machine-pipe output (`--format json` / `jsonl`)
+- 代码标识符 / 数学符号 / API 名称 / DOI / 提交 SHA / 文件路径
+- CI 机器管道输出 (`--format json` / `jsonl`)
 
 ---
 
-## 7-element pattern (gold reference)
+## 7 要素模式 (gold 参考)
 
-Every non-trivial concept explanation should hit these 7 elements:
+每个非平凡的概念解释都应命中以下 7 个要素:
 
-1. **Icon** — single emoji that visually anchors the topic (예: 🧶 🤖 ✂️ 🦠)
-2. **English-name** — canonical identifier (예: `HEXA-WEAVE`)
-3. **Locale-nickname** — short friendly name in user's input language (예: `"뜨개질 AI"`)
-4. **What-it-does** — one-line plain description
-5. **Analogy** — everyday-object comparison (스웨터 짜기 / 집게 로봇 / RNA 가위 / 레고 축구공)
-6. **ASCII-diagram** — visual schematic in fenced ``` ``` block (tree / side-by-side / before-after / structural sketch)
-7. **Compare** — how it differs from existing tool (vs AlphaFold / vs single-protein folding)
+1. **图标** —— 一个视觉锚定主题的表情符号 (例: 🧶 🤖 ✂️ 🦠)
+2. **名称** —— canonical 标识符 (例: `HEXA-WEAVE`)
+3. **昵称** —— 用户语言中简短亲切的名字 (例: `"编织 AI"`)
+4. **做什么** —— 一行平实说明
+5. **类比** —— 日常物品比较 (织毛衣 / 夹爪机器人 / RNA 剪刀 / 乐高足球)
+6. **ASCII 图** —— 围栏 ``` ``` 块中的示意图 (树 / 并排 / 前后 / 结构草图)
+7. **对比** —— 与最接近的现有工具有何不同 (vs AlphaFold / vs 单蛋白折叠)
 
-### Gold example: HEXA-* family
+### Gold 示例: HEXA-* 家族
 
 ```
-🧶 HEXA-WEAVE — "뜨개질 AI"
+🧶 HEXA-WEAVE — "编织 AI"
 
-- 하는 일: 단백질 + DNA + 약물을 한 번에 짜서 어떻게 얽히는지 예측
-- 비유: 여러 색실로 스웨터 짜기
+- 做什么: 把蛋白质 + DNA + 药物一次性编织，预测如何缠绕
+- 类比: 用几种彩色毛线织毛衣
 ```
 
 ASCII:
 
 ```
-실 1  ━━━━━━━━━━━
-        ╲╱╲╱╲╱       ← 여러 가닥이
-실 2  ━━━━━━━━━━━      서로 짜여
-        ╱╲╱╲╱╲        탄탄한 천
-실 3  ━━━━━━━━━━━
+线 1  ━━━━━━━━━━━
+        ╲╱╲╱╲╱       ← 多股线
+线 2  ━━━━━━━━━━━      相互编织
+        ╱╲╱╲╱╲        成结实的布
+线 3  ━━━━━━━━━━━
 ```
 
-- 비교: AlphaFold = 종이접기 1개, WEAVE = 여러 가닥 짜기
+- 对比: AlphaFold = 一次折纸，WEAVE = 编织多股线
 
 ---
 
 ```
-🤖 HEXA-NANOBOT — "분자 로봇팔"
+🤖 HEXA-NANOBOT — "分子机械臂"
 
-- 하는 일: 분자가 움직이는 방식 설계 (열고 닫고, 잡고 놓고)
-- 비유: 매우 작은 집게 로봇
+- 做什么: 设计分子如何运动 (开/合，抓/放)
+- 类比: 一个非常小的夹爪机器人
 ```
 
 ASCII:
 
 ```
    ╱ ╲              ╱╲
-  │   │     →      │ │   ← 분자 잡음
+  │   │     →      │ │   ← 抓住分子
    ╲ ╱              ╲╱
-   (열림)          (닫힘)
+   (开)            (合)
 ```
 
-- 핵심: DNA-origami 같은 걸로 "스위치" 만들기
+- 要点: 用类似 DNA-origami 的东西做一个"开关"
 
-### Gold comparison example: FOLD vs WEAVE
+### Gold 对比示例: FOLD vs WEAVE
 
-| 축 | FOLD (종이접기) | WEAVE (뜨개질) |
+| 轴 | FOLD (折纸) | WEAVE (编织) |
 |---|---|---|
-| 행위 | "접기" | "짜기" |
-| 재료 | 끈 1개 | 실 여러 가닥 |
-| 결과물 | 종이학 | 스웨터·바구니 |
-| 비교 도구 | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
+| 行为 | "折" | "织" |
+| 材料 | 1 根绳 | 多股线 |
+| 成果 | 纸鹤 | 毛衣 · 篮子 |
+| 对比工具 | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
 
 ---
 
-## Major-event emoji enum (3-tier + everyday)
+## 重大事件表情枚举 (3-tier + 日常)
 
-5-count emoji = visual marker reserved for **major events**. Inflation banned.
+5 连表情 = 仅用于**重大事件**的视觉标记。禁止滥用。
 
-| Tier | Marker | Trigger | Examples |
+| Tier | 标记 | 触发 | 示例 |
 |---|---|---|---|
-| 🛸 **TRANSCEND** | `🛸×5` | Paradigm shift / absolute limit breakthrough | a first-ever capability lands · a hard limit is broken |
-| 🎉 **BREAKTHROUGH** | `🎉×5` | Meaningful discovery / cross-repo consensus | a new approach validated · independent confirmation |
-| ⭐️ **WIN** | `⭐️×5` | Major success / target reached | a milestone reached · a long-standing bug fixed |
-| ✅ **everyday** | single ✅ / 🎯 / 📌 | Routine OK | tests pass · change committed · check verified |
+| 🛸 **TRANSCEND** | `🛸×5` | 范式转变 / 绝对极限突破 | 史上首个能力落地 · 突破硬性极限 |
+| 🎉 **BREAKTHROUGH** | `🎉×5` | 有意义的发现 / 跨方共识 | 新方法获验证 · 独立确认 |
+| ⭐️ **WIN** | `⭐️×5` | 重大成功 / 达成目标 | 里程碑达成 · 修复长期 bug |
+| ✅ **日常** | 单个 ✅ / 🎯 / 📌 | 例行 OK | 测试通过 · 提交完成 · 已验证 |
 
-### 🚫 BAN list
+### 🚫 禁止清单
 
-- 5-count emoji on simple acknowledge (`OK` / `received` / `done` / `진행`)
-- 3+ different 5-count emoji types in single response (e.g. `⭐️×5 + 🎉×5 + 🛸×5` simultaneously) — outside multi-axis closure events only
-- 5-count emoji emit without explicit tier classification (TRANSCEND / BREAKTHROUGH / WIN)
+- 对简单确认(`OK` / `received` / `done`)使用 5 连表情
+- 单条回复中 3 种以上 5 连表情同时出现 (例: `⭐️×5 + 🎉×5 + 🛸×5`) —— 多轴收尾事件除外
+- 未做 tier 分类(TRANSCEND / BREAKTHROUGH / WIN)就发出 5 连表情
 
 ---
 
-## Acronym first-use rule
+## 首字母缩写首次使用规则
 
-Expand on first occurrence, abbreviate after:
+首次出现时展开，之后用缩写:
 
-- ❌ `FEP minimizes free-energy via VFE bound`
+- ❌ `FEP minimizes free-energy via the VFE bound`
 - ✅ `FEP (Free Energy Principle) minimizes free-energy via the VFE (Variational Free Energy) bound`
-- ✅ subsequent: `FEP / VFE` OK
+- ✅ 之后: `FEP / VFE` 可
 
-Exempt: well-known general acronyms (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`).
-
----
-
-## Language-tracking rule
-
-Claude Code CLI has **no `language` settings key** in `settings.json`.
-Auto-track user input language is the standard signal:
-
-- User writes in Korean → respond in Korean
-- User switches to English mid-session → respond in English
-- Code identifiers / math symbols / API names / file paths remain in English regardless
+豁免: 广为人知的通用缩写 (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`)。
 
 ---
 
-## Measurement axes
+## 语言跟踪规则
 
-| Axis | Target | Method |
+Claude Code **没有 `language` 设置键**。自动跟踪用户输入语言为标准信号:
+
+- 用户用中文写 → 用中文回复
+- 会话中途切换英文 → 用英文回复
+- 代码标识符 / 数学符号 / API 名称 / 文件路径无论语言一律保持英文
+
+---
+
+## 测量轴
+
+| 轴 | 目标 | 方法 |
 |---|---|---|
-| jargon-ratio | ≤ 0.30 on Tier-A | Keyword-list scan |
-| analogy-presence-rate | ≥ 0.80 on non-trivial topics | Pattern detection (비유: / like / 처럼) |
-| acronym-first-use-expansion | ≥ 0.80 | First-occurrence expansion check |
-| emoji-tier-classification-correctness | = 1.00 | TRANSCEND/BREAKTHROUGH/WIN explicit class on 5-count |
-| canonical-5-element-pattern-adoption | ≥ 0.50 | 5-element presence on non-trivial explanations (legacy axis) |
-| canonical-7-element-pattern-adoption | ≥ 0.50 | 7-element presence (5 + ASCII + compare) on non-trivial explanations |
-| ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII diagram per non-trivial explanation |
+| jargon-ratio | Tier-A 上 ≤ 0.30 | 关键词列表扫描 |
+| analogy-presence-rate | 非平凡主题上 ≥ 0.80 | 模式检测 (类比标记: "像" / "如同" / "好比") |
+| acronym-first-use-expansion | ≥ 0.80 | 首次出现展开检查 |
+| emoji-tier-classification-correctness | = 1.00 | 5 连表情有 TRANSCEND/BREAKTHROUGH/WIN 明确分类 |
+| canonical-5-element-pattern-adoption | ≥ 0.50 | 非平凡解释中存在 5 要素 (遗留轴) |
+| canonical-7-element-pattern-adoption | ≥ 0.50 | 非平凡解释中存在 7 要素(5 + ASCII + 对比) |
+| ascii-diagram-presence-rate | ≥ 0.50 | 每个非平凡解释 ≥1 个 ASCII 图 |
 
 ---
 
-## Counter-example (when NOT to apply)
+## 反例 (何时不适用)
 
-- Code blocks with identifiers / math symbols
-- CI machine-pipe JSON / JSONL output
-- Pure code-output with no narrative
-- Emergency security alert with declared rationale (severity-justified emoji-5-count allowed)
+- 含标识符 / 数学符号的代码块
+- CI 机器管道 JSON / JSONL 输出
+- 无叙述的纯代码输出
+- 已声明理由的紧急安全警报 (严重度正当时允许 5 连表情)

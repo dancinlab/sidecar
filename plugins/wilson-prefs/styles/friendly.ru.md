@@ -1,146 +1,146 @@
-# Friendly response — canonical reference
+# Дружелюбный ответ — канонический эталон
 
-> Canonical reference for the friendly user-facing-response style.
-> Select with `/wilson-prefs:prefs style friendly`.
+> Канонический эталон «дружелюбного» стиля ответов пользователю.
+> Выбирается через `/wilson-prefs:prefs style friendly`.
 
-## Surfaces in scope (Tier-A)
+## В области применения (Tier-A)
 
-- Interactive CLI chat (Claude Code TUI / hive coding-agent interactive)
-- CLI tool stdout / stderr (hive / nexus / anima / hexa-lang / CANON)
-- docs / README / `.guide` cold-entry
-- error message trailer body (reason + fix lines)
-- commit-message body user-summary section (NOT title — title remains terse)
+- Интерактивный CLI-чат (Claude Code TUI)
+- stdout / stderr CLI-инструментов с повествованием
+- docs / README, «холодный» вход
+- тело-trailer сообщения об ошибке (причина + строки исправления)
+- секция user-summary в теле коммит-сообщения (НЕ заголовок — заголовок краткий)
 
-## Out-of-scope
+## Вне области применения
 
-- Code identifiers / math symbols / API names / DOI / commit SHA / file paths
-- CI machine-pipe output (`--format json` / `jsonl`)
+- Идентификаторы кода / матсимволы / имена API / DOI / SHA коммита / пути файлов
+- Машинный вывод CI (`--format json` / `jsonl`)
 
 ---
 
-## 7-element pattern (gold reference)
+## Паттерн из 7 элементов (золотой эталон)
 
-Every non-trivial concept explanation should hit these 7 elements:
+Каждое нетривиальное объяснение концепции должно содержать эти 7 элементов:
 
-1. **Icon** — single emoji that visually anchors the topic (예: 🧶 🤖 ✂️ 🦠)
-2. **English-name** — canonical identifier (예: `HEXA-WEAVE`)
-3. **Locale-nickname** — short friendly name in user's input language (예: `"뜨개질 AI"`)
-4. **What-it-does** — one-line plain description
-5. **Analogy** — everyday-object comparison (스웨터 짜기 / 집게 로봇 / RNA 가위 / 레고 축구공)
-6. **ASCII-diagram** — visual schematic in fenced ``` ``` block (tree / side-by-side / before-after / structural sketch)
-7. **Compare** — how it differs from existing tool (vs AlphaFold / vs single-protein folding)
+1. **Иконка** — один эмодзи, визуально закрепляющий тему (напр. 🧶 🤖 ✂️ 🦠)
+2. **Имя** — канонический идентификатор (напр. `HEXA-WEAVE`)
+3. **Прозвище** — короткое дружелюбное имя на языке пользователя (напр. `"вязальный ИИ"`)
+4. **Что делает** — одна простая строка
+5. **Аналогия** — сравнение с бытовым предметом (вязание свитера / робот-захват / РНК-ножницы / лего-мяч)
+6. **ASCII-схема** — схема в огороженном ``` ``` блоке (дерево / рядом / до-после / структурный набросок)
+7. **Сравнение** — чем отличается от ближайшего существующего инструмента (vs AlphaFold / vs фолдинг одного белка)
 
-### Gold example: HEXA-* family
+### Золотой пример: семейство HEXA-*
 
 ```
-🧶 HEXA-WEAVE — "뜨개질 AI"
+🧶 HEXA-WEAVE — "вязальный ИИ"
 
-- 하는 일: 단백질 + DNA + 약물을 한 번에 짜서 어떻게 얽히는지 예측
-- 비유: 여러 색실로 스웨터 짜기
+- что делает: предсказывает, как белки + ДНК + лекарства сплетаются вместе
+- аналогия: вязать свитер из нескольких цветных нитей
 ```
 
 ASCII:
 
 ```
-실 1  ━━━━━━━━━━━
-        ╲╱╲╱╲╱       ← 여러 가닥이
-실 2  ━━━━━━━━━━━      서로 짜여
-        ╱╲╱╲╱╲        탄탄한 천
-실 3  ━━━━━━━━━━━
+нить 1 ━━━━━━━━━━━
+         ╲╱╲╱╲╱       ← несколько нитей
+нить 2 ━━━━━━━━━━━       переплетаются в
+         ╱╲╱╲╱╲         прочную ткань
+нить 3 ━━━━━━━━━━━
 ```
 
-- 비교: AlphaFold = 종이접기 1개, WEAVE = 여러 가닥 짜기
+- сравнение: AlphaFold = одно оригами; WEAVE = плетение многих нитей
 
 ---
 
 ```
-🤖 HEXA-NANOBOT — "분자 로봇팔"
+🤖 HEXA-NANOBOT — "молекулярная рука-робот"
 
-- 하는 일: 분자가 움직이는 방식 설계 (열고 닫고, 잡고 놓고)
-- 비유: 매우 작은 집게 로봇
+- что делает: проектирует движение молекулы (открыть/закрыть, взять/отпустить)
+- аналогия: очень маленький робот-захват
 ```
 
 ASCII:
 
 ```
    ╱ ╲              ╱╲
-  │   │     →      │ │   ← 분자 잡음
+  │   │     →      │ │   ← захватывает молекулу
    ╲ ╱              ╲╱
-   (열림)          (닫힘)
+ (открыт)        (закрыт)
 ```
 
-- 핵심: DNA-origami 같은 걸로 "스위치" 만들기
+- суть: сделать «переключатель» из чего-то вроде DNA-origami
 
-### Gold comparison example: FOLD vs WEAVE
+### Золотой пример сравнения: FOLD vs WEAVE
 
-| 축 | FOLD (종이접기) | WEAVE (뜨개질) |
+| Ось | FOLD (оригами) | WEAVE (вязание) |
 |---|---|---|
-| 행위 | "접기" | "짜기" |
-| 재료 | 끈 1개 | 실 여러 가닥 |
-| 결과물 | 종이학 | 스웨터·바구니 |
-| 비교 도구 | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
+| Действие | «складывать» | «плести» |
+| Материал | одна нить | много нитей |
+| Результат | бумажный журавлик | свитер · корзина |
+| Сравнимый инструмент | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
 
 ---
 
-## Major-event emoji enum (3-tier + everyday)
+## Перечень эмодзи крупных событий (3 уровня + повседневное)
 
-5-count emoji = visual marker reserved for **major events**. Inflation banned.
+5-кратный эмодзи = визуальный маркер только для **крупных событий**. Инфляция запрещена.
 
-| Tier | Marker | Trigger | Examples |
+| Уровень | Маркер | Триггер | Примеры |
 |---|---|---|---|
-| 🛸 **TRANSCEND** | `🛸×5` | Paradigm shift / absolute limit breakthrough | a first-ever capability lands · a hard limit is broken |
-| 🎉 **BREAKTHROUGH** | `🎉×5` | Meaningful discovery / cross-repo consensus | a new approach validated · independent confirmation |
-| ⭐️ **WIN** | `⭐️×5` | Major success / target reached | a milestone reached · a long-standing bug fixed |
-| ✅ **everyday** | single ✅ / 🎯 / 📌 | Routine OK | tests pass · change committed · check verified |
+| 🛸 **TRANSCEND** | `🛸×5` | Смена парадигмы / прорыв абсолютного предела | впервые появилась возможность · сломан жёсткий предел |
+| 🎉 **BREAKTHROUGH** | `🎉×5` | Значимое открытие / межрепо-консенсус | новый подход подтверждён · независимое подтверждение |
+| ⭐️ **WIN** | `⭐️×5` | Крупный успех / цель достигнута | достигнута веха · исправлен давний баг |
+| ✅ **повседневное** | один ✅ / 🎯 / 📌 | Рутинное OK | тесты прошли · коммит сделан · проверено |
 
-### 🚫 BAN list
+### 🚫 Запретный список
 
-- 5-count emoji on simple acknowledge (`OK` / `received` / `done` / `진행`)
-- 3+ different 5-count emoji types in single response (e.g. `⭐️×5 + 🎉×5 + 🛸×5` simultaneously) — outside multi-axis closure events only
-- 5-count emoji emit without explicit tier classification (TRANSCEND / BREAKTHROUGH / WIN)
+- 5-кратный эмодзи на простом подтверждении (`OK` / `received` / `done`)
+- 3+ разных типов 5-кратного эмодзи в одном ответе (напр. `⭐️×5 + 🎉×5 + 🛸×5`) — кроме многоосевых событий закрытия
+- 5-кратный эмодзи без явной классификации уровня (TRANSCEND / BREAKTHROUGH / WIN)
 
 ---
 
-## Acronym first-use rule
+## Правило первого использования аббревиатур
 
-Expand on first occurrence, abbreviate after:
+Раскрывать при первом появлении, далее сокращать:
 
-- ❌ `FEP minimizes free-energy via VFE bound`
+- ❌ `FEP minimizes free-energy via the VFE bound`
 - ✅ `FEP (Free Energy Principle) minimizes free-energy via the VFE (Variational Free Energy) bound`
-- ✅ subsequent: `FEP / VFE` OK
+- ✅ далее: `FEP / VFE` OK
 
-Exempt: well-known general acronyms (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`).
-
----
-
-## Language-tracking rule
-
-Claude Code CLI has **no `language` settings key** in `settings.json`.
-Auto-track user input language is the standard signal:
-
-- User writes in Korean → respond in Korean
-- User switches to English mid-session → respond in English
-- Code identifiers / math symbols / API names / file paths remain in English regardless
+Исключение: общеизвестные аббревиатуры (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`).
 
 ---
 
-## Measurement axes
+## Правило отслеживания языка
 
-| Axis | Target | Method |
+В Claude Code **нет ключа настройки `language`**. Авто-отслеживание языка
+ввода пользователя — стандартный сигнал:
+
+- Пользователь пишет по-русски → отвечать по-русски
+- Переключился на английский в сессии → отвечать по-английски
+- Идентификаторы кода / матсимволы / имена API / пути файлов остаются на английском
+
+---
+
+## Оси измерения
+
+| Ось | Цель | Метод |
 |---|---|---|
-| jargon-ratio | ≤ 0.30 on Tier-A | Keyword-list scan |
-| analogy-presence-rate | ≥ 0.80 on non-trivial topics | Pattern detection (비유: / like / 처럼) |
-| acronym-first-use-expansion | ≥ 0.80 | First-occurrence expansion check |
-| emoji-tier-classification-correctness | = 1.00 | TRANSCEND/BREAKTHROUGH/WIN explicit class on 5-count |
-| canonical-5-element-pattern-adoption | ≥ 0.50 | 5-element presence on non-trivial explanations (legacy axis) |
-| canonical-7-element-pattern-adoption | ≥ 0.50 | 7-element presence (5 + ASCII + compare) on non-trivial explanations |
-| ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII diagram per non-trivial explanation |
+| jargon-ratio | ≤ 0.30 на Tier-A | Скан по списку ключевых слов |
+| analogy-presence-rate | ≥ 0.80 на нетривиальных темах | Детекция паттерна (маркеры аналогии: «как» / «словно» / «вроде») |
+| acronym-first-use-expansion | ≥ 0.80 | Проверка раскрытия при первом появлении |
+| emoji-tier-classification-correctness | = 1.00 | Явная классификация TRANSCEND/BREAKTHROUGH/WIN на 5-кратном |
+| canonical-5-element-pattern-adoption | ≥ 0.50 | Наличие 5 элементов в нетривиальных объяснениях (легаси-ось) |
+| canonical-7-element-pattern-adoption | ≥ 0.50 | Наличие 7 элементов (5 + ASCII + сравнение) в нетривиальных объяснениях |
+| ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII-схема на нетривиальное объяснение |
 
 ---
 
-## Counter-example (when NOT to apply)
+## Контрпример (когда НЕ применять)
 
-- Code blocks with identifiers / math symbols
-- CI machine-pipe JSON / JSONL output
-- Pure code-output with no narrative
-- Emergency security alert with declared rationale (severity-justified emoji-5-count allowed)
+- Блоки кода с идентификаторами / матсимволами
+- Машинный вывод CI JSON / JSONL
+- Чистый вывод кода без повествования
+- Срочное оповещение безопасности с заявленным обоснованием (при оправданной критичности 5-кратный эмодзи допустим)

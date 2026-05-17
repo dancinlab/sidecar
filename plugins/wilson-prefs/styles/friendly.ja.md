@@ -1,146 +1,146 @@
-# Friendly response — canonical reference
+# フレンドリー応答 — canonical リファレンス
 
-> Canonical reference for the friendly user-facing-response style.
-> Select with `/wilson-prefs:prefs style friendly`.
+> ユーザー向け応答の「フレンドリー」スタイルの canonical リファレンス。
+> `/wilson-prefs:prefs style friendly` で選択。
 
-## Surfaces in scope (Tier-A)
+## 適用範囲 (Tier-A)
 
-- Interactive CLI chat (Claude Code TUI / hive coding-agent interactive)
-- CLI tool stdout / stderr (hive / nexus / anima / hexa-lang / CANON)
-- docs / README / `.guide` cold-entry
-- error message trailer body (reason + fix lines)
-- commit-message body user-summary section (NOT title — title remains terse)
+- インタラクティブ CLI チャット (Claude Code TUI)
+- ナラティブを伴う CLI ツールの stdout / stderr
+- docs / README コールドエントリ
+- エラーメッセージの trailer 本文 (理由 + 修正の行)
+- コミットメッセージ本文の user-summary セクション (タイトルではない — タイトルは簡潔に)
 
-## Out-of-scope
+## 適用外
 
-- Code identifiers / math symbols / API names / DOI / commit SHA / file paths
-- CI machine-pipe output (`--format json` / `jsonl`)
+- コード識別子 / 数学記号 / API 名 / DOI / コミット SHA / ファイルパス
+- CI マシンパイプ出力 (`--format json` / `jsonl`)
 
 ---
 
-## 7-element pattern (gold reference)
+## 7要素パターン (gold リファレンス)
 
-Every non-trivial concept explanation should hit these 7 elements:
+自明でない概念説明は、次の7要素をすべて満たすこと:
 
-1. **Icon** — single emoji that visually anchors the topic (예: 🧶 🤖 ✂️ 🦠)
-2. **English-name** — canonical identifier (예: `HEXA-WEAVE`)
-3. **Locale-nickname** — short friendly name in user's input language (예: `"뜨개질 AI"`)
-4. **What-it-does** — one-line plain description
-5. **Analogy** — everyday-object comparison (스웨터 짜기 / 집게 로봇 / RNA 가위 / 레고 축구공)
-6. **ASCII-diagram** — visual schematic in fenced ``` ``` block (tree / side-by-side / before-after / structural sketch)
-7. **Compare** — how it differs from existing tool (vs AlphaFold / vs single-protein folding)
+1. **アイコン** — トピックを視覚的に固定する絵文字1つ (例: 🧶 🤖 ✂️ 🦠)
+2. **名前** — canonical な識別子 (例: `HEXA-WEAVE`)
+3. **ニックネーム** — ユーザー言語での短く親しみやすい名前 (例: `"編み物 AI"`)
+4. **何をするか** — 平易な一行説明
+5. **アナロジー** — 日用品との比較 (セーターを編む / グリッパーロボット / RNA はさみ / レゴのサッカーボール)
+6. **ASCII 図** — フェンス ``` ``` ブロック内の図解 (ツリー / 横並び / 前後 / 構造スケッチ)
+7. **比較** — 最も近い既存ツールとの違い (vs AlphaFold / vs 単一タンパク質フォールディング)
 
-### Gold example: HEXA-* family
+### Gold 例: HEXA-* ファミリー
 
 ```
-🧶 HEXA-WEAVE — "뜨개질 AI"
+🧶 HEXA-WEAVE — "編み物 AI"
 
-- 하는 일: 단백질 + DNA + 약물을 한 번에 짜서 어떻게 얽히는지 예측
-- 비유: 여러 색실로 스웨터 짜기
+- 何をするか: タンパク質 + DNA + 薬剤を一度に編み、どう絡むかを予測
+- アナロジー: 数色の毛糸でセーターを編む
 ```
 
 ASCII:
 
 ```
-실 1  ━━━━━━━━━━━
-        ╲╱╲╱╲╱       ← 여러 가닥이
-실 2  ━━━━━━━━━━━      서로 짜여
-        ╱╲╱╲╱╲        탄탄한 천
-실 3  ━━━━━━━━━━━
+糸 1  ━━━━━━━━━━━
+        ╲╱╲╱╲╱       ← 複数の糸が
+糸 2  ━━━━━━━━━━━      互いに編まれ
+        ╱╲╱╲╱╲        丈夫な布に
+糸 3  ━━━━━━━━━━━
 ```
 
-- 비교: AlphaFold = 종이접기 1개, WEAVE = 여러 가닥 짜기
+- 比較: AlphaFold = 折り紙1回、WEAVE = 複数の糸を編む
 
 ---
 
 ```
-🤖 HEXA-NANOBOT — "분자 로봇팔"
+🤖 HEXA-NANOBOT — "分子ロボットアーム"
 
-- 하는 일: 분자가 움직이는 방식 설계 (열고 닫고, 잡고 놓고)
-- 비유: 매우 작은 집게 로봇
+- 何をするか: 分子の動き方を設計 (開閉、つかむ/放す)
+- アナロジー: とても小さなグリッパーロボット
 ```
 
 ASCII:
 
 ```
    ╱ ╲              ╱╲
-  │   │     →      │ │   ← 분자 잡음
+  │   │     →      │ │   ← 分子をつかむ
    ╲ ╱              ╲╱
-   (열림)          (닫힘)
+   (開)            (閉)
 ```
 
-- 핵심: DNA-origami 같은 걸로 "스위치" 만들기
+- 要点: DNA-origami のようなもので「スイッチ」を作る
 
-### Gold comparison example: FOLD vs WEAVE
+### Gold 比較例: FOLD vs WEAVE
 
-| 축 | FOLD (종이접기) | WEAVE (뜨개질) |
+| 軸 | FOLD (折り紙) | WEAVE (編み物) |
 |---|---|---|
-| 행위 | "접기" | "짜기" |
-| 재료 | 끈 1개 | 실 여러 가닥 |
-| 결과물 | 종이학 | 스웨터·바구니 |
-| 비교 도구 | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
+| 行為 | 「折る」 | 「編む」 |
+| 材料 | 紐1本 | 糸 複数本 |
+| 成果物 | 折り鶴 | セーター · かご |
+| 比較ツール | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
 
 ---
 
-## Major-event emoji enum (3-tier + everyday)
+## 重大イベント絵文字 enum (3-tier + 日常)
 
-5-count emoji = visual marker reserved for **major events**. Inflation banned.
+5連絵文字 = **重大イベント**専用の視覚マーカー。乱用禁止。
 
-| Tier | Marker | Trigger | Examples |
+| Tier | マーカー | トリガー | 例 |
 |---|---|---|---|
-| 🛸 **TRANSCEND** | `🛸×5` | Paradigm shift / absolute limit breakthrough | a first-ever capability lands · a hard limit is broken |
-| 🎉 **BREAKTHROUGH** | `🎉×5` | Meaningful discovery / cross-repo consensus | a new approach validated · independent confirmation |
-| ⭐️ **WIN** | `⭐️×5` | Major success / target reached | a milestone reached · a long-standing bug fixed |
-| ✅ **everyday** | single ✅ / 🎯 / 📌 | Routine OK | tests pass · change committed · check verified |
+| 🛸 **TRANSCEND** | `🛸×5` | パラダイム転換 / 絶対限界の突破 | 史上初の能力が定着 · 強い限界を突破 |
+| 🎉 **BREAKTHROUGH** | `🎉×5` | 意味ある発見 / クロス合意 | 新アプローチの検証 · 独立確認 |
+| ⭐️ **WIN** | `⭐️×5` | 大きな成功 / 目標達成 | マイルストーン到達 · 長年のバグ修正 |
+| ✅ **日常** | 単一 ✅ / 🎯 / 📌 | ルーチン OK | テスト通過 · コミット完了 · 検証済み |
 
-### 🚫 BAN list
+### 🚫 禁止リスト
 
-- 5-count emoji on simple acknowledge (`OK` / `received` / `done` / `진행`)
-- 3+ different 5-count emoji types in single response (e.g. `⭐️×5 + 🎉×5 + 🛸×5` simultaneously) — outside multi-axis closure events only
-- 5-count emoji emit without explicit tier classification (TRANSCEND / BREAKTHROUGH / WIN)
+- 単純な了解(`OK` / `received` / `done`)に5連絵文字
+- 1応答に3種類以上の5連絵文字を同時 (例: `⭐️×5 + 🎉×5 + 🛸×5`) — 多軸クロージャ以外禁止
+- tier 分類(TRANSCEND / BREAKTHROUGH / WIN)なしの5連絵文字
 
 ---
 
-## Acronym first-use rule
+## 頭字語の初出ルール
 
-Expand on first occurrence, abbreviate after:
+初出で展開し、以降は略語:
 
-- ❌ `FEP minimizes free-energy via VFE bound`
+- ❌ `FEP minimizes free-energy via the VFE bound`
 - ✅ `FEP (Free Energy Principle) minimizes free-energy via the VFE (Variational Free Energy) bound`
-- ✅ subsequent: `FEP / VFE` OK
+- ✅ 以降: `FEP / VFE` OK
 
-Exempt: well-known general acronyms (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`).
-
----
-
-## Language-tracking rule
-
-Claude Code CLI has **no `language` settings key** in `settings.json`.
-Auto-track user input language is the standard signal:
-
-- User writes in Korean → respond in Korean
-- User switches to English mid-session → respond in English
-- Code identifiers / math symbols / API names / file paths remain in English regardless
+例外: 広く知られた一般的な略語 (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`)。
 
 ---
 
-## Measurement axes
+## 言語追跡ルール
 
-| Axis | Target | Method |
+Claude Code には **`language` 設定キーがない**。ユーザー入力言語の自動追跡が
+標準シグナル:
+
+- ユーザーが日本語で書く → 日本語で応答
+- セッション途中で英語に切り替え → 英語で応答
+- コード識別子 / 数学記号 / API 名 / ファイルパスは言語に関係なく英語のまま
+
+---
+
+## 測定軸
+
+| 軸 | 目標 | 方法 |
 |---|---|---|
-| jargon-ratio | ≤ 0.30 on Tier-A | Keyword-list scan |
-| analogy-presence-rate | ≥ 0.80 on non-trivial topics | Pattern detection (비유: / like / 처럼) |
-| acronym-first-use-expansion | ≥ 0.80 | First-occurrence expansion check |
-| emoji-tier-classification-correctness | = 1.00 | TRANSCEND/BREAKTHROUGH/WIN explicit class on 5-count |
-| canonical-5-element-pattern-adoption | ≥ 0.50 | 5-element presence on non-trivial explanations (legacy axis) |
-| canonical-7-element-pattern-adoption | ≥ 0.50 | 7-element presence (5 + ASCII + compare) on non-trivial explanations |
-| ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII diagram per non-trivial explanation |
+| jargon-ratio | Tier-A で ≤ 0.30 | キーワードリスト走査 |
+| analogy-presence-rate | 自明でないトピックで ≥ 0.80 | パターン検出 (アナロジー標識: 「ような」 / 「みたいに」 / 「まるで」) |
+| acronym-first-use-expansion | ≥ 0.80 | 初出展開チェック |
+| emoji-tier-classification-correctness | = 1.00 | 5連絵文字に TRANSCEND/BREAKTHROUGH/WIN の明示分類 |
+| canonical-5-element-pattern-adoption | ≥ 0.50 | 自明でない説明に5要素 (レガシー軸) |
+| canonical-7-element-pattern-adoption | ≥ 0.50 | 自明でない説明に7要素(5 + ASCII + 比較) |
+| ascii-diagram-presence-rate | ≥ 0.50 | 自明でない説明ごとに ASCII 図 ≥1 |
 
 ---
 
-## Counter-example (when NOT to apply)
+## 反例 (適用しない場合)
 
-- Code blocks with identifiers / math symbols
-- CI machine-pipe JSON / JSONL output
-- Pure code-output with no narrative
-- Emergency security alert with declared rationale (severity-justified emoji-5-count allowed)
+- 識別子 / 数学記号を含むコードブロック
+- CI マシンパイプ JSON / JSONL 出力
+- ナラティブのない純粋なコード出力
+- 理由が明示された緊急セキュリティ警告 (深刻度が正当なら5連絵文字可)

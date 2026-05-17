@@ -1,36 +1,36 @@
-# Friendly response — canonical reference
+# 친절한 응답 — canonical 레퍼런스
 
-> Canonical reference for the friendly user-facing-response style.
-> Select with `/wilson-prefs:prefs style friendly`.
+> 사용자 대면 응답의 "친절한" 스타일 canonical 레퍼런스.
+> `/wilson-prefs:prefs style friendly` 로 선택.
 
-## Surfaces in scope (Tier-A)
+## 적용 범위 (Tier-A)
 
-- Interactive CLI chat (Claude Code TUI / hive coding-agent interactive)
-- CLI tool stdout / stderr (hive / nexus / anima / hexa-lang / CANON)
-- docs / README / `.guide` cold-entry
-- error message trailer body (reason + fix lines)
-- commit-message body user-summary section (NOT title — title remains terse)
+- 인터랙티브 CLI 채팅 (Claude Code TUI)
+- 내러티브가 있는 CLI 도구 stdout / stderr
+- docs / README 콜드 엔트리
+- 에러 메시지 trailer 본문 (원인 + 해결 줄)
+- 커밋 메시지 본문의 user-summary 섹션 (제목 아님 — 제목은 간결 유지)
 
-## Out-of-scope
+## 적용 제외
 
-- Code identifiers / math symbols / API names / DOI / commit SHA / file paths
-- CI machine-pipe output (`--format json` / `jsonl`)
+- 코드 식별자 / 수학 기호 / API 이름 / DOI / 커밋 SHA / 파일 경로
+- CI 머신 파이프 출력 (`--format json` / `jsonl`)
 
 ---
 
-## 7-element pattern (gold reference)
+## 7-요소 패턴 (gold 레퍼런스)
 
-Every non-trivial concept explanation should hit these 7 elements:
+사소하지 않은 개념 설명은 다음 7요소를 모두 갖춰야 한다:
 
-1. **Icon** — single emoji that visually anchors the topic (예: 🧶 🤖 ✂️ 🦠)
-2. **English-name** — canonical identifier (예: `HEXA-WEAVE`)
-3. **Locale-nickname** — short friendly name in user's input language (예: `"뜨개질 AI"`)
-4. **What-it-does** — one-line plain description
-5. **Analogy** — everyday-object comparison (스웨터 짜기 / 집게 로봇 / RNA 가위 / 레고 축구공)
-6. **ASCII-diagram** — visual schematic in fenced ``` ``` block (tree / side-by-side / before-after / structural sketch)
-7. **Compare** — how it differs from existing tool (vs AlphaFold / vs single-protein folding)
+1. **아이콘** — 주제를 시각적으로 고정하는 이모지 1개 (예: 🧶 🤖 ✂️ 🦠)
+2. **이름** — canonical 식별자 (예: `HEXA-WEAVE`)
+3. **별칭** — 사용자 언어로 된 짧고 친근한 이름 (예: `"뜨개질 AI"`)
+4. **하는 일** — 한 줄 평이한 설명
+5. **비유** — 일상 사물 비교 (스웨터 짜기 / 집게 로봇 / RNA 가위 / 레고 축구공)
+6. **ASCII 다이어그램** — 펜스 ``` ``` 블록의 시각 도식 (트리 / 나란히 / 전후 / 구조 스케치)
+7. **비교** — 가장 가까운 기존 도구와 어떻게 다른지 (vs AlphaFold / vs 단일 단백질 폴딩)
 
-### Gold example: HEXA-* family
+### Gold 예시: HEXA-* 패밀리
 
 ```
 🧶 HEXA-WEAVE — "뜨개질 AI"
@@ -71,76 +71,76 @@ ASCII:
 
 - 핵심: DNA-origami 같은 걸로 "스위치" 만들기
 
-### Gold comparison example: FOLD vs WEAVE
+### Gold 비교 예시: FOLD vs WEAVE
 
 | 축 | FOLD (종이접기) | WEAVE (뜨개질) |
 |---|---|---|
 | 행위 | "접기" | "짜기" |
 | 재료 | 끈 1개 | 실 여러 가닥 |
-| 결과물 | 종이학 | 스웨터·바구니 |
+| 결과물 | 종이학 | 스웨터 · 바구니 |
 | 비교 도구 | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
 
 ---
 
-## Major-event emoji enum (3-tier + everyday)
+## 주요 이벤트 이모지 enum (3-tier + 일상)
 
-5-count emoji = visual marker reserved for **major events**. Inflation banned.
+5개 이모지 = **주요 이벤트**에만 쓰는 시각 마커. 남발 금지.
 
-| Tier | Marker | Trigger | Examples |
+| Tier | 마커 | 트리거 | 예시 |
 |---|---|---|---|
-| 🛸 **TRANSCEND** | `🛸×5` | Paradigm shift / absolute limit breakthrough | a first-ever capability lands · a hard limit is broken |
-| 🎉 **BREAKTHROUGH** | `🎉×5` | Meaningful discovery / cross-repo consensus | a new approach validated · independent confirmation |
-| ⭐️ **WIN** | `⭐️×5` | Major success / target reached | a milestone reached · a long-standing bug fixed |
-| ✅ **everyday** | single ✅ / 🎯 / 📌 | Routine OK | tests pass · change committed · check verified |
+| 🛸 **TRANSCEND** | `🛸×5` | 패러다임 전환 / 절대 한계 돌파 | 사상 첫 역량 안착 · 강한 한계 돌파 |
+| 🎉 **BREAKTHROUGH** | `🎉×5` | 의미 있는 발견 / 교차 합의 | 새 접근 검증 · 독립 확인 |
+| ⭐️ **WIN** | `⭐️×5` | 큰 성공 / 목표 달성 | 마일스톤 도달 · 오래된 버그 수정 |
+| ✅ **일상** | 단일 ✅ / 🎯 / 📌 | 루틴 OK | 테스트 통과 · 커밋 완료 · 검증됨 |
 
-### 🚫 BAN list
+### 🚫 금지 목록
 
-- 5-count emoji on simple acknowledge (`OK` / `received` / `done` / `진행`)
-- 3+ different 5-count emoji types in single response (e.g. `⭐️×5 + 🎉×5 + 🛸×5` simultaneously) — outside multi-axis closure events only
-- 5-count emoji emit without explicit tier classification (TRANSCEND / BREAKTHROUGH / WIN)
+- 단순 확인(`OK` / `received` / `done`)에 5개 이모지
+- 한 응답에 3종 이상의 5개 이모지 동시 (예: `⭐️×5 + 🎉×5 + 🛸×5`) — 다축 클로저 이벤트 제외
+- tier 분류(TRANSCEND / BREAKTHROUGH / WIN) 없이 5개 이모지 방출
 
 ---
 
-## Acronym first-use rule
+## 약어 첫 사용 규칙
 
-Expand on first occurrence, abbreviate after:
+첫 등장에서 풀어 쓰고, 이후 약어 사용:
 
-- ❌ `FEP minimizes free-energy via VFE bound`
+- ❌ `FEP minimizes free-energy via the VFE bound`
 - ✅ `FEP (Free Energy Principle) minimizes free-energy via the VFE (Variational Free Energy) bound`
-- ✅ subsequent: `FEP / VFE` OK
+- ✅ 이후: `FEP / VFE` OK
 
-Exempt: well-known general acronyms (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`).
-
----
-
-## Language-tracking rule
-
-Claude Code CLI has **no `language` settings key** in `settings.json`.
-Auto-track user input language is the standard signal:
-
-- User writes in Korean → respond in Korean
-- User switches to English mid-session → respond in English
-- Code identifiers / math symbols / API names / file paths remain in English regardless
+예외: 널리 알려진 일반 약어 (`AI`, `API`, `JSON`, `URL`, `CPU`, `GPU`).
 
 ---
 
-## Measurement axes
+## 언어 추적 규칙
 
-| Axis | Target | Method |
+Claude Code에는 **`language` 설정 키가 없다**. 사용자 입력 언어 자동 추적이
+표준 신호:
+
+- 사용자가 한국어로 쓰면 → 한국어로 응답
+- 세션 도중 영어로 바꾸면 → 영어로 응답
+- 코드 식별자 / 수학 기호 / API 이름 / 파일 경로는 언어와 무관하게 영어 유지
+
+---
+
+## 측정 축
+
+| 축 | 목표 | 방법 |
 |---|---|---|
-| jargon-ratio | ≤ 0.30 on Tier-A | Keyword-list scan |
-| analogy-presence-rate | ≥ 0.80 on non-trivial topics | Pattern detection (비유: / like / 처럼) |
-| acronym-first-use-expansion | ≥ 0.80 | First-occurrence expansion check |
-| emoji-tier-classification-correctness | = 1.00 | TRANSCEND/BREAKTHROUGH/WIN explicit class on 5-count |
-| canonical-5-element-pattern-adoption | ≥ 0.50 | 5-element presence on non-trivial explanations (legacy axis) |
-| canonical-7-element-pattern-adoption | ≥ 0.50 | 7-element presence (5 + ASCII + compare) on non-trivial explanations |
-| ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII diagram per non-trivial explanation |
+| jargon-ratio | Tier-A에서 ≤ 0.30 | 키워드 목록 스캔 |
+| analogy-presence-rate | 사소하지 않은 주제에서 ≥ 0.80 | 패턴 탐지 (비유 마커: "같은" / "처럼" / "마치") |
+| acronym-first-use-expansion | ≥ 0.80 | 첫 등장 풀어쓰기 확인 |
+| emoji-tier-classification-correctness | = 1.00 | 5개 이모지에 TRANSCEND/BREAKTHROUGH/WIN 명시 분류 |
+| canonical-5-element-pattern-adoption | ≥ 0.50 | 사소하지 않은 설명에 5요소 존재 (레거시 축) |
+| canonical-7-element-pattern-adoption | ≥ 0.50 | 사소하지 않은 설명에 7요소(5 + ASCII + 비교) 존재 |
+| ascii-diagram-presence-rate | ≥ 0.50 | 사소하지 않은 설명당 ASCII 다이어그램 ≥1 |
 
 ---
 
-## Counter-example (when NOT to apply)
+## 반례 (적용하지 않을 때)
 
-- Code blocks with identifiers / math symbols
-- CI machine-pipe JSON / JSONL output
-- Pure code-output with no narrative
-- Emergency security alert with declared rationale (severity-justified emoji-5-count allowed)
+- 식별자 / 수학 기호가 든 코드 블록
+- CI 머신 파이프 JSON / JSONL 출력
+- 내러티브 없는 순수 코드 출력
+- 사유가 명시된 긴급 보안 경보 (심각도 정당화 시 5개 이모지 허용)

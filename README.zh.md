@@ -58,9 +58,61 @@
 ## Install
 
 ```bash
+# 1. 注册市场
 /plugin marketplace add dancinlab/sidecar
-/plugin install wilson-guards@sidecar
-/plugin install wilson-ssot@sidecar
+
+# 2. 安装需要的插件 —— 各自独立
+/plugin install wilson-secret-guard@sidecar    # 拦截实时密钥 / .env 写入
+/plugin install wilson-bash-guard@sidecar      # 拦截灾难性 Bash 命令
+/plugin install wilson-dangerous-path@sidecar  # 保护系统 / 凭据路径
+/plugin install wilson-git-guard@sidecar       # 拦截 force-push
+/plugin install wilson-readme-format@sidecar   # repo-root README lint 护栏
+/plugin install wilson-hexa-verify@sidecar     # 非 hexa 校验器 → 引导至 hexa
+/plugin install wilson-guards@sidecar          # ssot-lock / tape / domain-lint 包
+/plugin install wilson-ssot@sidecar            # AGENTS.md SSOT 注入
+/plugin install wilson-prefs@sidecar           # 回复语言 / 代码 / 风格设置
+/plugin install wilson-output-trim@sidecar     # Bash stdout 显著性过滤
+/plugin install wilson-pool@sidecar            # 重型 Bash → 路由到远程主机
+/plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
+/plugin install worktree-pr@sidecar            # /worktree-pr:wt 工作流命令
+/plugin install sidecar@sidecar                # /sidecar 运行时 on/off 控制
+```
+
+随时用 `/plugin` 浏览或开关。新版本发布后升级:
+
+```bash
+/plugin marketplace update sidecar
+/plugin update
+```
+
+### 一次性全部安装
+
+无需逐个 `/plugin install`，可在 `settings.json`（`~/.claude/settings.json` 对所有项目、
+`.claude/settings.json` 对单个项目）中声明市场与插件 —— Claude Code 在下次启动时
+一次性安装并启用列出的全部插件:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "sidecar": { "source": { "source": "github", "repo": "dancinlab/sidecar" } }
+  },
+  "enabledPlugins": {
+    "wilson-secret-guard@sidecar": true,
+    "wilson-bash-guard@sidecar": true,
+    "wilson-dangerous-path@sidecar": true,
+    "wilson-git-guard@sidecar": true,
+    "wilson-readme-format@sidecar": true,
+    "wilson-hexa-verify@sidecar": true,
+    "wilson-guards@sidecar": true,
+    "wilson-ssot@sidecar": true,
+    "wilson-prefs@sidecar": true,
+    "wilson-output-trim@sidecar": true,
+    "wilson-pool@sidecar": true,
+    "wilson-lsp@sidecar": true,
+    "worktree-pr@sidecar": true,
+    "sidecar@sidecar": true
+  }
+}
 ```
 
 ## Status

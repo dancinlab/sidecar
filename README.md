@@ -60,9 +60,62 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 ## Install
 
 ```bash
+# 1. register the marketplace
 /plugin marketplace add dancinlab/sidecar
-/plugin install wilson-guards@sidecar
-/plugin install wilson-ssot@sidecar
+
+# 2. install the plugins you want — each is independent
+/plugin install wilson-secret-guard@sidecar     # block live secrets / .env writes
+/plugin install wilson-bash-guard@sidecar       # block catastrophic Bash commands
+/plugin install wilson-dangerous-path@sidecar   # protect system / credential paths
+/plugin install wilson-git-guard@sidecar        # block force-push
+/plugin install wilson-readme-format@sidecar    # repo-root README lint guard
+/plugin install wilson-hexa-verify@sidecar      # redirect non-hexa verifiers to hexa
+/plugin install wilson-guards@sidecar           # ssot-lock / tape / domain-lint bundle
+/plugin install wilson-ssot@sidecar             # AGENTS.md SSOT injection
+/plugin install wilson-prefs@sidecar            # reply-language / code / style prefs
+/plugin install wilson-output-trim@sidecar      # Bash stdout salience filter
+/plugin install wilson-pool@sidecar             # route heavy Bash to a remote host
+/plugin install wilson-lsp@sidecar              # LSP for .hexa / .tape / .n6 / .hxc / .kosmos
+/plugin install worktree-pr@sidecar             # /worktree-pr:wt workflow command
+/plugin install sidecar@sidecar                 # /sidecar runtime on/off control
+```
+
+Browse or toggle plugins anytime with `/plugin`. After a new release, upgrade with:
+
+```bash
+/plugin marketplace update sidecar
+/plugin update
+```
+
+### Enable everything at once
+
+Rather than running `/plugin install` per plugin, declare the marketplace and
+the plugins in `settings.json` (`~/.claude/settings.json` for every project, or
+`.claude/settings.json` for one) — Claude Code installs and enables every listed
+plugin on the next start:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "sidecar": { "source": { "source": "github", "repo": "dancinlab/sidecar" } }
+  },
+  "enabledPlugins": {
+    "wilson-secret-guard@sidecar": true,
+    "wilson-bash-guard@sidecar": true,
+    "wilson-dangerous-path@sidecar": true,
+    "wilson-git-guard@sidecar": true,
+    "wilson-readme-format@sidecar": true,
+    "wilson-hexa-verify@sidecar": true,
+    "wilson-guards@sidecar": true,
+    "wilson-ssot@sidecar": true,
+    "wilson-prefs@sidecar": true,
+    "wilson-output-trim@sidecar": true,
+    "wilson-pool@sidecar": true,
+    "wilson-lsp@sidecar": true,
+    "worktree-pr@sidecar": true,
+    "sidecar@sidecar": true
+  }
+}
 ```
 
 ## Status

@@ -1,0 +1,10 @@
+{
+  "name": "wilson-readme-format",
+  "description": "Deny Write/Edit on a repo-root README.md that violates the readme-format anti-patterns (emoji-in-prose, multi-glyph H1, non-English At-a-glance fence, forbidden #### heading). Standalone port of wilson's guard-readme-format — no wilson binary dependency.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "guardrail", "readme", "wilson", "lint"],
+  "hooks": "./hooks/hooks.json"
+}

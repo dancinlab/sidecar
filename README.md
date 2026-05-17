@@ -4,7 +4,7 @@
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-  <img alt="Status" src="https://img.shields.io/badge/status-v0.0.0_scaffold-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-v0.1.0-orange">
   <img alt="Marketplace" src="https://img.shields.io/badge/claude--code-plugin_marketplace-informational">
   <img alt="Sibling" src="https://img.shields.io/badge/sibling-wilson-blueviolet">
 </p>
@@ -40,7 +40,8 @@ primitives 1:1.
 | Plugin | CC hook | Behavior |
 |---|---|---|
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Deny dangerous-path / SSOT-append-only / domain-lint violations |
-| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Inject `AGENTS.md` walk-up SSOT as context (wilson `agents-md` equivalent) |
+| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Inject `AGENTS.md` walk-up SSOT as context (wilson `agents-md` equivalent) — **working** |
+| `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Deny a repo-root `README.md` violating readme-format anti-patterns (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — standalone port of wilson `guard-readme-format`, **working** |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 `wilson-recap` (PreCompact/SessionEnd summarization).
@@ -55,10 +56,12 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 
 ## Status
 
-**v0.0.0 — scaffold.** The marketplace/plugin manifests and hook wiring are in
-place, but the `bin/` wrappers are **stubs** (currently passthrough, with TODOs
-documented). Because wilson is a single static binary (plugin dispatch is an
-internal ABI), the real porting path is one of two, to be decided:
+**v0.1.0 — first guard ported.** `wilson-ssot` (AGENTS.md walk-up) and
+`wilson-readme-format` (4-lint README guard, faithful standalone port of
+wilson's `guard-readme-format`) **work**. `wilson-guards` is still a **stub**
+(passthrough — never fabricates fake blocks). Because wilson is a single static
+binary (plugin dispatch is an internal ABI), the remaining `wilson-guards` port
+path is one of two, to be decided:
 
 1. **via harness-rpc** — a thin wrapper that calls wilson's `harness-rpc`
    (JSONL stdin/stdout) for a specific guard plugin action.
@@ -79,10 +82,14 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse wiring
 │   │   └── bin/guard.sh              # stub (TODO: wilson port)
-│   └── wilson-ssot/
+│   ├── wilson-ssot/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit wiring
+│   │   └── bin/_ssot.py              # AGENTS.md walk-up (working)
+│   └── wilson-readme-format/
 │       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # SessionStart/UserPromptSubmit wiring
-│       └── bin/_ssot.py              # AGENTS.md walk-up (working)
+│       ├── hooks/hooks.json          # PreToolUse (Write|Edit) wiring
+│       └── bin/_readme_format.py     # 4-lint README guard (working)
 └── LICENSE
 ```
 

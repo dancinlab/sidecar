@@ -4,7 +4,7 @@
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-  <img alt="Status" src="https://img.shields.io/badge/status-v0.0.0_scaffold-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-v0.1.0-orange">
   <img alt="Marketplace" src="https://img.shields.io/badge/claude--code-plugin_marketplace-informational">
   <img alt="Sibling" src="https://img.shields.io/badge/sibling-wilson-blueviolet">
 </p>
@@ -40,7 +40,8 @@ governance だけを追加する **プラグインマーケットプレイス re
 | プラグイン | CC hook | 動作 |
 |---|---|---|
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 危険パス・SSOT 追記専用・ドメイン lint 違反を拒否 |
-| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` の上方探索 SSOT をコンテキスト注入（wilson `agents-md` 相当） |
+| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` の上方探索 SSOT をコンテキスト注入（wilson `agents-md` 相当） — **動作** |
+| `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo ルート `README.md` の readme-format 違反を拒否（emoji-in-prose / multi-glyph H1 / 非英語 At-a-glance / `####`）— wilson `guard-readme-format` の standalone 移植、**動作** |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
 `wilson-recap`（PreCompact/SessionEnd 要約）。
@@ -55,10 +56,11 @@ governance だけを追加する **プラグインマーケットプレイス re
 
 ## Status
 
-**v0.0.0 — scaffold。** マーケットプレイス/プラグインのマニフェストと hook 配線は
-整っていますが、`bin/` ラッパーは **スタブ** です（現在はパススルー、TODO 明記）。
-wilson は単一の静的バイナリ（プラグイン dispatch は内部 ABI）のため、実際の移植
-経路は次の 2 つから決定します:
+**v0.1.0 — 最初の guard 移植。** `wilson-ssot`（AGENTS.md 上方探索）と
+`wilson-readme-format`（4-lint README ガード、wilson `guard-readme-format` の忠実な
+standalone 移植）は **動作** します。`wilson-guards` はまだ **スタブ**（パススルー —
+偽のブロックを捏造しない）。wilson は単一の静的バイナリ（プラグイン dispatch は内部
+ABI）のため、残る `wilson-guards` の移植経路は次の 2 つから決定します:
 
 1. **harness-rpc 経由** — wilson の `harness-rpc`（JSONL stdin/stdout）で特定の
    guard プラグイン action を呼ぶ薄いラッパー。
@@ -77,10 +79,14 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse 配線
 │   │   └── bin/guard.sh              # スタブ (TODO: wilson 移植)
-│   └── wilson-ssot/
+│   ├── wilson-ssot/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 配線
+│   │   └── bin/_ssot.py              # AGENTS.md 上方探索 (動作)
+│   └── wilson-readme-format/
 │       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 配線
-│       └── bin/_ssot.py              # AGENTS.md 上方探索 (動作)
+│       ├── hooks/hooks.json          # PreToolUse (Write|Edit) 配線
+│       └── bin/_readme_format.py     # 4-lint README ガード (動作)
 └── LICENSE
 ```
 

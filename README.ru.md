@@ -4,7 +4,7 @@
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-  <img alt="Status" src="https://img.shields.io/badge/status-v0.0.0_scaffold-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-v0.1.0-orange">
   <img alt="Marketplace" src="https://img.shields.io/badge/claude--code-plugin_marketplace-informational">
   <img alt="Sibling" src="https://img.shields.io/badge/sibling-wilson-blueviolet">
 </p>
@@ -40,7 +40,8 @@
 | Плагин | Хук CC | Поведение |
 |---|---|---|
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Запрет нарушений: опасный-путь / SSOT-только-добавление / доменный-lint |
-| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) |
+| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) — **работает** |
+| `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
 SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
@@ -55,11 +56,12 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
 
 ## Status
 
-**v0.0.0 — scaffold (каркас).** Манифесты маркетплейса/плагинов и проводка
-хуков на месте, но обёртки в `bin/` — **заглушки** (сейчас passthrough, с
-задокументированными TODO). Поскольку wilson — единый статический бинарник
-(dispatch плагинов — внутренний ABI), реальный путь портирования будет одним
-из двух, ещё не решено:
+**v0.1.0 — первый guard портирован.** `wilson-ssot` (обход вверх по AGENTS.md) и
+`wilson-readme-format` (README-guard из 4 линтов, точный standalone-порт
+wilson `guard-readme-format`) **работают**. `wilson-guards` пока **заглушка**
+(passthrough — не фабрикует ложные блокировки). Поскольку wilson — единый
+статический бинарник (dispatch плагинов — внутренний ABI), оставшийся путь
+портирования `wilson-guards` будет одним из двух, ещё не решено:
 
 1. **через harness-rpc** — тонкая обёртка, вызывающая `harness-rpc` из wilson
    (JSONL stdin/stdout) для конкретного действия guard-плагина.
@@ -80,10 +82,14 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # проводка PreToolUse
 │   │   └── bin/guard.sh              # заглушка (TODO: порт wilson)
-│   └── wilson-ssot/
+│   ├── wilson-ssot/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # проводка SessionStart/UserPromptSubmit
+│   │   └── bin/_ssot.py              # обход вверх по AGENTS.md (работает)
+│   └── wilson-readme-format/
 │       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # проводка SessionStart/UserPromptSubmit
-│       └── bin/_ssot.py              # обход вверх по AGENTS.md (работает)
+│       ├── hooks/hooks.json          # проводка PreToolUse (Write|Edit)
+│       └── bin/_readme_format.py     # README-guard из 4 линтов (работает)
 └── LICENSE
 ```
 

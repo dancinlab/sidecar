@@ -4,7 +4,7 @@
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-  <img alt="Status" src="https://img.shields.io/badge/status-v0.0.0_scaffold-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-v0.1.0-orange">
   <img alt="Marketplace" src="https://img.shields.io/badge/claude--code-plugin_marketplace-informational">
   <img alt="Sibling" src="https://img.shields.io/badge/sibling-wilson-blueviolet">
 </p>
@@ -38,7 +38,8 @@
 | 插件 | CC hook | 行为 |
 |---|---|---|
 | `wilson-guards` | `PreToolUse`（`Bash`·`Write`·`Edit`） | 拒绝 危险路径 / SSOT 仅追加 / 领域 lint 违规 |
-| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | 注入 `AGENTS.md` 向上查找的 SSOT 作为上下文（等价于 wilson `agents-md`） |
+| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | 注入 `AGENTS.md` 向上查找的 SSOT 作为上下文（等价于 wilson `agents-md`） — **可用** |
+| `wilson-readme-format` | `PreToolUse`（`Write`·`Edit`） | 拒绝违反 readme-format 的仓库根 `README.md`（散文中表情 / 多字形 H1 / 非英文 At-a-glance / `####`）— wilson `guard-readme-format` 的独立移植，**可用** |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
 `wilson-recap`（PreCompact/SessionEnd 摘要）。
@@ -53,9 +54,11 @@
 
 ## Status
 
-**v0.0.0 —— scaffold（脚手架）。** 市场/插件清单与 hook 接线已就位，但 `bin/`
-封装为 **桩（stub）**（当前为透传，已注明 TODO）。由于 wilson 是单个静态二进制
-（插件 dispatch 为内部 ABI），真实移植路径将在以下两者中决定：
+**v0.1.0 —— 首个 guard 已移植。** `wilson-ssot`（AGENTS.md 向上查找）与
+`wilson-readme-format`（4-lint README 护栏，wilson `guard-readme-format` 的忠实独立
+移植）**可用**。`wilson-guards` 仍为 **桩**（透传 —— 不伪造虚假拦截）。由于 wilson
+是单个静态二进制（插件 dispatch 为内部 ABI），剩余的 `wilson-guards` 移植路径将在
+以下两者中决定：
 
 1. **经由 harness-rpc** —— 一个薄封装，通过 wilson 的 `harness-rpc`
    （JSONL stdin/stdout）调用特定 guard 插件 action。
@@ -74,10 +77,14 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse 接线
 │   │   └── bin/guard.sh              # 桩 (TODO: wilson 移植)
-│   └── wilson-ssot/
+│   ├── wilson-ssot/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 接线
+│   │   └── bin/_ssot.py              # AGENTS.md 向上查找 (可用)
+│   └── wilson-readme-format/
 │       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 接线
-│       └── bin/_ssot.py              # AGENTS.md 向上查找 (可用)
+│       ├── hooks/hooks.json          # PreToolUse (Write|Edit) 接线
+│       └── bin/_readme_format.py     # 4-lint README 护栏 (可用)
 └── LICENSE
 ```
 

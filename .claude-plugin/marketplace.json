@@ -15,6 +15,12 @@
       "source": "./plugins/wilson-ssot",
       "description": "AGENTS.md walk-up SSOT injected at SessionStart / UserPromptSubmit (wilson agents-md plugin equivalent).",
       "version": "0.0.0"
+    },
+    {
+      "name": "wilson-readme-format",
+      "source": "./plugins/wilson-readme-format",
+      "description": "Deny Write/Edit on a repo-root README.md violating readme-format anti-patterns (emoji-in-prose, multi-glyph H1, non-English At-a-glance, forbidden ####). Standalone port of wilson guard-readme-format — working, no wilson binary dependency.",
+      "version": "0.1.0"
     }
   ]
 }

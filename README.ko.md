@@ -4,7 +4,7 @@
 
 <p align="center">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
-  <img alt="Status" src="https://img.shields.io/badge/status-v0.0.0_scaffold-orange">
+  <img alt="Status" src="https://img.shields.io/badge/status-v0.1.0-orange">
   <img alt="Marketplace" src="https://img.shields.io/badge/claude--code-plugin_marketplace-informational">
   <img alt="Sibling" src="https://img.shields.io/badge/sibling-wilson-blueviolet">
 </p>
@@ -38,7 +38,8 @@
 | 플러그인 | CC hook | 동작 |
 |---|---|---|
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 위험 경로·SSOT append-only·도메인 린트 위반 차단 |
-| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) |
+| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) — **작동** |
+| `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
 `wilson-recap`(PreCompact/SessionEnd 요약).
@@ -53,9 +54,11 @@
 
 ## Status
 
-**v0.0.0 — scaffold.** 마켓플레이스/플러그인 매니페스트·hook 배선은 자리잡았으나
-`bin/` 래퍼는 **스텁**입니다(현재 passthrough + TODO 명시). wilson은 단일
-정적 바이너리(플러그인 dispatch는 내부 ABI)라, 실제 이식 경로는 두 갈래 중 결정:
+**v0.1.0 — 첫 guard 이식.** `wilson-ssot`(AGENTS.md walk-up)와
+`wilson-readme-format`(4-lint README 가드, wilson `guard-readme-format`의 충실한
+standalone 포팅)은 **작동**합니다. `wilson-guards`는 아직 **스텁**(passthrough —
+가짜 차단 안 함). wilson은 단일 정적 바이너리(플러그인 dispatch는 내부 ABI)라,
+남은 `wilson-guards` 이식 경로는 두 갈래 중 결정:
 
 1. **harness-rpc 경유** — wilson의 `harness-rpc`(JSONL stdin/stdout) 모드로 특정
    guard plugin action을 호출하는 얇은 래퍼.
@@ -74,10 +77,14 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse 배선
 │   │   └── bin/guard.sh              # 스텁 (TODO: wilson 이식)
-│   └── wilson-ssot/
+│   ├── wilson-ssot/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 배선
+│   │   └── bin/_ssot.py              # AGENTS.md walk-up (작동)
+│   └── wilson-readme-format/
 │       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 배선
-│       └── bin/_ssot.py              # AGENTS.md walk-up (작동)
+│       ├── hooks/hooks.json          # PreToolUse (Write|Edit) 배선
+│       └── bin/_readme_format.py     # 4-lint README 가드 (작동)
 └── LICENSE
 ```
 

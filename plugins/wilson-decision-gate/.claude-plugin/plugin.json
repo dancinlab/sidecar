@@ -1,0 +1,9 @@
+{
+  "name": "wilson-decision-gate",
+  "description": "Step-by-step decision gate — multi-decision work is one user-confirmation gate per decision, never batched: for each branch point present options + recommendation + rationale (3+ bullets), wait for the pick, then record `Decision N: <picked> · <rationale>` in design.md. Standalone port of wilson's principle-step-by-step-decision-gate (text-only, like wilson; CC hooks can't detect batching either). SessionStart injects the principle once; UserPromptSubmit adds a short reminder ONLY when the prompt looks like branch-point work (not every prompt). /wilson-decision-gate maintains the design.md ledger. Ships a 5-language design.md sample. Opt out: SIDECAR_NO_DECISION_GATE.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "governance", "decision-gate", "design-doc", "wilson"]
+}

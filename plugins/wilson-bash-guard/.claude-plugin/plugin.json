@@ -5,6 +5,5 @@
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "hooks", "guardrail", "bash", "security", "pipe-to-shell", "wilson"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["claude-code", "hooks", "guardrail", "bash", "security", "pipe-to-shell", "wilson"]
 }

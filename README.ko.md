@@ -44,11 +44,12 @@
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | 보호 시스템 경로(`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`)·자격증명 경로(`~/.ssh`·`~/.aws`·gh config·keychain·credentials) 대상 Write/Edit/MultiEdit 차단 — wilson `guard-dangerous-path` standalone 포팅, **작동** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push 차단 — `git push`에 `--force`/`-f`/`+refspec`(및 `--force-with-lease`, `SIDECAR_ALLOW_FORCE_WITH_LEASE=1` 아니면) 있으면 차단 — wilson `git-guard` standalone 포팅, **작동** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | 실제 `.env` 파일 쓰기, 또는 고신뢰 크리덴셜(AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe 토큰, PEM 개인키)을 담은 내용 차단; 그런 크리덴셜을 붙여넣은 프롬프트 차단 — 고신뢰 패턴만, false positive 거의 없음, **작동** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
+| `wilson-bash-guard` | `PreToolUse` (`Bash`) | 파괴적 셸 명령 차단 — pipe-to-shell(`curl … \| sh`), 루트/홈 경로 `rm -rf`, fork bomb, 디스크 파괴자(`dd of=/dev/disk`·`mkfs`·`>/dev/sd*`), `/` `~` `.` 대상 재귀 `chmod`/`chown` — 고신뢰 파괴 패턴만, false positive 거의 없음, **작동** (opt out: `SIDECAR_NO_BASH_GUARD=1`) |
 | `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash 명령을 재작성(`updatedInput`)해 stdout이 TF-IDF salience + MinHash 중복제거 필터를 거친 뒤 모델에 들어가게 함 — wilson `compaction-prefilter` 정신 포팅, **작동** (작은 출력 verbatim · exit code `pipefail`로 보존) |
 | `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 호스트로 ssh 라우팅 — wilson `pool` 정신 포팅, **작동**. ⚠ host+workdir 설정 전 OFF · Bash만 라우팅 · 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
 | `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
-| `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard prefs output-trim pool guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
+| `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
 | `worktree-pr` | `/worktree-pr:wt` 커맨드 (워크플로) | 안전한 **worktree → PR → merge → 정리** 워크플로 — `start <name>`(origin 기본 브랜치에서 격리 worktree+브랜치), `ship <name> "<title>"`(push + PR 생성), `finish <name>`(PR merge + worktree 제거 + 브랜치 삭제 + base 갱신), `status`, `abort`. 메인 워킹트리·동시세션 브랜치 무접촉 |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
@@ -109,6 +110,10 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse(Write|Edit)+UserPromptSubmit
 │   │   ├── bin/secret-guard.sh       # hook 래퍼
 │   │   └── bin/_secret_guard.py      # .env + 크리덴셜 토큰 가드 (작동)
+│   ├── wilson-bash-guard/
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 배선
+│   │   ├── bin/bash-guard.sh         # hook 래퍼
+│   │   └── bin/_bash_guard.py        # 파괴적 명령 가드 (작동)
 │   ├── wilson-prefs/
 │   │   ├── commands/prefs.md         # /wilson-prefs:prefs 슬래시 커맨드
 │   │   ├── bin/_prefs.py             # 설정 set/show (작동)

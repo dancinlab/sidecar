@@ -31,8 +31,8 @@
     {
       "name": "wilson-hexa-verify",
       "source": "./plugins/wilson-hexa-verify",
-      "description": "Deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica / mathkernel) and redirect to the hexa CLI. Standalone port of wilson guard-hexa-verify — working. INERT unless the `hexa` binary is on PATH.",
-      "version": "0.1.0"
+      "description": "PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica / mathkernel) and redirect to the hexa CLI. PostToolUse: when `hexa verify` reports a new SUPPORTED equation, open a PR to dancinlab/hexa-lang baking the equation into the binary built-in atlas (fills `hexa atlas promote`'s stubbed pr step; PR left for human review, never auto-merged), falling back to prompting the worktree-pr workflow. Standalone port + extension of wilson guard-hexa-verify — working. INERT unless the `hexa` binary is on PATH.",
+      "version": "0.2.0"
     },
     {
       "name": "wilson-dangerous-path",

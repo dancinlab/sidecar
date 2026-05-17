@@ -47,6 +47,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-secret-guard",
+      "source": "./plugins/wilson-secret-guard",
+      "description": "Block live secrets before they land. PreToolUse (Write/Edit/MultiEdit): deny writing a real .env file or content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys). UserPromptSubmit: block a prompt that pastes one. High-confidence patterns only — near-zero false positives. Opt out: SIDECAR_NO_SECRET_GUARD=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-output-trim",
       "source": "./plugins/wilson-output-trim",
       "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",

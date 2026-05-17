@@ -43,11 +43,12 @@
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse`（`Bash`） | PreToolUse: 拒绝对非 hexa 校验器（sympy/PyPhi/wolframscript/mathematica）的 Bash 调用 → 引导改用 hexa CLI。PostToolUse: 当 `hexa verify` 报告新的 SUPPORTED 方程（🔵/🟢）时，**自动向** `dancinlab/hexa-lang` **开 PR** —— 把方程烘焙进二进制内置 atlas（补全 `hexa atlas promote` 的桩 `pr` 步骤，PR 留待人工审查、不自动合并）。无法自动开 PR 时回退为引导 `worktree-pr` 工作流。wilson `guard-hexa-verify` 的独立移植+扩展，**可用**。⚠ `hexa` 不在 PATH 时 inert |
 | `wilson-dangerous-path` | `PreToolUse`（`Write`·`Edit`） | 拒绝对受保护系统路径（`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`）与凭据路径（`~/.ssh`·`~/.aws`·gh config·keychain·credentials）的 Write/Edit/MultiEdit — wilson `guard-dangerous-path` 的独立移植，**可用** |
 | `wilson-git-guard` | `PreToolUse`（`Bash`） | 拒绝 force-push —— `git push` 带 `--force`/`-f`/`+refspec`（以及 `--force-with-lease`，除非 `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`）即拦截 — wilson `git-guard` 的独立移植，**可用** |
+| `wilson-secret-guard` | `PreToolUse`（`Write`·`Edit`·`MultiEdit`） + `UserPromptSubmit` | 拒绝写入真实 `.env` 文件，或拒绝含高置信凭据（AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe 令牌、PEM 私钥）的内容；拦截粘贴此类凭据的提示 —— 仅高置信模式、几乎零误报，**可用**（opt out: `SIDECAR_NO_SECRET_GUARD=1`） |
 | `wilson-prefs` | `/wilson-prefs:prefs` 命令 + `SessionStart`·`UserPromptSubmit` | 设置回复语言 / 代码语言 / 回复风格 → 持久化到插件数据，注入上下文。wilson `prefs` 的独立移植 —— **可用**（未设置前不注入任何内容） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | 重写 Bash 命令（`updatedInput`），让 stdout 先经 TF-IDF 显著性 + MinHash 去重过滤再进入模型 —— wilson `compaction-prefilter` 精神移植，**可用**（小输出原样 · 退出码经 `pipefail` 保留） |
 | `wilson-pool` | `/wilson-pool:pool` 命令 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 把重型 Bash 命令经 ssh 路由到远程主机 —— wilson `pool` 精神移植，**可用**。⚠ 未设置 host+workdir 前 OFF · 仅 Bash · 远程 workdir 同步由**用户负责**（CC hook 无法像 wilson 的 9P/sshfs 那样挂载 fs） |
 | `wilson-lsp` | `.lsp.json` LSP 服务器（非 hook） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 接到各格式 repo 的 canonical 服务器（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`，随 `github.com/dancinlab/{tape,n6,hxc,kosmos}` 提供）。graceful —— 不在 PATH 只在 `/plugin` Errors 显示。LSP 生命周期由 CC 管理（用 `/plugin` 切换，非 `/sidecar`） |
-| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify prefs output-trim pool guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
+| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify dangerous-path git-guard secret-guard prefs output-trim pool guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
 | `worktree-pr` | `/worktree-pr:wt` 命令（工作流） | 安全的 **worktree → PR → merge → 清理** 工作流 —— `start <name>`（从 origin 默认分支建隔离 worktree+分支）、`ship <name> "<title>"`（push + 开 PR）、`finish <name>`（合并 PR + 移除 worktree + 删除分支 + 刷新 base）、`status`、`abort`。绝不触碰主工作树或并行会话的分支 |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
@@ -104,6 +105,10 @@ sidecar/
 │   ├── wilson-git-guard/
 │   │   ├── hooks/hooks.json          # PreToolUse (Bash) 接线
 │   │   └── bin/_git_guard.py         # force-push 护栏 (可用)
+│   ├── wilson-secret-guard/
+│   │   ├── hooks/hooks.json          # PreToolUse(Write|Edit)+UserPromptSubmit
+│   │   ├── bin/secret-guard.sh       # hook 包装器
+│   │   └── bin/_secret_guard.py      # .env + 凭据令牌 护栏 (可用)
 │   ├── wilson-prefs/
 │   │   ├── commands/prefs.md         # /wilson-prefs:prefs 斜杠命令
 │   │   ├── bin/_prefs.py             # 设置 set/show (可用)

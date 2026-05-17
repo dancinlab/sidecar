@@ -44,7 +44,8 @@
 | `wilson-prefs` | `/wilson-prefs:prefs` 命令 + `SessionStart`·`UserPromptSubmit` | 设置回复语言 / 代码语言 / 回复风格 → 持久化到插件数据，注入上下文。wilson `prefs` 的独立移植 —— **可用**（未设置前不注入任何内容） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | 重写 Bash 命令（`updatedInput`），让 stdout 先经 TF-IDF 显著性 + MinHash 去重过滤再进入模型 —— wilson `compaction-prefilter` 精神移植，**可用**（小输出原样 · 退出码经 `pipefail` 保留） |
 | `wilson-pool` | `/wilson-pool:pool` 命令 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 把重型 Bash 命令经 ssh 路由到远程主机 —— wilson `pool` 精神移植，**可用**。⚠ 未设置 host+workdir 前 OFF · 仅 Bash · 远程 workdir 同步由**用户负责**（CC hook 无法像 wilson 的 9P/sshfs 那样挂载 fs） |
-| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format prefs output-trim pool guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
+| `wilson-lsp` | `.lsp.json` LSP 服务器（非 hook） | `.hexa` → 接到现成的 `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 内置最小、依规范的诊断服务器（无依赖）。graceful —— 缺二进制只在 `/plugin` Errors 显示。LSP 生命周期由 CC 管理（用 `/plugin` 切换，非 `/sidecar`） |
+| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify prefs output-trim pool guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
 `wilson-recap`（PreCompact/SessionEnd 摘要）。
@@ -107,6 +108,9 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart 接线
 │   │   ├── bin/_route.py             # 重型命令 → ssh 重写 (可用)
 │   │   └── bin/_inject.py            # ## Pool 块 (可用)
+│   ├── wilson-lsp/
+│   │   ├── .lsp.json                 # .hexa→hexa lsp · tape/n6/hxc/kosmos→内置
+│   │   └── bin/_lsp.py + sidecar-*-lsp   # 最小 JSON-RPC 诊断 (可用)
 │   └── sidecar/                      # 控制插件
 │       ├── commands/sidecar.md       # /sidecar status|on|off <name>
 │       └── bin/_sidecar.py           # 写共享 disabled.json (可用)

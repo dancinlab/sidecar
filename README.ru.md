@@ -42,7 +42,7 @@
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Запрет нарушений: опасный-путь / SSOT-только-добавление / доменный-lint |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) — **работает** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
-| `wilson-hexa-verify` | `PreToolUse` (`Bash`) | Запрет Bash-вызовов не-hexa верификаторов (sympy/PyPhi/wolframscript/mathematica) → перенаправление на hexa CLI — standalone-порт wilson `guard-hexa-verify`, **работает**. ⚠ INERT, если `hexa` нет в PATH |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: запрет Bash-вызовов не-hexa верификаторов (sympy/PyPhi/wolframscript/mathematica) → перенаправление на hexa CLI. PostToolUse: когда `hexa verify` сообщает о новом SUPPORTED-уравнении (🔵/🟢), **автоматически открывает PR** в `dancinlab/hexa-lang`, впекая уравнение во встроенный atlas бинарника (заполняет заглушку шага `pr` у `hexa atlas promote`; PR оставляется на ревью, не авто-merge) — при невозможности откатывается на подсказку workflow `worktree-pr`. Standalone-порт + расширение wilson `guard-hexa-verify`, **работает**. ⚠ INERT, если `hexa` нет в PATH |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Запрет Write/Edit/MultiEdit по защищённым системным путям (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) и путям учётных данных (`~/.ssh`·`~/.aws`·gh config·keychain·credentials) — standalone-порт wilson `guard-dangerous-path`, **работает** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | Запрет force-push — `git push` с `--force`/`-f`/`+refspec` (и `--force-with-lease`, если не задан `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`) блокируется — standalone-порт wilson `git-guard`, **работает** |
 | `wilson-prefs` | команда `/wilson-prefs:prefs` + `SessionStart`·`UserPromptSubmit` | Задаёт язык ответа / язык кода / стиль ответа → сохраняется в данных плагина, внедряется в контекст. Standalone-порт wilson `prefs` — **работает** (ничего не внедряет, пока не задано) |
@@ -100,8 +100,9 @@ sidecar/
 │   │   ├── hooks/hooks.json          # проводка PreToolUse (Write|Edit)
 │   │   └── bin/_readme_format.py     # README-guard из 4 линтов (работает)
 │   ├── wilson-hexa-verify/
-│   │   ├── hooks/hooks.json          # проводка PreToolUse (Bash)
-│   │   └── bin/_hexa_verify.py       # guard не-hexa верификаторов (работает)
+│   │   ├── hooks/hooks.json          # проводка PreToolUse + PostToolUse (Bash)
+│   │   ├── bin/_hexa_verify.py       # guard не-hexa верификаторов (работает)
+│   │   └── bin/_verify_watch.py      # новое уравнение → PR в hexa-lang (работает)
 │   ├── wilson-dangerous-path/
 │   │   ├── hooks/hooks.json          # проводка PreToolUse (Write|Edit)
 │   │   └── bin/_dangerous_path.py    # guard защищённых путей (работает)

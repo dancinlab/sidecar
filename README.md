@@ -42,7 +42,7 @@ primitives 1:1.
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Deny dangerous-path / SSOT-append-only / domain-lint violations |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Inject `AGENTS.md` walk-up SSOT as context (wilson `agents-md` equivalent) — **working** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Deny a repo-root `README.md` violating readme-format anti-patterns (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — standalone port of wilson `guard-readme-format`, **working** |
-| `wilson-hexa-verify` | `PreToolUse` (`Bash`) | Deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI — standalone port of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI. PostToolUse: when `hexa verify` reports a new SUPPORTED equation (🔵/🟢), **opens a PR** to `dancinlab/hexa-lang` baking the equation into the binary built-in atlas (fills `hexa atlas promote`'s stubbed `pr` step; PR left for human review, never auto-merged) — falls back to prompting the `worktree-pr` workflow if the autonomous PR isn't possible. Standalone port + extension of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Deny Write/Edit/MultiEdit targeting a protected system path (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) or a credential path (`~/.ssh`, `~/.aws`, gh config, keychain, credentials) — standalone port of wilson `guard-dangerous-path`, **working** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | Deny force-push — a `git push` carrying `--force` / `-f` / a `+refspec` (and `--force-with-lease` unless `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`) is blocked — standalone port of wilson `git-guard`, **working** |
 | `wilson-prefs` | `/wilson-prefs:prefs` command + `SessionStart`·`UserPromptSubmit` | Set reply language / code language / response style; persisted to plugin data, injected as context. Standalone port of wilson `prefs` — **working** (injects nothing until you set one) |
@@ -112,8 +112,9 @@ sidecar/
 │   │   └── bin/_readme_format.py     # 4-lint README guard (working)
 │   ├── wilson-hexa-verify/
 │   │   ├── .claude-plugin/plugin.json
-│   │   ├── hooks/hooks.json          # PreToolUse (Bash) wiring
-│   │   └── bin/_hexa_verify.py       # non-hexa-verifier guard (working)
+│   │   ├── hooks/hooks.json          # PreToolUse + PostToolUse (Bash) wiring
+│   │   ├── bin/_hexa_verify.py       # non-hexa-verifier guard (working)
+│   │   └── bin/_verify_watch.py      # new-equation → hexa-lang PR trigger (working)
 │   ├── wilson-dangerous-path/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) wiring

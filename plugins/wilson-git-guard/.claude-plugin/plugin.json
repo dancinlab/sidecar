@@ -1,0 +1,10 @@
+{
+  "name": "wilson-git-guard",
+  "description": "Deny force-push at the PreToolUse layer — a Bash `git push` carrying --force / -f / a +refspec (and --force-with-lease, unless SIDECAR_ALLOW_FORCE_WITH_LEASE=1) is blocked. Standalone port of wilson's git-guard.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "guardrail", "git", "force-push", "wilson"],
+  "hooks": "./hooks/hooks.json"
+}

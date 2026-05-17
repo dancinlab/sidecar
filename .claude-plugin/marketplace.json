@@ -41,6 +41,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-git-guard",
+      "source": "./plugins/wilson-git-guard",
+      "description": "Deny force-push: a Bash `git push` carrying --force / -f / a +refspec (and --force-with-lease unless SIDECAR_ALLOW_FORCE_WITH_LEASE=1) is blocked at PreToolUse. Standalone port of wilson git-guard — working.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-output-trim",
       "source": "./plugins/wilson-output-trim",
       "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",

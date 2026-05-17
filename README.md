@@ -1,0 +1,86 @@
+<h1 align="center">🏍️ sidecar</h1>
+
+<p align="center"><strong>Battle-tested guardrails for Claude Code — ported from a hexa-native agent.</strong></p>
+
+<p align="center">
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-blue">
+  <img alt="Status" src="https://img.shields.io/badge/status-v0.0.0_scaffold-orange">
+  <img alt="Marketplace" src="https://img.shields.io/badge/claude--code-plugin_marketplace-informational">
+  <img alt="Sibling" src="https://img.shields.io/badge/sibling-wilson-blueviolet">
+</p>
+
+---
+
+> **Claude Code를 안 건드리고 옆에 붙여 가드레일을 입히는 사이드카.**
+> 손수 짠 hook 스니펫이 아니라, 프로덕션 hexa-native 에이전트
+> [`wilson`](https://github.com/dancinlab/wilson)에서 검증된 가드 세트를
+> Claude Code 플러그인 마켓플레이스로 이식한 것.
+
+`sidecar`는 호스트 하네스(Claude Code)는 그대로 둔 채 측면 장착으로 governance만
+추가하는 **plugin marketplace repo**입니다. wilson의 `governance` / `guard-*` /
+`agents-md` 플러그인 가치를 Claude Code의 hook 프리미티브로 1:1 매핑합니다.
+
+## Why sidecar?
+
+- **검증된 가드의 이식** — 임시 dotfiles hook 모음이 아니라 wilson 번들에서
+  실사용·검증된 차단 규칙(위험 경로·SSOT append-only·도메인 린트).
+- **호스트 비침습** — Claude Code 설정/코어를 수정하지 않음. 마켓플레이스에서
+  설치·활성/비활성만.
+- **wilson on-ramp** — Claude Code에서 wilson governance를 맛보고 풀
+  `wilson`(hexa-native · plugin-everything)으로 졸업하는 진입로.
+
+## Plugins
+
+| 플러그인 | CC hook | 동작 |
+|---|---|---|
+| `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 위험 경로·SSOT append-only·도메인 린트 위반 차단 |
+| `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) |
+
+로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
+`wilson-recap`(PreCompact/SessionEnd 요약).
+
+## Install (사용자)
+
+```bash
+/plugin marketplace add dancinlab/sidecar
+/plugin install wilson-guards@sidecar
+/plugin install wilson-ssot@sidecar
+```
+
+## Status
+
+**v0.0.0 — scaffold.** 마켓플레이스/플러그인 매니페스트·hook 배선은 자리잡았으나
+`bin/` 래퍼는 **스텁**입니다(현재 passthrough + TODO 명시). wilson은 단일
+정적 바이너리(플러그인 dispatch는 내부 ABI)라, 실제 이식 경로는 두 갈래 중 결정:
+
+1. **harness-rpc 경유** — wilson의 `harness-rpc`(JSONL stdin/stdout) 모드로 특정
+   plugin action을 호출하는 얇은 래퍼.
+2. **standalone 포팅** — guard 술어(predicate)만 떼어 hexa/shell로 재구현
+   (wilson 바이너리 의존 제거, 마켓플레이스 단독 동작).
+
+결정 전까지 hook은 deny 없이 통과 — 가짜 차단으로 사용자를 오도하지 않음(정직).
+
+## Repo layout
+
+```
+sidecar/
+├── .claude-plugin/marketplace.json   # 마켓플레이스 매니페스트
+├── plugins/
+│   ├── wilson-guards/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # PreToolUse 배선
+│   │   └── bin/guard.sh              # 스텁 (TODO: wilson 이식)
+│   └── wilson-ssot/
+│       ├── .claude-plugin/plugin.json
+│       ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 배선
+│       └── bin/ssot.sh               # AGENTS.md walk-up (작동)
+└── LICENSE
+```
+
+## Sibling
+
+- 🐦 [`dancinlab/wilson`](https://github.com/dancinlab/wilson) — hexa-native AI 코딩 에이전트. sidecar가 이식하는 가드의 원본.
+
+## License
+
+MIT. See [LICENSE](LICENSE).

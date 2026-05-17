@@ -1,0 +1,20 @@
+{
+  "name": "sidecar",
+  "owner": { "name": "dancinlab" },
+  "description": "Battle-tested guardrails for Claude Code, ported from the hexa-native agent wilson.",
+  "metadata": { "pluginRoot": "./plugins" },
+  "plugins": [
+    {
+      "name": "wilson-guards",
+      "source": "./plugins/wilson-guards",
+      "description": "PreToolUse guardrails — dangerous-path / SSOT append-only / domain-lint denial, ported from wilson governance + guard-* plugins.",
+      "version": "0.0.0"
+    },
+    {
+      "name": "wilson-ssot",
+      "source": "./plugins/wilson-ssot",
+      "description": "AGENTS.md walk-up SSOT injected at SessionStart / UserPromptSubmit (wilson agents-md plugin equivalent).",
+      "version": "0.0.0"
+    }
+  ]
+}

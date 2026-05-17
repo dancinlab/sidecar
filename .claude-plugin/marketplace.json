@@ -77,6 +77,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-gpu",
+      "source": "./plugins/wilson-gpu",
+      "description": "Rented-GPU cost guardrail + lifecycle for RunPod / Vast.ai. SessionStart surfaces every still-billing instance (uptime + estimated cost so far) so a forgotten pod never leaks money; /wilson-gpu down is the kill switch and attach wires an instance straight into the wilson-pool roster. Provisioning (up) is a SEPARATE switch, OFF by default — up needs provisioning ON *and* --yes (double gate on the money action). Inert unless runpodctl / vastai is on PATH. Opt out: SIDECAR_NO_GPU=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
       "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",

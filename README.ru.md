@@ -51,8 +51,9 @@
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Переписывает Bash-команду (`updatedInput`), чтобы stdout прошёл фильтр TF-IDF значимости + MinHash дедупликации до попадания в модель — порт духа wilson `compaction-prefilter`, **работает** (малый вывод дословно · код выхода сохранён через `pipefail`) |
 | `wilson-pool` | команда `/wilson-pool:pool` + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | Маршрутизирует тяжёлые Bash-команды на **ростер удалённых хостов** по ssh — у каждого хоста тег платформы, поэтому macOS-only / Linux-only команда идёт на хост этой платформы, остальное распределяется round-robin — порт духа ростера wilson `pool`, **работает**. ⚠ OFF, пока в ростере нет ≥1 хоста и не задан workdir (`workdir auto` зеркалит текущий проект на хостах) · только Bash · синхронизация удалённого workdir на каждом хосте — **ответственность пользователя** (CC-хук не может смонтировать fs, как 9P/sshfs у wilson) |
 | `wilson-checkpoint` | `Stop`·`PreCompact`·`SessionEnd`·`SessionStart` | Не терять работу из-за лимита / краша — каждый ход `git stash create` снимок WIP (dangling-коммит · рабочее дерево/индекс/ветки нетронуты), закреплён в `refs/wilson-checkpoint/` + resume-заметка; `SessionStart` переинъецирует непогашенный снимок. `/wilson-checkpoint:checkpoint` для status/restore/clear (restore только печатается · не применяется автоматически) — **работает** · только git · с дебаунсом (opt out: `SIDECAR_NO_CHECKPOINT=1`) |
+| `wilson-gpu` | команда `/wilson-gpu` + `SessionStart` | Гардрейл расходов на арендованный GPU для RunPod / Vast.ai — `SessionStart` показывает каждый ещё тарифицируемый инстанс (аптайм + накопленная оценка стоимости), чтобы забытый pod не сливал деньги; `down` — аварийный стоп, `attach` подключает инстанс в ростер `wilson-pool`. Провижининг (`up`) — **отдельный переключатель, по умолчанию OFF** — `up` требует provisioning ON **и** `--yes` (двойной шлюз). **работает** · INERT, если `runpodctl`/`vastai` нет в PATH (opt out: `SIDECAR_NO_GPU=1`) |
 | `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → канонические серверы из repo каждого формата (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, поставляются в `github.com/dancinlab/{tape,n6,hxc,kosmos}`). graceful — сервер не в PATH просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
-| `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
+| `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
 | `worktree-pr` | команда `/worktree-pr:wt` (workflow) | Безопасный процесс **worktree → PR → merge → очистка** — `start <name>` (изолированный worktree+ветка от ветки origin по умолчанию), `ship <name> "<title>"` (push + открыть PR), `finish <name>` (merge PR + удалить worktree + удалить ветку + обновить base), `status`, `abort`. Никогда не трогает основное рабочее дерево или ветку параллельной сессии |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
@@ -77,6 +78,7 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
 /plugin install wilson-output-trim@sidecar     # фильтр значимости Bash stdout
 /plugin install wilson-pool@sidecar            # тяжёлый Bash → на удалённый хост
 /plugin install wilson-checkpoint@sidecar      # снимок WIP каждый ход (защита от лимита/краша)
+/plugin install wilson-gpu@sidecar             # гардрейл расходов RunPod/Vast + аварийный стоп
 /plugin install wilson-lsp@sidecar             # LSP для .hexa / .tape / .n6 / .hxc / .kosmos
 /plugin install worktree-pr@sidecar            # команда-workflow /worktree-pr:wt
 /plugin install sidecar@sidecar                # /sidecar — рантайм on/off контроль
@@ -114,6 +116,7 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
     "wilson-output-trim@sidecar": true,
     "wilson-pool@sidecar": true,
     "wilson-checkpoint@sidecar": true,
+    "wilson-gpu@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -192,6 +195,12 @@ sidecar/
 │   │   ├── hooks/hooks.json          # Stop·PreCompact·SessionEnd·SessionStart
 │   │   ├── bin/checkpoint.sh         # точка входа hook + команды
 │   │   └── bin/_checkpoint.py        # снимок/восстановление WIP через git-stash (работает)
+│   ├── wilson-gpu/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/gpu.md           # /wilson-gpu
+│   │   ├── hooks/hooks.json          # SessionStart (гардрейл расходов)
+│   │   ├── bin/gpu.sh                # точка входа hook + команды
+│   │   └── bin/_gpu.py               # адаптеры RunPod/Vast + гардрейл (работает)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + LSP repo tape/n6/hxc/kosmos

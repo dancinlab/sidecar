@@ -51,8 +51,9 @@ primitives 1:1.
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Rewrites a Bash command (`updatedInput`) so stdout passes a TF-IDF salience + MinHash near-dup filter before the model ingests it — spirit-port of wilson `compaction-prefilter`, **working** (small output verbatim; exit code preserved via `pipefail`) |
 | `wilson-pool` | `/wilson-pool:pool` command + `PreToolUse` (`Bash`) + `SessionStart`·`UserPromptSubmit` | Route heavy Bash commands to a remote **host roster** via ssh — each host is platform-tagged, so a macOS-only / Linux-only command goes to a host of that platform and the rest is round-robined — spirit-port of wilson's `pool` roster, **working**. ⚠ OFF until the roster has ≥1 host + workdir set (`workdir auto` mirrors the current project across hosts); only Bash is routed; **you** keep the remote workdir synced on every host (a CC hook can't mount the fs like wilson's 9P/sshfs) |
 | `wilson-checkpoint` | `Stop`·`PreCompact`·`SessionEnd`·`SessionStart` | Never lose work to a usage limit / crash — every turn, `git stash create` snapshots WIP (a dangling commit; working tree / index / branches untouched), pinned under `refs/wilson-checkpoint/`, + a resume note; `SessionStart` re-injects an unconsumed snapshot. `/wilson-checkpoint:checkpoint` to status/restore/clear (restore is printed, never auto-applied) — **working**, git-only, debounced (opt out: `SIDECAR_NO_CHECKPOINT=1`) |
+| `wilson-gpu` | `/wilson-gpu` command + `SessionStart` | Rented-GPU cost guardrail for RunPod / Vast.ai — `SessionStart` surfaces every still-billing instance (uptime + ~cost so far) so a forgotten pod never leaks money; `down` is the kill switch, `attach` wires an instance into the `wilson-pool` roster. Provisioning (`up`) is a **separate switch, OFF by default** — `up` needs provisioning ON *and* `--yes` (double gate). **working**, inert unless `runpodctl`/`vastai` on PATH (opt out: `SIDECAR_NO_GPU=1`) |
 | `wilson-lsp` | `.lsp.json` LSP servers (not a hook) | Wires `.hexa` → `hexa lsp` and `.tape`·`.n6`·`.hxc`·`.kosmos` → the canonical per-repo servers (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, shipped in `github.com/dancinlab/{tape,n6,hxc,kosmos}`). Graceful — a server not on PATH just shows in `/plugin` Errors. LSP lifecycle is CC-managed (toggle via `/plugin`, not `/sidecar`) |
-| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
+| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
 | `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
@@ -77,6 +78,7 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 /plugin install wilson-output-trim@sidecar      # Bash stdout salience filter
 /plugin install wilson-pool@sidecar             # route heavy Bash to a remote host
 /plugin install wilson-checkpoint@sidecar       # WIP snapshot every turn (limit/crash safe)
+/plugin install wilson-gpu@sidecar              # RunPod/Vast cost guardrail + kill switch
 /plugin install wilson-lsp@sidecar              # LSP for .hexa / .tape / .n6 / .hxc / .kosmos
 /plugin install worktree-pr@sidecar             # /worktree-pr:wt workflow command
 /plugin install sidecar@sidecar                 # /sidecar runtime on/off control
@@ -114,6 +116,7 @@ plugin on the next start:
     "wilson-output-trim@sidecar": true,
     "wilson-pool@sidecar": true,
     "wilson-checkpoint@sidecar": true,
+    "wilson-gpu@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -123,7 +126,7 @@ plugin on the next start:
 
 ## Status
 
-**v0.1.0 — twelve plugins working.** `wilson-guards` (ssot-lock /
+**v0.1.0 — thirteen plugins working.** `wilson-guards` (ssot-lock /
 tape-append-only / domain-lint bundle, inert unless its convention is
 present), `wilson-ssot` (AGENTS.md walk-up),
 `wilson-readme-format` (4-lint README guard, faithful standalone port of
@@ -138,7 +141,9 @@ slash command → persisted language/style, injected as context),
 `PreToolUse updatedInput`), `wilson-pool` (heavy Bash → a
 platform-tagged remote host roster, user-synced workdir), and
 `wilson-checkpoint` (every-turn `git stash create` WIP snapshot so a
-usage limit / crash never loses work) **work**, plus
+usage limit / crash never loses work), and `wilson-gpu` (RunPod/Vast
+rented-GPU cost guardrail + kill switch; provisioning behind a separate
+off-by-default switch) **work**, plus
 `wilson-lsp` (wires LSP — `.hexa`
 via `hexa lsp`; `.tape`/`.n6`/`.hxc`/`.kosmos` via the canonical per-repo
 servers) and the `sidecar` **control plugin**
@@ -218,6 +223,12 @@ sidecar/
 │   │   ├── hooks/hooks.json          # Stop·PreCompact·SessionEnd·SessionStart
 │   │   ├── bin/checkpoint.sh         # hook + command entrypoint
 │   │   └── bin/_checkpoint.py        # git-stash WIP snapshot/restore (working)
+│   ├── wilson-gpu/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/gpu.md           # /wilson-gpu
+│   │   ├── hooks/hooks.json          # SessionStart (cost guardrail)
+│   │   ├── bin/gpu.sh                # hook + command entrypoint
+│   │   └── bin/_gpu.py               # RunPod/Vast adapters + guardrail (working)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # wires hexa lsp + tape/n6/hxc/kosmos repo LSPs

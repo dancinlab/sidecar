@@ -45,19 +45,24 @@ if not hosts or not workdir:
     sys.exit(0)
 
 roster = ", ".join("%s (%s)" % (h["host"], h["platform"]) for h in hosts)
+if workdir.lower() == "auto":
+    wd_desc = ("mirrored — the current project's path under your home "
+               "(`~/<rel>`) on each host")
+else:
+    wd_desc = "`%s`" % workdir
 ctx = (
     "## Pool\n\n"
     "- Heavy Bash commands (build/test/compile/GPU) are auto-routed over "
     "ssh by the wilson-pool plugin to one of: **%s**.\n"
     "- Host selection: a macOS-only or Linux-only command goes to a host "
     "of that platform; otherwise the load is round-robined across the "
-    "roster. Remote workdir: `%s`.\n"
+    "roster. Remote workdir: %s.\n"
     "- The remote workdir is assumed to be a user-synced copy of this "
     "project on EVERY roster host — this plugin does NOT sync filesystems. "
     "Do not assume local file edits are visible remotely until the user "
     "has synced them.\n"
     "- Read/Write/Edit/Grep stay LOCAL (only Bash is routed).\n"
-    % (roster, workdir)
+    % (roster, wd_desc)
 )
 print(json.dumps({
     "hookSpecificOutput": {"hookEventName": event, "additionalContext": ctx}

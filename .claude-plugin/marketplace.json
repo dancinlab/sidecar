@@ -67,8 +67,8 @@
     {
       "name": "wilson-pool",
       "source": "./plugins/wilson-pool",
-      "description": "Route heavy Bash commands to a remote host roster via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Each host carries a platform tag — a macOS-only or Linux-only command is sent to a host of that platform, otherwise the load is round-robined across the roster. Spirit-port of wilson's pool roster. CAVEAT: a CC hook cannot mount the caller fs (wilson uses 9P/sshfs) — the user must keep the remote workdir synced on every roster host; routing is OFF until the roster has >=1 host AND workdir is set; only Bash is routed.",
-      "version": "0.2.0"
+      "description": "Route heavy Bash commands to a remote host roster via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Each host carries a platform tag — a macOS-only or Linux-only command is sent to a host of that platform, otherwise the load is round-robined across the roster. workdir may be explicit or `auto` (mirror the current project — a local ~/<rel> path runs at ~/<rel> on each host, so one setting works across roster hosts with different usernames), with an optional fallback path. Spirit-port of wilson's pool roster. CAVEAT: a CC hook cannot mount the caller fs (wilson uses 9P/sshfs) — the user must keep the remote workdir synced on every roster host; routing is OFF until the roster has >=1 host AND workdir is set; only Bash is routed.",
+      "version": "0.3.0"
     },
     {
       "name": "wilson-lsp",

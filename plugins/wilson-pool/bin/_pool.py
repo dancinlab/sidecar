@@ -77,7 +77,7 @@ def show():
     if not hs and not d:
         print("sidecar/wilson-pool: not configured. Routing OFF.")
         print("Set: /wilson-pool:pool add <ssh-target> [linux|macos]  "
-              "then  workdir <remote-path>")
+              "then  workdir <remote-path|auto>")
         return
     print("sidecar/wilson-pool — roster:")
     if hs:
@@ -85,7 +85,15 @@ def show():
             print("  %-20s %s" % (h["host"], h["platform"]))
     else:
         print("  (no hosts — add one: /wilson-pool:pool add <ssh-target>)")
-    print("  workdir:  %s" % (d.get("workdir") or "(unset)"))
+    wd = (d.get("workdir") or "").strip()
+    fb = (d.get("workdir_fallback") or "").strip()
+    if wd.lower() == "auto":
+        print("  workdir:  auto (mirrors the current project — a local "
+              "~/<rel> path runs at ~/<rel> on each host)")
+        print("  fallback: %s" % (fb or "(none — cwd outside home → "
+                                  "runs local)"))
+    else:
+        print("  workdir:  %s" % (wd or "(unset)"))
     print("  patterns: %s" % (d.get("patterns") or "(default)"))
     print("  routing:  %s" % (
         "ARMED — heavy Bash -> ssh (round-robin; macOS-only -> macos host)"
@@ -145,11 +153,13 @@ def main():
               "host(s)." % (target, len(hs)))
         return
 
-    keymap = {"workdir": "workdir", "patterns": "patterns"}
+    keymap = {"workdir": "workdir", "fallback": "workdir_fallback",
+              "patterns": "patterns"}
     if cmd not in keymap:
         print("sidecar/wilson-pool: unknown subcommand %r. Use: show | "
-              "add <target> [linux|macos] | rm <target> | workdir <path> "
-              "| patterns <re> | off" % cmd)
+              "add <target> [linux|macos] | rm <target> | "
+              "workdir <path|auto> | fallback <path> | patterns <re> | off"
+              % cmd)
         return
     if len(args) < 2 or not args[1].strip():
         print("sidecar/wilson-pool: `%s` needs a value." % cmd)

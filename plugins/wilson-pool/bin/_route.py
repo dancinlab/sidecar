@@ -70,6 +70,41 @@ def roster(cfg):
     return out
 
 
+def cd_target(wd):
+    """Quote a workdir for a remote `cd`, but keep a leading ~ UNquoted so
+    the remote shell still expands it to that host's own home — essential
+    when roster hosts have different usernames."""
+    if wd == "~":
+        return "~"
+    if wd.startswith("~/"):
+        return "~/" + shlex.quote(wd[2:])
+    return shlex.quote(wd)
+
+
+def resolve_workdir(cfg, payload):
+    """Resolve the remote workdir.
+      - an explicit `workdir` is used verbatim;
+      - `workdir: auto` mirrors the current project — a local <home>/<rel>
+        path maps to the remote `~/<rel>` (so `~` expands per host);
+      - when `auto` cannot mirror (cwd outside the local home), the
+        designated `workdir_fallback` is used if set, else None (run local).
+    """
+    workdir = (cfg.get("workdir") or "").strip()
+    fallback = (cfg.get("workdir_fallback") or "").strip()
+    if workdir.lower() != "auto":
+        return workdir or None
+    cwd = payload.get("cwd") or os.getcwd()
+    try:
+        rel = os.path.relpath(os.path.abspath(cwd), os.path.expanduser("~"))
+    except Exception:
+        rel = os.pardir
+    if rel == os.curdir:
+        return "~"
+    if not rel.startswith(".."):
+        return "~/" + rel
+    return fallback or None        # auto could not mirror → designated path
+
+
 if os.environ.get("SIDECAR_NO_POOL") == "1":
     allow()
 try:
@@ -136,7 +171,11 @@ except Exception:
     pass
 host = pick["host"]
 
-remote = "cd %s && %s" % (shlex.quote(workdir), cmd)
+wd_remote = resolve_workdir(cfg, payload)
+if not wd_remote:                  # auto mode + cwd outside home, no fallback
+    allow()
+
+remote = "cd %s && %s" % (cd_target(wd_remote), cmd)
 new_cmd = "ssh %s %s  # %s" % (shlex.quote(host), shlex.quote(remote), MARK)
 
 print(json.dumps({
@@ -146,7 +185,7 @@ print(json.dumps({
         "additionalContext": (
             "wilson-pool: routed this heavy command to %s:%s via ssh "
             "(%s; %d-host roster; remote workdir is user-synced)."
-            % (host, workdir, why, len(hosts))
+            % (host, wd_remote, why, len(hosts))
         ),
     }
 }))

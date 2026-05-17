@@ -1,0 +1,9 @@
+{
+  "name": "sidecar",
+  "description": "Control plugin: /sidecar status|on|off <name> toggles the other sidecar plugins at runtime via a shared state file (~/.claude/sidecar/disabled.json). Each sidecar plugin's hook checks it and no-ops when disabled. Persists across sessions; complements (does not replace) the native /plugin manager.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "control", "toggle", "sidecar"]
+}

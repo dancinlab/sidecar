@@ -45,6 +45,7 @@ primitives 1:1.
 | `wilson-prefs` | `/wilson-prefs:prefs` command + `SessionStart`·`UserPromptSubmit` | Set reply language / code language / response style; persisted to plugin data, injected as context. Standalone port of wilson `prefs` — **working** (injects nothing until you set one) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Rewrites a Bash command (`updatedInput`) so stdout passes a TF-IDF salience + MinHash near-dup filter before the model ingests it — spirit-port of wilson `compaction-prefilter`, **working** (small output verbatim; exit code preserved via `pipefail`) |
 | `wilson-pool` | `/wilson-pool:pool` command + `PreToolUse` (`Bash`) + `SessionStart`·`UserPromptSubmit` | Route heavy Bash commands to a remote host via ssh — spirit-port of wilson `pool`, **working**. ⚠ OFF until host+workdir set; only Bash is routed; **you** keep the remote workdir synced (a CC hook can't mount the fs like wilson's 9P/sshfs) |
+| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format prefs output-trim pool guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 `wilson-recap` (PreCompact/SessionEnd summarization).
@@ -65,7 +66,9 @@ wilson's `guard-readme-format`), `wilson-prefs` (`/wilson-prefs:prefs`
 slash command → persisted language/style, injected as context),
 `wilson-output-trim` (Bash stdout → TF-IDF/MinHash salience filter via
 `PreToolUse updatedInput`), and `wilson-pool` (heavy Bash → remote ssh,
-user-synced workdir) **work**. `wilson-guards` is still a **stub**
+user-synced workdir) **work**, plus the `sidecar` **control plugin**
+(`/sidecar off <name>` toggles any of them at runtime, persists,
+complements `/plugin`). `wilson-guards` is still a **stub**
 (passthrough — never fabricates fake blocks). Because wilson is a single static
 binary (plugin dispatch is an internal ABI), the remaining `wilson-guards` port
 path is one of two, to be decided:
@@ -109,11 +112,14 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse (Bash) wiring
 │   │   ├── bin/_trim.py              # rewrites cmd via updatedInput (working)
 │   │   └── bin/_salience.py          # TF-IDF + MinHash filter (working)
-│   └── wilson-pool/
-│       ├── commands/pool.md          # /wilson-pool:pool slash command
-│       ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart wiring
-│       ├── bin/_route.py             # heavy cmd → ssh rewrite (working)
-│       └── bin/_inject.py            # ## Pool block (working)
+│   ├── wilson-pool/
+│   │   ├── commands/pool.md          # /wilson-pool:pool slash command
+│   │   ├── hooks/hooks.json          # PreToolUse(Bash)+SessionStart wiring
+│   │   ├── bin/_route.py             # heavy cmd → ssh rewrite (working)
+│   │   └── bin/_inject.py            # ## Pool block (working)
+│   └── sidecar/                      # control plugin
+│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│       └── bin/_sidecar.py           # writes shared disabled.json (working)
 └── LICENSE
 ```
 

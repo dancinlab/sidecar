@@ -19,4 +19,6 @@
 # TODO(sidecar): implement the chosen path; until then, allow (exit 0).
 
 cat >/dev/null   # drain stdin
+# sidecar control: this plugin is already a passthrough stub, so the
+# /sidecar guards toggle is a no-op until guards becomes a real guard.
 exit 0

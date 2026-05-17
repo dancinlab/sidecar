@@ -39,6 +39,12 @@
       "source": "./plugins/wilson-pool",
       "description": "Route heavy Bash commands to a remote pool host via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Spirit-port of wilson pool. CAVEAT: a CC hook cannot mount the caller fs (wilson uses 9P/sshfs) — the user must keep the remote workdir synced; routing is OFF until host AND workdir are set; only Bash is routed.",
       "version": "0.1.0"
+    },
+    {
+      "name": "sidecar",
+      "source": "./plugins/sidecar",
+      "description": "Control plugin: /sidecar status|on|off <name> toggles the other sidecar plugins at runtime via a shared state file (~/.claude/sidecar/disabled.json) every plugin's hook checks. Persists across sessions; complements the native /plugin manager.",
+      "version": "0.1.0"
     }
   ]
 }

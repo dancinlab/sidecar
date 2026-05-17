@@ -15,6 +15,17 @@
 #                       (also honors WILSON_NO_README_FORMAT_GUARD=1)
 import json, os, sys
 
+# sidecar control — no-op when /sidecar disabled this plugin
+try:
+    if "readme-format" in json.load(open(os.path.join(
+            os.path.expanduser("~"), ".claude", "sidecar",
+            "disabled.json"), encoding="utf-8")):
+        sys.exit(0)
+except SystemExit:
+    raise
+except Exception:
+    pass
+
 EVENT = "PreToolUse"
 
 

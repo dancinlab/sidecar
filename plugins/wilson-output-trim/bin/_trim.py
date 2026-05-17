@@ -13,6 +13,17 @@ import json
 import os
 import sys
 
+# sidecar control — no-op when /sidecar disabled this plugin
+try:
+    if "output-trim" in json.load(open(os.path.join(
+            os.path.expanduser("~"), ".claude", "sidecar",
+            "disabled.json"), encoding="utf-8")):
+        sys.exit(0)
+except SystemExit:
+    raise
+except Exception:
+    pass
+
 MARK = "__SIDECAR_TRIM__"
 
 

@@ -7,6 +7,17 @@ import json
 import os
 import sys
 
+# sidecar control — no-op when /sidecar disabled this plugin
+try:
+    if "pool" in json.load(open(os.path.join(
+            os.path.expanduser("~"), ".claude", "sidecar",
+            "disabled.json"), encoding="utf-8")):
+        sys.exit(0)
+except SystemExit:
+    raise
+except Exception:
+    pass
+
 try:
     payload = json.load(sys.stdin)
 except Exception:

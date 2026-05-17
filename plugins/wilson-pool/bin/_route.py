@@ -16,6 +16,17 @@ import re
 import shlex
 import sys
 
+# sidecar control — no-op when /sidecar disabled this plugin
+try:
+    if "pool" in json.load(open(os.path.join(
+            os.path.expanduser("~"), ".claude", "sidecar",
+            "disabled.json"), encoding="utf-8")):
+        sys.exit(0)
+except SystemExit:
+    raise
+except Exception:
+    pass
+
 MARK = "__SIDECAR_POOL__"
 DEFAULT_PATTERNS = (
     r"\b(make|cargo|npm|pnpm|yarn|gradle|mvn|bazel|cmake|ctest|tox|"

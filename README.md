@@ -45,11 +45,12 @@ primitives 1:1.
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI. PostToolUse: when `hexa verify` reports a new SUPPORTED equation (🔵/🟢), **opens a PR** to `dancinlab/hexa-lang` baking the equation into the binary built-in atlas (fills `hexa atlas promote`'s stubbed `pr` step; PR left for human review, never auto-merged) — falls back to prompting the `worktree-pr` workflow if the autonomous PR isn't possible. Standalone port + extension of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Deny Write/Edit/MultiEdit targeting a protected system path (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) or a credential path (`~/.ssh`, `~/.aws`, gh config, keychain, credentials) — standalone port of wilson `guard-dangerous-path`, **working** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | Deny force-push — a `git push` carrying `--force` / `-f` / a `+refspec` (and `--force-with-lease` unless `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`) is blocked — standalone port of wilson `git-guard`, **working** |
+| `wilson-secret-guard` | `PreToolUse` (`Write`/`Edit`/`MultiEdit`) + `UserPromptSubmit` | Deny writing a real `.env` file or content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys); block a prompt that pastes one — high-confidence patterns only, near-zero false positives, **working** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
 | `wilson-prefs` | `/wilson-prefs:prefs` command + `SessionStart`·`UserPromptSubmit` | Set reply language / code language / response style; persisted to plugin data, injected as context. Standalone port of wilson `prefs` — **working** (injects nothing until you set one) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Rewrites a Bash command (`updatedInput`) so stdout passes a TF-IDF salience + MinHash near-dup filter before the model ingests it — spirit-port of wilson `compaction-prefilter`, **working** (small output verbatim; exit code preserved via `pipefail`) |
 | `wilson-pool` | `/wilson-pool:pool` command + `PreToolUse` (`Bash`) + `SessionStart`·`UserPromptSubmit` | Route heavy Bash commands to a remote host via ssh — spirit-port of wilson `pool`, **working**. ⚠ OFF until host+workdir set; only Bash is routed; **you** keep the remote workdir synced (a CC hook can't mount the fs like wilson's 9P/sshfs) |
 | `wilson-lsp` | `.lsp.json` LSP servers (not a hook) | Wires `.hexa` → `hexa lsp` and `.tape`·`.n6`·`.hxc`·`.kosmos` → the canonical per-repo servers (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, shipped in `github.com/dancinlab/{tape,n6,hxc,kosmos}`). Graceful — a server not on PATH just shows in `/plugin` Errors. LSP lifecycle is CC-managed (toggle via `/plugin`, not `/sidecar`) |
-| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard prefs output-trim pool guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
+| `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard prefs output-trim pool guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
 | `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
@@ -65,12 +66,13 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 
 ## Status
 
-**v0.1.0 — eight plugins working.** `wilson-ssot` (AGENTS.md walk-up),
+**v0.1.0 — nine plugins working.** `wilson-ssot` (AGENTS.md walk-up),
 `wilson-readme-format` (4-lint README guard, faithful standalone port of
 wilson's `guard-readme-format`), `wilson-hexa-verify` (non-hexa-verifier
 Bash guard, inert without `hexa`), `wilson-dangerous-path` (protected
 system / credential path guard), `wilson-git-guard` (force-push guard),
-`wilson-prefs` (`/wilson-prefs:prefs`
+`wilson-secret-guard` (block live secrets / `.env` writes / pasted
+credentials), `wilson-prefs` (`/wilson-prefs:prefs`
 slash command → persisted language/style, injected as context),
 `wilson-output-trim` (Bash stdout → TF-IDF/MinHash salience filter via
 `PreToolUse updatedInput`), and `wilson-pool` (heavy Bash → remote ssh,
@@ -123,6 +125,11 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse (Bash) wiring
 │   │   └── bin/_git_guard.py         # force-push guard (working)
+│   ├── wilson-secret-guard/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # PreToolUse(Write|Edit)+UserPromptSubmit
+│   │   ├── bin/secret-guard.sh       # hook wrapper
+│   │   └── bin/_secret_guard.py      # .env + credential-token guard (working)
 │   ├── wilson-prefs/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── commands/prefs.md         # /wilson-prefs:prefs slash command

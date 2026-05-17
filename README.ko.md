@@ -49,8 +49,9 @@
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash 명령을 재작성(`updatedInput`)해 stdout이 TF-IDF salience + MinHash 중복제거 필터를 거친 뒤 모델에 들어가게 함 — wilson `compaction-prefilter` 정신 포팅, **작동** (작은 출력 verbatim · exit code `pipefail`로 보존) |
 | `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 **호스트 roster**로 ssh 라우팅 — 호스트마다 platform 태그가 있어 macOS 전용·Linux 전용 명령은 해당 플랫폼 호스트로, 나머지는 round-robin 분산 — wilson `pool` roster 정신 포팅, **작동**. ⚠ roster에 호스트 1개+workdir 설정 전 OFF (`workdir auto`는 현재 프로젝트를 호스트별 미러링) · Bash만 라우팅 · 모든 호스트의 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
 | `wilson-checkpoint` | `Stop`·`PreCompact`·`SessionEnd`·`SessionStart` | usage limit / 크래시에도 작업 무손실 — 매 턴 `git stash create`로 WIP 스냅샷(dangling commit · 워킹트리/index/브랜치 무접촉), `refs/wilson-checkpoint/`에 고정 + resume 노트; `SessionStart`가 미소비 스냅샷 재주입. `/wilson-checkpoint:checkpoint`로 status/restore/clear (restore는 출력만 · 자동 적용 안 함) — **작동** · git 전용 · 디바운스 (opt out: `SIDECAR_NO_CHECKPOINT=1`) |
+| `wilson-gpu` | `/wilson-gpu` 커맨드 + `SessionStart` | RunPod / Vast.ai 렌트 GPU 비용 가드레일 — `SessionStart`가 과금중 인스턴스(업타임 + 누적 추정비용) 노출 → 잊은 pod 비용누수 차단; `down` kill 스위치, `attach`는 인스턴스를 `wilson-pool` roster에 연결. provisioning(`up`)은 **별도 스위치 · 기본 OFF** — `up`은 provisioning ON **+** `--yes` 이중 게이트. **작동** · `runpodctl`/`vastai` 없으면 inert (opt out: `SIDECAR_NO_GPU=1`) |
 | `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
-| `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
+| `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
 | `worktree-pr` | `/worktree-pr:wt` 커맨드 (워크플로) | 안전한 **worktree → PR → merge → 정리** 워크플로 — `start <name>`(origin 기본 브랜치에서 격리 worktree+브랜치), `ship <name> "<title>"`(push + PR 생성), `finish <name>`(PR merge + worktree 제거 + 브랜치 삭제 + base 갱신), `status`, `abort`. 메인 워킹트리·동시세션 브랜치 무접촉 |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
@@ -75,6 +76,7 @@
 /plugin install wilson-output-trim@sidecar     # Bash stdout salience 필터
 /plugin install wilson-pool@sidecar            # 무거운 Bash → 원격 호스트 라우팅
 /plugin install wilson-checkpoint@sidecar      # 매 턴 WIP 스냅샷 (limit/크래시 안전)
+/plugin install wilson-gpu@sidecar             # RunPod/Vast 비용 가드레일 + kill 스위치
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
 /plugin install worktree-pr@sidecar            # /worktree-pr:wt 워크플로 커맨드
 /plugin install sidecar@sidecar                # /sidecar 런타임 on/off 컨트롤
@@ -111,6 +113,7 @@
     "wilson-output-trim@sidecar": true,
     "wilson-pool@sidecar": true,
     "wilson-checkpoint@sidecar": true,
+    "wilson-gpu@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -188,6 +191,12 @@ sidecar/
 │   │   ├── hooks/hooks.json          # Stop·PreCompact·SessionEnd·SessionStart
 │   │   ├── bin/checkpoint.sh         # hook + 커맨드 엔트리포인트
 │   │   └── bin/_checkpoint.py        # git-stash WIP 스냅샷/복구 (작동)
+│   ├── wilson-gpu/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/gpu.md           # /wilson-gpu
+│   │   ├── hooks/hooks.json          # SessionStart (비용 가드레일)
+│   │   ├── bin/gpu.sh                # hook + 커맨드 엔트리포인트
+│   │   └── bin/_gpu.py               # RunPod/Vast 어댑터 + 가드레일 (작동)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 연결

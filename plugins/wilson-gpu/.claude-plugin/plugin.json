@@ -1,0 +1,9 @@
+{
+  "name": "wilson-gpu",
+  "description": "Rented-GPU cost guardrail + lifecycle for RunPod / Vast.ai. SessionStart surfaces every still-billing instance (uptime + estimated cost so far) so a forgotten pod never leaks money; /wilson-gpu is the kill switch (down) and wires an instance straight into the wilson-pool roster (attach). Provisioning (up) is a SEPARATE switch, OFF by default — `up` needs provisioning ON *and* --yes (double gate on the money action). Inert unless `runpodctl` / `vastai` is on PATH. Opt out: SIDECAR_NO_GPU=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "gpu", "runpod", "vast-ai", "cost-guardrail", "wilson"]
+}

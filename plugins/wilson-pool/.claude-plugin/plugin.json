@@ -1,7 +1,7 @@
 {
   "name": "wilson-pool",
-  "description": "Route heavy Bash commands to a remote pool host via ssh (PreToolUse updatedInput). Spirit-port of wilson's pool plugin. CAVEAT: Claude Code hooks cannot mount the caller filesystem (wilson uses 9P/sshfs) — YOU must keep the remote workdir in sync. Routing is OFF until both host and workdir are set; only the Bash tool is routed.",
-  "version": "0.1.0",
+  "description": "Route heavy Bash commands to a remote host roster via ssh (PreToolUse updatedInput). Each host carries a platform tag — a macOS-only or Linux-only command is sent to a host of that platform, otherwise the load is round-robined across the roster. Spirit-port of wilson's pool roster. CAVEAT: Claude Code hooks cannot mount the caller filesystem (wilson uses 9P/sshfs) — YOU must keep the remote workdir in sync on every roster host. Routing is OFF until the roster has >=1 host AND workdir is set; only the Bash tool is routed.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

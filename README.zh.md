@@ -48,8 +48,9 @@
 | `wilson-prefs` | `/wilson-prefs:prefs` 命令 + `SessionStart`·`UserPromptSubmit` | 设置回复语言 / 代码语言 / 回复风格 —— 语言值可用 `auto`（镜像用户所用语言）→ 持久化到插件数据，注入上下文。wilson `prefs` 的独立移植 —— **可用**（未设置前不注入任何内容） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | 重写 Bash 命令（`updatedInput`），让 stdout 先经 TF-IDF 显著性 + MinHash 去重过滤再进入模型 —— wilson `compaction-prefilter` 精神移植，**可用**（小输出原样 · 退出码经 `pipefail` 保留） |
 | `wilson-pool` | `/wilson-pool:pool` 命令 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 把重型 Bash 命令经 ssh 路由到远程**主机 roster** —— 每台主机带 platform 标签，macOS 专用 / Linux 专用命令送往对应平台主机，其余按 round-robin 分摊 —— wilson `pool` roster 精神移植，**可用**。⚠ roster 至少 1 台主机+workdir 设置前 OFF（`workdir auto` 跨主机镜像当前项目）· 仅 Bash · 所有主机的远程 workdir 同步由**用户负责**（CC hook 无法像 wilson 的 9P/sshfs 那样挂载 fs） |
+| `wilson-checkpoint` | `Stop`·`PreCompact`·`SessionEnd`·`SessionStart` | usage limit / 崩溃也不丢工作 —— 每轮 `git stash create` 快照 WIP（dangling commit · 工作树/index/分支无接触），固定到 `refs/wilson-checkpoint/` + resume 笔记;`SessionStart` 重新注入未消费快照。`/wilson-checkpoint:checkpoint` 进行 status/restore/clear（restore 仅打印 · 不自动应用）—— **可用** · 仅 git · 去抖（opt out: `SIDECAR_NO_CHECKPOINT=1`） |
 | `wilson-lsp` | `.lsp.json` LSP 服务器（非 hook） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 接到各格式 repo 的 canonical 服务器（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`，随 `github.com/dancinlab/{tape,n6,hxc,kosmos}` 提供）。graceful —— 不在 PATH 只在 `/plugin` Errors 显示。LSP 生命周期由 CC 管理（用 `/plugin` 切换，非 `/sidecar`） |
-| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
+| `sidecar` | `/sidecar` 命令（控制） | 其余插件的运行时 on/off —— `/sidecar status\|on\|off <name>`（名称: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint guards，或 `all`）。共享 `~/.claude/sidecar/disabled.json` 由各 hook 检查 · 跨会话持久 · 补充原生 `/plugin` |
 | `worktree-pr` | `/worktree-pr:wt` 命令（工作流） | 安全的 **worktree → PR → merge → 清理** 工作流 —— `start <name>`（从 origin 默认分支建隔离 worktree+分支）、`ship <name> "<title>"`（push + 开 PR）、`finish <name>`（合并 PR + 移除 worktree + 删除分支 + 刷新 base）、`status`、`abort`。绝不触碰主工作树或并行会话的分支 |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
@@ -73,6 +74,7 @@
 /plugin install wilson-prefs@sidecar           # 回复语言 / 代码 / 风格设置
 /plugin install wilson-output-trim@sidecar     # Bash stdout 显著性过滤
 /plugin install wilson-pool@sidecar            # 重型 Bash → 路由到远程主机
+/plugin install wilson-checkpoint@sidecar      # 每轮 WIP 快照 (limit/崩溃安全)
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
 /plugin install worktree-pr@sidecar            # /worktree-pr:wt 工作流命令
 /plugin install sidecar@sidecar                # /sidecar 运行时 on/off 控制
@@ -108,6 +110,7 @@
     "wilson-prefs@sidecar": true,
     "wilson-output-trim@sidecar": true,
     "wilson-pool@sidecar": true,
+    "wilson-checkpoint@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -178,6 +181,12 @@ sidecar/
 │   │   ├── bin/_pool.py              # 主机 roster / workdir 配置 (可用)
 │   │   ├── bin/_route.py             # platform 路由 ssh 重写 (可用)
 │   │   └── bin/_inject.py            # ## Pool 块 (可用)
+│   ├── wilson-checkpoint/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/checkpoint.md    # /wilson-checkpoint:checkpoint
+│   │   ├── hooks/hooks.json          # Stop·PreCompact·SessionEnd·SessionStart
+│   │   ├── bin/checkpoint.sh         # hook + 命令入口
+│   │   └── bin/_checkpoint.py        # git-stash WIP 快照/恢复 (可用)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # 接 hexa lsp + tape/n6/hxc/kosmos repo LSP

@@ -83,6 +83,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "wilson-decision-gate",
+      "source": "./plugins/wilson-decision-gate",
+      "description": "Step-by-step decision gate — multi-decision work is one user-confirmation gate per decision, never batched: for each branch point present options + recommendation + rationale (3+ bullets), wait for the pick, then record a `### Decision N` block in design.md. Standalone port of wilson's principle-step-by-step-decision-gate (text-only, like wilson — a hook can't detect batching either). SessionStart injects the principle once; UserPromptSubmit adds a short reminder ONLY on branch-point-looking prompts (not every prompt). /wilson-decision-gate maintains the design.md ledger; ships a 5-language canonical sample. Default ON; opt out: SIDECAR_NO_DECISION_GATE.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
       "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",

@@ -48,6 +48,7 @@
 | `wilson-pool` | `/wilson-pool:pool` 커맨드 + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 무거운 Bash 명령을 원격 호스트로 ssh 라우팅 — wilson `pool` 정신 포팅, **작동**. ⚠ host+workdir 설정 전 OFF · Bash만 라우팅 · 원격 workdir 동기화는 **사용자 책임**(CC hook은 wilson 9P/sshfs처럼 fs 마운트 불가) |
 | `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
 | `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify prefs output-trim pool guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
+| `worktree-pr` | `/worktree-pr:wt` 커맨드 (워크플로) | 안전한 **worktree → PR → merge → 정리** 워크플로 — `start <name>`(origin 기본 브랜치에서 격리 worktree+브랜치), `ship <name> "<title>"`(push + PR 생성), `finish <name>`(PR merge + worktree 제거 + 브랜치 삭제 + base 갱신), `status`, `abort`. 메인 워킹트리·동시세션 브랜치 무접촉 |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
 `wilson-recap`(PreCompact/SessionEnd 요약).
@@ -119,9 +120,12 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 연결
-│   └── sidecar/                      # 컨트롤 플러그인
-│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│       └── bin/_sidecar.py           # 공유 disabled.json 기록 (작동)
+│   ├── sidecar/                      # 컨트롤 플러그인
+│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│   │   └── bin/_sidecar.py           # 공유 disabled.json 기록 (작동)
+│   └── worktree-pr/
+│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
+│       └── bin/worktree-pr.sh        # worktree → PR → merge → 정리 (작동)
 └── LICENSE
 ```
 

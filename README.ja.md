@@ -50,6 +50,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-pool` | `/wilson-pool:pool` コマンド + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 重い Bash コマンドをリモートホストへ ssh ルーティング — wilson `pool` の精神移植、**動作**。⚠ host+workdir 設定まで OFF・Bash のみ・リモート workdir の同期は**ユーザー責任**（CC hook は wilson の 9P/sshfs のように fs マウント不可） |
 | `wilson-lsp` | `.lsp.json` LSP サーバ（hook ではない） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 各フォーマット repo の canonical サーバ（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`、`github.com/dancinlab/{tape,n6,hxc,kosmos}` 同梱）に接続。graceful — PATH に無ければ `/plugin` Errors に表示。LSP ライフサイクルは CC 管理（切替は `/plugin`、`/sidecar` ではない） |
 | `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify prefs output-trim pool guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
+| `worktree-pr` | `/worktree-pr:wt` コマンド（ワークフロー） | 安全な **worktree → PR → merge → クリーンアップ** ワークフロー — `start <name>`（origin 既定ブランチから隔離 worktree+ブランチ）、`ship <name> "<title>"`（push + PR 作成）、`finish <name>`（PR merge + worktree 削除 + ブランチ削除 + base 更新）、`status`、`abort`。メイン作業ツリー・並行セッションのブランチに非接触 |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
 `wilson-recap`（PreCompact/SessionEnd 要約）。
@@ -121,9 +122,12 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 接続
-│   └── sidecar/                      # コントロールプラグイン
-│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│       └── bin/_sidecar.py           # 共有 disabled.json 書込 (動作)
+│   ├── sidecar/                      # コントロールプラグイン
+│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│   │   └── bin/_sidecar.py           # 共有 disabled.json 書込 (動作)
+│   └── worktree-pr/
+│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
+│       └── bin/worktree-pr.sh        # worktree → PR → merge → 整理 (動作)
 └── LICENSE
 ```
 

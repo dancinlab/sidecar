@@ -69,6 +69,12 @@
       "source": "./plugins/sidecar",
       "description": "Control plugin: /sidecar status|on|off <name> toggles the other sidecar plugins at runtime via a shared state file (~/.claude/sidecar/disabled.json) every plugin's hook checks. Persists across sessions; complements the native /plugin manager.",
       "version": "0.1.0"
+    },
+    {
+      "name": "worktree-pr",
+      "source": "./plugins/worktree-pr",
+      "description": "Safe worktree -> PR -> merge -> cleanup workflow as the /worktree-pr:wt slash command. start makes an isolated worktree+branch off origin's default branch; ship pushes + opens a PR; finish merges the PR, removes the worktree, deletes the remote branch, refreshes the base. Never touches the main working tree or a concurrent session's branch.",
+      "version": "0.1.0"
     }
   ]
 }

@@ -46,11 +46,12 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | 保護システムパス（`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`）・資格情報パス（`~/.ssh`・`~/.aws`・gh config・keychain・credentials）への Write/Edit/MultiEdit を拒否 — wilson `guard-dangerous-path` の standalone 移植、**動作** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push を拒否 — `git push` に `--force`/`-f`/`+refspec`（および `--force-with-lease`、`SIDECAR_ALLOW_FORCE_WITH_LEASE=1` でなければ）が付くとブロック — wilson `git-guard` の standalone 移植、**動作** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | 実際の `.env` ファイルの書き込み、または高信頼クレデンシャル（AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe トークン、PEM 秘密鍵）を含む内容を拒否；そのクレデンシャルを貼り付けたプロンプトをブロック — 高信頼パターンのみ、誤検出ほぼゼロ、**動作**（opt out: `SIDECAR_NO_SECRET_GUARD=1`） |
+| `wilson-bash-guard` | `PreToolUse` (`Bash`) | 破壊的なシェルコマンドを拒否 — pipe-to-shell（`curl … \| sh`）、ルート/ホームパスの `rm -rf`、fork bomb、ディスク破壊（`dd of=/dev/disk`・`mkfs`・`>/dev/sd*`）、`/` `~` `.` への再帰 `chmod`/`chown` — 高信頼の破壊パターンのみ、誤検出ほぼゼロ、**動作**（opt out: `SIDECAR_NO_BASH_GUARD=1`） |
 | `wilson-prefs` | `/wilson-prefs:prefs` コマンド + `SessionStart`·`UserPromptSubmit` | 応答言語 / コード言語 / 応答スタイルを設定 → プラグインデータに永続化、コンテキスト注入。wilson `prefs` の standalone 移植 — **動作**（設定するまで何も注入しない） |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Bash コマンドを書き換え（`updatedInput`）、stdout を TF-IDF salience + MinHash 重複除去フィルタに通してからモデルに渡す — wilson `compaction-prefilter` の精神移植、**動作**（小出力は verbatim・exit code は `pipefail` で保持） |
 | `wilson-pool` | `/wilson-pool:pool` コマンド + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | 重い Bash コマンドをリモートホストへ ssh ルーティング — wilson `pool` の精神移植、**動作**。⚠ host+workdir 設定まで OFF・Bash のみ・リモート workdir の同期は**ユーザー責任**（CC hook は wilson の 9P/sshfs のように fs マウント不可） |
 | `wilson-lsp` | `.lsp.json` LSP サーバ（hook ではない） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 各フォーマット repo の canonical サーバ（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`、`github.com/dancinlab/{tape,n6,hxc,kosmos}` 同梱）に接続。graceful — PATH に無ければ `/plugin` Errors に表示。LSP ライフサイクルは CC 管理（切替は `/plugin`、`/sidecar` ではない） |
-| `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify dangerous-path git-guard secret-guard prefs output-trim pool guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
+| `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
 | `worktree-pr` | `/worktree-pr:wt` コマンド（ワークフロー） | 安全な **worktree → PR → merge → クリーンアップ** ワークフロー — `start <name>`（origin 既定ブランチから隔離 worktree+ブランチ）、`ship <name> "<title>"`（push + PR 作成）、`finish <name>`（PR merge + worktree 削除 + ブランチ削除 + base 更新）、`status`、`abort`。メイン作業ツリー・並行セッションのブランチに非接触 |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
@@ -111,6 +112,10 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse(Write|Edit)+UserPromptSubmit
 │   │   ├── bin/secret-guard.sh       # hook ラッパー
 │   │   └── bin/_secret_guard.py      # .env + クレデンシャルトークン ガード (動作)
+│   ├── wilson-bash-guard/
+│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 配線
+│   │   ├── bin/bash-guard.sh         # hook ラッパー
+│   │   └── bin/_bash_guard.py        # 破壊的コマンド ガード (動作)
 │   ├── wilson-prefs/
 │   │   ├── commands/prefs.md         # /wilson-prefs:prefs スラッシュコマンド
 │   │   ├── bin/_prefs.py             # 設定 set/show (動作)

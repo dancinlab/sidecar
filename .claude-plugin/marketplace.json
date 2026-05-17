@@ -53,6 +53,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-bash-guard",
+      "source": "./plugins/wilson-bash-guard",
+      "description": "Deny catastrophic Bash commands at PreToolUse — pipe-to-shell from a network downloader (curl|sh), `rm -rf` of a root/home path, fork bombs, disk destroyers (dd of=/dev/disk, mkfs, >/dev/sd*), and recursive chmod/chown on / ~ or `.`. High-confidence destructive patterns only — near-zero false positives. Complements wilson-git-guard (force-push) and wilson-dangerous-path (protected-path writes). Opt out: SIDECAR_NO_BASH_GUARD=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-output-trim",
       "source": "./plugins/wilson-output-trim",
       "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",

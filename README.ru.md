@@ -46,11 +46,12 @@
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Запрет Write/Edit/MultiEdit по защищённым системным путям (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) и путям учётных данных (`~/.ssh`·`~/.aws`·gh config·keychain·credentials) — standalone-порт wilson `guard-dangerous-path`, **работает** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | Запрет force-push — `git push` с `--force`/`-f`/`+refspec` (и `--force-with-lease`, если не задан `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`) блокируется — standalone-порт wilson `git-guard`, **работает** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | Запрет записи реального файла `.env` или контента с высоконадёжными учётными данными (токены AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe, приватные ключи PEM); блокирует промпт, в который вставлены такие данные — только высоконадёжные паттерны, почти ноль ложных срабатываний, **работает** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
+| `wilson-bash-guard` | `PreToolUse` (`Bash`) | Запрет катастрофических shell-команд — pipe-to-shell (`curl … \| sh`), `rm -rf` корневого/домашнего пути, fork bomb, разрушители диска (`dd of=/dev/disk`·`mkfs`·`>/dev/sd*`), рекурсивный `chmod`/`chown` по `/` `~` `.` — только высоконадёжные деструктивные паттерны, почти ноль ложных срабатываний, **работает** (opt out: `SIDECAR_NO_BASH_GUARD=1`) |
 | `wilson-prefs` | команда `/wilson-prefs:prefs` + `SessionStart`·`UserPromptSubmit` | Задаёт язык ответа / язык кода / стиль ответа → сохраняется в данных плагина, внедряется в контекст. Standalone-порт wilson `prefs` — **работает** (ничего не внедряет, пока не задано) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Переписывает Bash-команду (`updatedInput`), чтобы stdout прошёл фильтр TF-IDF значимости + MinHash дедупликации до попадания в модель — порт духа wilson `compaction-prefilter`, **работает** (малый вывод дословно · код выхода сохранён через `pipefail`) |
 | `wilson-pool` | команда `/wilson-pool:pool` + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | Маршрутизирует тяжёлые Bash-команды на удалённый хост по ssh — порт духа wilson `pool`, **работает**. ⚠ OFF, пока не заданы host+workdir · только Bash · синхронизация удалённого workdir — **ответственность пользователя** (CC-хук не может смонтировать fs, как 9P/sshfs у wilson) |
 | `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → канонические серверы из repo каждого формата (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, поставляются в `github.com/dancinlab/{tape,n6,hxc,kosmos}`). graceful — сервер не в PATH просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
-| `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard prefs output-trim pool guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
+| `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
 | `worktree-pr` | команда `/worktree-pr:wt` (workflow) | Безопасный процесс **worktree → PR → merge → очистка** — `start <name>` (изолированный worktree+ветка от ветки origin по умолчанию), `ship <name> "<title>"` (push + открыть PR), `finish <name>` (merge PR + удалить worktree + удалить ветку + обновить base), `status`, `abort`. Никогда не трогает основное рабочее дерево или ветку параллельной сессии |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
@@ -114,6 +115,10 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse(Write|Edit)+UserPromptSubmit
 │   │   ├── bin/secret-guard.sh       # обёртка hook
 │   │   └── bin/_secret_guard.py      # guard .env + токенов учётных данных (работает)
+│   ├── wilson-bash-guard/
+│   │   ├── hooks/hooks.json          # проводка PreToolUse (Bash)
+│   │   ├── bin/bash-guard.sh         # обёртка hook
+│   │   └── bin/_bash_guard.py        # guard катастрофических команд (работает)
 │   ├── wilson-prefs/
 │   │   ├── commands/prefs.md         # слэш-команда /wilson-prefs:prefs
 │   │   ├── bin/_prefs.py             # set/show настроек (работает)

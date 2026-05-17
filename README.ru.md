@@ -60,9 +60,62 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
 ## Install
 
 ```bash
+# 1. зарегистрировать маркетплейс
 /plugin marketplace add dancinlab/sidecar
-/plugin install wilson-guards@sidecar
-/plugin install wilson-ssot@sidecar
+
+# 2. установить нужные плагины — каждый независим
+/plugin install wilson-secret-guard@sidecar    # блок живых секретов / записи .env
+/plugin install wilson-bash-guard@sidecar      # блок катастрофических Bash-команд
+/plugin install wilson-dangerous-path@sidecar  # защита системных / credential путей
+/plugin install wilson-git-guard@sidecar       # блок force-push
+/plugin install wilson-readme-format@sidecar   # lint-guard для repo-root README
+/plugin install wilson-hexa-verify@sidecar     # не-hexa верификаторы → перенаправить на hexa
+/plugin install wilson-guards@sidecar          # бандл ssot-lock / tape / domain-lint
+/plugin install wilson-ssot@sidecar            # внедрение SSOT из AGENTS.md
+/plugin install wilson-prefs@sidecar           # язык ответа / код / стиль
+/plugin install wilson-output-trim@sidecar     # фильтр значимости Bash stdout
+/plugin install wilson-pool@sidecar            # тяжёлый Bash → на удалённый хост
+/plugin install wilson-lsp@sidecar             # LSP для .hexa / .tape / .n6 / .hxc / .kosmos
+/plugin install worktree-pr@sidecar            # команда-workflow /worktree-pr:wt
+/plugin install sidecar@sidecar                # /sidecar — рантайм on/off контроль
+```
+
+Просматривайте и переключайте плагины в любой момент через `/plugin`. После нового релиза обновляйтесь:
+
+```bash
+/plugin marketplace update sidecar
+/plugin update
+```
+
+### Включить всё сразу
+
+Вместо `/plugin install` для каждого плагина объявите маркетплейс и плагины в
+`settings.json` (`~/.claude/settings.json` — для всех проектов, `.claude/settings.json` —
+для одного) — Claude Code установит и включит все перечисленные плагины при следующем
+запуске:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "sidecar": { "source": { "source": "github", "repo": "dancinlab/sidecar" } }
+  },
+  "enabledPlugins": {
+    "wilson-secret-guard@sidecar": true,
+    "wilson-bash-guard@sidecar": true,
+    "wilson-dangerous-path@sidecar": true,
+    "wilson-git-guard@sidecar": true,
+    "wilson-readme-format@sidecar": true,
+    "wilson-hexa-verify@sidecar": true,
+    "wilson-guards@sidecar": true,
+    "wilson-ssot@sidecar": true,
+    "wilson-prefs@sidecar": true,
+    "wilson-output-trim@sidecar": true,
+    "wilson-pool@sidecar": true,
+    "wilson-lsp@sidecar": true,
+    "worktree-pr@sidecar": true,
+    "sidecar@sidecar": true
+  }
+}
 ```
 
 ## Status

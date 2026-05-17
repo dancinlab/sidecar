@@ -58,9 +58,61 @@
 ## Install
 
 ```bash
+# 1. 마켓플레이스 등록
 /plugin marketplace add dancinlab/sidecar
-/plugin install wilson-guards@sidecar
-/plugin install wilson-ssot@sidecar
+
+# 2. 원하는 플러그인 설치 — 각각 독립
+/plugin install wilson-secret-guard@sidecar    # 라이브 시크릿 / .env 쓰기 차단
+/plugin install wilson-bash-guard@sidecar      # 파괴적 Bash 명령 차단
+/plugin install wilson-dangerous-path@sidecar  # 시스템 / 자격증명 경로 보호
+/plugin install wilson-git-guard@sidecar       # force-push 차단
+/plugin install wilson-readme-format@sidecar   # repo-root README 린트 가드
+/plugin install wilson-hexa-verify@sidecar     # 비-hexa 검증기 → hexa 유도
+/plugin install wilson-guards@sidecar          # ssot-lock / tape / domain-lint 번들
+/plugin install wilson-ssot@sidecar            # AGENTS.md SSOT 주입
+/plugin install wilson-prefs@sidecar           # 응답언어 / 코드 / 스타일 설정
+/plugin install wilson-output-trim@sidecar     # Bash stdout salience 필터
+/plugin install wilson-pool@sidecar            # 무거운 Bash → 원격 호스트 라우팅
+/plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
+/plugin install worktree-pr@sidecar            # /worktree-pr:wt 워크플로 커맨드
+/plugin install sidecar@sidecar                # /sidecar 런타임 on/off 컨트롤
+```
+
+`/plugin`으로 언제든 둘러보거나 토글. 새 릴리스 후 업그레이드:
+
+```bash
+/plugin marketplace update sidecar
+/plugin update
+```
+
+### 한 번에 전부 설치
+
+`/plugin install`을 플러그인마다 치는 대신, `settings.json`(`~/.claude/settings.json`은
+모든 프로젝트, `.claude/settings.json`은 해당 프로젝트)에 마켓플레이스와 플러그인을
+선언하면 — Claude Code가 다음 시작 시 나열된 플러그인을 한 번에 설치·활성화합니다:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "sidecar": { "source": { "source": "github", "repo": "dancinlab/sidecar" } }
+  },
+  "enabledPlugins": {
+    "wilson-secret-guard@sidecar": true,
+    "wilson-bash-guard@sidecar": true,
+    "wilson-dangerous-path@sidecar": true,
+    "wilson-git-guard@sidecar": true,
+    "wilson-readme-format@sidecar": true,
+    "wilson-hexa-verify@sidecar": true,
+    "wilson-guards@sidecar": true,
+    "wilson-ssot@sidecar": true,
+    "wilson-prefs@sidecar": true,
+    "wilson-output-trim@sidecar": true,
+    "wilson-pool@sidecar": true,
+    "wilson-lsp@sidecar": true,
+    "worktree-pr@sidecar": true,
+    "sidecar@sidecar": true
+  }
+}
 ```
 
 ## Status

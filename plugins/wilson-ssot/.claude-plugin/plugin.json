@@ -5,6 +5,5 @@
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "hooks", "agents-md", "ssot", "wilson"],
-  "hooks": "./hooks/hooks.json"
+  "keywords": ["claude-code", "hooks", "agents-md", "ssot", "wilson"]
 }

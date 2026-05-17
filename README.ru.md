@@ -43,6 +43,7 @@
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) — **работает** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
 | `wilson-prefs` | команда `/wilson-prefs:prefs` + `SessionStart`·`UserPromptSubmit` | Задаёт язык ответа / язык кода / стиль ответа → сохраняется в данных плагина, внедряется в контекст. Standalone-порт wilson `prefs` — **работает** (ничего не внедряет, пока не задано) |
+| `wilson-output-trim` | `PreToolUse` (`Bash`) | Переписывает Bash-команду (`updatedInput`), чтобы stdout прошёл фильтр TF-IDF значимости + MinHash дедупликации до попадания в модель — порт духа wilson `compaction-prefilter`, **работает** (малый вывод дословно · код выхода сохранён через `pipefail`) |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
 SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
@@ -91,11 +92,15 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # проводка PreToolUse (Write|Edit)
 │   │   └── bin/_readme_format.py     # README-guard из 4 линтов (работает)
-│   └── wilson-prefs/
-│       ├── commands/prefs.md         # слэш-команда /wilson-prefs:prefs
-│       ├── bin/_prefs.py             # set/show настроек (работает)
-│       ├── bin/_inject.py            # внедрение настроек в контекст (работает)
-│       └── styles/friendly.{md,*.md} # образцы стиля ответа (5 языков, идентичны)
+│   ├── wilson-prefs/
+│   │   ├── commands/prefs.md         # слэш-команда /wilson-prefs:prefs
+│   │   ├── bin/_prefs.py             # set/show настроек (работает)
+│   │   ├── bin/_inject.py            # внедрение настроек в контекст (работает)
+│   │   └── styles/friendly.{md,*.md} # образцы стиля ответа (5 языков)
+│   └── wilson-output-trim/
+│       ├── hooks/hooks.json          # проводка PreToolUse (Bash)
+│       ├── bin/_trim.py              # переписывает команду через updatedInput (работает)
+│       └── bin/_salience.py          # фильтр TF-IDF + MinHash (работает)
 └── LICENSE
 ```
 

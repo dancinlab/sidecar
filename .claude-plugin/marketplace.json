@@ -27,6 +27,12 @@
       "source": "./plugins/wilson-prefs",
       "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context at SessionStart + UserPromptSubmit. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
       "version": "0.1.0"
+    },
+    {
+      "name": "wilson-output-trim",
+      "source": "./plugins/wilson-output-trim",
+      "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",
+      "version": "0.1.0"
     }
   ]
 }

@@ -41,6 +41,7 @@
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | 注入 `AGENTS.md` 向上查找的 SSOT 作为上下文（等价于 wilson `agents-md`） — **可用** |
 | `wilson-readme-format` | `PreToolUse`（`Write`·`Edit`） | 拒绝违反 readme-format 的仓库根 `README.md`（散文中表情 / 多字形 H1 / 非英文 At-a-glance / `####`）— wilson `guard-readme-format` 的独立移植，**可用** |
 | `wilson-prefs` | `/wilson-prefs:prefs` 命令 + `SessionStart`·`UserPromptSubmit` | 设置回复语言 / 代码语言 / 回复风格 → 持久化到插件数据，注入上下文。wilson `prefs` 的独立移植 —— **可用**（未设置前不注入任何内容） |
+| `wilson-output-trim` | `PreToolUse` (`Bash`) | 重写 Bash 命令（`updatedInput`），让 stdout 先经 TF-IDF 显著性 + MinHash 去重过滤再进入模型 —— wilson `compaction-prefilter` 精神移植，**可用**（小输出原样 · 退出码经 `pipefail` 保留） |
 
 路线图候选：`wilson-memory`（SessionStart/SessionEnd 文件 memory）、
 `wilson-recap`（PreCompact/SessionEnd 摘要）。
@@ -86,11 +87,15 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 接线
 │   │   └── bin/_readme_format.py     # 4-lint README 护栏 (可用)
-│   └── wilson-prefs/
-│       ├── commands/prefs.md         # /wilson-prefs:prefs 斜杠命令
-│       ├── bin/_prefs.py             # 设置 set/show (可用)
-│       ├── bin/_inject.py            # 设置上下文注入 (可用)
-│       └── styles/friendly.{md,*.md} # 回复风格样本 (5 语言相同)
+│   ├── wilson-prefs/
+│   │   ├── commands/prefs.md         # /wilson-prefs:prefs 斜杠命令
+│   │   ├── bin/_prefs.py             # 设置 set/show (可用)
+│   │   ├── bin/_inject.py            # 设置上下文注入 (可用)
+│   │   └── styles/friendly.{md,*.md} # 回复风格样本 (5 语言)
+│   └── wilson-output-trim/
+│       ├── hooks/hooks.json          # PreToolUse (Bash) 接线
+│       ├── bin/_trim.py              # 用 updatedInput 重写命令 (可用)
+│       └── bin/_salience.py          # TF-IDF + MinHash 过滤 (可用)
 └── LICENSE
 ```
 

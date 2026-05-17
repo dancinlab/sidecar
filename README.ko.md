@@ -40,6 +40,7 @@
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 위험 경로·SSOT append-only·도메인 린트 위반 차단 |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) — **작동** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
+| `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
 `wilson-recap`(PreCompact/SessionEnd 요약).
@@ -81,10 +82,15 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 배선
 │   │   └── bin/_ssot.py              # AGENTS.md walk-up (작동)
-│   └── wilson-readme-format/
-│       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # PreToolUse (Write|Edit) 배선
-│       └── bin/_readme_format.py     # 4-lint README 가드 (작동)
+│   ├── wilson-readme-format/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 배선
+│   │   └── bin/_readme_format.py     # 4-lint README 가드 (작동)
+│   └── wilson-prefs/
+│       ├── commands/prefs.md         # /wilson-prefs:prefs 슬래시 커맨드
+│       ├── bin/_prefs.py             # 설정 set/show (작동)
+│       ├── bin/_inject.py            # 설정 컨텍스트 주입 (작동)
+│       └── styles/friendly.{md,*.md} # 응답 스타일 샘플 (5개국어 동일)
 └── LICENSE
 ```
 

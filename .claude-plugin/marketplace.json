@@ -21,6 +21,12 @@
       "source": "./plugins/wilson-readme-format",
       "description": "Deny Write/Edit on a repo-root README.md violating readme-format anti-patterns (emoji-in-prose, multi-glyph H1, non-English At-a-glance, forbidden ####). Standalone port of wilson guard-readme-format — working, no wilson binary dependency.",
       "version": "0.1.0"
+    },
+    {
+      "name": "wilson-prefs",
+      "source": "./plugins/wilson-prefs",
+      "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context at SessionStart + UserPromptSubmit. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
+      "version": "0.1.0"
     }
   ]
 }

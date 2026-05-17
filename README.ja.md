@@ -42,6 +42,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 危険パス・SSOT 追記専用・ドメイン lint 違反を拒否 |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` の上方探索 SSOT をコンテキスト注入（wilson `agents-md` 相当） — **動作** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo ルート `README.md` の readme-format 違反を拒否（emoji-in-prose / multi-glyph H1 / 非英語 At-a-glance / `####`）— wilson `guard-readme-format` の standalone 移植、**動作** |
+| `wilson-prefs` | `/wilson-prefs:prefs` コマンド + `SessionStart`·`UserPromptSubmit` | 応答言語 / コード言語 / 応答スタイルを設定 → プラグインデータに永続化、コンテキスト注入。wilson `prefs` の standalone 移植 — **動作**（設定するまで何も注入しない） |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
 `wilson-recap`（PreCompact/SessionEnd 要約）。
@@ -83,10 +84,15 @@ sidecar/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 配線
 │   │   └── bin/_ssot.py              # AGENTS.md 上方探索 (動作)
-│   └── wilson-readme-format/
-│       ├── .claude-plugin/plugin.json
-│       ├── hooks/hooks.json          # PreToolUse (Write|Edit) 配線
-│       └── bin/_readme_format.py     # 4-lint README ガード (動作)
+│   ├── wilson-readme-format/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 配線
+│   │   └── bin/_readme_format.py     # 4-lint README ガード (動作)
+│   └── wilson-prefs/
+│       ├── commands/prefs.md         # /wilson-prefs:prefs スラッシュコマンド
+│       ├── bin/_prefs.py             # 設定 set/show (動作)
+│       ├── bin/_inject.py            # 設定コンテキスト注入 (動作)
+│       └── styles/friendly.{md,*.md} # 応答スタイル サンプル (5言語 同一)
 └── LICENSE
 ```
 

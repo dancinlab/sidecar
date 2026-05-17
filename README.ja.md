@@ -42,7 +42,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 危険パス・SSOT 追記専用・ドメイン lint 違反を拒否 |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` の上方探索 SSOT をコンテキスト注入（wilson `agents-md` 相当） — **動作** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo ルート `README.md` の readme-format 違反を拒否（emoji-in-prose / multi-glyph H1 / 非英語 At-a-glance / `####`）— wilson `guard-readme-format` の standalone 移植、**動作** |
-| `wilson-hexa-verify` | `PreToolUse` (`Bash`) | 非 hexa 検証器（sympy/PyPhi/wolframscript/mathematica）の Bash 呼び出しを拒否 → hexa CLI へ誘導 — wilson `guard-hexa-verify` の standalone 移植、**動作**。⚠ `hexa` が PATH に無ければ inert |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 非 hexa 検証器（sympy/PyPhi/wolframscript/mathematica）の Bash 呼び出しを拒否 → hexa CLI へ誘導。PostToolUse: `hexa verify` が新しい SUPPORTED 方程式（🔵/🟢）を報告したら `dancinlab/hexa-lang` に **PR を自動作成** — 方程式を binary built-in atlas に焼き込む（`hexa atlas promote` の stub な `pr` を補完、PR は人手レビュー用・自動マージなし）。自律 PR が不可なら `worktree-pr` ワークフロー誘導に fallback。wilson `guard-hexa-verify` の standalone 移植+拡張、**動作**。⚠ `hexa` が PATH に無ければ inert |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | 保護システムパス（`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`）・資格情報パス（`~/.ssh`・`~/.aws`・gh config・keychain・credentials）への Write/Edit/MultiEdit を拒否 — wilson `guard-dangerous-path` の standalone 移植、**動作** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push を拒否 — `git push` に `--force`/`-f`/`+refspec`（および `--force-with-lease`、`SIDECAR_ALLOW_FORCE_WITH_LEASE=1` でなければ）が付くとブロック — wilson `git-guard` の standalone 移植、**動作** |
 | `wilson-prefs` | `/wilson-prefs:prefs` コマンド + `SessionStart`·`UserPromptSubmit` | 応答言語 / コード言語 / 応答スタイルを設定 → プラグインデータに永続化、コンテキスト注入。wilson `prefs` の standalone 移植 — **動作**（設定するまで何も注入しない） |
@@ -97,8 +97,9 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 配線
 │   │   └── bin/_readme_format.py     # 4-lint README ガード (動作)
 │   ├── wilson-hexa-verify/
-│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 配線
-│   │   └── bin/_hexa_verify.py       # 非 hexa 検証器ガード (動作)
+│   │   ├── hooks/hooks.json          # PreToolUse + PostToolUse (Bash) 配線
+│   │   ├── bin/_hexa_verify.py       # 非 hexa 検証器ガード (動作)
+│   │   └── bin/_verify_watch.py      # 新方程式 → hexa-lang PR トリガー (動作)
 │   ├── wilson-dangerous-path/
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 配線
 │   │   └── bin/_dangerous_path.py    # 保護パスガード (動作)

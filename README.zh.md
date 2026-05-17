@@ -40,7 +40,7 @@
 | `wilson-guards` | `PreToolUse`（`Bash`·`Write`·`Edit`） | 拒绝 危险路径 / SSOT 仅追加 / 领域 lint 违规 |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | 注入 `AGENTS.md` 向上查找的 SSOT 作为上下文（等价于 wilson `agents-md`） — **可用** |
 | `wilson-readme-format` | `PreToolUse`（`Write`·`Edit`） | 拒绝违反 readme-format 的仓库根 `README.md`（散文中表情 / 多字形 H1 / 非英文 At-a-glance / `####`）— wilson `guard-readme-format` 的独立移植，**可用** |
-| `wilson-hexa-verify` | `PreToolUse`（`Bash`） | 拒绝对非 hexa 校验器（sympy/PyPhi/wolframscript/mathematica）的 Bash 调用 → 引导改用 hexa CLI — wilson `guard-hexa-verify` 的独立移植，**可用**。⚠ `hexa` 不在 PATH 时 inert |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse`（`Bash`） | PreToolUse: 拒绝对非 hexa 校验器（sympy/PyPhi/wolframscript/mathematica）的 Bash 调用 → 引导改用 hexa CLI。PostToolUse: 当 `hexa verify` 报告新的 SUPPORTED 方程（🔵/🟢）时，**自动向** `dancinlab/hexa-lang` **开 PR** —— 把方程烘焙进二进制内置 atlas（补全 `hexa atlas promote` 的桩 `pr` 步骤，PR 留待人工审查、不自动合并）。无法自动开 PR 时回退为引导 `worktree-pr` 工作流。wilson `guard-hexa-verify` 的独立移植+扩展，**可用**。⚠ `hexa` 不在 PATH 时 inert |
 | `wilson-dangerous-path` | `PreToolUse`（`Write`·`Edit`） | 拒绝对受保护系统路径（`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`）与凭据路径（`~/.ssh`·`~/.aws`·gh config·keychain·credentials）的 Write/Edit/MultiEdit — wilson `guard-dangerous-path` 的独立移植，**可用** |
 | `wilson-git-guard` | `PreToolUse`（`Bash`） | 拒绝 force-push —— `git push` 带 `--force`/`-f`/`+refspec`（以及 `--force-with-lease`，除非 `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`）即拦截 — wilson `git-guard` 的独立移植，**可用** |
 | `wilson-prefs` | `/wilson-prefs:prefs` 命令 + `SessionStart`·`UserPromptSubmit` | 设置回复语言 / 代码语言 / 回复风格 → 持久化到插件数据，注入上下文。wilson `prefs` 的独立移植 —— **可用**（未设置前不注入任何内容） |
@@ -95,8 +95,9 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 接线
 │   │   └── bin/_readme_format.py     # 4-lint README 护栏 (可用)
 │   ├── wilson-hexa-verify/
-│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 接线
-│   │   └── bin/_hexa_verify.py       # 非 hexa 校验器护栏 (可用)
+│   │   ├── hooks/hooks.json          # PreToolUse + PostToolUse (Bash) 接线
+│   │   ├── bin/_hexa_verify.py       # 非 hexa 校验器护栏 (可用)
+│   │   └── bin/_verify_watch.py      # 新方程 → hexa-lang PR 触发 (可用)
 │   ├── wilson-dangerous-path/
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 接线
 │   │   └── bin/_dangerous_path.py    # 受保护路径护栏 (可用)

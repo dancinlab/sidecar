@@ -1,7 +1,7 @@
 {
   "name": "wilson-hexa-verify",
-  "description": "Deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica / mathkernel) and redirect to the hexa CLI. Standalone port of wilson's guard-hexa-verify. INERT unless the `hexa` binary is on PATH (a redirect to hexa is meaningless without it).",
-  "version": "0.1.0",
+  "description": "Two hexa-atlas guards. PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica / mathkernel), redirect to the hexa CLI — INERT unless `hexa` is on PATH. PostToolUse: when `hexa verify` reports a new SUPPORTED equation (🔵/🟢), prompt the agent to ship the atlas change to dancinlab/hexa-lang via the worktree-pr workflow (filling `hexa atlas promote`'s stubbed `pr` step). Standalone port + extension of wilson's guard-hexa-verify.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

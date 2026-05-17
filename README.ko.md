@@ -40,7 +40,7 @@
 | `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 위험 경로·SSOT append-only·도메인 린트 위반 차단 |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) — **작동** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
-| `wilson-hexa-verify` | `PreToolUse` (`Bash`) | 비-hexa 검증기(sympy/PyPhi/wolframscript/mathematica) Bash 호출 차단 → hexa CLI로 유도 — wilson `guard-hexa-verify` standalone 포팅, **작동**. ⚠ `hexa`가 PATH에 없으면 inert |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 비-hexa 검증기(sympy/PyPhi/wolframscript/mathematica) Bash 호출 차단 → hexa CLI 유도. PostToolUse: `hexa verify`가 새 SUPPORTED 방정식(🔵/🟢) 보고 시 `dancinlab/hexa-lang`에 **PR 자동 생성** — 방정식을 binary built-in atlas에 베이크(`hexa atlas promote`의 stub `pr` 단계 보완, PR은 사람 리뷰용·자동 머지 안 함). 자율 PR 불가 시 `worktree-pr` 워크플로 유도로 fallback. wilson `guard-hexa-verify` standalone 포팅+확장, **작동**. ⚠ `hexa`가 PATH에 없으면 inert |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | 보호 시스템 경로(`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`)·자격증명 경로(`~/.ssh`·`~/.aws`·gh config·keychain·credentials) 대상 Write/Edit/MultiEdit 차단 — wilson `guard-dangerous-path` standalone 포팅, **작동** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push 차단 — `git push`에 `--force`/`-f`/`+refspec`(및 `--force-with-lease`, `SIDECAR_ALLOW_FORCE_WITH_LEASE=1` 아니면) 있으면 차단 — wilson `git-guard` standalone 포팅, **작동** |
 | `wilson-prefs` | `/wilson-prefs:prefs` 커맨드 + `SessionStart`·`UserPromptSubmit` | 응답 언어 / 코드 언어 / 응답 스타일 설정 → 플러그인 데이터에 영속, 컨텍스트 주입. wilson `prefs` standalone 포팅 — **작동** (설정 전까지 아무것도 주입 안 함) |
@@ -95,8 +95,9 @@ sidecar/
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 배선
 │   │   └── bin/_readme_format.py     # 4-lint README 가드 (작동)
 │   ├── wilson-hexa-verify/
-│   │   ├── hooks/hooks.json          # PreToolUse (Bash) 배선
-│   │   └── bin/_hexa_verify.py       # 비-hexa 검증기 가드 (작동)
+│   │   ├── hooks/hooks.json          # PreToolUse + PostToolUse (Bash) 배선
+│   │   ├── bin/_hexa_verify.py       # 비-hexa 검증기 가드 (작동)
+│   │   └── bin/_verify_watch.py      # 새 방정식 → hexa-lang PR 트리거 (작동)
 │   ├── wilson-dangerous-path/
 │   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 배선
 │   │   └── bin/_dangerous_path.py    # 보호 경로 가드 (작동)

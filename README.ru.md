@@ -43,6 +43,7 @@
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) — **работает** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
 | `wilson-hexa-verify` | `PreToolUse` (`Bash`) | Запрет Bash-вызовов не-hexa верификаторов (sympy/PyPhi/wolframscript/mathematica) → перенаправление на hexa CLI — standalone-порт wilson `guard-hexa-verify`, **работает**. ⚠ INERT, если `hexa` нет в PATH |
+| `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Запрет Write/Edit/MultiEdit по защищённым системным путям (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) и путям учётных данных (`~/.ssh`·`~/.aws`·gh config·keychain·credentials) — standalone-порт wilson `guard-dangerous-path`, **работает** |
 | `wilson-prefs` | команда `/wilson-prefs:prefs` + `SessionStart`·`UserPromptSubmit` | Задаёт язык ответа / язык кода / стиль ответа → сохраняется в данных плагина, внедряется в контекст. Standalone-порт wilson `prefs` — **работает** (ничего не внедряет, пока не задано) |
 | `wilson-output-trim` | `PreToolUse` (`Bash`) | Переписывает Bash-команду (`updatedInput`), чтобы stdout прошёл фильтр TF-IDF значимости + MinHash дедупликации до попадания в модель — порт духа wilson `compaction-prefilter`, **работает** (малый вывод дословно · код выхода сохранён через `pipefail`) |
 | `wilson-pool` | команда `/wilson-pool:pool` + `PreToolUse`(`Bash`) + `SessionStart`·`UserPromptSubmit` | Маршрутизирует тяжёлые Bash-команды на удалённый хост по ssh — порт духа wilson `pool`, **работает**. ⚠ OFF, пока не заданы host+workdir · только Bash · синхронизация удалённого workdir — **ответственность пользователя** (CC-хук не может смонтировать fs, как 9P/sshfs у wilson) |
@@ -99,6 +100,9 @@ sidecar/
 │   ├── wilson-hexa-verify/
 │   │   ├── hooks/hooks.json          # проводка PreToolUse (Bash)
 │   │   └── bin/_hexa_verify.py       # guard не-hexa верификаторов (работает)
+│   ├── wilson-dangerous-path/
+│   │   ├── hooks/hooks.json          # проводка PreToolUse (Write|Edit)
+│   │   └── bin/_dangerous_path.py    # guard защищённых путей (работает)
 │   ├── wilson-prefs/
 │   │   ├── commands/prefs.md         # слэш-команда /wilson-prefs:prefs
 │   │   ├── bin/_prefs.py             # set/show настроек (работает)

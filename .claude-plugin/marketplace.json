@@ -35,6 +35,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-dangerous-path",
+      "source": "./plugins/wilson-dangerous-path",
+      "description": "Deny Write/Edit/MultiEdit targeting a protected system path (/etc /usr /bin /sbin /System /.git /.gnupg) or a credential path (~/.ssh, ~/.aws, gh config, keychain, credentials). Standalone port of wilson guard-dangerous-path — working.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-output-trim",
       "source": "./plugins/wilson-output-trim",
       "description": "Token economy: PreToolUse rewrites Bash commands (updatedInput) so stdout passes a TF-IDF line-salience + MinHash near-dup filter before the model ingests it. Spirit-port of wilson compaction-prefilter — working. Small output passes verbatim; exit code preserved via pipefail.",

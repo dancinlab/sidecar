@@ -33,20 +33,31 @@ try:
 except Exception:
     sys.exit(0)
 
-host = (cfg.get("host") or "").strip()
+hosts = []
+for h in (cfg.get("hosts") or []):
+    if isinstance(h, dict) and str(h.get("host") or "").strip():
+        hosts.append({"host": str(h["host"]).strip(),
+                      "platform": (h.get("platform") or "linux")})
+if not hosts and cfg.get("host"):          # legacy single-host config
+    hosts.append({"host": str(cfg["host"]).strip(), "platform": "linux"})
 workdir = (cfg.get("workdir") or "").strip()
-if not host or not workdir:
+if not hosts or not workdir:
     sys.exit(0)
 
+roster = ", ".join("%s (%s)" % (h["host"], h["platform"]) for h in hosts)
 ctx = (
     "## Pool\n\n"
-    "- Heavy Bash commands (build/test/compile/GPU) are auto-routed to "
-    "**%s:%s** over ssh by the wilson-pool plugin.\n"
+    "- Heavy Bash commands (build/test/compile/GPU) are auto-routed over "
+    "ssh by the wilson-pool plugin to one of: **%s**.\n"
+    "- Host selection: a macOS-only or Linux-only command goes to a host "
+    "of that platform; otherwise the load is round-robined across the "
+    "roster. Remote workdir: `%s`.\n"
     "- The remote workdir is assumed to be a user-synced copy of this "
-    "project — this plugin does NOT sync filesystems. Do not assume local "
-    "file edits are visible remotely until the user has synced them.\n"
+    "project on EVERY roster host — this plugin does NOT sync filesystems. "
+    "Do not assume local file edits are visible remotely until the user "
+    "has synced them.\n"
     "- Read/Write/Edit/Grep stay LOCAL (only Bash is routed).\n"
-    % (host, workdir)
+    % (roster, workdir)
 )
 print(json.dumps({
     "hookSpecificOutput": {"hookEventName": event, "additionalContext": ctx}

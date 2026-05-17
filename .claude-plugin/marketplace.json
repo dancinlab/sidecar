@@ -71,6 +71,12 @@
       "version": "0.3.0"
     },
     {
+      "name": "wilson-checkpoint",
+      "source": "./plugins/wilson-checkpoint",
+      "description": "Never lose work to a usage limit / rate-limit / crash. A CC hook cannot see the limit event, so this keeps an always-fresh non-destructive snapshot instead: on Stop / PreCompact / SessionEnd it runs `git stash create` (a dangling commit — working tree, index and branches untouched), pins it under refs/wilson-checkpoint/, and writes a resume note; SessionStart re-injects an unconsumed snapshot so the next session continues. Restore/list/clear via /wilson-checkpoint:checkpoint (restore is printed, never auto-applied). Debounced; git-only. Opt out: SIDECAR_NO_CHECKPOINT=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
       "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",

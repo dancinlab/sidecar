@@ -39,7 +39,7 @@
 
 | Плагин | Хук CC | Поведение |
 |---|---|---|
-| `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | Запрет нарушений: опасный-путь / SSOT-только-добавление / доменный-lint |
+| `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | Бандл из 3 guard-ов рабочего процесса dancinlab — `ssot-lock` (запрет правки файла, совпавшего с пунктом `ssot-lock:` в ближайшем `AGENTS.md ## Governance`), `tape-append-only` (трасса `.tape` только-добавление — запрет переписывающего Edit / перезаписывающего Write), `domain-lint` (корневой `UPPERCASE.md`-роадмап темы должен быть `Head + --- + ## Log`) — standalone-порт, **работает**; каждый guard INERT, если его соглашения нет (opt out: `SIDECAR_NO_GUARDS=1`) |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) — **работает** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: запрет Bash-вызовов не-hexa верификаторов (sympy/PyPhi/wolframscript/mathematica) → перенаправление на hexa CLI. PostToolUse: когда `hexa verify` сообщает о новом SUPPORTED-уравнении (🔵/🟢), **автоматически открывает PR** в `dancinlab/hexa-lang`, впекая уравнение во встроенный atlas бинарника (заполняет заглушку шага `pr` у `hexa atlas promote`; PR оставляется на ревью, не авто-merge) — при невозможности откатывается на подсказку workflow `worktree-pr`. Standalone-порт + расширение wilson `guard-hexa-verify`, **работает**. ⚠ INERT, если `hexa` нет в PATH |
@@ -69,19 +69,13 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
 
 **v0.1.0 — первый guard портирован.** `wilson-ssot` (обход вверх по AGENTS.md) и
 `wilson-readme-format` (README-guard из 4 линтов, точный standalone-порт
-wilson `guard-readme-format`) **работают**. `wilson-guards` пока **заглушка**
-(passthrough — не фабрикует ложные блокировки). Поскольку wilson — единый
-статический бинарник (dispatch плагинов — внутренний ABI), оставшийся путь
-портирования `wilson-guards` будет одним из двух, ещё не решено:
-
-1. **через harness-rpc** — тонкая обёртка, вызывающая `harness-rpc` из wilson
-   (JSONL stdin/stdout) для конкретного действия guard-плагина.
-2. **standalone-порт** — переписать здесь напрямую предикаты guard-ов
-   (опасный путь, SSOT только-добавление, доменный lint), без зависимости от
-   бинарника wilson (маркетплейс работает сам по себе).
-
-До принятия решения хук пропускает без запрета — он **не фабрикует ложные
-блокировки** (честно по дизайну).
+wilson `guard-readme-format`) **работают**. `wilson-guards` теперь
+**standalone-порт** — три guard-а (`ssot-lock` / `tape-append-only` /
+`domain-lint`) напрямую переписывают предикаты wilson без зависимости от
+бинарника. Каждый guard **действует, только если его соглашение реально
+присутствует** в проекте (нет пункта `ssot-lock:` / нет файла `.tape` / нет
+корневого роадмапа темы → нулевое поведение), поэтому бандл безопасен для
+обычной установки и осмыслен лишь внутри рабочего процесса в стиле dancinlab.
 
 ## Repo layout
 
@@ -91,8 +85,9 @@ sidecar/
 ├── plugins/
 │   ├── wilson-guards/
 │   │   ├── .claude-plugin/plugin.json
-│   │   ├── hooks/hooks.json          # проводка PreToolUse
-│   │   └── bin/guard.sh              # заглушка (TODO: порт wilson)
+│   │   ├── hooks/hooks.json          # проводка PreToolUse (Write|Edit)
+│   │   ├── bin/guard.sh              # обёртка hook
+│   │   └── bin/_guards.py            # ssot-lock + tape-append-only + domain-lint (работает)
 │   ├── wilson-ssot/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # проводка SessionStart/UserPromptSubmit

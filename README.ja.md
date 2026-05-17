@@ -39,7 +39,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 
 | プラグイン | CC hook | 動作 |
 |---|---|---|
-| `wilson-guards` | `PreToolUse` (`Bash`·`Write`·`Edit`) | 危険パス・SSOT 追記専用・ドメイン lint 違反を拒否 |
+| `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | dancinlab ワークフローのガード 3 種バンドル — `ssot-lock`（最も近い `AGENTS.md ## Governance` の `ssot-lock:` 箇条書きにマッチするファイルの編集を拒否）、`tape-append-only`（`.tape` トレースは追記専用 — 既存内容を書き換える Edit / 上書き Write を拒否）、`domain-lint`（ルート `UPPERCASE.md` トピックロードマップは `Head + --- + ## Log` 構造であること） — standalone 移植、**動作**；各ガードは該当する規約が無ければ inert（opt out: `SIDECAR_NO_GUARDS=1`） |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` の上方探索 SSOT をコンテキスト注入（wilson `agents-md` 相当） — **動作** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo ルート `README.md` の readme-format 違反を拒否（emoji-in-prose / multi-glyph H1 / 非英語 At-a-glance / `####`）— wilson `guard-readme-format` の standalone 移植、**動作** |
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 非 hexa 検証器（sympy/PyPhi/wolframscript/mathematica）の Bash 呼び出しを拒否 → hexa CLI へ誘導。PostToolUse: `hexa verify` が新しい SUPPORTED 方程式（🔵/🟢）を報告したら `dancinlab/hexa-lang` に **PR を自動作成** — 方程式を binary built-in atlas に焼き込む（`hexa atlas promote` の stub な `pr` を補完、PR は人手レビュー用・自動マージなし）。自律 PR が不可なら `worktree-pr` ワークフロー誘導に fallback。wilson `guard-hexa-verify` の standalone 移植+拡張、**動作**。⚠ `hexa` が PATH に無ければ inert |
@@ -69,16 +69,12 @@ governance だけを追加する **プラグインマーケットプレイス re
 
 **v0.1.0 — 最初の guard 移植。** `wilson-ssot`（AGENTS.md 上方探索）と
 `wilson-readme-format`（4-lint README ガード、wilson `guard-readme-format` の忠実な
-standalone 移植）は **動作** します。`wilson-guards` はまだ **スタブ**（パススルー —
-偽のブロックを捏造しない）。wilson は単一の静的バイナリ（プラグイン dispatch は内部
-ABI）のため、残る `wilson-guards` の移植経路は次の 2 つから決定します:
-
-1. **harness-rpc 経由** — wilson の `harness-rpc`（JSONL stdin/stdout）で特定の
-   guard プラグイン action を呼ぶ薄いラッパー。
-2. **standalone 移植** — guard 述語（危険パス・SSOT 追記専用・ドメイン lint）だけ
-   を切り出してここで直接再実装（wilson バイナリ依存なし、マーケットプレイス単体動作）。
-
-決定までは hook は拒否せず通過 — **偽のブロックを捏造しません**（設計上正直）。
+standalone 移植）は **動作** します。`wilson-guards` は今や **standalone 移植** —
+3 つのガード（`ssot-lock` / `tape-append-only` / `domain-lint`）が wilson の述語を
+バイナリ依存なしで直接再実装します。各ガードは **その規約がプロジェクトに実際に
+存在するときのみ動作**（`ssot-lock:` 箇条書きなし / `.tape` ファイルなし / ルート
+トピックロードマップなし → 動作ゼロ）するため、バンドル自体は汎用インストールでも
+安全で、dancinlab 流ワークフローの中でのみ意味を持ちます。
 
 ## Repo layout
 
@@ -88,8 +84,9 @@ sidecar/
 ├── plugins/
 │   ├── wilson-guards/
 │   │   ├── .claude-plugin/plugin.json
-│   │   ├── hooks/hooks.json          # PreToolUse 配線
-│   │   └── bin/guard.sh              # スタブ (TODO: wilson 移植)
+│   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 配線
+│   │   ├── bin/guard.sh              # hook ラッパー
+│   │   └── bin/_guards.py            # ssot-lock + tape-append-only + domain-lint (動作)
 │   ├── wilson-ssot/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 配線

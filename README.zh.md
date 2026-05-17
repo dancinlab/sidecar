@@ -37,7 +37,7 @@
 
 | 插件 | CC hook | 行为 |
 |---|---|---|
-| `wilson-guards` | `PreToolUse`（`Bash`·`Write`·`Edit`） | 拒绝 危险路径 / SSOT 仅追加 / 领域 lint 违规 |
+| `wilson-guards` | `PreToolUse`（`Write`·`Edit`·`MultiEdit`） | dancinlab 工作流护栏 3 合 1 包 —— `ssot-lock`（拒绝编辑被最近 `AGENTS.md ## Governance` 中 `ssot-lock:` 条目匹配的文件）、`tape-append-only`（`.tape` 轨迹仅追加 —— 拒绝重写既有内容的 Edit / 覆盖式 Write）、`domain-lint`（根 `UPPERCASE.md` 主题路线图须为 `Head + --- + ## Log` 结构） —— 独立移植，**可用**；各护栏在对应约定缺失时 inert（opt out: `SIDECAR_NO_GUARDS=1`） |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | 注入 `AGENTS.md` 向上查找的 SSOT 作为上下文（等价于 wilson `agents-md`） — **可用** |
 | `wilson-readme-format` | `PreToolUse`（`Write`·`Edit`） | 拒绝违反 readme-format 的仓库根 `README.md`（散文中表情 / 多字形 H1 / 非英文 At-a-glance / `####`）— wilson `guard-readme-format` 的独立移植，**可用** |
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse`（`Bash`） | PreToolUse: 拒绝对非 hexa 校验器（sympy/PyPhi/wolframscript/mathematica）的 Bash 调用 → 引导改用 hexa CLI。PostToolUse: 当 `hexa verify` 报告新的 SUPPORTED 方程（🔵/🟢）时，**自动向** `dancinlab/hexa-lang` **开 PR** —— 把方程烘焙进二进制内置 atlas（补全 `hexa atlas promote` 的桩 `pr` 步骤，PR 留待人工审查、不自动合并）。无法自动开 PR 时回退为引导 `worktree-pr` 工作流。wilson `guard-hexa-verify` 的独立移植+扩展，**可用**。⚠ `hexa` 不在 PATH 时 inert |
@@ -67,16 +67,11 @@
 
 **v0.1.0 —— 首个 guard 已移植。** `wilson-ssot`（AGENTS.md 向上查找）与
 `wilson-readme-format`（4-lint README 护栏，wilson `guard-readme-format` 的忠实独立
-移植）**可用**。`wilson-guards` 仍为 **桩**（透传 —— 不伪造虚假拦截）。由于 wilson
-是单个静态二进制（插件 dispatch 为内部 ABI），剩余的 `wilson-guards` 移植路径将在
-以下两者中决定：
-
-1. **经由 harness-rpc** —— 一个薄封装，通过 wilson 的 `harness-rpc`
-   （JSONL stdin/stdout）调用特定 guard 插件 action。
-2. **独立移植** —— 仅抽取 guard 谓词（危险路径、SSOT 仅追加、领域 lint）在此
-   直接重实现（不依赖 wilson 二进制，市场可独立运行）。
-
-在决定之前，hook 不拒绝、直接透传 —— **不伪造虚假拦截**（设计上诚实）。
+移植）**可用**。`wilson-guards` 现已是 **独立移植** —— 三个护栏
+（`ssot-lock` / `tape-append-only` / `domain-lint`）不依赖 wilson 二进制、直接
+重实现 wilson 谓词。各护栏 **仅在对应约定确实存在于项目时才动作**（无 `ssot-lock:`
+条目 / 无 `.tape` 文件 / 无根主题路线图 → 零动作），因此该包本身对通用安装是安全的，
+仅在 dancinlab 风格工作流中才有意义。
 
 ## Repo layout
 
@@ -86,8 +81,9 @@ sidecar/
 ├── plugins/
 │   ├── wilson-guards/
 │   │   ├── .claude-plugin/plugin.json
-│   │   ├── hooks/hooks.json          # PreToolUse 接线
-│   │   └── bin/guard.sh              # 桩 (TODO: wilson 移植)
+│   │   ├── hooks/hooks.json          # PreToolUse (Write|Edit) 接线
+│   │   ├── bin/guard.sh              # hook 包装器
+│   │   └── bin/_guards.py            # ssot-lock + tape-append-only + domain-lint (可用)
 │   ├── wilson-ssot/
 │   │   ├── .claude-plugin/plugin.json
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit 接线

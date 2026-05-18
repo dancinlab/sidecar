@@ -102,20 +102,57 @@ def _should_full(event, cfg, payload, dd):
     return ts["n"] > 0 and ts["n"] % n_every == 0
 
 
+def _plugin_root():
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def _read_sample():
+    """Resolve the canonical pool.md sample. User-customised DATA copy
+    wins over the shipped ROOT copy, matching the wilson-prefs precedent.
+    Returns "" if neither exists (caller falls back to the inline summary).
+    """
+    cands = [os.path.join(dd, "samples", "pool.md"),
+             os.path.join(_plugin_root(), "samples", "pool.md")]
+    for cand in cands:
+        if os.path.isfile(cand):
+            try:
+                return open(cand, "r", encoding="utf-8",
+                            errors="replace").read().strip()
+            except OSError:
+                return ""
+    return ""
+
+
 def full_block():
-    return (
+    # Always lead with the concrete roster + workdir resolved from this
+    # session's pool.json — the canonical reference (pool.md) is static
+    # and can't carry per-install hostnames or the active workdir mode.
+    header = (
         "## Pool\n\n"
         "- Heavy Bash commands (build/test/compile/GPU) are auto-routed "
         "over ssh by the wilson-pool plugin to one of: **%s**.\n"
-        "- Host selection: a macOS-only or Linux-only command goes to a "
-        "host of that platform; otherwise the load is round-robined across "
-        "the roster. Remote workdir: %s.\n"
-        "- The remote workdir is assumed to be a user-synced copy of this "
-        "project on EVERY roster host — this plugin does NOT sync "
-        "filesystems. Do not assume local file edits are visible remotely "
-        "until the user has synced them.\n"
+        "- Remote workdir: %s.\n"
         "- Read/Write/Edit/Grep stay LOCAL (only Bash is routed).\n"
         % (roster, wd_desc)
+    )
+    body = _read_sample()
+    if body:
+        # The sample's own H1 is dropped (header already labels the block);
+        # everything below the first blank line after the front-matter
+        # is the canonical reference body.
+        return header + "\n" + body + "\n"
+    # Fallback: the 0.5.0 4-bullet form, used when samples/pool.md is
+    # absent (e.g. a partial install). Keeps the safety properties even
+    # without the long-form body.
+    return (
+        header
+        + "- Host selection: a macOS-only or Linux-only command goes to "
+        "a host of that platform; otherwise the load is round-robined "
+        "across the roster.\n"
+        + "- The remote workdir is assumed to be a user-synced copy of "
+        "this project on EVERY roster host — this plugin does NOT sync "
+        "filesystems. Do not assume local file edits are visible "
+        "remotely until the user has synced them.\n"
     )
 
 

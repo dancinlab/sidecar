@@ -162,3 +162,18 @@
   - the sync caveat ('local edits not visible remotely until synced') is a correctness guard, not info — forgetting it causes silent stale-source remote builds, so it must stay every turn
   - token delta of keeping ~40 tok/turn is trivial vs the ~150 tok/turn we're removing — Option-2's extra savings cannot justify reintroducing a silent correctness hazard
   - only genuinely informational content (roster details, host-selection rule, mirror-workdir explanation) gets cadence-gated — gating exactly what should be gated
+
+### Decision 18 — Option A — introduce plugins/wilson-pool/samples/pool.md (+ language variants) and inline it as the full_block() body on SessionStart/PreCompact/PostCompact + every Nth UserPromptSubmit; off-turn keeps the 1-line safety guard from 0.5.0
+- **picked**: Option A — introduce plugins/wilson-pool/samples/pool.md (+ language variants) and inline it as the full_block() body on SessionStart/PreCompact/PostCompact + every Nth UserPromptSubmit; off-turn keeps the 1-line safety guard from 0.5.0
+- **rationale**:
+  - user explicitly cited friendly.md and step-by-step-decision-gate.md as the target shape — this is the canonical wilson-plugin sample pattern, B and C reject that intent
+  - the routing-mechanism details that should live in the full body (heavy-command classification, autosync modes, platform-routing rule, sync caveat rationale) are exactly the questions where current 4-bullet hardcoded body fails the model — a long-form canonical reference solves it at the source
+  - A reuses the _should_full() cadence ALREADY shipped in wilson-pool 0.5.0 (and proven in wilson-prefs) — incremental surface = sample file + 4-line patch to full_block() to read it. Lowest cost / highest alignment with repo conventions
+  - B's SessionStart-only inject was explicitly rejected by both wilson-prefs and wilson-decision-gate (PostCompact full-refresh is the strictly-stronger path) — adopting it here would re-introduce a fade-out failure mode those plugins already designed away
+
+### Decision 19 — Option A — pool.md adopts the 8-section full pattern (~5 KB): head/activation, in-scope (heavy classification), out-of-scope, routing mechanism, host selection, workdir modes (auto/explicit/autosync), sync caveat as correctness guard, counter-example
+- **picked**: Option A — pool.md adopts the 8-section full pattern (~5 KB): head/activation, in-scope (heavy classification), out-of-scope, routing mechanism, host selection, workdir modes (auto/explicit/autosync), sync caveat as correctness guard, counter-example
+- **rationale**:
+  - matches the natural size of the two repo precedents (friendly.md 5.3 KB / step-by-step-decision-gate.md 6.7 KB) — 5 KB sits in the centre of established wilson-plugin sample sizing
+  - Option B (core-only ~2.5 KB) would drop host-selection / autosync / workdir-mode detail — the exact routing-decision detail the 4-bullet body fails at today, so it defeats the very motivation for introducing sample.md
+  - Option C (~7 KB with companion-plugin relations + worked routing trace) overshoots wilson-pool's nature: it is a mechanism tool not a governance principle, and a worked routing trace is inappropriate content for static inject context

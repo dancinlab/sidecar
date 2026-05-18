@@ -118,8 +118,10 @@ def hook():
         "hookEventName") or ""
     if load().get("off"):
         sys.exit(0)
-    if event == "SessionStart":
-        inject("SessionStart", PRINCIPLE)
+    # SessionStart (also fires post-compact with source="compact") and
+    # PostCompact (clean post-summary moment) → full principle inject.
+    if event in ("SessionStart", "PostCompact"):
+        inject(event, PRINCIPLE)
     if event == "UserPromptSubmit":
         prompt = payload.get("prompt") or ""
         if BRANCH_RE.search(prompt):

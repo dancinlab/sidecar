@@ -78,10 +78,16 @@ lines.append("")
 # (friendly.md ≈ 5–8 KB) but also don't fade out as a long session and
 # its compactions erode the original SessionStart inject:
 #
-#   SessionStart      — full body (the session's baseline)
-#   PreCompact        — full body, RIGHT BEFORE compaction summarises the
-#                       transcript — guarantees the style rules land
-#                       inside whatever summary CC keeps
+#   SessionStart      — full body (the session's baseline; CC also fires
+#                       this on resume / clear / post-compact reloads,
+#                       distinguishable by `source` ∈ {startup, resume,
+#                       clear, compact})
+#   PreCompact        — full body before compaction summarises (cheap
+#                       belt-and-suspenders insurance — the post-summary
+#                       PostCompact below is the strictly stronger one)
+#   PostCompact       — full body AFTER compaction completes — lands in
+#                       the clean post-summary context (the rules are
+#                       guaranteed present, not buried inside a summary)
 #   UserPromptSubmit  — compact directives only, EXCEPT every Nth turn
 #                       (configurable; default 25) we refresh the body
 #                       so the rules stay fresh across long sessions
@@ -90,7 +96,7 @@ lines.append("")
 # language wins, then the canonical file; user-custom (DATA) overrides
 # shipped (ROOT) at each step.
 def _should_full(event, prefs, payload, dd):
-    if event in ("SessionStart", "PreCompact"):
+    if event in ("SessionStart", "PreCompact", "PostCompact"):
         return True
     if event != "UserPromptSubmit":
         return False

@@ -3,13 +3,15 @@
 # plugin (no wilson binary dependency). Invoked by readme-format.sh so that
 # sys.stdin is the Claude Code PreToolUse payload.
 #
-# Denies Write/Edit/MultiEdit on a REPO-ROOT README.md violating the four
+# Denies Write/Edit/MultiEdit on a REPO-ROOT README.md violating the
 # readme-format anti-patterns (faithful to wilson principle #16):
 #   L4 forbidden `#### ` heading            (push deeper docs into docs/)
 #   L2 multi-glyph H1   (>=2 SMP-emoji prefix glyphs in the first `# ` line)
-#   L1 emoji-in-prose   (SMP emoji in a body paragraph line)
 #   L3 At-a-glance fence non-English        (write only — needs full doc)
-# Lint order matches wilson: L4 -> L2 -> L1 -> L3.
+# Lint order matches wilson: L4 -> L2 -> L3.
+# L1 emoji-in-prose was removed — table cells and aligned glyph rows are
+# legitimate prose carriers and the rule produced more false positives than
+# real catches.
 #
 # Opt out per session: SIDECAR_NO_README_FORMAT_GUARD=1
 #                       (also honors WILSON_NO_README_FORMAT_GUARD=1)
@@ -136,30 +138,6 @@ def lint_l2():
     return ""
 
 
-# ── L1: emoji-in-prose ──────────────────────────────────────────────
-def lint_l1():
-    in_fence = False
-    for i, raw in enumerate(lines):
-        t = raw.strip()
-        if t.startswith("```"):
-            in_fence = not in_fence
-            continue
-        if in_fence or t == "":
-            continue
-        if t.startswith("# ") and not t.startswith("## "):
-            continue                       # first H1 — one glyph allowed
-        if t.startswith("#"):
-            continue                       # other headings
-        if t.startswith("[![") or t.startswith("<") \
-                or t.startswith("> [!") or t == "---":
-            continue                       # badges / HTML chrome / callouts
-        if count_smp_emoji(raw) > 0:
-            return ("L1 emoji-in-prose on line %d — `%s` (emojis belong in "
-                    "badges and the H1 glyph; never in body paragraphs)"
-                    % (i + 1, clip(raw, 60)))
-    return ""
-
-
 # ── L3: At-a-glance fence non-English (write only) ──────────────────
 def lint_l3():
     in_section = False
@@ -185,7 +163,7 @@ def lint_l3():
     return ""
 
 
-violation = lint_l4() or lint_l2() or lint_l1()
+violation = lint_l4() or lint_l2()
 if not violation and is_write:
     violation = lint_l3()
 

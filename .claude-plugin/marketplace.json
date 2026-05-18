@@ -2,7 +2,9 @@
   "name": "sidecar",
   "owner": { "name": "dancinlab" },
   "description": "Battle-tested guardrails for Claude Code, ported from the hexa-native agent wilson.",
-  "metadata": { "pluginRoot": "./plugins" },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
   "plugins": [
     {
       "name": "wilson-guards",
@@ -19,8 +21,8 @@
     {
       "name": "wilson-readme-format",
       "source": "./plugins/wilson-readme-format",
-      "description": "Deny Write/Edit on a repo-root README.md violating readme-format anti-patterns (emoji-in-prose, multi-glyph H1, non-English At-a-glance, forbidden ####). Standalone port of wilson guard-readme-format — working, no wilson binary dependency.",
-      "version": "0.1.0"
+      "description": "Deny Write/Edit on a repo-root README.md that violates the readme-format anti-patterns (multi-glyph H1, non-English At-a-glance fence, forbidden #### heading). Standalone port of wilson's guard-readme-format — no wilson binary dependency. Ships a companion `docs-convention` skill teaching the README/UPPERCASE.md roadmap conventions up front — also covers wilson-guards/domain-lint.",
+      "version": "0.3.0"
     },
     {
       "name": "wilson-prefs",
@@ -43,14 +45,14 @@
     {
       "name": "wilson-git-guard",
       "source": "./plugins/wilson-git-guard",
-      "description": "Deny force-push: a Bash `git push` carrying --force / -f / a +refspec (and --force-with-lease unless SIDECAR_ALLOW_FORCE_WITH_LEASE=1) is blocked at PreToolUse. Standalone port of wilson git-guard — working.",
-      "version": "0.1.0"
+      "description": "Deny force-push at the PreToolUse layer — a Bash `git push` carrying --force / -f / a +refspec (and --force-with-lease, unless SIDECAR_ALLOW_FORCE_WITH_LEASE=1) is blocked. Standalone port of wilson's git-guard. Ships a companion `git-workflow` skill teaching the safe-push convention up front so the force-push deny rarely has to fire.",
+      "version": "0.2.0"
     },
     {
       "name": "wilson-secret-guard",
       "source": "./plugins/wilson-secret-guard",
-      "description": "Block live secrets before they land. PreToolUse (Write/Edit/MultiEdit): deny writing a real .env file or content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys). UserPromptSubmit: block a prompt that pastes one. High-confidence patterns only — near-zero false positives. Opt out: SIDECAR_NO_SECRET_GUARD=1.",
-      "version": "0.1.0"
+      "description": "Block live secrets before they land. PreToolUse (Write/Edit/MultiEdit): deny writing a real .env file or any content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys). UserPromptSubmit: block a prompt that pastes such a credential. High-confidence patterns only — near-zero false positives. Ships a companion `security` skill (wilson-sdlc-style) teaching the secret/path/destructive-shell convention up front so the deny rarely has to fire — also covers the sibling wilson-dangerous-path & wilson-bash-guard surface.",
+      "version": "0.2.0"
     },
     {
       "name": "wilson-bash-guard",
@@ -122,6 +124,12 @@
       "name": "worktree-pr",
       "source": "./plugins/worktree-pr",
       "description": "Safe worktree -> PR -> merge -> cleanup workflow as the /worktree-pr:wt slash command. start makes an isolated worktree+branch off origin's default branch; ship pushes + opens a PR; finish merges the PR, removes the worktree, deletes the remote branch, refreshes the base. Never touches the main working tree or a concurrent session's branch.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "wilson-sdlc",
+      "source": "./plugins/wilson-sdlc",
+      "description": "Spec → Plan → Build → Test&Recover → Review → Simplify → Ship — a 7-stage software-delivery skill pipeline. Skill *structure* is borrowed from addyosmani/agent-skills; the *content* is wilson's own dogfooded workflow, so each stage maps onto sidecar primitives the user already has: Spec→design.md+wilson-decision-gate, Plan→task tools+wilson-goal, Build→worktree-pr+wilson-checkpoint, Test&Recover→wilson-pool routing + systematic root-cause, Review→6-axis (5 generic + design.md decision-conformance), Simplify→sequences the built-in /simplify then re-checks decisions, Ship→the version→marketplace.json→GROWTH §10→commit checklist this very pack ships by. Stages that map to a wilson plugin degrade gracefully when that plugin is absent. Skills load on-demand; the plugin injects nothing on its own.",
       "version": "0.1.0"
     }
   ]

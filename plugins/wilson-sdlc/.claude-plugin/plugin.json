@@ -1,0 +1,9 @@
+{
+  "name": "wilson-sdlc",
+  "description": "Spec → Plan → Build → Test&Recover → Review → Simplify → Ship — a 7-stage software-delivery skill pipeline. Skill *structure* is borrowed from addyosmani/agent-skills; the *content* is wilson's own dogfooded workflow, so each stage maps onto sidecar primitives the user already has: Spec→design.md+wilson-decision-gate, Plan→task tools+wilson-goal, Build→worktree-pr+wilson-checkpoint, Test&Recover→wilson-pool routing + systematic root-cause, Review→6-axis (5 generic + design.md decision-conformance), Simplify→sequences the built-in /simplify then re-checks decisions, Ship→the version→marketplace.json→GROWTH §10→commit checklist this very pack ships by. Stages that map to a wilson plugin degrade gracefully when that plugin is absent. Skills load on-demand; the plugin injects nothing on its own.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skills", "sdlc", "workflow", "spec", "ship", "wilson"]
+}

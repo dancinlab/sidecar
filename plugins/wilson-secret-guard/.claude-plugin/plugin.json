@@ -1,7 +1,7 @@
 {
   "name": "wilson-secret-guard",
-  "description": "Block live secrets before they land. PreToolUse (Write/Edit/MultiEdit): deny writing a real .env file or any content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys). UserPromptSubmit: block a prompt that pastes such a credential. High-confidence patterns only — near-zero false positives.",
-  "version": "0.1.0",
+  "description": "Block live secrets before they land. PreToolUse (Write/Edit/MultiEdit): deny writing a real .env file or any content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys). UserPromptSubmit: block a prompt that pastes such a credential. High-confidence patterns only — near-zero false positives. Ships a companion `security` skill (wilson-sdlc-style) teaching the secret/path/destructive-shell convention up front so the deny rarely has to fire — also covers the sibling wilson-dangerous-path & wilson-bash-guard surface.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

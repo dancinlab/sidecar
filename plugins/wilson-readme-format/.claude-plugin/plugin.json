@@ -1,7 +1,7 @@
 {
   "name": "wilson-readme-format",
-  "description": "Deny Write/Edit on a repo-root README.md that violates the readme-format anti-patterns (multi-glyph H1, non-English At-a-glance fence, forbidden #### heading). Standalone port of wilson's guard-readme-format — no wilson binary dependency.",
-  "version": "0.2.0",
+  "description": "Deny Write/Edit on a repo-root README.md that violates the readme-format anti-patterns (multi-glyph H1, non-English At-a-glance fence, forbidden #### heading). Standalone port of wilson's guard-readme-format — no wilson binary dependency. Ships a companion `docs-convention` skill teaching the README/UPPERCASE.md roadmap conventions up front — also covers wilson-guards/domain-lint.",
+  "version": "0.3.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

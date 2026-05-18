@@ -140,3 +140,10 @@
   - D2=A enforce→explain — README/UPPERCASE.md 작성 전 선교육
   - D3=A 구조 차용 + 본문=wilson 문서 규약(7초룰·Head+---+##Log)
   - 트레이드오프: 2 plugin 1 skill 공유 — 응집 규약면
+
+### Decision 15 — wilson-checkpoint last_user_prompt() — transcript tail-only read (<=2 MiB), not whole-file
+- **picked**: wilson-checkpoint last_user_prompt() — transcript tail-only read (<=2 MiB), not whole-file
+- **rationale**:
+  - real cause = CC built-in Stop-evaluator prompt overflow (harness scope) — sidecar code cannot remove the error itself, honest scope limit
+  - Stop hook's per-turn full readlines() of a 14 MB transcript IS our code — bound it to an O(1) tail (<=2 MiB) regardless of session size
+  - measured on real 14.4 MB transcript: identical result ('ok go'), I/O 3x lower (19.2->6.1 ms), small/missing/empty edges regression-free — surgical, behavior-preserving

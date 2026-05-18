@@ -93,14 +93,34 @@ def paths(repo):
     }
 
 
+# Tail-only cap for the transcript read. The most recent user message
+# lives near the end, so reading the whole file is wasteful — a long
+# autonomous session's transcript can reach tens of MB, and this hook
+# fires on every Stop. Bound the read at O(1) regardless of session
+# size; 2 MiB comfortably spans the last user turn even when big
+# tool-result lines are interleaved before it.
+TAIL_BYTES = 2 * 1024 * 1024
+
+
 def last_user_prompt(transcript):
     """Best-effort: pull the most recent user message text from the
-    transcript JSONL. Never raises."""
+    transcript JSONL. Reads only the file's tail (<= TAIL_BYTES), never
+    the whole transcript. Never raises."""
     try:
         if not transcript or not os.path.isfile(transcript):
             return ""
-        with open(transcript, encoding="utf-8", errors="replace") as f:
-            lines = f.readlines()[-400:]
+        size = os.path.getsize(transcript)
+        with open(transcript, "rb") as fb:
+            start = max(0, size - TAIL_BYTES)
+            if start:
+                fb.seek(start)
+            blob = fb.read()
+        if start:
+            # Dropped into the middle of a line — discard the partial head.
+            nl = blob.find(b"\n")
+            blob = blob[nl + 1:] if nl != -1 else b""
+        text = blob.decode("utf-8", errors="replace")
+        lines = text.splitlines()[-400:]
         for ln in reversed(lines):
             try:
                 e = json.loads(ln)

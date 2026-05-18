@@ -114,10 +114,16 @@ def _should_full(event, prefs, payload, dd):
         return True
     if event != "UserPromptSubmit":
         return False
+    # Default refresh cadence: every 10 user turns (was 25 before D22).
+    # User-felt observation: at 25 the friendly 7-element pattern faded
+    # visibly between refreshes — the 1-line "Active response style:
+    # friendly" directive on off-turns is a label, not an instruction.
+    # 10 keeps the average fade window to ~5 turns, short enough that
+    # style drift is rare without doubling token cost. Decision 22.
     try:
-        n_every = int(prefs.get("refresh_every", 25))
+        n_every = int(prefs.get("refresh_every", 10))
     except Exception:
-        n_every = 25
+        n_every = 10
     if n_every <= 0:
         return False
     sid = str(payload.get("session_id") or "")

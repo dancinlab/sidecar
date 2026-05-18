@@ -193,3 +193,11 @@
   - wilson-prefs and wilson-pool source comments already describe PostCompact as landing in the clean post-summary context with rules guaranteed present — Option A reflects that documented intent in code, Option B would remove the strictly-cleaner path that D20 explicitly preserved
   - measured savings about 14101 tok per 120-turn session across the three plugins (DG -1598 / prefs -4079 / pool -8424) — comparable to D20, addresses the largest remaining audit residue
   - identical 4-5 line patch in all three plugins establishes the canonical SS plus PostCompact cadence reference for any future wilson-* plugin that inlines a sample body
+
+### Decision 22 — Option B — wilson-prefs default refresh_every: 25 -> 10 (full body refreshes 2.5x more often; UPS 1-line directive unchanged on off-turns)
+- **picked**: Option B — wilson-prefs default refresh_every: 25 -> 10 (full body refreshes 2.5x more often; UPS 1-line directive unchanged on off-turns)
+- **rationale**:
+  - user reports friendly-style drift was pre-existing — default 25 is the structural cause, not the recent token-audit work (cadence has been sparse since the original cadence was introduced)
+  - Option A (25->5) would refund half of D20+D21 savings and overshoots the symptom — user observed drift not zero-tolerance fidelity, average fade window of 5 turns under B is short enough to be invisible
+  - Option C (richer short directive) injects keywords without the full 7-element pattern body — partial reminder cannot restore the exact ASCII/analogy/icon discipline the full body encodes, mitigates drift but does not solve it
+  - measured cost ~3000 tok per long session vs the ~7800 tok of Option A — sits at the balance point where drift becomes visually rare while token reclaim from D17-D21 stays mostly intact

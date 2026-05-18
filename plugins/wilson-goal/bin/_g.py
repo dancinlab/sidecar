@@ -138,7 +138,11 @@ def hook():
             save_state(s)
         except Exception:
             pass
-    text = inject_full(g) if event == "SessionStart" else inject_short(g)
+    # SessionStart (also fires post-compact with source="compact"),
+    # PostCompact (clean post-summary moment) → full goal block.
+    # UserPromptSubmit → one-line compact reminder.
+    text = (inject_full(g) if event in ("SessionStart", "PostCompact")
+            else inject_short(g))
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": event, "additionalContext": text}}))
     sys.exit(0)

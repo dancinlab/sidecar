@@ -148,23 +148,42 @@ def _should_full(event, prefs, payload, dd):
     return ts["n"] > 0 and ts["n"] % n_every == 0
 
 
-if style and _should_full(event, prefs, payload, dd):
-    body = ""
+def _resolve_md(name):
+    """Resolve a style body file. Resolution order, first hit wins:
+      DATA/styles/<name>.<resp>.md (user-customised, language-localised)
+      ROOT/styles/<name>.<resp>.md (shipped, language-localised)
+      DATA/styles/<name>.md        (user-customised, canonical EN)
+      ROOT/styles/<name>.md        (shipped, canonical EN)
+    Returns "" if no file resolves. Used for both the style itself and
+    the shared `_common` body (Decision 23)."""
     root = plugin_root()
     cands = []
     if resp:
-        cands += [os.path.join(dd, "styles", "%s.%s.md" % (style, resp)),
-                  os.path.join(root, "styles", "%s.%s.md" % (style, resp))]
-    cands += [os.path.join(dd, "styles", "%s.md" % style),
-              os.path.join(root, "styles", "%s.md" % style)]
+        cands += [os.path.join(dd, "styles", "%s.%s.md" % (name, resp)),
+                  os.path.join(root, "styles", "%s.%s.md" % (name, resp))]
+    cands += [os.path.join(dd, "styles", "%s.md" % name),
+              os.path.join(root, "styles", "%s.md" % name)]
     for cand in cands:
         if os.path.isfile(cand):
             try:
-                body = open(cand, "r", encoding="utf-8",
+                return open(cand, "r", encoding="utf-8",
                             errors="replace").read().strip()
             except OSError:
-                body = ""
-            break
+                return ""
+    return ""
+
+
+if style and _should_full(event, prefs, payload, dd):
+    # Compose the full body from two layers:
+    #   _common.md  — universal rules (emoji tier enum, acronym first-use,
+    #                 language-tracking) shared across all styles
+    #   <style>.md  — style-specific body (e.g. friendly's 7-element
+    #                 pattern, Tier-A scope, measurement axes)
+    # The common block is prepended so per-style content can override or
+    # extend it. Decision 23.
+    common_body = _resolve_md("_common")
+    style_body = _resolve_md(style)
+    body = "\n\n".join(b for b in (common_body, style_body) if b)
     if body:
         lines.append("### Response style — %s" % style)
         lines.append("")

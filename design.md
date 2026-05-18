@@ -201,3 +201,11 @@
   - Option A (25->5) would refund half of D20+D21 savings and overshoots the symptom — user observed drift not zero-tolerance fidelity, average fade window of 5 turns under B is short enough to be invisible
   - Option C (richer short directive) injects keywords without the full 7-element pattern body — partial reminder cannot restore the exact ASCII/analogy/icon discipline the full body encodes, mitigates drift but does not solve it
   - measured cost ~3000 tok per long session vs the ~7800 tok of Option A — sits at the balance point where drift becomes visually rare while token reclaim from D17-D21 stays mostly intact
+
+### Decision 23 — Option A — extract universal style rules (emoji 3-tier enum, acronym first-use, language-tracking) into styles/_common.md (+ 4 language variants) and concat with the active style body at inject time; friendly.{md,ko,ja,zh,ru}.md keep only friendly-specific sections (Tier-A scope, 7-element pattern, measurement axes, counter-example)
+- **picked**: Option A — extract universal style rules (emoji 3-tier enum, acronym first-use, language-tracking) into styles/_common.md (+ 4 language variants) and concat with the active style body at inject time; friendly.{md,ko,ja,zh,ru}.md keep only friendly-specific sections (Tier-A scope, 7-element pattern, measurement axes, counter-example)
+- **rationale**:
+  - user explicitly cited two candidate forms (separate code or shared md) and the md form aligns with wilsons data-first convention (prefs.json, samples, style bodies all already md — sharing the same hand-edit surface)
+  - existing language-variant resolver pattern is reused as-is (cands = [<DATA>/styles/X.<lang>.md, <ROOT>/styles/X.<lang>.md, <DATA>/styles/X.md, <ROOT>/styles/X.md]) — _common just becomes another X in that loop, so _inject.py grows ~10 lines of concat glue and zero new resolution complexity
+  - adding a future style (terse / narrative / teaching) becomes a single file authored, not 5 (canonical + 4 language variants) where each repeats the same emoji-enum and acronym tables — eliminates the synchronisation-drift failure mode the current 5-fold duplication is exposed to
+  - honest non-goal — runtime token cost is unchanged (only the active style body is injected, common or not) — this refactor is for maintainability and consistency, not for D17-D22 style token reclaim

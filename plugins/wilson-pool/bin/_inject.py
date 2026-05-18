@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-# wilson-pool :: SessionStart / UserPromptSubmit / PreCompact / PostCompact
-# hook. Injects a "## Pool" block ONLY when routing is armed, so the model
-# knows heavy Bash commands run remotely (and that the remote workdir is
-# user-synced). Nothing is injected when unconfigured (no noise).
+# wilson-pool :: SessionStart / UserPromptSubmit / PostCompact hook.
+# Injects a "## Pool" block ONLY when routing is armed, so the model knows
+# heavy Bash commands run remotely (and that the remote workdir is user-
+# synced). Nothing is injected when unconfigured (no noise).
 #
-# Cadence — mirror of wilson-prefs (Decision 16 + 17, design.md):
+# Cadence — mirror of wilson-prefs (design.md Decisions 16 / 17 / 20):
 #
-#   SessionStart / PreCompact / PostCompact  → full block (baseline +
-#                                              survive compactions)
-#   UserPromptSubmit, every Nth turn         → full block (refresh so the
-#                                              roster details don't fade
-#                                              across long sessions)
-#   UserPromptSubmit, off-turn               → 1-line safety guard
-#                                              (routing + sync caveat)
+#   SessionStart / PostCompact         → full block (baseline + survives
+#                                        compaction; PostCompact lands in
+#                                        the clean post-summary context).
+#                                        Decision 20 dropped the PreCompact
+#                                        full body — it was strictly weaker
+#                                        than PostCompact at the same cost.
+#   UserPromptSubmit, every Nth turn   → full block (refresh so the roster
+#                                        details don't fade across long
+#                                        sessions)
+#   UserPromptSubmit, off-turn         → 1-line safety guard (routing +
+#                                        sync caveat)
 #
 # Why off-turns are NOT silent: the "remote workdir is a user-synced copy"
 # caveat is a CORRECTNESS guard, not info — forgetting it causes silent
@@ -69,8 +73,9 @@ else:
 
 def _should_full(event, cfg, payload, dd):
     """Mirror of wilson-prefs._should_full(): always full on session /
-    compaction boundaries; periodic refresh on UserPromptSubmit."""
-    if event in ("SessionStart", "PreCompact", "PostCompact"):
+    post-compact boundaries; periodic refresh on UserPromptSubmit.
+    PreCompact is intentionally not full — see header comment."""
+    if event in ("SessionStart", "PostCompact"):
         return True
     if event != "UserPromptSubmit":
         return False

@@ -1,7 +1,7 @@
 {
   "name": "wilson-prefs",
-  "description": "User preferences (reply language / code language / response style) settable via the /wilson-prefs:prefs slash command, persisted to plugin data, and injected into context. SessionStart / PreCompact / PostCompact inject the full `## Prefs` block including the style file body (PostCompact lands in the clean post-summary context — strictly stronger than PreCompact for surviving compaction); UserPromptSubmit re-asserts only the compact directive lines, EXCEPT every Nth turn (configurable via `refresh-every`, default 25) it refreshes the full body so the style stays fresh across a long session. Standalone port of wilson's prefs plugin.",
-  "version": "0.1.3",
+  "description": "User preferences (reply language / code language / response style) settable via the /wilson-prefs:prefs slash command, persisted to plugin data, and injected into context. SessionStart / PostCompact inject the full `## Prefs` block including the style file body (PostCompact lands in the clean post-summary context, where the rules are guaranteed present); UserPromptSubmit re-asserts only the compact directive lines, EXCEPT every Nth turn (configurable via `refresh-every`, default 25) it refreshes the full body so the style stays fresh across a long session. Standalone port of wilson's prefs plugin.",
+  "version": "0.1.4",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

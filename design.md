@@ -177,3 +177,11 @@
   - matches the natural size of the two repo precedents (friendly.md 5.3 KB / step-by-step-decision-gate.md 6.7 KB) — 5 KB sits in the centre of established wilson-plugin sample sizing
   - Option B (core-only ~2.5 KB) would drop host-selection / autosync / workdir-mode detail — the exact routing-decision detail the 4-bullet body fails at today, so it defeats the very motivation for introducing sample.md
   - Option C (~7 KB with companion-plugin relations + worked routing trace) overshoots wilson-pool's nature: it is a mechanism tool not a governance principle, and a worked routing trace is inappropriate content for static inject context
+
+### Decision 20 — Option A — remove PreCompact hook entry from both wilson-prefs/hooks.json and wilson-pool/hooks.json (no emit on PreCompact); SessionStart + UserPromptSubmit + PostCompact remain the cadence surface
+- **picked**: Option A — remove PreCompact hook entry from both wilson-prefs/hooks.json and wilson-pool/hooks.json (no emit on PreCompact); SessionStart + UserPromptSubmit + PostCompact remain the cadence surface
+- **rationale**:
+  - wilson-prefs source-of-truth comment explicitly labels PreCompact 'belt-and-suspenders insurance' with PostCompact as 'strictly stronger' — author intent and measured behavior align
+  - 'cheap insurance' was inaccurate — measured cost is ~6,062 tok/session for wilson-prefs and ~8,162 tok/session for wilson-pool, identical to the PostCompact full-body cost it duplicates (total ~14,224 tok/session of pure redundancy)
+  - Option B (hook entry retained but emit-free) leaves a registered hook with zero current emit value and no future placeholder rationale — A removes the entry cleanly, simpler code/config surface to explain
+  - applying to both plugins simultaneously preserves cadence-shape symmetry across wilson-* plugins (SS + UPS + PostCompact triple) — sets the canonical cadence reference for any new sample-inlining plugin

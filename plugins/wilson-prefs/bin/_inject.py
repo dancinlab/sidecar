@@ -82,12 +82,13 @@ lines.append("")
 #                       this on resume / clear / post-compact reloads,
 #                       distinguishable by `source` ∈ {startup, resume,
 #                       clear, compact})
-#   PreCompact        — full body before compaction summarises (cheap
-#                       belt-and-suspenders insurance — the post-summary
-#                       PostCompact below is the strictly stronger one)
 #   PostCompact       — full body AFTER compaction completes — lands in
 #                       the clean post-summary context (the rules are
-#                       guaranteed present, not buried inside a summary)
+#                       guaranteed present, not buried inside a summary).
+#                       We do NOT also inject on PreCompact: that body
+#                       would land inside the about-to-be-summarised
+#                       context, so PostCompact is strictly stronger and
+#                       PreCompact is pure duplicate (Decision 20).
 #   UserPromptSubmit  — compact directives only, EXCEPT every Nth turn
 #                       (configurable; default 25) we refresh the body
 #                       so the rules stay fresh across long sessions
@@ -96,7 +97,7 @@ lines.append("")
 # language wins, then the canonical file; user-custom (DATA) overrides
 # shipped (ROOT) at each step.
 def _should_full(event, prefs, payload, dd):
-    if event in ("SessionStart", "PreCompact", "PostCompact"):
+    if event in ("SessionStart", "PostCompact"):
         return True
     if event != "UserPromptSubmit":
         return False

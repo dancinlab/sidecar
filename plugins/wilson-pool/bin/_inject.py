@@ -1,8 +1,23 @@
 #!/usr/bin/env python3
-# wilson-pool :: SessionStart / UserPromptSubmit hook. Injects a compact
-# "## Pool" block ONLY when routing is armed, so the model knows heavy
-# Bash commands run remotely (and that the remote workdir is user-synced).
-# Nothing injected when unconfigured (no noise).
+# wilson-pool :: SessionStart / UserPromptSubmit / PreCompact / PostCompact
+# hook. Injects a "## Pool" block ONLY when routing is armed, so the model
+# knows heavy Bash commands run remotely (and that the remote workdir is
+# user-synced). Nothing is injected when unconfigured (no noise).
+#
+# Cadence — mirror of wilson-prefs (Decision 16 + 17, design.md):
+#
+#   SessionStart / PreCompact / PostCompact  → full block (baseline +
+#                                              survive compactions)
+#   UserPromptSubmit, every Nth turn         → full block (refresh so the
+#                                              roster details don't fade
+#                                              across long sessions)
+#   UserPromptSubmit, off-turn               → 1-line safety guard
+#                                              (routing + sync caveat)
+#
+# Why off-turns are NOT silent: the "remote workdir is a user-synced copy"
+# caveat is a CORRECTNESS guard, not info — forgetting it causes silent
+# stale-source remote builds. The roster / host-selection / round-robin
+# explanation IS info, so only that gets cadence-gated.
 import json
 import os
 import sys
@@ -50,20 +65,74 @@ if workdir.lower() == "auto":
                "(`~/<rel>`) on each host")
 else:
     wd_desc = "`%s`" % workdir
-ctx = (
-    "## Pool\n\n"
-    "- Heavy Bash commands (build/test/compile/GPU) are auto-routed over "
-    "ssh by the wilson-pool plugin to one of: **%s**.\n"
-    "- Host selection: a macOS-only or Linux-only command goes to a host "
-    "of that platform; otherwise the load is round-robined across the "
-    "roster. Remote workdir: %s.\n"
-    "- The remote workdir is assumed to be a user-synced copy of this "
-    "project on EVERY roster host — this plugin does NOT sync filesystems. "
-    "Do not assume local file edits are visible remotely until the user "
-    "has synced them.\n"
-    "- Read/Write/Edit/Grep stay LOCAL (only Bash is routed).\n"
-    % (roster, wd_desc)
-)
+
+
+def _should_full(event, cfg, payload, dd):
+    """Mirror of wilson-prefs._should_full(): always full on session /
+    compaction boundaries; periodic refresh on UserPromptSubmit."""
+    if event in ("SessionStart", "PreCompact", "PostCompact"):
+        return True
+    if event != "UserPromptSubmit":
+        return False
+    try:
+        n_every = int(cfg.get("refresh_every", 25))
+    except Exception:
+        n_every = 25
+    if n_every <= 0:
+        return False
+    sid = str(payload.get("session_id") or "")
+    if not sid:
+        return False
+    turns_dir = os.path.join(dd, "turns")
+    try:
+        os.makedirs(turns_dir, exist_ok=True)
+    except Exception:
+        return False
+    tp = os.path.join(turns_dir, sid + ".json")
+    try:
+        ts = json.load(open(tp, encoding="utf-8"))
+    except Exception:
+        ts = {"n": 0}
+    ts["n"] = ts.get("n", 0) + 1
+    try:
+        with open(tp, "w", encoding="utf-8") as f:
+            json.dump(ts, f)
+    except Exception:
+        pass
+    return ts["n"] > 0 and ts["n"] % n_every == 0
+
+
+def full_block():
+    return (
+        "## Pool\n\n"
+        "- Heavy Bash commands (build/test/compile/GPU) are auto-routed "
+        "over ssh by the wilson-pool plugin to one of: **%s**.\n"
+        "- Host selection: a macOS-only or Linux-only command goes to a "
+        "host of that platform; otherwise the load is round-robined across "
+        "the roster. Remote workdir: %s.\n"
+        "- The remote workdir is assumed to be a user-synced copy of this "
+        "project on EVERY roster host — this plugin does NOT sync "
+        "filesystems. Do not assume local file edits are visible remotely "
+        "until the user has synced them.\n"
+        "- Read/Write/Edit/Grep stay LOCAL (only Bash is routed).\n"
+        % (roster, wd_desc)
+    )
+
+
+def short_guard():
+    # One-line correctness guard for off-turns: keeps the sync caveat
+    # alive every turn so the model never forgets that local edits are
+    # invisible to the remote until synced. Drops the roster details
+    # (those are info, refreshed on cadence).
+    return (
+        "## Pool\n\n"
+        "- wilson-pool routes heavy Bash to a remote roster; the remote "
+        "workdir is a user-synced mirror — local edits are NOT visible "
+        "remotely until you sync. Read/Write/Edit/Grep stay LOCAL.\n"
+    )
+
+
+ctx = full_block() if _should_full(event, cfg, payload, dd) else short_guard()
 print(json.dumps({
     "hookSpecificOutput": {"hookEventName": event, "additionalContext": ctx}
 }))

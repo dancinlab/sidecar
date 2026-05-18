@@ -147,3 +147,18 @@
   - real cause = CC built-in Stop-evaluator prompt overflow (harness scope) — sidecar code cannot remove the error itself, honest scope limit
   - Stop hook's per-turn full readlines() of a 14 MB transcript IS our code — bound it to an O(1) tail (<=2 MiB) regardless of session size
   - measured on real 14.4 MB transcript: identical result ('ok go'), I/O 3x lower (19.2->6.1 ms), small/missing/empty edges regression-free — surgical, behavior-preserving
+
+### Decision 16 — B — wilson-pool injection mirrors the wilson-prefs cadence (full block on SessionStart/PreCompact/PostCompact + every Nth UserPromptSubmit; not every turn)
+- **picked**: B — wilson-pool injection mirrors the wilson-prefs cadence (full block on SessionStart/PreCompact/PostCompact + every Nth UserPromptSubmit; not every turn)
+- **rationale**:
+  - audit-measured: wilson-pool re-injected the full ## Pool block on EVERY UserPromptSubmit with zero dedupe/cadence -> ~22.5k tok/long-session (53% of all plugin injection overhead)
+  - wilson-prefs already proves the pattern in-repo via _should_full() — mirror a verified mechanism instead of inventing one
+  - the Pool routing facts are static (roster, mirror-workdir rule) so re-sending every turn is purely multiplicative waste, while a periodic refresh keeps them from fading across long sessions/compactions
+
+### Decision 17 — Option 1 — off-turn UserPromptSubmit emits a 1-line safety guard (routing + sync caveat); full ## Pool block only on SessionStart/PreCompact/PostCompact + every Nth UserPromptSubmit
+- **picked**: Option 1 — off-turn UserPromptSubmit emits a 1-line safety guard (routing + sync caveat); full ## Pool block only on SessionStart/PreCompact/PostCompact + every Nth UserPromptSubmit
+- **rationale**:
+  - faithful mirror of wilson-prefs cadence — prefs never goes fully silent on off-turns (compact directives stay; only heavy style body is gated). Same shape = predictable + already-trusted
+  - the sync caveat ('local edits not visible remotely until synced') is a correctness guard, not info — forgetting it causes silent stale-source remote builds, so it must stay every turn
+  - token delta of keeping ~40 tok/turn is trivial vs the ~150 tok/turn we're removing — Option-2's extra savings cannot justify reintroducing a silent correctness hazard
+  - only genuinely informational content (roster details, host-selection rule, mirror-workdir explanation) gets cadence-gated — gating exactly what should be gated

@@ -74,15 +74,55 @@ if style:
     lines.append("- Active response style: **%s**." % style)
 lines.append("")
 
-# inline the style file body — ONLY at SessionStart. The body is multi-KB
-# (friendly.md ≈ 5–8 KB); re-sending it on every UserPromptSubmit bloats
-# the prompt linearly over a long session ("Prompt is too long"). The
-# compact `## Prefs` directive lines above are re-asserted every turn
-# (cheap, survives compaction); the full style guide is established once
-# per session. Resolution order: a language-localized variant for the
-# active reply language wins, then the canonical file; user-custom (DATA)
-# overrides shipped (ROOT) at each step.
-if style and event == "SessionStart":
+# inline the style file body — gated so we don't bloat every prompt
+# (friendly.md ≈ 5–8 KB) but also don't fade out as a long session and
+# its compactions erode the original SessionStart inject:
+#
+#   SessionStart      — full body (the session's baseline)
+#   PreCompact        — full body, RIGHT BEFORE compaction summarises the
+#                       transcript — guarantees the style rules land
+#                       inside whatever summary CC keeps
+#   UserPromptSubmit  — compact directives only, EXCEPT every Nth turn
+#                       (configurable; default 25) we refresh the body
+#                       so the rules stay fresh across long sessions
+#
+# Resolution order: a language-localized variant for the active reply
+# language wins, then the canonical file; user-custom (DATA) overrides
+# shipped (ROOT) at each step.
+def _should_full(event, prefs, payload, dd):
+    if event in ("SessionStart", "PreCompact"):
+        return True
+    if event != "UserPromptSubmit":
+        return False
+    try:
+        n_every = int(prefs.get("refresh_every", 25))
+    except Exception:
+        n_every = 25
+    if n_every <= 0:
+        return False
+    sid = str(payload.get("session_id") or "")
+    if not sid:
+        return False
+    turns_dir = os.path.join(dd, "turns")
+    try:
+        os.makedirs(turns_dir, exist_ok=True)
+    except Exception:
+        return False
+    tp = os.path.join(turns_dir, sid + ".json")
+    try:
+        ts = json.load(open(tp, encoding="utf-8"))
+    except Exception:
+        ts = {"n": 0}
+    ts["n"] = ts.get("n", 0) + 1
+    try:
+        with open(tp, "w", encoding="utf-8") as f:
+            json.dump(ts, f)
+    except Exception:
+        pass
+    return ts["n"] > 0 and ts["n"] % n_every == 0
+
+
+if style and _should_full(event, prefs, payload, dd):
     body = ""
     root = plugin_root()
     cands = []

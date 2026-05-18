@@ -12,7 +12,11 @@
 #   reset                  → delete prefs.json (back to "unset → no injection")
 import json, os, sys
 
-KEYS = ("response_lang", "code_lang", "response_style")
+KEYS = ("response_lang", "code_lang", "response_style", "refresh_every")
+# `refresh_every` is the per-session cadence (UserPromptSubmit every Nth
+# turn re-injects the full style body). Default lives in _inject.py
+# (see DEFAULT_REFRESH_EVERY below) — keep the two in sync.
+DEFAULT_REFRESH_EVERY = 10
 
 
 def data_dir():
@@ -94,6 +98,11 @@ def show():
     for k in KEYS:
         if k in d:
             print("  %-15s %s" % (k, d[k]))
+        elif k == "refresh_every":
+            # Always surface the cadence so the user can see the live
+            # value even when it falls through to the default.
+            print("  %-15s %s (default — set to override)"
+                  % (k, DEFAULT_REFRESH_EVERY))
     print("State: %s" % STATE)
 
 
@@ -125,7 +134,7 @@ def main():
 
     if cmd in ("refresh-every", "refresh_every"):
         if len(args) < 2 or not args[1].strip():
-            cur = load().get("refresh_every", 25)
+            cur = load().get("refresh_every", DEFAULT_REFRESH_EVERY)
             print("sidecar/wilson-prefs: refresh-every = %s (full style "
                   "body re-injected on UserPromptSubmit every Nth turn — "
                   "0 disables). Set: /wilson-prefs:prefs refresh-every <N>"

@@ -27,6 +27,13 @@ except Exception:
 event = payload.get("hook_event_name") or payload.get("hookEventName") \
     or "SessionStart"
 
+# SessionStart fires with source ∈ {startup, resume, clear, compact};
+# the compact path overlaps PostCompact for the same compaction event.
+# Skip it here so PostCompact (strictly cleaner post-summary moment) owns
+# the full-body reload alone. Decision 21, design.md.
+if event == "SessionStart" and payload.get("source") == "compact":
+    sys.exit(0)
+
 
 def data_dir():
     d = os.environ.get("CLAUDE_PLUGIN_DATA") \
@@ -97,6 +104,12 @@ lines.append("")
 # language wins, then the canonical file; user-custom (DATA) overrides
 # shipped (ROOT) at each step.
 def _should_full(event, prefs, payload, dd):
+    # SessionStart's source="compact" path is intentionally skipped:
+    # PostCompact fires alongside it for the same compaction event and is
+    # the strictly cleaner post-summary moment. Letting both inject would
+    # double the full body on every compaction (Decision 21, design.md).
+    if event == "SessionStart" and payload.get("source") == "compact":
+        return False
     if event in ("SessionStart", "PostCompact"):
         return True
     if event != "UserPromptSubmit":

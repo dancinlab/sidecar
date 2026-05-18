@@ -44,6 +44,13 @@ except Exception:
 event = payload.get("hook_event_name") or payload.get("hookEventName") \
     or "SessionStart"
 
+# SessionStart fires with source ∈ {startup, resume, clear, compact};
+# the compact path overlaps PostCompact for the same compaction event.
+# Skip it here so PostCompact (strictly cleaner post-summary moment) owns
+# the full-body reload alone. Decision 21, design.md.
+if event == "SessionStart" and payload.get("source") == "compact":
+    sys.exit(0)
+
 dd = os.environ.get("CLAUDE_PLUGIN_DATA") or os.path.join(
     os.path.expanduser("~"), ".claude", "plugin-data", "wilson-pool")
 try:
@@ -74,7 +81,12 @@ else:
 def _should_full(event, cfg, payload, dd):
     """Mirror of wilson-prefs._should_full(): always full on session /
     post-compact boundaries; periodic refresh on UserPromptSubmit.
-    PreCompact is intentionally not full — see header comment."""
+    PreCompact is intentionally not full — see header comment.
+    SessionStart source=compact is also skipped (PostCompact owns it,
+    Decision 21) — guarded both here and at the script's top-level
+    early-exit for defense in depth."""
+    if event == "SessionStart" and payload.get("source") == "compact":
+        return False
     if event in ("SessionStart", "PostCompact"):
         return True
     if event != "UserPromptSubmit":

@@ -229,8 +229,14 @@ def hook():
         "hookEventName") or ""
     if load().get("off"):
         sys.exit(0)
-    # SessionStart (also fires post-compact with source="compact") and
-    # PostCompact (clean post-summary moment) → full principle inject.
+    # SessionStart (fires on startup/resume/clear/compact) and PostCompact
+    # (clean post-summary moment) → full principle inject. SessionStart's
+    # source="compact" path is intentionally skipped: PostCompact fires
+    # alongside it for the same compaction event and is the strictly
+    # cleaner post-summary moment. Letting both fire would duplicate the
+    # full principle on every compaction (Decision 21, design.md).
+    if event == "SessionStart" and payload.get("source") == "compact":
+        sys.exit(0)
     if event in ("SessionStart", "PostCompact"):
         inject(event, principle())
     if event == "UserPromptSubmit":

@@ -185,3 +185,11 @@
   - 'cheap insurance' was inaccurate — measured cost is ~6,062 tok/session for wilson-prefs and ~8,162 tok/session for wilson-pool, identical to the PostCompact full-body cost it duplicates (total ~14,224 tok/session of pure redundancy)
   - Option B (hook entry retained but emit-free) leaves a registered hook with zero current emit value and no future placeholder rationale — A removes the entry cleanly, simpler code/config surface to explain
   - applying to both plugins simultaneously preserves cadence-shape symmetry across wilson-* plugins (SS + UPS + PostCompact triple) — sets the canonical cadence reference for any new sample-inlining plugin
+
+### Decision 21 — Option A — three plugins (wilson-decision-gate, wilson-prefs, wilson-pool) skip full-body inject when SessionStart payload carries source=compact; PostCompact owns the post-compaction full-body reload; SessionStarts other sources (startup/resume/clear) unchanged
+- **picked**: Option A — three plugins (wilson-decision-gate, wilson-prefs, wilson-pool) skip full-body inject when SessionStart payload carries source=compact; PostCompact owns the post-compaction full-body reload; SessionStarts other sources (startup/resume/clear) unchanged
+- **rationale**:
+  - official CC docs define PostCompact as After context compaction completes and SessionStart as When a session begins or resumes — A maps each event to its precise semantic owner instead of duplicating the post-compaction reload across both
+  - wilson-prefs and wilson-pool source comments already describe PostCompact as landing in the clean post-summary context with rules guaranteed present — Option A reflects that documented intent in code, Option B would remove the strictly-cleaner path that D20 explicitly preserved
+  - measured savings about 14101 tok per 120-turn session across the three plugins (DG -1598 / prefs -4079 / pool -8424) — comparable to D20, addresses the largest remaining audit residue
+  - identical 4-5 line patch in all three plugins establishes the canonical SS plus PostCompact cadence reference for any future wilson-* plugin that inlines a sample body

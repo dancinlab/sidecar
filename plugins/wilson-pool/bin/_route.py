@@ -63,10 +63,12 @@ def roster(cfg):
     for h in (cfg.get("hosts") or []):
         if isinstance(h, dict) and str(h.get("host") or "").strip():
             out.append({"host": str(h["host"]).strip(),
-                        "platform": (h.get("platform") or "linux")})
+                        "platform": (h.get("platform") or "linux"),
+                        "workdir": str(h.get("workdir") or "").strip()})
     # migrate a legacy single-host config
     if not out and cfg.get("host"):
-        out.append({"host": str(cfg["host"]).strip(), "platform": "linux"})
+        out.append({"host": str(cfg["host"]).strip(),
+                    "platform": "linux", "workdir": ""})
     return out
 
 
@@ -81,15 +83,19 @@ def cd_target(wd):
     return shlex.quote(wd)
 
 
-def resolve_workdir(cfg, payload):
-    """Resolve the remote workdir.
-      - an explicit `workdir` is used verbatim;
-      - `workdir: auto` mirrors the current project — a local <home>/<rel>
-        path maps to the remote `~/<rel>` (so `~` expands per host);
+def resolve_workdir(pick, cfg, payload):
+    """Resolve the remote workdir for the chosen host.
+      - a per-host `workdir` on the roster entry wins (lets each host
+        point at wherever its copy actually lives — a different path, a
+        symlink target, a mount point);
+      - else the global `workdir`; an explicit path is used verbatim;
+      - `auto` mirrors the current project — local <home>/<rel> maps to
+        the remote `~/<rel>` (so `~` expands per host);
       - when `auto` cannot mirror (cwd outside the local home), the
-        designated `workdir_fallback` is used if set, else None (run local).
+        designated `workdir_fallback` is used if set, else None (local).
     """
-    workdir = (cfg.get("workdir") or "").strip()
+    workdir = (str(pick.get("workdir") or "").strip()
+               or str(cfg.get("workdir") or "").strip())
     fallback = (cfg.get("workdir_fallback") or "").strip()
     if workdir.lower() != "auto":
         return workdir or None
@@ -103,6 +109,39 @@ def resolve_workdir(cfg, payload):
     if not rel.startswith(".."):
         return "~/" + rel
     return fallback or None        # auto could not mirror → designated path
+
+
+def preflight_ok(host, wd_sh, dd):
+    """autosync-OFF safety net: confirm the workdir exists on the host
+    before routing — else the routed `cd` just fails with
+    `no such file or directory`. Cached per (host, workdir) for the
+    session, so only the first route to each host pays one ssh probe."""
+    import subprocess
+    cache_p = os.path.join(dd, ".preflight.json")
+    key = host + "\x00" + wd_sh
+    try:
+        cache = json.load(open(cache_p, encoding="utf-8"))
+        if not isinstance(cache, dict):
+            cache = {}
+    except Exception:
+        cache = {}
+    if key in cache:
+        return cache[key] == "ok"
+    try:
+        rc = subprocess.run(
+            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6",
+             host, "test -d " + wd_sh],
+            capture_output=True, timeout=12).returncode
+        ok = (rc == 0)
+    except Exception:
+        ok = False
+    cache[key] = "ok" if ok else "missing"
+    try:
+        with open(cache_p, "w", encoding="utf-8") as f:
+            json.dump(cache, f)
+    except Exception:
+        pass
+    return ok
 
 
 if os.environ.get("SIDECAR_NO_POOL") == "1":
@@ -171,21 +210,44 @@ except Exception:
     pass
 host = pick["host"]
 
-wd_remote = resolve_workdir(cfg, payload)
+wd_remote = resolve_workdir(pick, cfg, payload)
 if not wd_remote:                  # auto mode + cwd outside home, no fallback
     allow()
+wd_sh = cd_target(wd_remote)       # tilde-safe remote-shell form
+remote = "cd %s && %s" % (wd_sh, cmd)
 
-remote = "cd %s && %s" % (cd_target(wd_remote), cmd)
-new_cmd = "ssh %s %s  # %s" % (shlex.quote(host), shlex.quote(remote), MARK)
+if cfg.get("autosync"):
+    # incremental rsync of the local project → the remote workdir, run
+    # right before the heavy command (as part of the routed command, so
+    # the hook never blocks). Makes routing safe on a host that never had
+    # the workdir (rsync creates it) and keeps a continuously-changing
+    # tree fresh with zero manual sync. Additive by default — remote
+    # build caches survive; `autosync mirror` adds rsync --delete.
+    local = (payload.get("cwd") or os.getcwd()).rstrip("/") or "."
+    delete = " --delete" if str(cfg.get("autosync")) == "mirror" else ""
+    new_cmd = (
+        "ssh %s %s && rsync -az%s %s/ %s:%s/ && ssh %s %s  # %s" % (
+            shlex.quote(host), shlex.quote("mkdir -p " + wd_sh), delete,
+            shlex.quote(local), shlex.quote(host), wd_sh,
+            shlex.quote(host), shlex.quote(remote), MARK))
+    note = "auto-synced (rsync%s) → %s:%s" % (delete or " additive",
+                                              host, wd_remote)
+else:
+    # autosync off → pre-flight: never route to a host missing the
+    # workdir (that just yields `cd: no such file`). Run local instead.
+    if not preflight_ok(host, wd_sh, dd):
+        allow()
+    new_cmd = "ssh %s %s  # %s" % (
+        shlex.quote(host), shlex.quote(remote), MARK)
+    note = "%s:%s (workdir is user-synced)" % (host, wd_remote)
 
 print(json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "PreToolUse",
         "updatedInput": dict(ti, command=new_cmd),
         "additionalContext": (
-            "wilson-pool: routed this heavy command to %s:%s via ssh "
-            "(%s; %d-host roster; remote workdir is user-synced)."
-            % (host, wd_remote, why, len(hosts))
+            "wilson-pool: routed this heavy command — %s (%s; %d-host "
+            "roster)." % (note, why, len(hosts))
         ),
     }
 }))

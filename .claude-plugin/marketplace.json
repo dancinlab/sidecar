@@ -101,6 +101,12 @@
       "version": "0.1.1"
     },
     {
+      "name": "wilson-inbox",
+      "source": "./plugins/wilson-inbox",
+      "description": "Cross-project handoff inbox — when a gap or request affects another SSOT repo, file it there as a structured inbox/<kind>/<slug>.md entry (kind: notes / patches / poc / rfc_drafts) instead of silently working around it downstream. /wilson-inbox:inbox scaffolds and manages entries: add / list / show / path / verify / apply / archive / rm. Target repo: --to <name> (~/core/<name>) or the nearest .git walking up from the cwd. Light-mode is folder + entries; heavy-mode adds inbox/PATCHES.yaml with a status lifecycle that apply/archive transition. A SessionStart hook surfaces the current repo's inbox entries so a handoff is never forgotten — inert unless the repo has an inbox/. Standalone port of wilson's inbox plugin. Default ON. Opt out: SIDECAR_NO_INBOX=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
       "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",

@@ -69,14 +69,20 @@ Treat any real multi-decision spec/design session as the worked example: each br
 - Q&A / explanation / status reports — no deliverable.
 - Emergency hotfix where speed > deliberation (use the `/wilson-decision-gate off` / `SIDECAR_NO_DECISION_GATE=1` kill-switch for the duration of the session, and log the reason).
 
-## Independence from the "friendly preset"
+## Relationship to the `wilson-prefs` response style
 
-The protocol this generalises bundles two things:
+The protocol this generalises bundles two things along their natural axes:
 
-1. **Friendly preset** (7-element pattern, recommendation format, emoji enum, etc.) — that is *how you write*, and lives separately in the sidecar `wilson-prefs` plugin as a response style.
+1. **Response style** (e.g. the friendly 7-element pattern, recommendation format, emoji enum) — *how you write*. This lives separately in the sidecar `wilson-prefs` plugin as a response style.
 2. **Step-by-step user-confirmation gate** — *this* principle, *how you decide*.
 
-They split along their natural axes: friendly preset is how you write, step-by-step is how you decide. Either can be on while the other is off.
+**Scope is independent** (either can be on while the other is off), **but presentation is inherited — automatically**:
+
+- A gate's options + recommendation + rationale are **rendered in whatever response style `wilson-prefs` currently declares** — the agent reads the active style from the injected `## Prefs` block (`Active response style: **<name>**`) and applies it **without the user ever re-asking**. Having to manually say "present the gate in the friendly version" when `wilson-prefs` already declared `style=friendly` is a **bug**, not the intended workflow.
+- When the active style is **friendly**, each option and the recommendation use the **full friendly 7-element pattern** (emoji icon · alias · plain one-liner · everyday analogy · fenced ASCII diagram · comparison-to-nearest-tool) — *not* a bare terse table.
+- When `wilson-prefs` is **absent / unset / disabled**, the gate falls back to the host's default presentation. There is no hard runtime coupling — the gate works standalone; it just can't inherit a style that was never set.
+
+In short: *whether* you gate is this principle; *how the gate reads* is inherited from the active prefs style, with no manual reminder required.
 
 ## Activation cheatsheet
 

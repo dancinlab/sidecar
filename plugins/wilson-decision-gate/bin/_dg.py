@@ -80,7 +80,77 @@ def design_path(st, cwd):
     return rel if os.path.isabs(rel) else os.path.join(cwd, rel)
 
 
-PRINCIPLE = (
+def split_rationale(why):
+    """Split a rationale string into bullets.
+
+    Top-level `;`, `·` and newlines are bullet separators (NOT comma —
+    commas are common inside one reason). A separator inside a balanced
+    `(...)` / `[...]` / `{...}` group does NOT split, so a parenthetical
+    like `(secret-guard;dangerous-path 등)` stays in one bullet. A
+    backslash-escaped `\\;` / `\\·` is a literal (the backslash is
+    dropped); `\\n` is left untouched (only a real newline splits).
+    """
+    bullets = []
+    buf = []
+    depth = 0
+    pairs = {")": "(", "]": "[", "}": "{"}
+    opens = set(pairs.values())
+    i = 0
+    n = len(why)
+    while i < n:
+        ch = why[i]
+        if ch == "\\" and i + 1 < n and why[i + 1] in (";", "·"):
+            buf.append(why[i + 1])  # escaped separator → literal
+            i += 2
+            continue
+        if ch in opens:
+            depth += 1
+            buf.append(ch)
+        elif ch in pairs:
+            depth = max(0, depth - 1)
+            buf.append(ch)
+        elif ch == "\n" or (depth == 0 and ch in (";", "·")):
+            bullets.append("".join(buf))
+            buf = []
+        else:
+            buf.append(ch)
+        i += 1
+    bullets.append("".join(buf))
+    return [b.strip(" -·") for b in bullets if b.strip(" -·")]
+
+
+def prefs_data_dir():
+    # wilson-prefs persists to its OWN $CLAUDE_PLUGIN_DATA (per-plugin,
+    # isolated — we cannot read another plugin's env), falling back to a
+    # well-known absolute path. That fallback is the only stable
+    # cross-plugin coordination point, mirroring how sidecar's own shared
+    # state works. No file / unreadable → graceful: we just don't know the
+    # style and the static convention text still codifies "inherit it".
+    return os.path.join(os.path.expanduser("~"), ".claude", "plugin-data",
+                        "wilson-prefs")
+
+
+def active_style():
+    """Return the active wilson-prefs response style, or None.
+
+    Best-effort, never raises: if wilson-prefs is absent / unset /
+    unreadable we return None and callers fall back to the static
+    "inherit the active prefs style" convention text.
+    """
+    try:
+        with open(os.path.join(prefs_data_dir(), "prefs.json"),
+                  encoding="utf-8") as f:
+            d = json.load(f)
+        if isinstance(d, dict):
+            s = d.get("response_style")
+            if isinstance(s, str) and s.strip():
+                return s.strip()
+    except Exception:
+        pass
+    return None
+
+
+PRINCIPLE_BASE = (
     "## Step-by-step decision gate\n\n"
     "Multi-decision work is **one user-confirmation gate per decision, "
     "never batched**. For each branch point (spec design / refactor "
@@ -95,12 +165,53 @@ PRINCIPLE = (
     "Batching N picks into one yes/no collapses most decisions into "
     "undeliberated assents and defeats the gate.\n")
 
+# How a gate is *presented* is orthogonal to *that* it is gated: the
+# gate inherits the active wilson-prefs response style automatically —
+# the user never has to re-ask for it. If wilson-prefs is unset/absent
+# this still holds (no style → host default), so there is no hard
+# runtime coupling.
+PREFS_INHERIT_GENERIC = (
+    "\nGate presentation **inherits the active `wilson-prefs` response "
+    "style automatically** — never make the user re-ask for it. Render "
+    "the options + recommendation + rationale in whatever style "
+    "`wilson-prefs` declares (its `## Prefs` block names the active "
+    "style); if it declares **friendly**, use the full friendly "
+    "7-element pattern (emoji icon · alias · plain one-liner · everyday "
+    "analogy · fenced ASCII diagram · comparison-to-nearest-tool) for "
+    "each option and the recommendation — not a bare terse table. "
+    "If `wilson-prefs` is absent/unset, fall back to the host default. "
+    "This inheritance is the rule whether or not a reminder is given.\n")
+
+
+def _prefs_inherit_clause():
+    s = active_style()
+    if not s:
+        return PREFS_INHERIT_GENERIC
+    extra = ("" if s.lower() != "friendly" else
+             " Friendly = the full 7-element pattern (emoji icon · alias "
+             "· plain one-liner · everyday analogy · fenced ASCII diagram "
+             "· comparison-to-nearest-tool) per option + recommendation, "
+             "not a bare terse table.")
+    return (
+        "\nGate presentation **inherits the active `wilson-prefs` "
+        "response style automatically** — the active style is **%s** "
+        "(from `wilson-prefs`); present every gate's options + "
+        "recommendation + rationale in that style **without the user "
+        "re-asking**.%s This holds even if no reminder is given.\n"
+        % (s, extra))
+
+
+def principle():
+    return PRINCIPLE_BASE + _prefs_inherit_clause()
+
 NUDGE = (
     "[step-by-step-decision-gate] This looks like multi-decision work — "
     "gate each decision separately (options + recommendation + 3+ "
     "rationale bullets, then wait for the pick), and log each as "
     "`Decision N:` to design.md via `/wilson-decision-gate decide`. "
-    "Do not batch several picks into one confirmation.\n")
+    "Do not batch several picks into one confirmation. Present the gate "
+    "in the active `wilson-prefs` style automatically (no need for the "
+    "user to ask).\n")
 
 
 def inject(event, text):
@@ -121,7 +232,7 @@ def hook():
     # SessionStart (also fires post-compact with source="compact") and
     # PostCompact (clean post-summary moment) → full principle inject.
     if event in ("SessionStart", "PostCompact"):
-        inject(event, PRINCIPLE)
+        inject(event, principle())
     if event == "UserPromptSubmit":
         prompt = payload.get("prompt") or ""
         if BRANCH_RE.search(prompt):
@@ -217,10 +328,10 @@ def cmd(args):
             return
         picked = rest[0].strip()
         why = " ".join(rest[1:]).strip()
-        # split rationale into bullets on newline / ; / · (NOT comma —
-        # commas are common inside a single reason)
-        bullets = [b.strip(" -·") for b in re.split(r"[\n;·]", why)
-                   if b.strip(" -·")]
+        # split rationale into bullets on top-level newline / ; / ·
+        # (NOT comma, and NOT a ; / · inside a (...) / [...] / {...}
+        # group; \; / \· is a literal) — see split_rationale().
+        bullets = split_rationale(why)
         if not bullets:
             bullets = ["(rationale not given — add 3+ before shipping)"]
         txt, decs = read_ledger(path)

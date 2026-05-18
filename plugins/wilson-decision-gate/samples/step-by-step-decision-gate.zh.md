@@ -69,14 +69,20 @@
 - Q&A / 解释 / 状态报告 —— 无交付物。
 - 速度 > 审慎的紧急热修（会话期间用 `/wilson-decision-gate off` / `SIDECAR_NO_DECISION_GATE=1` kill-switch，并记录原因）。
 
-## 与 "friendly preset" 的独立性
+## 与 `wilson-prefs` 响应风格的关系
 
-此原则所一般化的协议捆绑两样:
+此原则所一般化的协议沿自然轴捆绑两样:
 
-1. **Friendly preset**（7-element 模式、推荐格式、emoji 枚举等）—— 那是 *怎么写*，作为响应风格单独存在于 sidecar `wilson-prefs` 插件。
+1. **响应风格**（如 friendly 7-element 模式、推荐格式、emoji 枚举）—— *怎么写*。作为响应风格单独存在于 sidecar `wilson-prefs` 插件。
 2. **Step-by-step 用户确认门** —— *本* 原则，*怎么决策*。
 
-沿自然轴分开: friendly preset 是怎么写，step-by-step 是怎么决策。一方开着另一方可关。
+**作用域独立**（一方开着另一方可关）**，但呈现是自动继承的**:
+
+- 门的选项 + 推荐 + 理由会**以 `wilson-prefs` 当前声明的响应风格渲染** —— 代理从注入的 `## Prefs` 块（`Active response style: **<name>**`）读取活动风格，并在**用户无需再次要求**的情况下应用。若 `wilson-prefs` 已声明 `style=friendly` 却还要手动说"用 friendly 版展示门"，那是 **bug**，不是预期工作流。
+- 当活动风格为 **friendly** 时，每个选项和推荐使用 **完整 friendly 7-element 模式**（emoji 图标 · 别名 · 一句白话 · 日常类比 · fenced ASCII 图 · 与最接近工具的对比）—— 不是 bare terse table。
+- 当 `wilson-prefs` **缺失 / 未设置 / 禁用** 时，门回退到宿主默认呈现。没有硬运行时耦合 —— 门可独立工作，只是无法继承从未设置过的风格。
+
+简言之: *是否设门* 是本原则；*门怎么读* 继承自活动 prefs 风格，无需手动提醒。
 
 ## 启用速查
 

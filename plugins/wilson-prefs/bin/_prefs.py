@@ -123,12 +123,36 @@ def main():
             print("  %-12s (%s)%s" % (name, tag, lg))
         return
 
+    if cmd in ("refresh-every", "refresh_every"):
+        if len(args) < 2 or not args[1].strip():
+            cur = load().get("refresh_every", 25)
+            print("sidecar/wilson-prefs: refresh-every = %s (full style "
+                  "body re-injected on UserPromptSubmit every Nth turn — "
+                  "0 disables). Set: /wilson-prefs:prefs refresh-every <N>"
+                  % cur)
+            return
+        try:
+            n = int(args[1].strip())
+        except ValueError:
+            print("sidecar/wilson-prefs: refresh-every needs an integer "
+                  "(0 disables periodic refresh).")
+            return
+        d = load()
+        d["refresh_every"] = n
+        save(d)
+        print("sidecar/wilson-prefs: refresh_every = %d — %s." % (
+            n, "periodic refresh disabled (SessionStart + PreCompact "
+            "only)" if n <= 0 else
+            "full style body re-injected every %d UserPromptSubmit turns "
+            "(SessionStart + PreCompact still get it unconditionally)" % n))
+        return
+
     keymap = {"lang": "response_lang", "code": "code_lang",
               "style": "response_style"}
     if cmd not in keymap:
         print("sidecar/wilson-prefs: unknown subcommand %r. "
               "Use: show | lang <code> | code <code> | style <name> | "
-              "styles | reset" % cmd)
+              "styles | refresh-every <N> | reset" % cmd)
         sys.exit(0)
     if len(args) < 2 or not args[1].strip():
         print("sidecar/wilson-prefs: `%s` needs a value, e.g. "

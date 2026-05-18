@@ -1,7 +1,7 @@
 {
   "name": "wilson-guards",
-  "description": "Three dancinlab-workflow PreToolUse guards in one bundle, standalone ports of wilson's governance + guard-* predicates: ssot-lock (deny editing a file matched by an ssot-lock: bullet in the nearest AGENTS.md ## Governance), tape-append-only (a .tape trace is append-only — deny a rewriting Edit or an overwriting Write), domain-lint (a root UPPERCASE.md topic roadmap must be Head + --- + ## Log). Each guard is inert unless its convention is present. Opt out: SIDECAR_NO_GUARDS=1.",
-  "version": "0.1.0",
+  "description": "Three dancinlab-workflow PreToolUse guards in one bundle, standalone ports of wilson's governance + guard-* predicates: ssot-lock (deny editing a file matched by an ssot-lock: bullet in the nearest AGENTS.md ## Governance), tape-append-only (a .log.tape event-history file is append-only — deny a rewriting Edit or an overwriting Write; per the tape v1.2 architecture-vs-history split a plain .tape is editable architecture, so the guard is inert for it), domain-lint (a root UPPERCASE.md topic roadmap must be Head + --- + ## Log). Each guard is inert unless its convention is present. Opt out: SIDECAR_NO_GUARDS=1.",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

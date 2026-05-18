@@ -5,14 +5,15 @@
 #   ssot-lock         — deny a Write/Edit to a file matched by an
 #                       `ssot-lock:` bullet in the nearest AGENTS.md
 #                       `## Governance` section.
-#   tape-append-only  — a `.tape` file is an append-only execution trace:
-#                       deny an Edit that rewrites existing content, and
-#                       deny a Write that overwrites an existing `.tape`.
+#   tape-append-only  — a `.log.tape` file is append-only event history
+#                       (tape v1.2 architecture-vs-history split): deny an
+#                       Edit that rewrites it / a Write that overwrites it.
+#                       A plain `.tape` is EDITABLE architecture → inert.
 #   domain-lint       — a root-level UPPERCASE.md topic roadmap must be
 #                       `Head + --- + ## Log`; deny a Write that is not.
 #
 # Every guard is INERT unless its convention is actually present — no
-# `ssot-lock:` bullet / no `.tape` file / no domain roadmap → zero
+# `ssot-lock:` bullet / no `.log.tape` file / no domain roadmap → zero
 # behaviour. dancinlab-workflow specific; toggle off: /sidecar off guards.
 #
 # Opt out per session: SIDECAR_NO_GUARDS=1
@@ -110,14 +111,20 @@ def guard_ssot(tool, ti, path):
 
 
 def guard_tape(tool, ti, path):
-    if not path or not path.endswith(".tape"):
-        return                                   # not a .tape → inert
+    # tape v1.2 architecture-vs-history split (governance `g_arch_vs_log_split`,
+    # tape spec §"Architecture-vs-history split"): a plain `<NAME>.tape` is
+    # EDITABLE architecture — declarative entries evolve, latest-wins per id.
+    # The append-only event history lives in the `<NAME>.log.tape` sibling.
+    # So the guard locks `.log.tape` files and is INERT for an editable
+    # `.tape` — a blanket whole-`.tape` lock contradicts the v1.2 governance.
+    if not path or not path.endswith(".log.tape"):
+        return                                   # editable / not history → inert
     if tool == "Write":
         if os.path.isfile(path):
-            deny("`%s` is a `.tape` execution trace — append-only. A full "
+            deny("`%s` is a `.log.tape` event history — append-only. A full "
                  "Write would overwrite recorded history; append a new "
                  "event at the bottom instead." % os.path.basename(path))
-        return                                   # new .tape → allow
+        return                                   # new .log.tape → allow
     edits = ti.get("edits") if tool == "MultiEdit" else [ti]
     for e in (edits or []):
         if not isinstance(e, dict):
@@ -125,9 +132,11 @@ def guard_tape(tool, ti, path):
         old = e.get("old_string") or ""
         new = e.get("new_string") or ""
         if old and not new.startswith(old):
-            deny("`%s` is a `.tape` execution trace — append-only. This "
-                 "edit rewrites existing content rather than appending a "
-                 "new event at the bottom." % os.path.basename(path))
+            deny("`%s` is a `.log.tape` event history — append-only. This "
+                 "edit rewrites existing content rather than appending a new "
+                 "event at the bottom. (A plain `.tape` is editable v1.2 "
+                 "architecture — only the `.log.tape` sibling is locked.)"
+                 % os.path.basename(path))
 
 
 def guard_domain(tool, ti, path):

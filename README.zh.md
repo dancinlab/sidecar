@@ -37,7 +37,7 @@
 
 | 插件 | CC hook | 行为 |
 |---|---|---|
-| `wilson-guards` | `PreToolUse`（`Write`·`Edit`·`MultiEdit`） | dancinlab 工作流护栏 3 合 1 包 —— `ssot-lock`（拒绝编辑被最近 `AGENTS.md ## Governance` 中 `ssot-lock:` 条目匹配的文件）、`tape-append-only`（`.tape` 轨迹仅追加 —— 拒绝重写既有内容的 Edit / 覆盖式 Write）、`domain-lint`（根 `UPPERCASE.md` 主题路线图须为 `Head + --- + ## Log` 结构） —— 独立移植，**可用**；各护栏在对应约定缺失时 inert（opt out: `SIDECAR_NO_GUARDS=1`） |
+| `wilson-guards` | `PreToolUse`（`Write`·`Edit`·`MultiEdit`） | dancinlab 工作流护栏 3 合 1 包 —— `ssot-lock`（拒绝编辑被最近 `AGENTS.md ## Governance` 中 `ssot-lock:` 条目匹配的文件）、`tape-append-only`（`.log.tape` 事件历史仅追加 —— 拒绝重写的 Edit / 覆盖式 Write；按 tape v1.2 的 architecture-vs-history 拆分，plain `.tape` 是可编辑架构，故护栏对其 inert）、`domain-lint`（根 `UPPERCASE.md` 主题路线图须为 `Head + --- + ## Log` 结构） —— 独立移植，**可用**；各护栏在对应约定缺失时 inert（opt out: `SIDECAR_NO_GUARDS=1`） |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | 注入 `AGENTS.md` 向上查找的 SSOT 作为上下文（等价于 wilson `agents-md`） — **可用** |
 | `wilson-readme-format` | `PreToolUse`（`Write`·`Edit`） | 拒绝违反 readme-format 的仓库根 `README.md`（散文中表情 / 多字形 H1 / 非英文 At-a-glance / `####`）— wilson `guard-readme-format` 的独立移植，**可用** |
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse`（`Bash`） | PreToolUse: 拒绝对非 hexa 校验器（sympy/PyPhi/wolframscript/mathematica）的 Bash 调用 → 引导改用 hexa CLI。PostToolUse: 当 `hexa verify` 报告新的 SUPPORTED 方程（🔵/🟢）时，**自动向** `dancinlab/hexa-lang` **开 PR** —— 把方程烘焙进二进制内置 atlas（补全 `hexa atlas promote` 的桩 `pr` 步骤，PR 留待人工审查、不自动合并）。无法自动开 PR 时回退为引导 `worktree-pr` 工作流。wilson `guard-hexa-verify` 的独立移植+扩展，**可用**。⚠ `hexa` 不在 PATH 时 inert |

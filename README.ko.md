@@ -37,7 +37,7 @@
 
 | 플러그인 | CC hook | 동작 |
 |---|---|---|
-| `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | dancinlab 워크플로 가드 3종 번들 — `ssot-lock`(가장 가까운 `AGENTS.md ## Governance`의 `ssot-lock:` 불릿에 매치되는 파일 편집 차단), `tape-append-only`(`.tape` 트레이스는 append-only — 기존 내용 재작성 Edit / 덮어쓰는 Write 차단), `domain-lint`(루트 `UPPERCASE.md` 토픽 로드맵은 `Head + --- + ## Log` 구조여야) — standalone 포팅, **작동**; 각 가드는 해당 규약이 없으면 inert (opt out: `SIDECAR_NO_GUARDS=1`) |
+| `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | dancinlab 워크플로 가드 3종 번들 — `ssot-lock`(가장 가까운 `AGENTS.md ## Governance`의 `ssot-lock:` 불릿에 매치되는 파일 편집 차단), `tape-append-only`(`.log.tape` 이벤트 이력은 append-only — 재작성 Edit / 덮어쓰는 Write 차단. tape v1.2 architecture-vs-history 분할상 plain `.tape`는 편집 가능 아키텍처라 가드는 inert), `domain-lint`(루트 `UPPERCASE.md` 토픽 로드맵은 `Head + --- + ## Log` 구조여야) — standalone 포팅, **작동**; 각 가드는 해당 규약이 없으면 inert (opt out: `SIDECAR_NO_GUARDS=1`) |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) — **작동** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
 | `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 비-hexa 검증기(sympy/PyPhi/wolframscript/mathematica) Bash 호출 차단 → hexa CLI 유도. PostToolUse: `hexa verify`가 새 SUPPORTED 방정식(🔵/🟢) 보고 시 `dancinlab/hexa-lang`에 **PR 자동 생성** — 방정식을 binary built-in atlas에 베이크(`hexa atlas promote`의 stub `pr` 단계 보완, PR은 사람 리뷰용·자동 머지 안 함). 자율 PR 불가 시 `worktree-pr` 워크플로 유도로 fallback. wilson `guard-hexa-verify` standalone 포팅+확장, **작동**. ⚠ `hexa`가 PATH에 없으면 inert |

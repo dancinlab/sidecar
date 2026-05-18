@@ -54,8 +54,9 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-gpu` | `/wilson-gpu` コマンド + `SessionStart` | RunPod / Vast.ai レンタル GPU のコストガードレール — `SessionStart` が課金中インスタンス（稼働時間 + 累計推定コスト）を提示 → 放置 pod のコスト漏れを防ぐ;`down` がキルスイッチ、`attach` はインスタンスを `wilson-pool` roster に接続。戦略 `watch`/`budget`/`idle-reaper`/`ephemeral`;課金・自動 down は別スイッチ（デフォルト OFF）二重ゲート（`up` は `provisioning`+`--yes`、自動停止は `reaping`）;`fanout` は shardable ジョブ向けコスト許容幅の意思決定補助。**動作**・`runpodctl`/`vastai` が無ければ inert（opt out: `SIDECAR_NO_GPU=1`） |
 | `wilson-decision-gate` | `SessionStart`·`UserPromptSubmit` + `/wilson-decision-gate` | ステップバイステップ決定ゲート — 多決定作業は **1 決定 = 1 ユーザー確認ゲート、バッチ禁止**（選択肢+推奨+根拠 3+ → 選択待ち → 次）、`design.md` に `### Decision N` ブロックで記録。wilson `step-by-step-decision-gate` の standalone 移植（wilson 同様 text-only）。SessionStart が原則を 1 回注入・UserPromptSubmit は **branch-point に見えるプロンプトのみ** 短いリマインダ（毎プロンプトではない）。`/wilson-decision-gate decide\|log\|on\|off\|sample`・5 言語 canonical サンプル同梱 — **動作**・デフォルト ON（opt out: `SIDECAR_NO_DECISION_GATE=1`） |
 | `wilson-tape-recorder` | `SessionStart`·`UserPromptSubmit`·`PreToolUse`·`PostToolUse`·`SessionEnd` + `/wilson-tape-recorder` | Claude Code セッションを `.tape` v1.2 実行トレースとして記録（dancinlab `tape` フォーマット） — セッション毎 1 ファイル `<DATA>/sessions/<id>.tape`：SessionStart `@S start` · UserPromptSubmit `@U` · PreToolUse `@T` · PostToolUse `@R` · SessionEnd `@S end`。17-type アルファベットのうち CC フックが実際に渡すものだけの誠実な subset（`@A` 応答テキスト・`@K` コストは信号無し → 除外）。**`wilson-guards/tape-append-only` と対**（レコーダーが produces、ガードが protects）。`/wilson-tape-recorder status\|ls\|tail\|cat\|on\|off` — **動作**・デフォルト ON（opt out: `SIDECAR_NO_TAPE_RECORDER=1`） |
+| `wilson-goal` | `SessionStart`·`UserPromptSubmit` + `/wilson-goal` | **セッション目標の永続+再注入** — 長いセッション・compaction を越えて目標を維持。目標は `<DATA>/goal.json`（トランスクリプト外）にディスク永続、毎 `SessionStart` で復元・`UserPromptSubmit` で 1 行リマインダ（≤ 180B）。プロジェクト直下の `GOAL.md` がユーザー未設定時のデフォルト。`/wilson-goal set\|status\|show\|clear\|path` — **動作**・デフォルト ON。**wilson `loop` 対比の正直な gap**：永続部分のみ移植可、自律 continuation（`loop_tick`+QUEUE）は CC フック制約で不可（opt out: `SIDECAR_NO_GOAL=1`） |
 | `wilson-lsp` | `.lsp.json` LSP サーバ（hook ではない） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 各フォーマット repo の canonical サーバ（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`、`github.com/dancinlab/{tape,n6,hxc,kosmos}` 同梱）に接続。graceful — PATH に無ければ `/plugin` Errors に表示。LSP ライフサイクルは CC 管理（切替は `/plugin`、`/sidecar` ではない） |
-| `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
+| `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
 | `worktree-pr` | `/worktree-pr:wt` コマンド（ワークフロー） | 安全な **worktree → PR → merge → クリーンアップ** ワークフロー — `start <name>`（origin 既定ブランチから隔離 worktree+ブランチ）、`ship <name> "<title>"`（push + PR 作成）、`finish <name>`（PR merge + worktree 削除 + ブランチ削除 + base 更新）、`status`、`abort`。メイン作業ツリー・並行セッションのブランチに非接触 |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
@@ -83,6 +84,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 /plugin install wilson-gpu@sidecar             # RunPod/Vast コストガードレール + キルスイッチ
 /plugin install wilson-decision-gate@sidecar   # ステップバイステップ決定ゲート + design.md 台帳
 /plugin install wilson-tape-recorder@sidecar   # セッションを .tape v1.2 トレースとして記録
+/plugin install wilson-goal@sidecar            # セッション目標の永続（compaction 越え）
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
 /plugin install worktree-pr@sidecar            # /worktree-pr:wt ワークフローコマンド
 /plugin install sidecar@sidecar                # /sidecar ランタイム on/off コントロール
@@ -123,6 +125,7 @@ governance だけを追加する **プラグインマーケットプレイス re
     "wilson-gpu@sidecar": true,
     "wilson-decision-gate@sidecar": true,
     "wilson-tape-recorder@sidecar": true,
+    "wilson-goal@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -219,6 +222,12 @@ sidecar/
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/SessionEnd
 │   │   ├── bin/tr.sh                 # hook + コマンド エントリポイント
 │   │   └── bin/_tr.py                # .tape v1.2 emitter (@S/@U/@T/@R) (動作)
+│   ├── wilson-goal/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/goal.md          # /wilson-goal
+│   │   ├── hooks/hooks.json          # SessionStart + UserPromptSubmit
+│   │   ├── bin/g.sh                  # hook + コマンド エントリポイント
+│   │   └── bin/_g.py                 # 目標の永続 + 再注入 (動作)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 接続

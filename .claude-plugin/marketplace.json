@@ -95,6 +95,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-goal",
+      "source": "./plugins/wilson-goal",
+      "description": "Session goal persistence + re-injection. Goal lives on disk at <DATA>/goal.json (outside the transcript that gets compacted), restored at every SessionStart and re-asserted as a short reminder on each UserPromptSubmit. A project-local `GOAL.md` is used as the default when no user goal is set. /wilson-goal set|status|show|clear|path. HONEST GAP vs wilson's `loop` plugin: only the goal-persistence half is portable — the autonomous-continuation half (wilson's loop_tick + QUEUE auto-injection) cannot be done from CC hooks (no `continue without user input` mechanism). Default ON. Opt out: SIDECAR_NO_GOAL=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
       "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",

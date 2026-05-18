@@ -54,8 +54,9 @@
 | `wilson-gpu` | команда `/wilson-gpu` + `SessionStart` | Гардрейл расходов на арендованный GPU для RunPod / Vast.ai — `SessionStart` показывает каждый ещё тарифицируемый инстанс (аптайм + накопленная оценка стоимости), чтобы забытый pod не сливал деньги; `down` — аварийный стоп, `attach` подключает инстанс в ростер `wilson-pool`. Стратегии `watch`/`budget`/`idle-reaper`/`ephemeral`; трата денег и авто-down под двойным шлюзом из отдельных off-by-default переключателей (`up` — `provisioning`+`--yes`, авто-стоп — `reaping`); `fanout` — помощник решения по допуску стоимости для shardable-задач. **работает** · INERT, если `runpodctl`/`vastai` нет в PATH (opt out: `SIDECAR_NO_GPU=1`) |
 | `wilson-decision-gate` | `SessionStart`·`UserPromptSubmit` + `/wilson-decision-gate` | Пошаговый шлюз решений — многорешенческая работа = **один шлюз подтверждения на решение, без батчинга** (варианты+рекомендация+обоснование 3+ → ждать выбор → дальше), записывается блоком `### Decision N` в `design.md`. Standalone-порт wilson `step-by-step-decision-gate` (text-only, как wilson). SessionStart внедряет принцип один раз · UserPromptSubmit добавляет короткое напоминание **только на промптах, похожих на точку ветвления** (не на каждом). `/wilson-decision-gate decide\|log\|on\|off\|sample` · 5-язычный canonical-образец в комплекте — **работает** · по умолчанию ON (opt out: `SIDECAR_NO_DECISION_GATE=1`) |
 | `wilson-tape-recorder` | `SessionStart`·`UserPromptSubmit`·`PreToolUse`·`PostToolUse`·`SessionEnd` + `/wilson-tape-recorder` | Записывает сессию Claude Code как `.tape` v1.2 execution-trace (формат dancinlab `tape`) — один файл на сессию `<DATA>/sessions/<id>.tape`: SessionStart `@S start` · UserPromptSubmit `@U` · PreToolUse `@T` · PostToolUse `@R` · SessionEnd `@S end`. Честное подмножество 17-типового алфавита — только то, что CC-хуки реально дают (`@A` текст ассистента и `@K` стоимость — нет сигнала → исключено). **В паре с `wilson-guards/tape-append-only`** (рекордер *produces*, guard *protects*). `/wilson-tape-recorder status\|ls\|tail\|cat\|on\|off` — **работает** · по умолчанию ON (opt out: `SIDECAR_NO_TAPE_RECORDER=1`) |
+| `wilson-goal` | `SessionStart`·`UserPromptSubmit` + `/wilson-goal` | **Сохранение цели сессии + переинъекция** — держим высокоуровневую цель через долгую сессию и сжатие контекста. Цель хранится на диске в `<DATA>/goal.json` (вне транскрипта, который сжимается), восстанавливается при каждом `SessionStart` и кратко напоминается при каждом `UserPromptSubmit` (≤ 180 B). Локальный для проекта `GOAL.md` используется как дефолт, когда пользовательская цель не задана. `/wilson-goal set\|status\|show\|clear\|path` — **работает** · по умолчанию ON. **Честный gap vs wilson `loop`**: переносится только половина с персистенцией; автономное продолжение (`loop_tick`+QUEUE) из CC-хуков невозможно (opt out: `SIDECAR_NO_GOAL=1`) |
 | `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → канонические серверы из repo каждого формата (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, поставляются в `github.com/dancinlab/{tape,n6,hxc,kosmos}`). graceful — сервер не в PATH просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
-| `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
+| `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
 | `worktree-pr` | команда `/worktree-pr:wt` (workflow) | Безопасный процесс **worktree → PR → merge → очистка** — `start <name>` (изолированный worktree+ветка от ветки origin по умолчанию), `ship <name> "<title>"` (push + открыть PR), `finish <name>` (merge PR + удалить worktree + удалить ветку + обновить base), `status`, `abort`. Никогда не трогает основное рабочее дерево или ветку параллельной сессии |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
@@ -83,6 +84,7 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
 /plugin install wilson-gpu@sidecar             # гардрейл расходов RunPod/Vast + аварийный стоп
 /plugin install wilson-decision-gate@sidecar   # пошаговый шлюз решений + журнал design.md
 /plugin install wilson-tape-recorder@sidecar   # запись сессии как .tape v1.2 трассы
+/plugin install wilson-goal@sidecar            # сохранение цели сессии (через compaction)
 /plugin install wilson-lsp@sidecar             # LSP для .hexa / .tape / .n6 / .hxc / .kosmos
 /plugin install worktree-pr@sidecar            # команда-workflow /worktree-pr:wt
 /plugin install sidecar@sidecar                # /sidecar — рантайм on/off контроль
@@ -123,6 +125,7 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
     "wilson-gpu@sidecar": true,
     "wilson-decision-gate@sidecar": true,
     "wilson-tape-recorder@sidecar": true,
+    "wilson-goal@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -220,6 +223,12 @@ sidecar/
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/SessionEnd
 │   │   ├── bin/tr.sh                 # точка входа hook + команды
 │   │   └── bin/_tr.py                # .tape v1.2 emitter (@S/@U/@T/@R) (работает)
+│   ├── wilson-goal/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/goal.md          # /wilson-goal
+│   │   ├── hooks/hooks.json          # SessionStart + UserPromptSubmit
+│   │   ├── bin/g.sh                  # точка входа hook + команды
+│   │   └── bin/_g.py                 # сохранение цели + переинъекция (работает)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + LSP repo tape/n6/hxc/kosmos

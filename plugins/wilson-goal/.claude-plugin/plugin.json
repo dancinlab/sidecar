@@ -1,0 +1,9 @@
+{
+  "name": "wilson-goal",
+  "description": "Session goal persistence + re-injection — keep the high-level objective alive across a long session and context compaction. Goal lives on disk at <DATA>/sessions/<session_id>.json (outside the transcript that gets compacted), restored at every SessionStart, and re-asserted as a short reminder on each UserPromptSubmit. A project-local `GOAL.md` (in the project root) is used as the default when no per-session goal is set. /wilson-goal set|status|show|clear|path. HONEST GAP vs wilson's `loop` plugin: only the goal-persistence half is portable — the autonomous-continuation half (wilson's loop_tick + QUEUE auto-injection) cannot be done from CC hooks (no `continue without user input` mechanism). Default ON. Opt out: SIDECAR_NO_GOAL=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "goal", "objective", "session", "compaction", "wilson"]
+}

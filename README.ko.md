@@ -52,8 +52,9 @@
 | `wilson-gpu` | `/wilson-gpu` 커맨드 + `SessionStart` | RunPod / Vast.ai 렌트 GPU 비용 가드레일 — `SessionStart`가 과금중 인스턴스(업타임 + 누적 추정비용) 노출 → 잊은 pod 비용누수 차단; `down` kill 스위치, `attach`는 인스턴스를 `wilson-pool` roster에 연결. 전략 `watch`/`budget`/`idle-reaper`/`ephemeral`; 과금·자동 down은 별도 기본-OFF 스위치 이중 게이트(`up`은 `provisioning`+`--yes`, 자동중단은 `reaping`); `fanout`은 shardable 작업용 비용허용폭 의사결정 보조. **작동** · `runpodctl`/`vastai` 없으면 inert (opt out: `SIDECAR_NO_GPU=1`) |
 | `wilson-decision-gate` | `SessionStart`·`UserPromptSubmit` + `/wilson-decision-gate` | 단계별 결정 게이트 — 다중 결정은 **한 결정 = 한 사용자 확인 게이트, 절대 배칭 금지**(옵션+추천+근거 3+ → 선택 대기 → 다음), `design.md`에 `### Decision N` 블록으로 기록. wilson `step-by-step-decision-gate` standalone 포팅(wilson처럼 text-only). SessionStart가 원칙 1회 주입 · UserPromptSubmit는 **branch-point성 프롬프트에만** 짧은 리마인더(매 프롬프트 아님). `/wilson-decision-gate decide\|log\|on\|off\|sample` · 5개국어 canonical 샘플 동봉 — **작동** · 기본 ON (opt out: `SIDECAR_NO_DECISION_GATE=1`) |
 | `wilson-tape-recorder` | `SessionStart`·`UserPromptSubmit`·`PreToolUse`·`PostToolUse`·`SessionEnd` + `/wilson-tape-recorder` | Claude Code 세션을 `.tape` v1.2 실행 트레이스로 기록(dancinlab `tape` 포맷) — 세션당 한 파일 `<DATA>/sessions/<id>.tape`: SessionStart `@S start` · UserPromptSubmit `@U` · PreToolUse `@T` · PostToolUse `@R` · SessionEnd `@S end`. 17-type 알파벳 중 CC 훅이 실제로 주는 것만 정직 subset(`@A` 응답 텍스트·`@K` 비용은 신호 없음 → 제외). **`wilson-guards/tape-append-only`와 짝**(레코더가 produces, 가드가 protects). `/wilson-tape-recorder status\|ls\|tail\|cat\|on\|off` — **작동** · 기본 ON (opt out: `SIDECAR_NO_TAPE_RECORDER=1`) |
+| `wilson-goal` | `SessionStart`·`UserPromptSubmit` + `/wilson-goal` | **세션 목표 영속 + 재주입** — 긴 세션·compaction 너머로 상위 목표 유지. 목표는 `<DATA>/goal.json`(트랜스크립트 밖) 디스크에 영속, 매 `SessionStart`에 복원·`UserPromptSubmit`에 한 줄 리마인더(≤ 180B). 프로젝트 루트의 `GOAL.md`가 사용자 미설정 시 기본값. `/wilson-goal set\|status\|show\|clear\|path` — **작동**·기본 ON. **wilson `loop` 대비 정직한 갭**: 영속 부분만 포팅 가능, 자율 continuation(`loop_tick`+QUEUE)은 CC 훅 제약상 불가 (opt out: `SIDECAR_NO_GOAL=1`) |
 | `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
-| `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
+| `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
 | `worktree-pr` | `/worktree-pr:wt` 커맨드 (워크플로) | 안전한 **worktree → PR → merge → 정리** 워크플로 — `start <name>`(origin 기본 브랜치에서 격리 worktree+브랜치), `ship <name> "<title>"`(push + PR 생성), `finish <name>`(PR merge + worktree 제거 + 브랜치 삭제 + base 갱신), `status`, `abort`. 메인 워킹트리·동시세션 브랜치 무접촉 |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
@@ -81,6 +82,7 @@
 /plugin install wilson-gpu@sidecar             # RunPod/Vast 비용 가드레일 + kill 스위치
 /plugin install wilson-decision-gate@sidecar   # 단계별 결정 게이트 + design.md 원장
 /plugin install wilson-tape-recorder@sidecar   # 세션을 .tape v1.2 트레이스로 기록
+/plugin install wilson-goal@sidecar            # 세션 목표 영속 (compaction 너머)
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
 /plugin install worktree-pr@sidecar            # /worktree-pr:wt 워크플로 커맨드
 /plugin install sidecar@sidecar                # /sidecar 런타임 on/off 컨트롤
@@ -120,6 +122,7 @@
     "wilson-gpu@sidecar": true,
     "wilson-decision-gate@sidecar": true,
     "wilson-tape-recorder@sidecar": true,
+    "wilson-goal@sidecar": true,
     "wilson-lsp@sidecar": true,
     "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
@@ -216,6 +219,12 @@ sidecar/
 │   │   ├── hooks/hooks.json          # SessionStart/UserPromptSubmit/PreToolUse/PostToolUse/SessionEnd
 │   │   ├── bin/tr.sh                 # hook + 커맨드 엔트리포인트
 │   │   └── bin/_tr.py                # .tape v1.2 emitter (@S/@U/@T/@R) (작동)
+│   ├── wilson-goal/
+│   │   ├── .claude-plugin/plugin.json
+│   │   ├── commands/goal.md          # /wilson-goal
+│   │   ├── hooks/hooks.json          # SessionStart + UserPromptSubmit
+│   │   ├── bin/g.sh                  # hook + 커맨드 엔트리포인트
+│   │   └── bin/_g.py                 # goal 영속 + 재주입 (작동)
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 연결

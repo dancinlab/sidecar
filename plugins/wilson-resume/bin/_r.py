@@ -20,12 +20,25 @@
 #                  Non-empty args → persist the condition to
 #                  <DATA>/<sha1(project)>.json. A bare `/goal` (empty
 #                  args = the native clear) → drop the persisted state.
+#                  Also scan the latest assistant turn: if it declares
+#                  the goal over-scoped (an honest "exceeds single-
+#                  session scope" decline), flag the record `stuck` so
+#                  the next session does NOT re-arm it verbatim — that
+#                  cross-session deadlock loop is what this prevents.
 #   SessionStart → on a fresh `startup` or after `/clear`, if a
 #                  persisted, un-cleared goal exists, inject a short
-#                  `## Goal — interrupted` block naming the condition
-#                  and the exact `/goal <condition>` line to re-arm it.
-#                  `resume` carries the native goal over already, and
-#                  `compact` is same-session — both are skipped.
+#                  briefing. A normal goal → `## Goal — interrupted`
+#                  with the exact `/goal <condition>` line to re-arm it.
+#                  A `stuck` goal → `## Goal — over-scoped (handoff)`:
+#                  do NOT re-arm; slice it smaller or resume from a
+#                  checkpoint. `resume` carries the native goal over
+#                  already, and `compact` is same-session — both skip.
+#
+# What this does NOT do: the within-session native /goal loop ("Goal
+# not yet met… continuing") cannot be stopped from a hook — the native
+# evaluator is an LLM call above the hook layer. That loop is already
+# bounded by native CC's CLAUDE_CODE_STOP_HOOK_BLOCK_CAP (≤9 turns);
+# wilson-resume only kills the UNBOUNDED cross-session re-arm loop.
 #
 # Inert unless a /goal was actually used — no goal, nothing persisted,
 # nothing injected.
@@ -41,6 +54,32 @@ import time
 
 GOAL_CMD = "<command-name>/goal</command-name>"
 ARGS_RE = re.compile(r"<command-args>(.*?)</command-args>", re.DOTALL)
+
+# An over-scoped /goal: the agent, working honestly toward a native
+# /goal, declares in its turn that the condition exceeds what a single
+# session can do. That declaration is a false-positive-free immediate
+# signal — a healthy in-progress goal never emits it — so one match is
+# enough, no repeat counter needed. Matched case-insensitively against
+# the latest assistant turn ONLY (a stale earlier match must not fire).
+DECLINE_MARKERS = (
+    # English
+    "exceeds single-session scope",
+    "exceeds the scope of a single session",
+    "single dialogue session",
+    "cannot complete in this session",
+    "cannot be completed in a single session",
+    "multi-week",
+    "multi-session",
+    "declines to fraudulently",
+    # Korean
+    "단일 세션 범위",
+    "single-session 범위 초과",
+    "별도 세션",
+    "한 세션에 완성",
+    "한 세션으로 완성 불가",
+    "세션 범위를 초과",
+    "다음 세션으로 미",
+)
 
 
 def disabled():
@@ -133,10 +172,57 @@ def find_latest_goal(transcript):
     return latest
 
 
+def latest_assistant_text(transcript):
+    """Text of the most recent assistant turn in the transcript — the
+    surface scanned for an over-scoped-goal declaration. Streams the
+    file, JSON-parsing only assistant lines. Never raises."""
+    if not transcript or not os.path.isfile(transcript):
+        return ""
+    text = ""
+    try:
+        with open(transcript, encoding="utf-8", errors="replace") as f:
+            for ln in f:
+                if '"assistant"' not in ln:
+                    continue
+                try:
+                    d = json.loads(ln)
+                except Exception:
+                    continue
+                msg = d.get("message") or d
+                if (msg.get("role") or d.get("type")) != "assistant":
+                    continue
+                c = msg.get("content")
+                if isinstance(c, list):
+                    c = " ".join(
+                        b.get("text", "") for b in c
+                        if isinstance(b, dict) and b.get("type") == "text")
+                if isinstance(c, str) and c.strip():
+                    text = c
+    except Exception:
+        pass
+    return text
+
+
+def over_scoped(transcript):
+    """(stuck, marker) — True + the matched phrase when the latest
+    assistant turn declares the active /goal exceeds single-session
+    scope; (False, "") otherwise. One match is decisive (see
+    DECLINE_MARKERS) — no repeat counter."""
+    t = latest_assistant_text(transcript).lower()
+    if not t:
+        return False, ""
+    for m in DECLINE_MARKERS:
+        if m.lower() in t:
+            return True, m
+    return False, ""
+
+
 def capture(payload, cwd):
-    """Stop hook — persist the active native /goal condition, if any."""
-    g = find_latest_goal(payload.get("transcript_path")
-                         or payload.get("transcriptPath"))
+    """Stop hook — persist the active native /goal condition, if any,
+    and flag it `stuck` when the latest turn declares it over-scoped."""
+    transcript = (payload.get("transcript_path")
+                  or payload.get("transcriptPath"))
+    g = find_latest_goal(transcript)
     if g is None:
         return  # /goal never used → stay inert, touch nothing
     if g == "":
@@ -148,21 +234,54 @@ def capture(payload, cwd):
         return
     base, _ = project_key(cwd)
     cur = load_state(cwd)
-    if cur.get("condition") == g:
-        return  # unchanged → no rewrite
-    save_state(cwd, {
+    stuck, marker = over_scoped(transcript)
+    same = cur.get("condition") == g
+    if same and bool(cur.get("stuck")) == stuck:
+        return  # neither the condition nor the stuck flag changed
+    now = int(time.time())
+    rec = {
         "condition": g,
         "project": base,
         "cwd": cwd,
         "session_id": payload.get("session_id")
         or payload.get("sessionId") or "",
-        "set_at": int(time.time()),
-        "iso": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-    })
+        "set_at": cur.get("set_at") if same else now,
+        "iso": cur.get("iso") if same
+        else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
+    if stuck:
+        # Immediate handoff record — written on the FIRST over-scoped
+        # turn, so even after the bounded within-session loop burns out
+        # the next session resumes from this instead of re-arming.
+        rec["stuck"] = True
+        rec["stuck_marker"] = marker
+        rec["stuck_at"] = now
+        rec["stuck_iso"] = time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    save_state(cwd, rec)
 
 
 def briefing(s):
     cond = s.get("condition", "")
+    if s.get("stuck"):
+        return (
+            "## Goal — over-scoped (handoff)\n\n"
+            "A native `/goal` was active in this project, but the "
+            "previous session worked toward it and honestly declared "
+            "it **exceeds single-session scope** — it ended without "
+            "meeting the condition:\n\n"
+            "> %s\n\n"
+            "Do **not** re-arm it verbatim with `/goal` — that re-"
+            "enters the same deadlock (the native goal loop cannot be "
+            "met, so every turn re-blocks). Instead:\n\n"
+            "- break it into one session-sized slice and set a fresh "
+            "`/goal` for just that slice, **or**\n"
+            "- resume from the last committed checkpoint in a separate "
+            "session, no `/goal` armed.\n\n"
+            "(Flagged over-scoped %s · matched `%s`. Already handled? "
+            "Dismiss with `/wilson-resume clear`.)\n"
+            % (cond, s.get("stuck_iso", "?"),
+               s.get("stuck_marker", "decline marker")))
     return (
         "## Goal — interrupted\n\n"
         "A native `/goal` was active in this project and was never "
@@ -230,7 +349,14 @@ def cmd(args):
         print()
         print("  condition: %s" % s["condition"])
         print("  captured:  %s" % s.get("iso", "?"))
-        print("  re-arm:    /goal %s" % s["condition"])
+        if s.get("stuck"):
+            print("  status:    OVER-SCOPED — flagged %s (matched `%s`)"
+                  % (s.get("stuck_iso", "?"),
+                     s.get("stuck_marker", "decline marker")))
+            print("  next:      do NOT re-arm — slice it smaller, or "
+                  "resume from a checkpoint")
+        else:
+            print("  re-arm:    /goal %s" % s["condition"])
         print("  state:     %s" % state_path(cwd))
         return
 

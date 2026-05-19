@@ -38,6 +38,19 @@ Batching collapses N picks into one yes/no. Specifically:
 
 This is why the protocol this principle generalises defines a hard rule: **more than one decision picked per gate → block**.
 
+## Autonomy mode under an active `/goal`
+
+Claude Code's native `/goal` keeps Claude working turn-to-turn until a completion condition is met. A gate that stops to wait for a pick **stalls that goal** — the goal is set, but the first branch point freezes it. So when a `/goal` is active the gate changes shape:
+
+- Still present the options + recommendation + 3-bullet rationale.
+- Then **adopt your own recommendation** rather than waiting.
+- Record it with `/wilson-decision-gate decide` — the ledger entry is the audit trail, and it matters *more* here, not less, since the user did not pick in real time.
+- Note the auto-pick in one line of your reply, and continue.
+
+The `/goal` itself is the standing authorization: the user asked for autonomous progress toward the condition, so per-branch-point confirmation would contradict the instruction they just gave.
+
+This removes only the **deliberation pause**, never the **safety floor** — PreToolUse guards (destructive Bash, secrets, force-push, protected paths) still fire, and a genuinely irreversible or truly-ambiguous call still warrants a real stop even mid-goal. With no `/goal` active, gate normally: present, then wait for the pick.
+
 ## Decision-record format
 
 Inside the design.md / session log, every decision lands as:

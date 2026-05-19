@@ -163,7 +163,18 @@ PRINCIPLE_BASE = (
     "appends exactly that; `/wilson-decision-gate sample` is the full "
     "convention) as you go — the audit trail ships with the work. "
     "Batching N picks into one yes/no collapses most decisions into "
-    "undeliberated assents and defeats the gate.\n")
+    "undeliberated assents and defeats the gate.\n\n"
+    "**Active `/goal` = autonomy mode.** When Claude Code's native "
+    "`/goal` is in effect the user has pre-authorized autonomous "
+    "progress toward it — do NOT halt at each gate to wait for a pick. "
+    "Still present the options + recommendation + rationale, then "
+    "**adopt your own recommendation**, record it with "
+    "`/wilson-decision-gate decide`, note the auto-pick in one line, and "
+    "continue. The gate becomes record-and-proceed, not stop-and-wait. "
+    "Autonomy mode removes only the deliberation pause, not the safety "
+    "floor — PreToolUse safety guards still fire, and a genuinely "
+    "irreversible or ambiguous call still warrants a stop. With no "
+    "`/goal` active, gate normally and wait for the pick.\n")
 
 # How a gate is *presented* is orthogonal to *that* it is gated: the
 # gate inherits the active wilson-prefs response style automatically —
@@ -211,7 +222,8 @@ NUDGE = (
     "`Decision N:` to design.md via `/wilson-decision-gate decide`. "
     "Do not batch several picks into one confirmation. Present the gate "
     "in the active `wilson-prefs` style automatically (no need for the "
-    "user to ask).\n")
+    "user to ask). If a native `/goal` is active, do not stop — adopt "
+    "your recommendation, log it, and continue (autonomy mode).\n")
 
 
 def inject(event, text):

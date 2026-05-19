@@ -80,6 +80,25 @@ At each measure-vs-predict fork, present a gate — never silently pick:
 The user may overrule the recommendation — a "measure anyway" pick
 against a confident prediction is legitimate and is still recorded.
 
+## Autonomy mode under an active `/goal`
+
+Claude Code's native `/goal` drives Claude turn-to-turn until its
+condition is met. A fire-gate that stops to wait stalls that goal at
+the first fork. So when a `/goal` is active:
+
+- Apply the four tenets yourself — predict, judge the uncertainty,
+  check whether a prior measurement already settles the question.
+- Adopt the resulting call (fire when genuinely uncertain, resolve
+  when settled) instead of waiting for a pick.
+- Record it with `/wilson-fire-gate decide`, note it in one line,
+  then continue.
+
+A `/goal` is standing authorization for the cost-bearing fires its
+closure genuinely needs — `cost-no-object` in force. It still never
+licenses **re-firing a result already settled** (tenet 3): a goal
+removes the confirmation pause, not the discipline. Without an active
+`/goal`, gate normally and wait for the pick.
+
 ## Fire-decision record format
 
 Inside `design.md`, every fire-vs-predict call lands as:

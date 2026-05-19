@@ -150,7 +150,16 @@ PRINCIPLE_BASE = (
     "($0)** — with a recommendation + **3+ rationale bullets**, wait for "
     "the user's pick, and record it as a `### Fire-decision N` block via "
     "`/wilson-fire-gate decide \"<picked>\" \"<b1>;<b2>;<b3>\"`. "
-    "`/wilson-fire-gate sample` prints the full convention.\n")
+    "`/wilson-fire-gate sample` prints the full convention.\n\n"
+    "**Active `/goal` = autonomy mode.** When Claude Code's native "
+    "`/goal` is in effect, do NOT stop at a fire fork to wait — apply "
+    "the four tenets yourself, adopt the resulting call (fire when "
+    "genuinely uncertain, resolve when settled), record it with "
+    "`/wilson-fire-gate decide`, note it in one line, and continue. A "
+    "`/goal` is standing authorization for the cost-bearing fires its "
+    "closure needs (cost-no-object) — but never licenses re-firing a "
+    "result already settled. Without an active `/goal`, gate normally "
+    "and wait for the pick.\n")
 
 PREFS_INHERIT_GENERIC = (
     "\nFork presentation **inherits the active `wilson-prefs` response "
@@ -190,7 +199,9 @@ NUDGE = (
     "measurement already settled (resolve analytically instead). Gate "
     "the fire-vs-resolve call (options + recommendation + 3+ rationale "
     "→ wait for the pick) and record it as `### Fire-decision N` via "
-    "`/wilson-fire-gate decide`.\n")
+    "`/wilson-fire-gate decide`. If a native `/goal` is active, do not "
+    "stop — adopt the instrument-first call, log it, and continue "
+    "(autonomy mode).\n")
 
 
 def inject(event, text):

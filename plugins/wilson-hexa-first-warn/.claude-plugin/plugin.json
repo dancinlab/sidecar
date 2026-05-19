@@ -1,0 +1,9 @@
+{
+  "name": "wilson-hexa-first-warn",
+  "description": "PreToolUse warn on Write when file_path ends in `.py` or `.sh` — emit an AI-native single-line directive (HEXA_FIRST_WARN { trigger, target, ext, action, rationale, optout }) via additionalContext, asking the model to consider whether a hexa-native equivalent (stdlib, atlas-bound theorem, or `hexa` CLI subcommand) covers the same job before writing the script. Does NOT block — Write proceeds normally; the warn is advisory and consumed by the agent same-turn. New-file moment only (`Write` matcher, NOT `Edit`) — editing an existing .py file does not nag every time. Whitelist is deliberately narrow (`.py`, `.sh`) — `.js`/`.ts`/`Makefile` etc. are out of scope to avoid noise. Implements the hexa-first principle as a soft enforcement complement to wilson-prefs's principle-text injection — text says \"prefer hexa\", this asks \"sure?\" at the file-creation moment. Opt out: SIDECAR_NO_HEXA_FIRST_WARN=1 (or WILSON_NO_HEXA_FIRST_WARN=1).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "guardrail", "hexa", "hexa-first", "warn", "wilson"]
+}

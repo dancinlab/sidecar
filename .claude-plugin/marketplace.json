@@ -161,6 +161,12 @@
       "source": "./plugins/wilson-research",
       "description": "Research-fetch tools — pull the latest research material from arXiv and from YouTube. `/wilson-research:yt <url-or-id> [lang]` extracts a video's caption transcript (manual or auto-generated, any available language) by POSTing the InnerTube ANDROID player API and flattening the timedtext payload. `/wilson-research:arxiv <query|id> [--n N]` searches the official arXiv API or looks up a paper by id, returning title / authors / date / categories / pdf link / abstract. Pure Python stdlib — no binaries, no pip dependencies, no API key. Two model-invocable slash commands; no hooks.",
       "version": "0.1.0"
+    },
+    {
+      "name": "wilson-chat-only",
+      "source": "./plugins/wilson-chat-only",
+      "description": "Deny the AskUserQuestion tool at the PreToolUse layer — the boxed terminal option-picker UI is forbidden, options must be presented inline as plain text and the agent waits for the user's plain-text reply (chat-only interaction mode). The deny reason is an AI-native single-line directive (CHAT_ONLY_MODE { rule, action, scope, optout }) so the model parses it and adapts the same turn, rather than retrying the tool. Solves the case where rigid options+rationale picker output reads as a wizard wall rather than a conversation. Opt out: SIDECAR_NO_CHAT_ONLY=1 (or WILSON_NO_CHAT_ONLY=1).",
+      "version": "0.1.0"
     }
   ]
 }

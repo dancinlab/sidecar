@@ -49,7 +49,11 @@ Claude Code's native `/goal` keeps Claude working turn-to-turn until a completio
 
 The `/goal` itself is the standing authorization: the user asked for autonomous progress toward the condition, so per-branch-point confirmation would contradict the instruction they just gave.
 
-This removes only the **deliberation pause**, never the **safety floor** — PreToolUse guards (destructive Bash, secrets, force-push, protected paths) still fire, and a genuinely irreversible or truly-ambiguous call still warrants a real stop even mid-goal. With no `/goal` active, gate normally: present, then wait for the pick.
+This removes only the **deliberation pause**, never the **safety floor** — PreToolUse guards (destructive Bash, secrets, force-push, protected paths) still fire, and a genuinely irreversible or truly-ambiguous call still warrants a real stop even mid-goal.
+
+A **transient, recoverable failure** mid-goal — a network-failed `git push`, a rate-limit, a flaky remote — is likewise not a hard stop. The work is already committed and safe locally; note the failure as pending, retry it when conditions recover, and keep going toward the goal. Halting an autonomous goal on a failure that will clear on its own defeats the point of the goal.
+
+With no `/goal` active, gate normally: present, then wait for the pick.
 
 ## Decision-record format
 

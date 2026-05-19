@@ -173,8 +173,12 @@ PRINCIPLE_BASE = (
     "continue. The gate becomes record-and-proceed, not stop-and-wait. "
     "Autonomy mode removes only the deliberation pause, not the safety "
     "floor — PreToolUse safety guards still fire, and a genuinely "
-    "irreversible or ambiguous call still warrants a stop. With no "
-    "`/goal` active, gate normally and wait for the pick.\n")
+    "irreversible or ambiguous call still warrants a stop. A transient, "
+    "recoverable failure mid-goal (a network-failed `git push`, a "
+    "rate-limit) is likewise not a hard stop — the work is already "
+    "committed and safe, so note it as pending, retry when conditions "
+    "recover, and keep going. With no `/goal` active, gate normally and "
+    "wait for the pick.\n")
 
 # How a gate is *presented* is orthogonal to *that* it is gated: the
 # gate inherits the active wilson-prefs response style automatically —

@@ -20,6 +20,8 @@
 # for keeping <workdir> a synced copy of this project on EVERY roster host.
 import json
 import os
+import shutil
+import subprocess
 import sys
 
 PLATFORMS = ("linux", "macos")
@@ -74,6 +76,9 @@ def roster(d):
             wd = str(h.get("workdir") or "").strip()
             if wd:
                 e["workdir"] = wd
+            tp = str(h.get("transport") or "").strip().lower()
+            if tp in ("tailscale", "ssh"):
+                e["transport"] = tp
             if h.get("sudo"):
                 e["sudo"] = True
             out.append(e)
@@ -82,6 +87,69 @@ def roster(d):
 
 def armed(d):
     return bool(roster(d)) and bool(str(d.get("workdir") or "").strip())
+
+
+# ── tailscale helpers (design.md D2/D3) ─────────────────────────────
+def ts_status():
+    """Parsed `tailscale status --json`, or None when unavailable."""
+    if not shutil.which("tailscale"):
+        return None
+    try:
+        r = subprocess.run(["tailscale", "status", "--json"],
+                            capture_output=True, text=True, timeout=6)
+        return json.loads(r.stdout) if r.returncode == 0 else None
+    except Exception:
+        return None
+
+
+def ts_nodes(st):
+    """[(short_name, os, online)] from Self + Peers of a parsed status."""
+    out = []
+
+    def add(n):
+        if not isinstance(n, dict):
+            return
+        dns = (n.get("DNSName") or "").strip().rstrip(".")
+        short = dns.split(".")[0] if dns else (n.get("HostName") or "").strip()
+        if short:
+            out.append((short, n.get("OS") or "?", bool(n.get("Online"))))
+
+    add((st or {}).get("Self"))
+    for p in ((st or {}).get("Peer") or {}).values():
+        add(p)
+    return out
+
+
+def os_to_platform(o):
+    o = (o or "").lower()
+    if "mac" in o or o == "darwin":
+        return "macos"
+    if "linux" in o:
+        return "linux"
+    return ""
+
+
+def transport_of(d, h):
+    """Per-host > global `transport` > auto. auto → tailscale when a
+    local tailscale binary exists, else ssh. Mirrors _route.py."""
+    t = (str(h.get("transport") or "").strip().lower()
+         or str(d.get("transport") or "").strip().lower() or "auto")
+    if t in ("tailscale", "ssh"):
+        return t
+    return "tailscale" if shutil.which("tailscale") else "ssh"
+
+
+def reachable(host, transport):
+    if transport == "tailscale":
+        argv = ["tailscale", "ssh", host, "true"]
+    else:
+        argv = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5",
+                host, "true"]
+    try:
+        return subprocess.run(argv, capture_output=True,
+                              timeout=10).returncode == 0
+    except Exception:
+        return False
 
 
 def show():
@@ -97,7 +165,10 @@ def show():
         for h in hs:
             hw = ("  workdir=" + h["workdir"]) if h.get("workdir") else ""
             su = "  sudo" if h.get("sudo") else ""
-            print("  %-20s %-6s%s%s" % (h["host"], h["platform"], su, hw))
+            tp = ("  transport=" + h["transport"]) if h.get("transport") \
+                else ""
+            print("  %-20s %-6s%s%s%s" % (
+                h["host"], h["platform"], tp, su, hw))
     else:
         print("  (no hosts — add one: /wilson-pool:pool add <ssh-target>)")
     wd = (d.get("workdir") or "").strip()
@@ -124,12 +195,60 @@ def show():
     print("State: %s" % STATE)
 
 
+def status_probe():
+    """show() + a LIVE per-host reachability probe via the resolved
+    transport. Slower than `show` (one probe per host) — that is why it
+    is a separate verb, not the default."""
+    show()
+    d = load()
+    hs = roster(d)
+    if not hs:
+        return
+    print("\nreachability (live probe):")
+    for h in hs:
+        tx = transport_of(d, h)
+        ok = reachable(h["host"], tx)
+        print("  %-20s %-10s %s" % (
+            h["host"], tx, "OK" if ok else "UNREACHABLE"))
+
+
+def tailnet_list():
+    """List nodes visible on the local tailnet (Self + Peers) and mark
+    which are already in the pool roster — the discovery verb."""
+    st = ts_status()
+    if st is None:
+        print("sidecar/wilson-pool: tailscale unavailable (no `tailscale` "
+              "binary or daemon down). `tailnet` needs tailscale.")
+        return
+    in_pool = {h["host"] for h in roster(load())}
+    nodes = ts_nodes(st)
+    if not nodes:
+        print("sidecar/wilson-pool: no tailnet nodes visible.")
+        return
+    print("sidecar/wilson-pool — tailnet nodes:")
+    print("  %-20s %-8s %-7s %s" % ("NODE", "OS", "ONLINE", "IN-POOL"))
+    for n, o, on in sorted(nodes):
+        mark = "yes" if n in in_pool else "no"
+        hint = "" if n in in_pool else \
+            "   <- /wilson-pool:pool add %s" % n
+        print("  %-20s %-8s %-7s %s%s" % (
+            n, o, "up" if on else "down", mark, hint))
+
+
 def main():
     args = sys.argv[1:]
     cmd = (args[0] if args else "show").strip().lower()
 
-    if cmd in ("", "show", "status"):
+    if cmd in ("", "show"):
         show()
+        return
+
+    if cmd == "status":
+        status_probe()
+        return
+
+    if cmd in ("tailnet", "tailscale"):
+        tailnet_list()
         return
 
     if cmd == "off":
@@ -149,15 +268,30 @@ def main():
         target = args[1].strip()
         # args after the target are positional (platform, workdir) plus an
         # optional `sudo`/`nosudo` keyword recognised anywhere among them.
-        sudo, pos = False, []
+        sudo, transport, pos = False, "", []
         for a in (x.strip() for x in args[2:] if x.strip()):
-            if a.lower() == "sudo":
+            al = a.lower()
+            if al == "sudo":
                 sudo = True
-            elif a.lower() == "nosudo":
+            elif al == "nosudo":
                 sudo = False
+            elif al in ("tailscale", "ssh"):
+                transport = al
             else:
                 pos.append(a)
-        platform = (pos[0].lower() if pos else "linux")
+        # platform: explicit positional wins; else auto-detect from the
+        # tailnet (the node's OS); else default linux.
+        auto_note = ""
+        if pos:
+            platform = pos[0].lower()
+        else:
+            platform = "linux"
+            for n, o, _ in ts_nodes(ts_status()):
+                if n == target:
+                    p = os_to_platform(o)
+                    if p:
+                        platform, auto_note = p, " (auto from tailnet)"
+                    break
         if platform not in PLATFORMS:
             print("sidecar/wilson-pool: platform must be one of %s "
                   "(got %r)." % ("/".join(PLATFORMS), platform))
@@ -168,17 +302,24 @@ def main():
         entry = {"host": target, "platform": platform}
         if host_wd:
             entry["workdir"] = host_wd
+        if transport:
+            entry["transport"] = transport
         if sudo:
             entry["sudo"] = True
         hs.append(entry)
         d["hosts"] = hs
         save(d)
-        print("sidecar/wilson-pool: host %s (%s%s%s) added — roster has %d "
-              "host(s). Routing %s." % (
-                  target, platform,
-                  ", workdir=" + host_wd if host_wd else "",
+        # one-time reachability probe via the resolved transport
+        tx = transport_of(d, entry)
+        probe = "reachable" if reachable(target, tx) else \
+            "NOT reachable yet (probe failed — check tailscale/ssh)"
+        print("sidecar/wilson-pool: host %s (%s%s%s%s) added — roster has "
+              "%d host(s). Routing %s. Probe via %s: %s." % (
+                  target, platform, auto_note,
+                  ", transport=" + transport if transport else "",
                   ", sudo" if sudo else "", len(hs),
-                  "ARMED" if armed(d) else "still OFF (need workdir)"))
+                  "ARMED" if armed(d) else "still OFF (need workdir)",
+                  tx, probe))
         return
 
     if cmd == "sudo":
@@ -252,9 +393,10 @@ def main():
               "patterns": "patterns"}
     if cmd not in keymap:
         print("sidecar/wilson-pool: unknown subcommand %r. Use: show | "
-              "add <target> [linux|macos] [workdir] [sudo] | rm <target> "
-              "| sudo <target> on|off | workdir <path|auto> | fallback "
-              "<path> | autosync on|off|mirror | patterns <re> | off"
+              "status | tailnet | add <target> [linux|macos] [workdir] "
+              "[tailscale|ssh] [sudo] | rm <target> | sudo <target> "
+              "on|off | workdir <path|auto> | fallback <path> | autosync "
+              "on|off|mirror | patterns <re> | off"
               % cmd)
         return
     if len(args) < 2 or not args[1].strip():

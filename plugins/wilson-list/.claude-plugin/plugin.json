@@ -1,0 +1,9 @@
+{
+  "name": "wilson-list",
+  "description": "UserPromptSubmit hook — when the user types a bare LIST keyword (`list` / `리스트` / `다음` / `next` / `다음 할일`), inject an ordered-list skeleton (1./2./3.) as additionalContext, telling Claude to emit the next-up sequence of actions for the prior user context. Differs from wilson-todo (5-col color-tier table = backlog snapshot) and wilson-roi (5-col table = option comparison): wilson-list is a SIMPLE ORDERED SEQUENCE — what to do FIRST, what to do SECOND, what to do THIRD. No color column, no tier grouping; the order itself IS the priority signal. Default cap: 5-7 items (3-tile working memory respected). Match is exact-after-strip+lower so `list the files` does NOT trigger — only a bare keyword. Sidecar-minimal: no persistence; the model emits from current context. Toggle: /sidecar off list. Default ON. Opt out: SIDECAR_NO_LIST=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "context", "list", "next-action", "ordered", "wilson"]
+}

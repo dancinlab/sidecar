@@ -109,6 +109,24 @@
       "version": "0.1.0"
     },
     {
+      "name": "wilson-roi",
+      "source": "./plugins/wilson-roi",
+      "description": "UserPromptSubmit hook — when the user types a bare ROI keyword (`roi` / `ROI` / `투자대비` / `roi표`), inject a 5-column traffic-light table skeleton (등급 · id · 프로젝트 · 한 줄 · 효과) as additionalContext, telling Claude to fill it in this turn for the prior user context (option comparison / project ranking). Color enum: 🔴 Critical / 🟡 Important / 🟢 OK / ⚪ Backlog — sourced from archive-nexus tool/rules_loader.hexa::level_to_severity (cross-repo signal canon). Header label appears only on the first row of each color group; subsequent rows in the same group leave column-1 empty for visual grouping (the dashboard-tri pattern from archive-nexus docs/atlas_meta_dashboard.md, commit ab098d20 2026-04-22). Match is exact-after-strip+lower so `roi for X` does NOT trigger — only a bare keyword. Pairs with wilson-todo (same 5-col schema, backlog headers) and wilson-list (ordered next-up). Sidecar-minimal: no scoring engine, no persistence; the model fills the table. Toggle: /sidecar off roi. Default ON. Opt out: SIDECAR_NO_ROI=1.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "wilson-todo",
+      "source": "./plugins/wilson-todo",
+      "description": "UserPromptSubmit hook — when the user types a bare TODO keyword (`todo` / `TODO` / `할일` / `할 일`), inject a 5-column traffic-light table skeleton (우선 · id · 카테고리 · 설명 · 효과) as additionalContext, telling Claude to surface the pending work items from the prior user context. Color enum: 🔴 Critical / 🟡 Important / 🟢 OK / ⚪ Backlog (sidecar canon, archive-nexus tool/rules_loader.hexa::level_to_severity). Header label appears only on the first row of each color group; subsequent rows leave column-1 empty for visual grouping (the dashboard-tri pattern from archive-nexus docs/atlas_meta_dashboard.md, commit ab098d20 2026-04-22). Pairs with wilson-roi (same 5-col schema, option-comparison headers) and wilson-list (next-up ordered sequence). Match is exact-after-strip+lower so `todo for next sprint` does NOT trigger — only a bare keyword. Sidecar-minimal: no codebase scanner, no persistence; the model surfaces and fills the table from context. Toggle: /sidecar off todo. Default ON. Opt out: SIDECAR_NO_TODO=1.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "wilson-list",
+      "source": "./plugins/wilson-list",
+      "description": "UserPromptSubmit hook — when the user types a bare LIST keyword (`list` / `리스트` / `다음` / `next` / `다음 할일`), inject an ordered-list skeleton (1./2./3.) as additionalContext, telling Claude to emit the next-up sequence of actions for the prior user context. Differs from wilson-todo (5-col color-tier table = backlog snapshot) and wilson-roi (5-col table = option comparison): wilson-list is a SIMPLE ORDERED SEQUENCE — what to do FIRST, what to do SECOND, what to do THIRD. No color column, no tier grouping; the order itself IS the priority signal. Default cap: 5-7 items. Match is exact-after-strip+lower so `list the files` does NOT trigger — only a bare keyword. Sidecar-minimal: no persistence; the model emits from current context. Toggle: /sidecar off list. Default ON. Opt out: SIDECAR_NO_LIST=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-tape-recorder",
       "source": "./plugins/wilson-tape-recorder",
       "description": "Record the Claude Code session as a `.tape` v1.2 execution trace (the dancinlab tape format — github.com/dancinlab/tape). One file per session at <DATA>/sessions/<id>.tape: SessionStart writes `@S start`, UserPromptSubmit writes `@U`, PreToolUse writes `@T`, PostToolUse writes `@R`, SessionEnd writes `@S end`. Honest subset of the 17-type alphabet — only what CC hooks actually deliver (no @A assistant text, no @K cost — those signals aren't exposed). Pairs with `wilson-guards/tape-append-only` (the recorder PRODUCES `.tape`, the guard PROTECTS it). /wilson-tape-recorder for status / ls / tail / cat / on / off. Default ON. Opt out: SIDECAR_NO_TAPE_RECORDER=1.",

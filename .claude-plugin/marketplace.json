@@ -117,8 +117,8 @@
     {
       "name": "wilson-inbox",
       "source": "./plugins/wilson-inbox",
-      "description": "Cross-project handoff inbox — when a gap or request affects another SSOT repo, file it there as a structured inbox/<kind>/<slug>.md entry (kind: notes / patches / poc / rfc_drafts) instead of silently working around it downstream. /wilson-inbox:inbox scaffolds and manages entries: add / list / show / path / verify / apply / archive / rm. Target repo: --to <name> (~/core/<name>) or the nearest .git walking up from the cwd. Light-mode is folder + entries; heavy-mode adds inbox/PATCHES.yaml with a status lifecycle that apply/archive transition. A SessionStart hook surfaces the current repo's inbox entries so a handoff is never forgotten — inert unless the repo has an inbox/. Standalone port of wilson's inbox plugin. Default ON. Opt out: SIDECAR_NO_INBOX=1.",
-      "version": "0.1.0"
+      "description": "Cross-project handoff inbox — when a gap or request affects another SSOT repo, file it there as a structured inbox/<kind>/<slug>.md entry (kind: notes / patches / poc / rfc_drafts) instead of silently working around it downstream. /wilson-inbox:inbox scaffolds and manages entries: add / list / show / path / verify / apply / archive / rm / pr. The pr verb takes a scaffolded entry through the full upstream loop in one idempotent step: checkout (or create) `inbox/<kind>/<slug>` branch in the target repo, stage + commit the entry, push -u, then `gh pr create` with the file's first H1 as the PR title and the file body as the PR body. Target repo: --to <name> (~/core/<name>) or the nearest .git walking up from the cwd. Light-mode is folder + entries; heavy-mode adds inbox/PATCHES.yaml with a status lifecycle that apply/archive transition. A SessionStart hook surfaces the current repo's inbox entries so a handoff is never forgotten — inert unless the repo has an inbox/. Standalone port of wilson's inbox plugin. Default ON. Opt out: SIDECAR_NO_INBOX=1.",
+      "version": "0.2.0"
     },
     {
       "name": "wilson-lsp",

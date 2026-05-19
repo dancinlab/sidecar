@@ -23,6 +23,7 @@
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 
@@ -445,6 +446,76 @@ def v_rm(slug, to, cwd):
     return "ok|rm `%s` (%s)%s  (log: %s)" % (slug, h["kind"], suffix, log)
 
 
+def v_pr(slug, to, cwd):
+    """Open an upstream PR for a scaffolded inbox/<kind>/<slug>.md entry.
+
+    Idempotent steps in the target repo: checkout or create the
+    `inbox/<kind>/<slug>` branch, stage + commit the entry if uncommitted,
+    push -u, then `gh pr create` with the file's first H1 as the title
+    and the file body as the PR body. Logs `action: pr` to manifest_log.
+    Requires `gh` on PATH; returns a clear error otherwise (the user can
+    still push the branch and open a PR manually).
+    """
+    if not slug:
+        return "pr: slug required"
+    repo = resolve_repo(to, cwd)
+    if not repo:
+        return no_repo_err(to)
+    hits = find_by_slug(repo, slug)
+    if not hits:
+        return "no entry matches slug `%s` under %s/inbox/" % (slug, repo)
+    if len(hits) > 1:
+        return "ambiguous slug `%s` — refusing to PR multiple entries:%s" % (
+            slug,
+            "".join("\n  - %s/%s" % (h["kind"], h["file"]) for h in hits))
+    h = hits[0]
+    if not os.path.isdir(os.path.join(repo, ".git")):
+        return "pr: %s is not a git repo (no .git/)" % repo
+    if subprocess.run(["which", "gh"], stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE).returncode != 0:
+        return ("pr: `gh` CLI not on PATH — install GitHub CLI to "
+                "open a PR (or push the branch manually).")
+    rel = os.path.relpath(h["path"], repo)
+    branch = "inbox/%s/%s" % (h["kind"], slug)
+    title = first_heading(h["path"]) or "inbox: %s/%s" % (h["kind"], slug)
+
+    def _run(cmd):
+        return subprocess.run(cmd, cwd=repo, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE, text=True)
+
+    cur = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
+    if cur != branch:
+        exists = _run(["git", "rev-parse", "--verify", "--quiet",
+                       "refs/heads/" + branch]).returncode == 0
+        sub = ["git", "checkout", branch] if exists \
+            else ["git", "checkout", "-b", branch]
+        r = _run(sub)
+        if r.returncode != 0:
+            return "pr: git checkout failed — %s" % (
+                r.stderr.strip() or r.stdout.strip())
+    _run(["git", "add", "--", rel])
+    staged = _run(["git", "diff", "--cached", "--quiet"])
+    if staged.returncode != 0:
+        r = _run(["git", "commit", "-m", title])
+        if r.returncode != 0:
+            return "pr: git commit failed — %s" % (
+                r.stderr.strip() or r.stdout.strip())
+    r = _run(["git", "push", "-u", "origin", branch])
+    if r.returncode != 0:
+        return "pr: git push failed — %s" % (
+            r.stderr.strip() or r.stdout.strip())
+    r = _run(["gh", "pr", "create", "--title", title,
+              "--body-file", rel, "--head", branch])
+    if r.returncode != 0:
+        return "pr: gh pr create failed — %s" % (
+            r.stderr.strip() or r.stdout.strip())
+    url = r.stdout.strip()
+    log = os.path.join(repo, "inbox", "manifest_log.jsonl")
+    log_row(log, {"slug": slug, "kind": h["kind"], "action": "pr",
+                  "branch": branch, "url": url})
+    return "ok|pr `%s` (%s) → %s" % (slug, h["kind"], url)
+
+
 USAGE = (
     "wilson-inbox — cross-project handoff inbox. Usage:\n"
     "  /wilson-inbox:inbox add <kind> <slug> [--to <repo>]\n"
@@ -455,6 +526,7 @@ USAGE = (
     "  /wilson-inbox:inbox apply <slug> [--status <new>] [--to <repo>]\n"
     "  /wilson-inbox:inbox archive <slug> [--to <repo>]\n"
     "  /wilson-inbox:inbox rm <slug> [--to <repo>]\n"
+    "  /wilson-inbox:inbox pr <slug> [--to <repo>]\n"
     "kind ∈ {notes, patches, poc, rfc_drafts}.  slug = [a-z0-9-]+.\n"
     "Target repo: --to <name> (~/core/<name>) or the nearest .git "
     "from the cwd.")
@@ -501,6 +573,8 @@ def run_cmd(args):
         r = v_archive(rest[0] if rest else "", to, cwd)
     elif verb in ("rm", "remove"):
         r = v_rm(rest[0] if rest else "", to, cwd)
+    elif verb == "pr":
+        r = v_pr(rest[0] if rest else "", to, cwd)
     else:
         print("wilson-inbox: unknown verb `%s`.\n\n%s" % (verb, USAGE))
         return

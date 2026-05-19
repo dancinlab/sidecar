@@ -498,3 +498,47 @@
   - JSON 파싱
   - 슬래시 커맨드 0 — one-plugin-한-가드 미니멀 정체성 유지
   - 기존 opt-out도 쉘 프로필 방식 — 일관됨, config 파일은 요청 범위(한 줄) 초과
+
+### Decision 60 — measure first (survey ~/core AGENTS.* before designing the cap)
+- **picked**: A — 측정 먼저 (anima·hexa-lang 등 실제 파일 부풀음 측정 후 cap·규칙 확정)
+- **rationale**:
+  - cap 숫자를 감으로 박으면 정상 파일을 막거나 부푼 파일을 통과시킴 — 실제 분포를 봐야 정확
+  - 측정 결과: 건강한 AGENTS.*는 ~130-200줄/6-15KB, 부푼 건 336-1533줄
+  - "히스토리"가 changelog 누적이 아니라 줄 단위 폭주(7-9KB 한 줄)로 새는 게 드러남 — 탐지 규칙 방향이 바뀜
+  - measure-vs-predict fork에서 측정 비용(파일 wc, ~5분) << cap 오설계 비용
+
+### Decision 61 — new plugin wilson-minimal-keep (not a fold into an existing one)
+- **picked**: B 후속 — 기존 35개 플러그인 조사 결과 AGENTS.* 비대화 가드 부재 → 신규 플러그인
+- **rationale**:
+  - wilson-readme-format이 구조 쌍둥이(특정 doc 파일 PreToolUse Write/Edit 포맷 단속)지만 대상이 README 한정
+  - wilson-tree는 state/ 흩어짐+REGISTRY.md 색인이라 대상이 다름 — AGENTS.* 크기는 미관할
+  - one-plugin-한-가드 정체성상 별도 가드는 별도 플러그인이 맞음 — 기존 플러그인에 끼우면 단일 책임 위반
+
+### Decision 62 — three bloat signals: S1 total-lines · S2 long-line · S3 history
+- **picked**: S1 total-lines >280 (Write only) · S2 long-line >800ch · S3 history (Log/History/Changelog heading or ≥3 dated bullets)
+- **rationale**:
+  - 측정상 healthy ≤200줄 / bloated ≥336줄 → 280줄 cap이 둘을 깔끔히 가름
+  - 800ch/줄은 anima의 7-9KB 거대 줄을 잡으면서 정상 산문 줄(~300-500ch)은 통과 — "장황함"의 직접 신호
+  - S1은 전체 파일이 필요 → Write 시에만 (readme-format L3 write-only 패턴과 동일 idiom)
+  - 히스토리는 도메인-메타-도메인 원칙상 별도 파일로 — 사용자가 명시적으로 지목한 신호
+
+### Decision 63 — 2-mode, default warn (not block)
+- **picked**: 2-mode (SIDECAR_MINIMAL_KEEP_MODE), default = warn
+- **rationale**:
+  - 크기 초과는 soft 판단 — force-push/live-secret 같은 hard-dangerous가 아님
+  - 정상적인 큰 편집을 block으로 막으면 과함 → warn이 안전 floor
+  - block은 opt-in으로 남겨 강한 단속이 필요한 repo만 켜게 함 (hexa-first-warn과 반대 기본값 — 위험도 차이 반영)
+
+### Decision 64 — wilson-tree integration: REGISTRY.md routing + one-way reference
+- **picked**: 런타임 history→REGISTRY.md 라우팅 + minimal-keep description의 단방향 wilson-tree 참조 (wilson-tree 본체 미수정)
+- **rationale**:
+  - S3 발동 시 AGENTS 파일 옆에 REGISTRY.md(wilson-tree 산출물)가 있으면 거기로, 없으면 GROWTH.md로 안내 — 실질적 기능 결합
+  - wilson-tree description은 이미 "ever-growing inline progress log" 개념 훅을 담음 — 본체 수정 시 불필요한 버전 bump
+  - ship 범위 최소화 — 단방향 참조로 충분, 양방향은 결합도만 키움
+
+### Decision 65 — manual cleanup scope: live top-level AGENTS.tape, snapshots excluded
+- **picked**: live 4개(anima·wilson·hexa-lang·hexa-matter) top-level AGENTS.tape만 정리, anima_clm_* 스냅샷 제외, 타repo는 워킹트리만 정리 후 보고
+- **rationale**:
+  - anima_clm_NN_* 디렉터리는 동결된 학습-런 스냅샷 — 본질이 히스토리라 정리 대상 아님
+  - 타repo SSOT 편집은 git-tracked라 복구 가능하지만 커밋은 각 repo 소유자 판단 — 워킹트리만 남기고 보고
+  - sidecar repo만 이번 작업에서 커밋 (g_ship_syncs_install 거버넌스 적용 대상)

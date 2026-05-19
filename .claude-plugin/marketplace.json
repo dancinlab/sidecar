@@ -173,6 +173,12 @@
       "source": "./plugins/wilson-hexa-first-warn",
       "description": "PreToolUse warn on Write when file_path ends in `.py` or `.sh` — emit an AI-native single-line directive (HEXA_FIRST_WARN { trigger, target, ext, action, rationale, optout }) via additionalContext, asking the model to consider whether a hexa-native equivalent (stdlib, atlas-bound theorem, or `hexa` CLI subcommand) covers the same job before writing the script. Does NOT block — Write proceeds normally; the warn is advisory and consumed by the agent same-turn. New-file moment only (`Write` matcher, NOT `Edit`) — editing an existing .py file does not nag every time. Whitelist is deliberately narrow (`.py`, `.sh`) — `.js`/`.ts`/`Makefile` etc. are out of scope to avoid noise. Soft enforcement complement to wilson-prefs's principle-text injection — text says \"prefer hexa\", this asks \"sure?\" at the file-creation moment. Opt out: SIDECAR_NO_HEXA_FIRST_WARN=1 (or WILSON_NO_HEXA_FIRST_WARN=1).",
       "version": "0.1.0"
+    },
+    {
+      "name": "wilson-hexa-first",
+      "source": "./plugins/wilson-hexa-first",
+      "description": "Inject the canonical `hexa-first` operating principle as additionalContext on SessionStart and PostCompact, so the agent reads it once at the top of context (and again right after a summary lands). Pure text contributor — NO enforcement (the soft enforcement complement is `wilson-hexa-first-warn`, which warns at .py/.sh write time). The principle text is the verbatim port of wilson `plugins/principle-hexa-first/main.hexa::principle_hexa_first_text` — prefer the hexa-native path over an external CLI / non-hexa dep, absorbed intrinsics over forking a shell, the absorbed stdlib / atlas over hand-rolling; when the constraint lives in hexa-lang itself fix it there PR-only via `hexa atlas register` → `hexa atlas pr` (direct fold-to-live forbidden). One block, two events (SessionStart + PostCompact). Opt out: SIDECAR_NO_HEXA_FIRST=1 (or WILSON_NO_HEXA_FIRST=1).",
+      "version": "0.1.0"
     }
   ]
 }

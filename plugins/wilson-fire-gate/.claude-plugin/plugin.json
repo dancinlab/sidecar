@@ -1,0 +1,9 @@
+{
+  "name": "wilson-fire-gate",
+  "description": "Instrument-first decision gate — measure over predict. A *fire* = running one real measurement (benchmark / profile / probe) instead of predicting its outcome. At a measure-vs-predict fork the agent should: (1) predict first with the most faithful model it has (prior measurements, roofline limits, documented walls); (2) fire only when that prediction is genuinely uncertain; (3) never re-fire a result a prior measurement already settled — resolve analytically ($0); (4) treat cost-no-object as 'do not block a needed fire on its cost', NOT as 'fire when the answer is already known'. Each fire-vs-resolve fork is gated (options + recommendation + 3+ rationale → wait for the pick) and recorded as a `### Fire-decision N` block in design.md. SessionStart + PostCompact inject the principle; UserPromptSubmit adds a short reminder only on measurement-looking prompts. /wilson-fire-gate status|on|off|decide|log|path|sample. Companion to wilson-decision-gate (generic gate) — this one is measurement-specialized. Default ON. Opt out: SIDECAR_NO_FIRE_GATE=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "instrument-first", "measure", "benchmark", "decision-gate", "wilson"]
+}

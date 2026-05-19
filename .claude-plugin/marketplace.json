@@ -28,7 +28,7 @@
       "name": "wilson-prefs",
       "source": "./plugins/wilson-prefs",
       "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context. SessionStart / PreCompact / PostCompact inject the full `## Prefs` block (PostCompact lands in the clean post-summary context — strictly stronger than PreCompact for surviving compaction); UserPromptSubmit re-asserts only the compact directive lines, EXCEPT every Nth turn (`refresh-every`, default 25) it re-injects the full body so the style stays fresh across a long session. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
-      "version": "0.1.3"
+      "version": "0.2.0"
     },
     {
       "name": "wilson-hexa-verify",
@@ -70,13 +70,13 @@
       "name": "wilson-pool",
       "source": "./plugins/wilson-pool",
       "description": "Route heavy Bash commands to a remote host roster via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Each host carries a platform tag (macOS-only / Linux-only commands go to a matching host, else round-robined) and an optional per-host workdir override. workdir may be explicit or `auto` (mirror the current project — local ~/<rel> → remote ~/<rel>). `autosync on` rsyncs the local project to the target host before each routed command — a continuously-changing tree stays fresh with zero manual sync, and the workdir is created if absent (additive by default; `autosync mirror` adds rsync --delete); with `autosync off` a pre-flight `test -d` check skips routing to any host lacking the workdir. Spirit-port of wilson's pool roster. Routing is OFF until the roster has >=1 host AND workdir is set; only Bash is routed.",
-      "version": "0.4.0"
+      "version": "0.6.2"
     },
     {
       "name": "wilson-checkpoint",
       "source": "./plugins/wilson-checkpoint",
       "description": "Never lose work to a usage limit / rate-limit / crash. A CC hook cannot see the limit event, so this keeps an always-fresh non-destructive snapshot instead: on Stop / PreCompact / SessionEnd it runs `git stash create` (a dangling commit — working tree, index and branches untouched), pins it under refs/wilson-checkpoint/, and writes a resume note; SessionStart re-injects an unconsumed snapshot so the next session continues. Restore/list/clear via /wilson-checkpoint:checkpoint (restore is printed, never auto-applied). Debounced; git-only. Opt out: SIDECAR_NO_CHECKPOINT=1.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "wilson-gpu",
@@ -88,7 +88,7 @@
       "name": "wilson-decision-gate",
       "source": "./plugins/wilson-decision-gate",
       "description": "Step-by-step decision gate — multi-decision work is one user-confirmation gate per decision, never batched: for each branch point present options + recommendation + rationale (3+ bullets), wait for the pick, then record a `### Decision N` block in design.md. Standalone port of wilson's principle-step-by-step-decision-gate (text-only, like wilson — a hook can't detect batching either). SessionStart **and PostCompact** inject the principle (PostCompact lands in the clean post-summary context — the rules survive compaction); UserPromptSubmit adds a short reminder ONLY on branch-point-looking prompts (not every prompt). /wilson-decision-gate maintains the design.md ledger; ships a 5-language canonical sample. Default ON; opt out: SIDECAR_NO_DECISION_GATE.",
-      "version": "0.1.1"
+      "version": "0.2.1"
     },
     {
       "name": "wilson-tape-recorder",
@@ -101,6 +101,12 @@
       "source": "./plugins/wilson-goal",
       "description": "Session goal persistence + re-injection. Goal lives on disk at <DATA>/goal.json (outside the transcript that gets compacted), restored at every SessionStart **and PostCompact** (the clean post-summary moment) and re-asserted as a short reminder on each UserPromptSubmit. A project-local `GOAL.md` is used as the default when no user goal is set. /wilson-goal set|status|show|clear|path. HONEST GAP vs wilson's `loop` plugin: only the goal-persistence half is portable — the autonomous-continuation half (wilson's loop_tick + QUEUE auto-injection) cannot be done from CC hooks (no `continue without user input` mechanism). Default ON. Opt out: SIDECAR_NO_GOAL=1.",
       "version": "0.1.1"
+    },
+    {
+      "name": "wilson-resume",
+      "source": "./plugins/wilson-resume",
+      "description": "Resume continuity across an abrupt session end (usage limit / rate-limit / crash / closed terminal). wilson-checkpoint already restores the *files*; wilson-resume restores the *work narrative* — how far along the task was and what came next. Every Stop snapshots the model's own TodoWrite checklist (read from CC's on-disk ~/.claude/todos/<session>.json — N/M done, next pending), the last user request (transcript tail, bounded read) and the git working-tree state to a per-project file at <DATA>/<sha1(cwd)>.json. SessionEnd flips a clean-exit flag so the next session can tell a clean stop from an abrupt one. SessionStart (source startup/resume/clear) re-injects a short `## Resume` briefing; source=compact is skipped (PostCompact territory). Progress-only — the goal line stays wilson-goal's job, so the `## Resume` and `## Goal` blocks sit side by side without duplication. Capture is deterministic, no model-facing slash command. Companion to wilson-goal (what) and wilson-checkpoint (files). Default ON. Opt out: SIDECAR_NO_RESUME=1.",
+      "version": "0.1.0"
     },
     {
       "name": "wilson-inbox",

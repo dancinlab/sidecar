@@ -1,0 +1,9 @@
+{
+  "name": "wilson-resume",
+  "description": "Resume continuity — when a session ends abruptly (usage limit / rate-limit / crash / closed terminal), pick the work thread back up in the next session. wilson-checkpoint already restores the *files*; wilson-resume restores the *narrative*: how far along the work was and what came next. On every Stop it snapshots the model's own TodoWrite checklist (read from CC's on-disk ~/.claude/todos/<session>.json — N/M done, next pending), the last user request (transcript tail, bounded read), and the git working-tree state to a per-project file at <DATA>/<sha1(cwd)>.json. SessionEnd writes a clean-exit flag so the next session can tell a clean stop from an abrupt one. SessionStart (source startup/resume/clear) re-injects a short `## Resume` briefing. Progress-only — the goal line stays wilson-goal's job, so the two blocks sit side by side without duplication. Companion to wilson-goal (what) and wilson-checkpoint (files). Default ON. Opt out: SIDECAR_NO_RESUME=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "resume", "continuity", "session", "todowrite", "crash-recovery", "wilson"]
+}

@@ -209,3 +209,34 @@
   - existing language-variant resolver pattern is reused as-is (cands = [<DATA>/styles/X.<lang>.md, <ROOT>/styles/X.<lang>.md, <DATA>/styles/X.md, <ROOT>/styles/X.md]) — _common just becomes another X in that loop, so _inject.py grows ~10 lines of concat glue and zero new resolution complexity
   - adding a future style (terse / narrative / teaching) becomes a single file authored, not 5 (canonical + 4 language variants) where each repeats the same emoji-enum and acronym tables — eliminates the synchronisation-drift failure mode the current 5-fold duplication is exposed to
   - honest non-goal — runtime token cost is unchanged (only the active style body is injected, common or not) — this refactor is for maintainability and consistency, not for D17-D22 style token reclaim
+
+### Decision 24 — Option A — new wilson-resume plugin owns the progress-narrative layer only ("goal X · N/M steps done · next: ..."); file-state resume stays wilson-checkpoint's job (no stash duplication)
+- **picked**: Option A — new wilson-resume plugin owns the progress-narrative layer only ("goal X · N/M steps done · next: ..."); file-state resume stays wilson-checkpoint's job (no stash duplication)
+- **rationale**:
+  - the whole repo is designed one-plugin-one-concern (Decisions 1-14 split guards individually) — checkpoint=files / goal=objective / resume=narrative lands exactly on that principle, whereas B and C blur it
+  - wilson-checkpoint already ships verified uncommitted-stash logic — Option B would parse/surface checkpoint's output line and couple wilson-resume to checkpoint's internal format, so a checkpoint change silently breaks resume
+  - Option C's minimal file-capture sounds like the zero-dependency standalone-port rule but actually means two plugins create the same stash and collide — wilson-goal's own precedent (D5/D6) is to degrade to a one-line fallback when a companion is absent, never to duplicate its function; Option A still runs standalone (narrative only) when checkpoint is absent, so it complements rather than depends
+
+### Decision 25 — Option A — wilson-resume captures progress automatically by reading CC's on-disk TodoWrite checklist; no model-facing slash command; degrades to git/transcript signals when a session used no todos
+- **picked**: Option A — wilson-resume captures progress automatically by reading CC's on-disk TodoWrite checklist (verified: ~/.claude/todos/<session-id>-agent-<agent-id>.json, JSON array of {content,status,activeForm} with status in pending|in_progress|completed); no model-facing slash command; degrades to git diff-stat + last-user-prompt from transcript tail when a session used no todos
+- **rationale**:
+  - principle 1 (ai-native) — deterministic dispatch over LLM guesswork: A reads an artifact CC already maintains (the model's own checklist with per-item status), B/C make progress fidelity depend on the model remembering to self-report
+  - B's model self-report is exactly the drift failure mode wilson-prefs spent D22 on — sparse voluntary updates fade, and a resume briefing built on a stale self-report is worse than none (false confidence)
+  - A adds zero model-facing surface — no slash command to teach, no PROGRESS.md convention; capture is a free side-effect of normal TodoWrite usage. C's optional note path re-introduces a voluntary mechanism used inconsistently
+  - honest degradation — a session that used no todos still yields a coarse but useful "last activity" briefing from deterministic git diff-stat + the last user prompt read from the transcript tail (bounded read, per D15)
+
+### Decision 26 — Option A — capture on Stop every turn (snapshot resume.json) + SessionEnd writes a clean-exit flag; re-inject on SessionStart{startup,resume,clear}; no PreCompact, no compact source
+- **picked**: Option A — capture on Stop every turn (snapshot resume.json) + SessionEnd writes a clean-exit flag; re-inject on SessionStart with source in {startup,resume,clear}; no PreCompact hook, compact source excluded from re-inject
+- **rationale**:
+  - a crash / usage-limit / rate-limit kill never fires SessionEnd — only a per-turn Stop capture preserves the last completed turn; Option B loses exactly that case and contradicts the plugin's purpose
+  - the SessionEnd hook here is NOT the redundant re-emit belt D20 removed — it emits no body, it writes one distinct signal (clean-exit flag) that lets the next session's briefing tell "clean exit" from "abrupt interrupt", which the user explicitly framed the problem around (limit/rate-limit/crash)
+  - PreCompact is excluded on both grounds — D20 precedent + compaction is same-session so todos stay in-context; for the same reason source=compact is excluded from re-inject (PostCompact territory), leaving {startup,resume,clear}
+  - cost over Option C is only a ~10-line SessionEnd hook flipping one boolean, buying an accurate clean-vs-crash briefing tone
+
+### Decision 27 — Option B — wilson-resume injects a progress-only block; the goal line stays wilson-goal's own SessionStart block (no goal-text duplication); resume state stored per-project at <DATA>/<sha1(cwd)[:12]>.json
+- **picked**: Option B — wilson-resume injects a progress-only block; the goal line stays wilson-goal's own SessionStart block (no goal-text duplication, no code import); resume state stored per-project at ~/.claude/plugin-data/wilson-resume/<sha1(cwd)[:12]>.json
+- **rationale**:
+  - D24 already fixed "resume owns the narrative only, never reaches into other plugins" — B is the natural consequence; A and C partially reverse D24
+  - wilson-goal already emits a ## Goal block on SessionStart — A would make wilson-resume print the goal text too, putting the goal on screen twice, exactly the duplication D17-D21 removed repo-wide
+  - B's two blocks are complementary not redundant — wilson-goal = "what (destination)", wilson-resume = "where (current position)"; adjacent on SessionStart, zero coupling
+  - honest degradation — with wilson-goal absent there is no goal block, but wilson-resume's todo contents carry their own context, so the briefing still stands alone; storage is per-project (resume state is inherently project-scoped, unlike wilson-goal's single global goal)

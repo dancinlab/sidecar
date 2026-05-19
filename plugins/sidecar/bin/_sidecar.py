@@ -13,7 +13,7 @@ import sys
 PLUGINS = ["ssot", "readme-format", "hexa-verify", "dangerous-path",
            "git-guard", "secret-guard", "bash-guard", "prefs",
            "output-trim", "pool", "checkpoint", "gpu", "decision-gate",
-           "tape-recorder", "goal", "inbox", "guards"]
+           "tape-recorder", "goal", "resume", "inbox", "guards"]
 
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".claude", "sidecar")
 STATE = os.path.join(STATE_DIR, "disabled.json")

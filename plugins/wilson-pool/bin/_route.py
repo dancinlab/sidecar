@@ -114,8 +114,21 @@ def resolve_workdir(pick, cfg, payload):
 def preflight_ok(host, wd_sh, dd):
     """autosync-OFF safety net: confirm the workdir exists on the host
     before routing — else the routed `cd` just fails with
-    `no such file or directory`. Cached per (host, workdir) for the
-    session, so only the first route to each host pays one ssh probe."""
+    `no such file or directory`.
+
+    A connection failure must NEVER bench a roster host. The probe
+    `ssh … test -d <wd>` has three outcomes, and only the two
+    DEFINITIVE ones are cached per (host, workdir) for the session:
+
+      rc 0   → workdir present              → cache "ok"
+      rc 1   → ssh connected, workdir absent → cache "missing"
+      rc 255 / timeout / ssh error → CONNECTION FAILURE → NOT cached:
+               skip routing for THIS command only, and re-probe on the
+               next one. A transient network blip / a sleeping host is
+               not a missing workdir — conflating them would silently
+               drop the host from routing for the rest of the session.
+               (The host always stays in pool.json; this is purely
+               about not de-facto benching it on a transient failure.)"""
     import subprocess
     cache_p = os.path.join(dd, ".preflight.json")
     key = host + "\x00" + wd_sh
@@ -132,9 +145,13 @@ def preflight_ok(host, wd_sh, dd):
             ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6",
              host, "test -d " + wd_sh],
             capture_output=True, timeout=12).returncode
-        ok = (rc == 0)
     except Exception:
-        ok = False
+        rc = 255                       # timeout / ssh missing → connection failure
+    if rc == 255:
+        # ssh transport failure — host unreachable, NOT a missing workdir.
+        # Do not cache; skip this once, the next heavy command re-probes.
+        return False
+    ok = (rc == 0)
     cache[key] = "ok" if ok else "missing"
     try:
         with open(cache_p, "w", encoding="utf-8") as f:

@@ -1,0 +1,9 @@
+{
+  "name": "wilson-go",
+  "description": "UserPromptSubmit hook — when the user types a bare AN10 fan-out keyword (`go` / `loop` / `병렬` / ...), inject an instruction telling Claude to dispatch multiple `Agent` tool calls in a SINGLE message, all with `run_in_background=true`, treating the prior user request as the fan-out task. Sidecar-minimal port of dancinlab/archive-nexus rule AN10 (rules/anima.json, added 2026-04-16) + tool/parallel_dispatch_guard.hexa — no agent-ledger, no DAG scheduler, no shadow comparator; just trigger detection and additionalContext injection. The model dispatches; the hook only nudges. Match is exact-after-strip+lower so `go to file X` does NOT trigger — only a bare keyword does. Trigger set: go · gogo · ㄱㄱ · 가자 · 가즈아 · keep · keep going · loop · 루프 · 병렬 · 동시 · 백그라운드. Default subagent_type mapping: exploration→Explore, planning→Plan, general→general-purpose, claude-code/SDK questions→claude-code-guide. Anti-pattern (called out in the injected instruction): launch one Agent, wait for result, launch the next — sequential dispatch is exactly what AN10 prohibits. Toggle: /sidecar off go. Default ON. Opt out: SIDECAR_NO_GO=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hooks", "context", "fan-out", "parallel", "subagent", "background", "an10", "wilson"]
+}

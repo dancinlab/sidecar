@@ -1,7 +1,7 @@
 {
   "name": "wilson-lsp",
-  "description": "Wires LSP servers for the dancinlab formats into Claude Code via .lsp.json: .hexa → `hexa lsp`, and .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: any server not on PATH simply shows in the /plugin Errors tab. Not a hook plugin — LSP lifecycle is CC-managed.",
-  "version": "0.2.0",
+  "description": "Wires LSP servers for the dancinlab formats into Claude Code via .lsp.json: .hexa (and the firmware-authoring extensions hexa absorbs — .c .h .cpp .hpp .cc .hh / .s .S / .v .sv .vhd .vhdl) → `hexa lsp`; and .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). The firmware-ext routing matches wilson-hexa-first-warn's protected set — opening a .c/.v file gets hexa-lsp diagnostics so the .hexa-is-the-replacement signal lands at the LSP layer too. .py/.sh are deliberately NOT claimed (existing pyright/bash-language-server conflict). Graceful: any server not on PATH simply shows in the /plugin Errors tab. Not a hook plugin — LSP lifecycle is CC-managed.",
+  "version": "0.3.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

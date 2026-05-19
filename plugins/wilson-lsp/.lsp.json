@@ -2,7 +2,21 @@
   "hexa": {
     "command": "hexa",
     "args": ["lsp"],
-    "extensionToLanguage": { ".hexa": "hexa" }
+    "extensionToLanguage": {
+      ".hexa": "hexa",
+      ".c":    "hexa",
+      ".h":    "hexa",
+      ".cpp":  "hexa",
+      ".hpp":  "hexa",
+      ".cc":   "hexa",
+      ".hh":   "hexa",
+      ".s":    "hexa",
+      ".S":    "hexa",
+      ".v":    "hexa",
+      ".sv":   "hexa",
+      ".vhd":  "hexa",
+      ".vhdl": "hexa"
+    }
   },
   "tape": {
     "command": "tape-lsp",

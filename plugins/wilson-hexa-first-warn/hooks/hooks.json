@@ -9,6 +9,15 @@
             "command": "${CLAUDE_PLUGIN_ROOT}/bin/hexa-first-warn.sh"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/bin/hexa-first-warn.sh"
+          }
+        ]
       }
     ]
   }

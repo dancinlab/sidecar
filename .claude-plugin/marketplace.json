@@ -155,8 +155,8 @@
     {
       "name": "wilson-lsp",
       "source": "./plugins/wilson-lsp",
-      "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp, shipped in github.com/dancinlab/{tape,n6,hxc,kosmos}). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",
-      "version": "0.2.0"
+      "description": "Wires LSP servers for the dancinlab formats via .lsp.json: .hexa (and the firmware-authoring extensions hexa absorbs — .c .h .cpp .hpp .cc .hh / .s .S / .v .sv .vhd .vhdl) → `hexa lsp`; .tape / .n6 / .hxc / .kosmos → the canonical per-repo servers (tape-lsp / n6-lsp / hxc-lsp / kosmos-lsp). The firmware-ext routing matches wilson-hexa-first-warn's protected set so opening a .c/.v file gets hexa-lsp diagnostics at the LSP layer too. .py/.sh are NOT claimed (existing pyright/bash-language-server conflict). Graceful: a server not on PATH just shows in /plugin Errors. Not a hook plugin — LSP lifecycle is CC-managed.",
+      "version": "0.3.0"
     },
     {
       "name": "sidecar",
@@ -203,8 +203,8 @@
     {
       "name": "wilson-hexa-first-warn",
       "source": "./plugins/wilson-hexa-first-warn",
-      "description": "PreToolUse guard on Write when file_path ends in `.py` or `.sh` — acts on the hexa-first principle, asking whether a hexa-native equivalent (stdlib, atlas-bound theorem, or `hexa` CLI subcommand) covers the same job before a hand-rolled script lands. Two modes, selected by SIDECAR_HEXA_FIRST_WARN_MODE (WILSON_ accepted): `block` (DEFAULT) — the Write is DENIED at PreToolUse via permissionDecision, emitting an AI-native single-line directive (HEXA_FIRST_BLOCK { trigger, target, ext, action }); the model must pick a hexa-native path or downgrade. `warn` — a single-line advisory (HEXA_FIRST_WARN { ... }) is injected via additionalContext and the Write proceeds unchanged. Any value other than `warn` resolves to `block` — block is the floor. New-file moment only (`Write` matcher, NOT `Edit`) — editing an existing .py file does not nag every time. Whitelist is deliberately narrow (`.py`, `.sh`) — `.js`/`.ts`/`Makefile` etc. are out of scope to avoid noise. Soft enforcement complement to wilson-prefs's principle-text injection — text says \"prefer hexa\", this stops at the file-creation moment. Opt out entirely: SIDECAR_NO_HEXA_FIRST_WARN=1 (or WILSON_NO_HEXA_FIRST_WARN=1).",
-      "version": "0.2.0"
+      "description": "PreToolUse guard on Write AND Bash when a new file in the protected set is about to land — acts on the hexa-first principle, pointing at `.hexa` as the primary replacement (.hexa absorbs scripting + firmware authoring in this project), or at hexa-lang upstream PR-only (`hexa atlas register <file>` → `hexa atlas pr`) when no existing path fits. Protected extensions: scripting (.py .sh) plus firmware (C: .c .h .cpp .hpp .cc .hh; asm: .s .S; RTL: .v .sv .vhd .vhdl). General-app languages (.rs .go .java .js .ts …) stay out of scope to avoid noise. Two tool surfaces — both routed to the same decision logic: Write (file_path matches a protected ext) and Bash (command contains a `>` / `>>` redirect or `tee [-a]` whose target ends in a protected ext — closes the heredoc/redirect bypass like `cat > foo.py <<EOF`). Two modes, selected by SIDECAR_HEXA_FIRST_WARN_MODE (WILSON_ accepted): `block` (DEFAULT) — DENY at PreToolUse via permissionDecision emitting an AI-native directive (HEXA_FIRST_BLOCK { trigger, target, ext, primary, extend, downgrade }); the model must write .hexa, extend upstream via PR, or downgrade. `warn` — advisory via additionalContext, call proceeds unchanged. Any value other than `warn` resolves to `block` — block is the floor. New-file moment only (Write matcher, NOT Edit). Known residual bypass: mv/cp/ln rename of a tmp file into a protected ext path. Opt out entirely: SIDECAR_NO_HEXA_FIRST_WARN=1 (or WILSON_NO_HEXA_FIRST_WARN=1).",
+      "version": "0.3.0"
     },
     {
       "name": "wilson-hexa-first",

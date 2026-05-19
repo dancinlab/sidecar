@@ -12,10 +12,12 @@
 #                   history belongs in REGISTRY.md / GROWTH.md, not here
 #
 # Two modes via SIDECAR_MINIMAL_KEEP_MODE (WILSON_ accepted):
-#   warn  (default)  one-line advisory via additionalContext, write proceeds
-#   block            the write is DENIED at PreToolUse
-# Any value other than `block` resolves to `warn` — warn is the floor: a
-# size overshoot is a soft judgment, unlike a force-push or a live secret.
+#   block (default)  the write is DENIED at PreToolUse
+#   warn             one-line advisory via additionalContext, write proceeds
+# Any value other than `warn` resolves to `block` — block is the default
+# because 0.1.0's warn-only default split detect from enforcement: the
+# bloat was always flagged but never refused, so the same Write would
+# pile on more bloat on the next cycle. Soft mode is opt-in.
 #
 # Opt out: SIDECAR_NO_MINIMAL_KEEP=1 (also honors WILSON_NO_MINIMAL_KEEP=1).
 # Audit / cleanup verb (no stdin): `_minimal_keep.py scan [dir]`.
@@ -154,8 +156,8 @@ def main():
     msg = "; ".join(findings)
 
     mode = (os.environ.get("SIDECAR_MINIMAL_KEEP_MODE")
-            or os.environ.get("WILSON_MINIMAL_KEEP_MODE") or "warn")
-    if mode == "block":
+            or os.environ.get("WILSON_MINIMAL_KEEP_MODE") or "block")
+    if mode != "warn":
         deny("MINIMAL_KEEP_BLOCK { target: %s, bloat: %s, action: trim "
              "before write — keep only non-obvious rules, history -> %s; "
              "or SIDECAR_MINIMAL_KEEP_MODE=warn to downgrade }"

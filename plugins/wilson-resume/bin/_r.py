@@ -25,14 +25,25 @@
 #                  session scope" decline), flag the record `stuck` so
 #                  the next session does NOT re-arm it verbatim — that
 #                  cross-session deadlock loop is what this prevents.
+#                  If the turn declares a `잔여 =` / `remaining =` /
+#                  `outstanding =` leading-marker handoff list, capture
+#                  the extract (≤2KB) so the next session sees the
+#                  specific pending items, not just the meta "stuck"
+#                  flag. Residual fires independently of stuck — a
+#                  turn-limit handoff without a single-session decline
+#                  still surfaces.
 #   SessionStart → on a fresh `startup` or after `/clear`, if a
 #                  persisted, un-cleared goal exists, inject a short
 #                  briefing. A normal goal → `## Goal — interrupted`
 #                  with the exact `/goal <condition>` line to re-arm it.
 #                  A `stuck` goal → `## Goal — over-scoped (handoff)`:
 #                  do NOT re-arm; slice it smaller or resume from a
-#                  checkpoint. `resume` carries the native goal over
-#                  already, and `compact` is same-session — both skip.
+#                  checkpoint. Either briefing appends a
+#                  `### 잔여 — 검토 필요` section when a residual
+#                  extract was captured, so the next session sees the
+#                  specific pending items. `resume` carries the native
+#                  goal over already, and `compact` is same-session —
+#                  both skip.
 #
 # What this does NOT do: the within-session native /goal loop ("Goal
 # not yet met… continuing") cannot be stopped from a hook — the native
@@ -96,6 +107,33 @@ DECLINE_MARKERS = (
     "cycle 분할 필요",
     "세션 분할 필요",
 )
+
+# A leading residual marker: the agent's explicit, structured handoff
+# list ("잔여 = a + b + c") in the latest assistant turn. Independent
+# of DECLINE_MARKERS — a turn can declare residual work without also
+# declaring the goal over-scoped (e.g. a turn-limit handoff with the
+# goal still meetable in the next session). Leading markers only —
+# `잔여 =` style — so healthy in-progress reports that merely *mention*
+# the word `잔여` (without a leading marker) don't trip. Matched case-
+# insensitively; one match is enough (no repeat counter, same as
+# DECLINE_MARKERS).
+RESIDUAL_MARKERS = (
+    "잔여 =",
+    "잔여 :",
+    "잔여:",
+    "remaining =",
+    "remaining:",
+    "outstanding =",
+    "outstanding:",
+)
+
+# Cap on the residual extract written to state and inlined into the
+# SessionStart briefing. Two reasons it must be bounded: (a) the
+# briefing is auto-injected into every fresh session and competes with
+# the other always-on context blocks (Pool · Prefs · SSOT) for the
+# session's prompt budget; (b) state.json is read on every Stop, and
+# an unbounded extract bloats the read.
+RESIDUAL_CAP_BYTES = 2048
 
 
 def disabled():
@@ -219,23 +257,68 @@ def latest_assistant_text(transcript):
     return text
 
 
-def over_scoped(transcript):
-    """(stuck, marker) — True + the matched phrase when the latest
-    assistant turn declares the active /goal exceeds single-session
-    scope; (False, "") otherwise. One match is decisive (see
-    DECLINE_MARKERS) — no repeat counter."""
-    t = latest_assistant_text(transcript).lower()
-    if not t:
+def _scan_substring(text, markers):
+    """(matched, marker) — True + the matched phrase when any marker
+    appears as a substring of `text` (case-insensitive); else
+    (False, ""). The single-match primitive shared by DECLINE_MARKERS
+    (over-scoped detection) and any future substring marker set."""
+    if not text:
         return False, ""
-    for m in DECLINE_MARKERS:
-        if m.lower() in t:
+    low = text.lower()
+    for m in markers:
+        if m.lower() in low:
             return True, m
     return False, ""
 
 
+def _extract_leading(text, markers, cap):
+    """(extract, marker) — when any leading marker (e.g. `잔여 =`) is
+    present in `text`, return the text from the *start of the marker's
+    line* through the end of `text` (or `cap` bytes, whichever is
+    smaller), with trailing whitespace trimmed; else ("", ""). The
+    earliest marker hit in the text wins so the extract covers what
+    follows the agent's first handoff declaration in the turn."""
+    if not text:
+        return "", ""
+    low = text.lower()
+    best_pos = -1
+    best_marker = ""
+    for m in markers:
+        p = low.find(m.lower())
+        if p >= 0 and (best_pos < 0 or p < best_pos):
+            best_pos = p
+            best_marker = m
+    if best_pos < 0:
+        return "", ""
+    line_start = text.rfind("\n", 0, best_pos) + 1
+    return text[line_start:line_start + cap].rstrip(), best_marker
+
+
+def over_scoped(text):
+    """(stuck, marker) — True + the matched phrase when the latest
+    assistant turn declares the active /goal exceeds single-session
+    scope; (False, "") otherwise. One match is decisive (see
+    DECLINE_MARKERS) — no repeat counter. Takes pre-fetched assistant
+    text so a single transcript read serves both this and
+    extract_residual()."""
+    return _scan_substring(text, DECLINE_MARKERS)
+
+
+def extract_residual(text):
+    """(extract, marker) — captures the agent's structured handoff
+    list from the latest assistant turn when introduced by a leading
+    `잔여 =` / `remaining =` / `outstanding =` marker (see
+    RESIDUAL_MARKERS). Returns ("", "") when no leading marker is
+    present. Capped at RESIDUAL_CAP_BYTES."""
+    return _extract_leading(text, RESIDUAL_MARKERS, RESIDUAL_CAP_BYTES)
+
+
 def capture(payload, cwd):
     """Stop hook — persist the active native /goal condition, if any,
-    and flag it `stuck` when the latest turn declares it over-scoped."""
+    flag it `stuck` when the latest turn declares it over-scoped, and
+    capture an explicit residual handoff extract when the turn carries
+    one. Stuck and residual are independent axes — a turn can declare
+    either, both, or neither."""
     transcript = (payload.get("transcript_path")
                   or payload.get("transcriptPath"))
     g = find_latest_goal(transcript)
@@ -250,35 +333,68 @@ def capture(payload, cwd):
         return
     base, _ = project_key(cwd)
     cur = load_state(cwd)
-    stuck, marker = over_scoped(transcript)
-    same = cur.get("condition") == g
-    if same and bool(cur.get("stuck")) == stuck:
-        return  # neither the condition nor the stuck flag changed
+    # One transcript read drives both stuck and residual detection.
+    latest = latest_assistant_text(transcript)
+    stuck, stuck_marker = over_scoped(latest)
+    residual, residual_marker = extract_residual(latest)
+    same_cond = cur.get("condition") == g
+    same_stuck = bool(cur.get("stuck")) == stuck
+    same_res = cur.get("residual", "") == residual
+    if same_cond and same_stuck and same_res:
+        return  # nothing changed
     now = int(time.time())
+    nowiso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     rec = {
         "condition": g,
         "project": base,
         "cwd": cwd,
         "session_id": payload.get("session_id")
         or payload.get("sessionId") or "",
-        "set_at": cur.get("set_at") if same else now,
-        "iso": cur.get("iso") if same
-        else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "set_at": cur.get("set_at") if same_cond else now,
+        "iso": cur.get("iso") if same_cond else nowiso,
     }
     if stuck:
         # Immediate handoff record — written on the FIRST over-scoped
         # turn, so even after the bounded within-session loop burns out
         # the next session resumes from this instead of re-arming.
         rec["stuck"] = True
-        rec["stuck_marker"] = marker
+        rec["stuck_marker"] = stuck_marker
         rec["stuck_at"] = now
-        rec["stuck_iso"] = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        rec["stuck_iso"] = nowiso
+    if residual:
+        # Specific pending items declared by the agent in the last
+        # turn — surfaced to the next session as a separate section in
+        # the briefing.
+        rec["residual"] = residual
+        rec["residual_marker"] = residual_marker
+        rec["residual_at"] = now
+        rec["residual_iso"] = nowiso
     save_state(cwd, rec)
+
+
+def _residual_section(s):
+    """The `### 잔여 — 검토 필요` block, inlined into the main briefing
+    when a residual extract was captured. Empty string if no residual
+    is on record — the briefing then degrades to its previous shape."""
+    res = s.get("residual", "")
+    if not res:
+        return ""
+    return (
+        "\n\n### 잔여 — 검토 필요\n\n"
+        "이전 세션이 마지막 턴에서 명시한 핸드오프 항목 "
+        "(matched `%s` · %s):\n\n"
+        "```\n%s\n```\n\n"
+        "다음 작업을 시작하기 전에 위 항목들을 검토해서 ① 본 세션에서 "
+        "이어 처리 · ② 별도 이슈 / PR 로 떼어내기 · ③ 이미 처리됨으로 "
+        "정리 — 중 하나로 정리하세요."
+        % (s.get("residual_marker", "residual marker"),
+           s.get("residual_iso", "?"),
+           res))
 
 
 def briefing(s):
     cond = s.get("condition", "")
+    res_section = _residual_section(s)
     if s.get("stuck"):
         return (
             "## Goal — over-scoped (handoff)\n\n"
@@ -295,9 +411,11 @@ def briefing(s):
             "- resume from the last committed checkpoint in a separate "
             "session, no `/goal` armed.\n\n"
             "(Flagged over-scoped %s · matched `%s`. Already handled? "
-            "Dismiss with `/wilson-resume clear`.)\n"
+            "Dismiss with `/wilson-resume clear`.)"
             % (cond, s.get("stuck_iso", "?"),
-               s.get("stuck_marker", "decline marker")))
+               s.get("stuck_marker", "decline marker"))
+            + res_section
+            + "\n")
     return (
         "## Goal — interrupted\n\n"
         "A native `/goal` was active in this project and was never "
@@ -309,8 +427,10 @@ def briefing(s):
         "and turn-to-turn continuation only restart once `/goal` is run "
         "again:\n\n"
         "    /goal %s\n\n"
-        "(Already finished? Dismiss with `/wilson-resume clear`.)\n"
-        % (cond, cond))
+        "(Already finished? Dismiss with `/wilson-resume clear`.)"
+        % (cond, cond)
+        + res_section
+        + "\n")
 
 
 def session_start(payload, cwd):
@@ -373,6 +493,11 @@ def cmd(args):
                   "resume from a checkpoint")
         else:
             print("  re-arm:    /goal %s" % s["condition"])
+        if s.get("residual"):
+            print("  residual:  %d bytes captured %s (matched `%s`)"
+                  % (len(s["residual"]),
+                     s.get("residual_iso", "?"),
+                     s.get("residual_marker", "residual marker")))
         print("  state:     %s" % state_path(cwd))
         return
 

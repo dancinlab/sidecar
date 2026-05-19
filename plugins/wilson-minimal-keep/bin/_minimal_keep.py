@@ -39,8 +39,21 @@ EXCLUDE = ("/archive", "/old/", "/vendor/", "/third_party/",
            # isolated-agent worktrees (anima, Claude Code Agent isolation
            # etc.) carry duplicate AGENTS.* copies of the master file —
            # flag the master, not each of N copies. Added 0.3.0.
-           "/.claude/worktrees/")
-HISTORY_HEADING = re.compile(r"^#+\s.*\b(log|history|changelog)\b", re.I)
+           "/.claude/worktrees/",
+           # archive snapshot directories — anima's _clm_NN_ workflow
+           # captures repeatedly-named branches as sibling root dirs
+           # (anima_clm_10_h100_sweep_laws_77_78 etc.); they are
+           # snapshots, not active masters. Added 0.5.0.
+           "_clm_")
+# Heading-level history signal. 0.5.0 tightened from `^#+\s.*\b(log|history|
+# changelog)\b` (matched any heading mentioning the word anywhere — caught
+# `## Log Sources`, narration like `# (...## Log)`, body sentences) to
+# require the keyword to sit at the tail of a short heading body — so
+# `## Changelog` / `## Audit log` / `# ─── migration history ────` still
+# match, but `## Log Sources` / `# actions · session log lives in …` do not.
+HISTORY_HEADING = re.compile(
+    r"^#{1,4}\s+[^#\n]{0,60}\b(?:log|history|changelog)\b[^#\w\n]*$",
+    re.IGNORECASE)
 DATED_BULLET = re.compile(r"^\s*[-*]\s.*20\d\d-[01]?\d")
 
 

@@ -1,7 +1,7 @@
 {
   "name": "wilson-minimal-keep",
   "description": "Keep agent-context files lean — a PreToolUse(Write|Edit|MultiEdit) guard on AGENTS.tape / AGENTS.md / CLAUDE.md. Three data-driven bloat signals (calibrated against 164 unique-content master AGENTS.* under ~/core on 2026-05-20 with /.claude/worktrees/ duplicates excluded; the three caps target the same top-decile bloat tail so fire rates stay aligned ~6-10%): S1 total-lines (file over 280 lines ≈ p90, Write only — fires ~10%), S2 long-line (any single line over 500 chars — sits between p90 375 and p95 565, dropped in 0.4.0 from 800 which only fired on p99 outliers at 3%, splitting jammed prose where a paragraph has been collapsed onto one line — fires ~6%), S3 history (a Log/History/Changelog heading or 3+ dated bullets — append-only history belongs in a REGISTRY.md or GROWTH.md, not in the per-session context file — fires ~10%). Two modes via SIDECAR_MINIMAL_KEEP_MODE: `block` (DEFAULT since 0.2.0 — the Write is DENIED) / `warn` (one-line advisory, write proceeds). EXCLUDE list covers archive / vendor / node_modules / .venv / scratch / templates / examples / .git AND `/.claude/worktrees/` (isolated-agent worktrees carry duplicate AGENTS.* copies of the master). Pairs with wilson-tree: when it flags a history section it routes it to the repo's REGISTRY.md (wilson-tree's index artifact) if present. Audit verb: `bin/minimal-keep.sh scan [dir]`. Opt out: SIDECAR_NO_MINIMAL_KEEP=1.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

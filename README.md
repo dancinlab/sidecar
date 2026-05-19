@@ -62,6 +62,7 @@ primitives 1:1.
 | `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal resume inbox guards fire-gate, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
 | `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
 | `wilson-gap` | `/gap` command (model-facing) | Multi-axis gap exploration — `/gap` sweeps the current work through **40 breakthrough-strategy lenses** in 8 families, curated from the archived `hive` repo's `state/*_audit` catalogue (each lens = one probing one-liner). Bare `/gap` = mode C (inline-triage all 40 → deep-dive subagent only for each family that surfaced a gap; zero gaps spawns nothing); `/gap full` = mode A (fan-out one subagent per family, no triage); `/gap <text>` scopes the sweep; `/gap list` prints the catalogue. Surfaces and prioritises gaps only — never fixes. No hook, no bin script — pure model-facing command |
+| `wilson-schedule` | `SessionStart`·`PostCompact`·`UserPromptSubmit` + `/wilson-schedule:schedule` | Global daily-routine task list whose `run` **fans every pending task out to a background subagent in parallel** — `add "<task>"` registers a free-text task; `run` (or typing the phrase `스케쥴 진행`, caught by `UserPromptSubmit`) dispatches **all** pending tasks at once as background agents (one `Agent` per task, `run_in_background`), `running`/`done` move state and capture a one-line result, `rm`/`clear` prune. A CC hook/bin can't call the `Agent` tool, so `run` only **emits a dispatch directive** — the bin owns state, the model owns the fan-out. State is `~/SCHEDULE.json` (one global JSON file at the home root); `SessionStart` surfaces a pending count. Not remote cron (that's the built-in `/schedule`) — a local immediate parallel executor — **working**, default ON (opt out: `SIDECAR_NO_SCHEDULE=1`) |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 `wilson-recap` (PreCompact/SessionEnd summarization).
@@ -95,6 +96,7 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 /plugin install wilson-lsp@sidecar              # LSP for .hexa / .tape / .n6 / .hxc / .kosmos
 /plugin install worktree-pr@sidecar             # /worktree-pr:wt workflow command
 /plugin install wilson-gap@sidecar              # /gap multi-axis gap exploration (40 strategy lenses)
+/plugin install wilson-schedule@sidecar         # daily task list — run fans pending tasks to bg subagents
 /plugin install sidecar@sidecar                 # /sidecar runtime on/off control
 ```
 

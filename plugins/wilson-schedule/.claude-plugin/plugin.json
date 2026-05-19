@@ -1,0 +1,9 @@
+{
+  "name": "wilson-schedule",
+  "description": "A global daily-routine task list whose `run` action fans every pending task out to a background subagent in parallel. `/wilson-schedule:schedule add \"<task>\"` registers a free-text task; `list` shows the list; `run` — also triggered by typing the phrase `스케쥴 진행` (caught by a UserPromptSubmit hook) — dispatches ALL pending tasks at once as background agents (one Agent call per task, run_in_background), per the immediate-full-fan-out model; `running`/`done` move a task's state, `done` capturing a one-line result; `rm`/`clear` prune. A CC hook/bin cannot call the Agent tool itself, so `run` only EMITS a dispatch directive — the bin owns state, the model owns the fan-out. State is a single global JSON file at the home root — ~/SCHEDULE.json (a day is a per-user unit, not per-repo). SessionStart surfaces a pending-count line. No remote cron — that is the built-in /schedule's job; this is a local immediate parallel executor. Default ON. Opt out: SIDECAR_NO_SCHEDULE=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "schedule", "tasks", "subagent", "background", "fan-out", "wilson"]
+}

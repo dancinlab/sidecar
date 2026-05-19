@@ -297,3 +297,52 @@
   - a worked example is excluded for the same reason D19 excluded a worked routing trace from wilson-pool's sample — worked examples bloat static inject context; the 4 tenets + the recording convention are the durable content
   - English-only for v0.1.0 matches the code/docs language pref and keeps the first release shippable fast — wilson-decision-gate's 5-language sample was a later maturation, not a v0.1.0 requirement; language variants can follow if wanted
   - the SessionStart + PostCompact cadence and the branch-point-only UserPromptSubmit reminder are the canonical wilson-* cadence already settled in D20/D21 — mirrored here rather than re-litigated
+
+### Decision 35 — Decision 1: 스케쥴 플러그인 = A안 하루 일과 트래커, 단 실행 모델은 순차 커서가 아니라 background 병렬 subagent 위임 — add로 task 등록, '스케쥴 진행' 시 pending task 전부를 background 병렬 subagent로 fan-out, 완료 시 알림
+- **picked**: Decision 1: 스케쥴 플러그인 = A안 하루 일과 트래커, 단 실행 모델은 순차 커서가 아니라 background 병렬 subagent 위임 — add로 task 등록, '스케쥴 진행' 시 pending task 전부를 background 병렬 subagent로 fan-out, 완료 시 알림
+- **rationale**:
+  - 사용자 명시: A안이되 순서대로가 아니라 subagent background 병렬 위임
+  - 각 일과 항목은 독립 작업이므로 병렬 fan-out이 직렬 커서보다 wall-clock을 크게 단축
+  - background 실행이라 '진행' 띄운 뒤 사용자는 다른 작업을 계속하고 완료 시 알림으로 수거
+  - 내장 /schedule(원격 cron routine)과 구별 — 이건 로컬 task를 즉시 병렬 위임하는 실행기
+
+### Decision 36 — Decision 2: 스케쥴 데이터 저장 = A안 글로벌 1개 목록 — ~/.claude/plugin-data/wilson-schedule/schedule.json 한 곳, 어느 repo에서든 같은 '하루 일과' 목록
+- **picked**: Decision 2: 스케쥴 데이터 저장 = A안 글로벌 1개 목록 — ~/.claude/plugin-data/wilson-schedule/schedule.json 한 곳, 어느 repo에서든 같은 '하루 일과' 목록
+- **rationale**:
+  - 사용자 출발점이 '하루 일과' — 하루는 repo 경계와 무관한 나의 단위라 글로벌 1개 목록이 멘탈 모델
+  - background 위임 task는 add 시 자유 텍스트로 들어오니 repo 필요 시 문장 안에 경로 명시 — 저장 위치를 쪼갤 이유 없음
+  - 기존 wilson-goal이 글로벌 goal + 선택적 프로젝트 GOAL.md 패턴 — A안이 sidecar 관례와 일관
+  - B안은 진행 시 '지금 어느 repo 목록?'이 헷갈려 하루 일과 트래커엔 과한 분절
+
+### Decision 37 — Decision 3: 스케쥴 진행 디스패치 = A안 즉시 전량 fan-out — 진행 즉시 pending 전부를 background subagent로 launch, 각 에이전트 완료 시 해당 task 자동 done 처리 + 결과 수거
+- **picked**: Decision 3: 스케쥴 진행 디스패치 = A안 즉시 전량 fan-out — 진행 즉시 pending 전부를 background subagent로 launch, 각 에이전트 완료 시 해당 task 자동 done 처리 + 결과 수거
+- **rationale**:
+  - 사용자 선택: 확인 없이 즉시 전량 fan-out
+  - background 위임의 본질은 '맡기고 잊기' — 확인 단계가 그 흐름을 끊음
+  - 자동 done + 결과 수거로 진행 직후 사용자 손이 떠남
+  - 자원 가시성은 진행 직후 launch 요약(N개 띄움)으로 사후 1회 표시해 보완
+
+### Decision 38 — confirmed — an active native /goal puts wilson-decision-gate and wilson-fire-gate into autonomy mode (record-and-proceed, not stop-and-wait); the conditional clause lives in each gate's injected principle text, no detection code
+- **picked**: confirmed (via AskUserQuestion) — when Claude Code's native `/goal` is active, wilson-decision-gate and wilson-fire-gate switch from "stop and wait for the user's pick" to "adopt the recommendation, log it to the ledger, and continue". The clause is added to each gate's injected `PRINCIPLE_BASE` text; the model self-evaluates its own `/goal` state, so no goal-detection code is needed
+- **rationale**:
+  - root cause confirmed by the user — a native `/goal` ("keep working until the condition is met") directly conflicts with the gate principles ("stop at every decision/fire for a pick"); the goal stalls at the first gate, exactly the "골 입력해도 여기서 멈춤" symptom
+  - the clause MUST live inside each gate's own principle — injecting it from a separate plugin would leave the gate principles still saying "always stop", a context contradiction; putting the conditional in the gate principle itself ("if /goal active → autonomy; else → wait") is the only contradiction-free shape
+  - text-only, consistent with wilson-decision-gate's stated philosophy (a hook cannot enforce) — the model knows its own `/goal` state, so a text conditional needs zero detection code; strictly simpler than re-implementing wilson-resume's transcript /goal scan in two more plugins
+  - autonomy mode removes only the deliberation pause, not the safety floor — PreToolUse safety guards (bash-guard, secret-guard, git-guard, dangerous-path) still fire, and the ledger still records every auto-adopted pick, so the audit trail stays intact and reviewable after the goal closes
+
+### Decision 39 — Decision 4 (Decision 2 개정): 스케쥴 저장 = 글로벌 JSON 폐기 → 프로젝트 루트의 SCHEDULE.md 대문자 도메인 파일로 관리 (.git walk-up 루트, Head + --- + ## Log 규약, 태스크는 ## Log 하위 체크박스 불릿)
+- **picked**: Decision 4 (Decision 2 개정): 스케쥴 저장 = 글로벌 JSON 폐기 → 프로젝트 루트의 SCHEDULE.md 대문자 도메인 파일로 관리 (.git walk-up 루트, Head + --- + ## Log 규약, 태스크는 ## Log 하위 체크박스 불릿)
+- **rationale**:
+  - 사용자 직접 지시: '루트의 대문자.md 로 스케쥴관리'
+  - wilson domain-meta-domain 원칙(원칙 4)과 정합 — 도메인 = 루트 UPPERCASE.md 한 파일
+  - 마크다운이라 사람이 직접 손으로 편집
+  - 검토 가능 — JSON보다 투명
+  - sidecar wilson-guards/domain-lint(루트 UPPERCASE.md = Head+---+##Log 강제)와 포맷 호환
+
+### Decision 40 — Decision 5 (Decision 4 정정): 스케쥴 저장 = ~/SCHEDULE.json — 홈 루트의 글로벌 JSON 파일. Decision 4의 'repo-root SCHEDULE.md 마크다운' 해석은 오해였고 사용자 정정: 마크다운 아닌 JSON, 루트는 repo가 아닌 홈(~/), 글로벌 1개 파일
+- **picked**: Decision 5 (Decision 4 정정): 스케쥴 저장 = ~/SCHEDULE.json — 홈 루트의 글로벌 JSON 파일. Decision 4의 'repo-root SCHEDULE.md 마크다운' 해석은 오해였고 사용자 정정: 마크다운 아닌 JSON, 루트는 repo가 아닌 홈(~/), 글로벌 1개 파일
+- **rationale**:
+  - 사용자 정정 verbatim: '루트의 글로벌.json / SCHEDULE.json'
+  - 원래 Decision 2(글로벌 1개 목록)와 일관 — 파일 위치만 ~/.claude/plugin-data → ~/SCHEDULE.json 로, 이름은 SCHEDULE.json
+  - JSON 유지 — _sched.py 저장 계층이 이미 JSON이므로 state_path()만 변경, 마크다운 파서 불필요
+  - 홈 루트 글로벌이라 어느 repo에서 진행하든 동일한 하루 일과 목록

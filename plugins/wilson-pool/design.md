@@ -110,13 +110,19 @@ How does the rewritten command reach the host off-LAN?
   `ssh` accordingly. Autosync path left on plain ssh per D4 with an
   inline caveat in the routed note. Verified locally: 5-case transport
   resolution + login_wrap (heredoc-run, routing-bypassed).
-- **D3 (CLI verbs `tailnet` / `add` / `status`) — NEXT SLICE, not in
-  this commit.** Clean ship boundary: the transport core is the
-  external-access enabler and is self-contained; the CLI verbs are
-  ergonomic discovery/debug helpers layered on `bin/_pool.py`. Tracked
-  in memory `wilson-pool-tailscale-design`. The feature already works
-  end-to-end via a hand-edited `pool.json` `transport` key; the verbs
-  just remove the hand-edit.
+- **v0.10.0 — D3 LANDED in `bin/_pool.py`:** `tailnet` (parse
+  `tailscale status --json` → Self+Peers; name/OS/online/in-pool +
+  add-hint), `status` (= `show` + live per-host reachability probe via
+  the resolved transport — separate verb since it is slower), `add`
+  enhanced (a `tailscale`/`ssh` keyword like `sudo`/`nosudo`; platform
+  auto-detected from the tailnet node OS when no positional given; a
+  one-time reachability probe after add). `roster()` round-trips a
+  valid per-host `transport`; `show()` prints it. Verified locally
+  (heredoc-run): roster transport round-trip, transport_of precedence,
+  os→platform map, graceful tailscale-absent. plugin.json +
+  marketplace.json + commands/pool.md updated; 0.9.0 → 0.10.0.
+- **All four decisions (D1–D4) now implemented.** D4's v2
+  drift-detector remains a deliberate non-build (instrument-first).
 
 ## Cross-references
 

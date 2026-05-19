@@ -1,5 +1,5 @@
 ---
-description: wilson-resume — resume continuity across an abrupt session end. Every turn it snapshots the TodoWrite checklist progress, the last request and the git working-tree state to a per-project file; SessionStart re-injects a short `## Resume` briefing so the next session picks the work thread back up. Snapshots are automatic — this command only inspects/clears them.
+description: wilson-resume — persistence + re-arm companion for Claude Code's native /goal command. Native /goal is session-scoped (no disk persistence), so a crash / usage limit loses the completion condition. wilson-resume captures the active /goal condition from the transcript on every Stop and re-surfaces it on SessionStart with the exact /goal line to re-arm. This command only inspects/clears the saved condition — capture is automatic.
 argument-hint: "[status | show | clear | path]"
 allowed-tools: Bash
 disable-model-invocation: true

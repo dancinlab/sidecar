@@ -240,3 +240,19 @@
   - wilson-goal already emits a ## Goal block on SessionStart — A would make wilson-resume print the goal text too, putting the goal on screen twice, exactly the duplication D17-D21 removed repo-wide
   - B's two blocks are complementary not redundant — wilson-goal = "what (destination)", wilson-resume = "where (current position)"; adjacent on SessionStart, zero coupling
   - honest degradation — with wilson-goal absent there is no goal block, but wilson-resume's todo contents carry their own context, so the briefing still stands alone; storage is per-project (resume state is inherently project-scoped, unlike wilson-goal's single global goal)
+
+### Decision 28 — Decision 1: /gap 전략 축 = A안 큐레이션 분류 — hive state/*_audit 100개 중 범용 사고 렌즈 ~40개를 8개 가족으로 묶은 전략 지도
+- **picked**: Decision 1: /gap 전략 축 = A안 큐레이션 분류 — hive state/*_audit 100개 중 범용 사고 렌즈 ~40개를 8개 가족으로 묶은 전략 지도
+- **rationale**:
+  - 사용자 요청이 '모든' 전략 방향이라 C안(핵심12개) 탈락 — 누락 불가
+  - B안(100개 평면)은 100개 중 ~60개가 hive 전용 배관(oauth_slot/nexus_kick 등)이라 신규 프로젝트에서 신호 대 잡음 붕괴
+  - A안은 범용 렌즈만 8가족으로 묶어 fan-out 병렬화 단위를 동시 확보 + wilson domain-meta-domain 분류 원칙과 정합
+  - hive 자신이 raw_taxonomy_audit 분류 축을 보유 — A안은 hive 방법론을 hive에 적용하는 self-consistent 선택
+
+### Decision 29 — course correction — wilson-resume repurposed as the persistence + re-arm companion for Claude Code's NATIVE /goal command; supersedes the TodoWrite-progress design of D24/D25/D27
+- **picked**: course correction — wilson-resume is repurposed as the persistence + re-arm companion for Claude Code's NATIVE `/goal` command (CC v2.1.139+): it captures the `/goal` completion condition from the transcript and re-surfaces it on SessionStart. Supersedes the TodoWrite-progress-narrative design of D24/D25/D27 (D26's Stop-capture trigger kept; SessionEnd dropped)
+- **rationale**:
+  - the user clarified the target is CC's *native* `/goal` (a real built-in command — verified via the claude-code-guide agent), not the wilson-goal plugin; native `/goal` is session-scoped with NO disk persistence, so a hard interruption (crash / usage limit / a closed terminal never cleanly `--resume`d) loses the completion condition entirely — that is the gap the user calls the "보조 톱니바퀴"
+  - the D24/D25/D27 design tracked the TodoWrite checklist as a generic resume narrative — adjacent to `/goal` but not a `/goal` companion; the user explicitly wants a cog that meshes with `/goal` specifically and is inert when no goal is set
+  - capture stays deterministic — a native `/goal` appears in the transcript as a user message `<command-name>/goal</command-name>` + `<command-args>CONDITION</command-args>` (verified against real transcripts); wilson-resume reads the most recent one, persists it (a bare `/goal` with empty args = clear → drop state), and re-injects it on SessionStart{startup,clear} as a `/goal <condition>` re-arm directive — the persist+re-inject pattern wilson-goal already proves, which is the "wilson-goal 참고" the user pointed at
+  - `resume`/`compact` SessionStart sources are excluded — native `/goal` already carries over a `--resume`d session and compaction is same-session, so re-arm is only needed on a fresh `startup` or after `/clear`

@@ -62,7 +62,7 @@ ARGS_RE = re.compile(r"<command-args>(.*?)</command-args>", re.DOTALL)
 # enough, no repeat counter needed. Matched case-insensitively against
 # the latest assistant turn ONLY (a stale earlier match must not fire).
 DECLINE_MARKERS = (
-    # English
+    # English — session-scope decline
     "exceeds single-session scope",
     "exceeds the scope of a single session",
     "single dialogue session",
@@ -71,7 +71,17 @@ DECLINE_MARKERS = (
     "multi-week",
     "multi-session",
     "declines to fraudulently",
-    # Korean
+    # English — turn-scope / safety-limit / cycle-split decline
+    # (added in 0.3.1 — Decision 4. The 0.3.0 list only covered
+    # session-scope phrasing; a 2026-05-20 transcript declared the goal
+    # over-scoped at the *turn* level — "본 single turn 의 안전 한도
+    # 초과 · 5 cycle 분할 필요" — and slipped through. These cover the
+    # turn / safety-limit / multi-cycle self-decline shape.)
+    "exceeds single-turn scope",
+    "exceeds the scope of a single turn",
+    "cannot be completed in a single turn",
+    "multi-cycle",
+    # Korean — session-scope decline
     "단일 세션 범위",
     "single-session 범위 초과",
     "별도 세션",
@@ -79,6 +89,12 @@ DECLINE_MARKERS = (
     "한 세션으로 완성 불가",
     "세션 범위를 초과",
     "다음 세션으로 미",
+    # Korean — turn-scope / safety-limit / cycle-split decline (0.3.1)
+    "안전 한도 초과",
+    "안전 한도 도달",
+    "turn 안전 한도",
+    "cycle 분할 필요",
+    "세션 분할 필요",
 )
 
 

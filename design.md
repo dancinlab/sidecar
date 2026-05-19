@@ -419,3 +419,17 @@
   - helpful한 AI가 설정파일을 고칠 땐 idiomatic하게 Write/Edit 도구를 씀 — 실제 재발 위협이 그 경로에 있음, JSON 설정에 echo 리다이렉트는 비전형적
   - B의 Bash 문자열 정규식은 본질적으로 leaky — python/heredoc 변종을 못 잡으면서 오탐 위험만 추가, 부분 커버는 false confidence를 줌
   - Bash 우회가 실제 문제가 되면 그때 B를 명시적 결정으로 추가하는 게 audit상 깨끗 — 'one plugin ~100 lines' 미니멀 관례에도 부합
+
+### Decision 50 — wilson-pool host에 sudo 필드 추가 — sudo:true 호스트로 라우팅될 때 root 필요 명령(apt/dpkg/yum/dnf/pacman/systemctl/ldconfig/setcap 등)을 자동으로 sudo prefix
+- **picked**: wilson-pool host에 sudo 필드 추가 — sudo:true 호스트로 라우팅될 때 root 필요 명령(apt/dpkg/yum/dnf/pacman/systemctl/ldconfig/setcap 등)을 자동으로 sudo prefix
+- **rationale**:
+  - 사용자가 3개 후보(capability 필터 / 메타데이터만 / 자동 sudo prefix) 중 자동 prefix 선택
+  - sudo:true는 '패스워드 없는 sudo 가능' 호스트 사실을 표현 — platform처럼 host capability 메타데이터
+  - guard가 pool.json 직접 Edit를 막으므로 sudo 필드는 반드시 pool.sh 명령 경유로 들어가야 함 → 플러그인 개선이 필수
+
+### Decision 51 — 라우팅 트리거 = DEFAULT_PATTERNS ∪ SUDO_RE — root 명령군(apt/dpkg/yum/dnf/pacman/systemctl/ldconfig/setcap)도 heavy 분류기와 무관하게 항상 라우팅 대상
+- **picked**: 라우팅 트리거 = DEFAULT_PATTERNS ∪ SUDO_RE — root 명령군(apt/dpkg/yum/dnf/pacman/systemctl/ldconfig/setcap)도 heavy 분류기와 무관하게 항상 라우팅 대상
+- **rationale**:
+  - 검증 중 발견: DEFAULT_PATTERNS와 SUDO_RE 교집합이 공집합 → sudo-prefix가 절대 안 켜지는 죽은 코드였음
+  - 사용자가 승인한 preview가 apt-get 원격 라우팅+sudo 그림이라 분류기 확장이 그 그림을 실현하는 유일한 경로
+  - pool 취지(무거운 작업 원격화)에 빌드 의존성 설치가 일관 — linux capability 필터로 linux 호스트에만 가고 없으면 로컬 폴백

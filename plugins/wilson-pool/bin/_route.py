@@ -52,6 +52,15 @@ LINUX_RE = re.compile(
     r"\b(apt|apt-get|dpkg|dpkg-deb|add-apt-repository|yum|dnf|rpm|pacman|"
     r"systemctl|journalctl|ldconfig|setcap|update-alternatives)\b"
     r"|linux-gnu|linux-musl|\.deb\b|\.rpm\b")
+# root-needing commands. Two roles: (1) they are always routable — a
+# match here routes even when the heavy `patterns` did not; (2) on a
+# host tagged sudo:true they are auto-prefixed with `sudo` (which
+# asserts that host has passwordless sudo).
+# Front-prefix only: a compound command (`apt update && apt install`)
+# has just its first segment elevated — keep such commands single.
+SUDO_RE = re.compile(
+    r"\b(apt|apt-get|dpkg|dpkg-deb|add-apt-repository|yum|dnf|rpm|pacman|"
+    r"systemctl|ldconfig|setcap|update-alternatives)\b")
 
 
 def allow():
@@ -64,11 +73,12 @@ def roster(cfg):
         if isinstance(h, dict) and str(h.get("host") or "").strip():
             out.append({"host": str(h["host"]).strip(),
                         "platform": (h.get("platform") or "linux"),
-                        "workdir": str(h.get("workdir") or "").strip()})
+                        "workdir": str(h.get("workdir") or "").strip(),
+                        "sudo": bool(h.get("sudo"))})
     # migrate a legacy single-host config
     if not out and cfg.get("host"):
         out.append({"host": str(cfg["host"]).strip(),
-                    "platform": "linux", "workdir": ""})
+                    "platform": "linux", "workdir": "", "sudo": False})
     return out
 
 
@@ -194,11 +204,15 @@ if MARK in cmd or "<<" in cmd or cmd.endswith("&") or cmd.startswith("ssh "):
 
 pat = cfg.get("patterns") or DEFAULT_PATTERNS
 try:
-    if not re.search(pat, cmd):
-        allow()
+    matched = bool(re.search(pat, cmd))
 except re.error:
-    if not re.search(DEFAULT_PATTERNS, cmd):
-        allow()
+    matched = bool(re.search(DEFAULT_PATTERNS, cmd))
+# root-needing commands are routable too, regardless of the heavy
+# `patterns` — the whole point of tagging a host sudo:true is to run
+# (and `sudo`) package/system commands on it. The Linux-only capability
+# filter below still keeps them on a linux host (or local if none).
+if not matched and not SUDO_RE.search(cmd):
+    allow()
 
 # capability filter — restrict to a platform when the command demands one
 why = "load-balanced"
@@ -226,6 +240,14 @@ try:
 except Exception:
     pass
 host = pick["host"]
+
+# auto sudo — a host tagged sudo:true gets a root-needing command
+# prefixed with `sudo` (skip if the command already starts with sudo).
+sudo_note = ""
+if (pick.get("sudo") and SUDO_RE.search(cmd)
+        and not re.match(r"sudo\b", cmd)):
+    cmd = "sudo " + cmd
+    sudo_note = ", sudo-prefixed"
 
 wd_remote = resolve_workdir(pick, cfg, payload)
 if not wd_remote:                  # auto mode + cwd outside home, no fallback
@@ -263,8 +285,8 @@ print(json.dumps({
         "hookEventName": "PreToolUse",
         "updatedInput": dict(ti, command=new_cmd),
         "additionalContext": (
-            "wilson-pool: routed this heavy command — %s (%s; %d-host "
-            "roster)." % (note, why, len(hosts))
+            "wilson-pool: routed this heavy command — %s (%s%s; %d-host "
+            "roster)." % (note, why, sudo_note, len(hosts))
         ),
     }
 }))

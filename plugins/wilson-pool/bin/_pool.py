@@ -3,9 +3,13 @@
 # wilson's pool roster: a list of remote hosts heavy Bash routes to.
 #
 # State: <DATA>/pool.json
-#   {"hosts":   [{"host": "<ssh-target>", "platform": "linux"|"macos"}, ...],
+#   {"hosts":   [{"host": "<ssh-target>", "platform": "linux"|"macos",
+#                 "sudo": true}, ...],
 #    "workdir": "<remote-path>",
 #    "patterns": "<regex>"}
+#
+# A host tagged "sudo": true gets root-needing routed commands (apt,
+# systemctl, …) auto-prefixed with `sudo` — see _route.py SUDO_RE.
 #
 # A legacy single-host config ({"host": "<t>"}) is migrated to a one-entry
 # roster on read.
@@ -59,12 +63,20 @@ def save(d):
 
 
 def roster(d):
+    """Normalised host list. Optional keys (workdir, sudo) are kept only
+    when set, so a rebuilt `hosts` list saves back clean — no `workdir:
+    ""` / `sudo: false` noise."""
     out = []
     for h in (d.get("hosts") or []):
         if isinstance(h, dict) and str(h.get("host") or "").strip():
-            out.append({"host": str(h["host"]).strip(),
-                        "platform": (h.get("platform") or "linux"),
-                        "workdir": str(h.get("workdir") or "").strip()})
+            e = {"host": str(h["host"]).strip(),
+                 "platform": (h.get("platform") or "linux")}
+            wd = str(h.get("workdir") or "").strip()
+            if wd:
+                e["workdir"] = wd
+            if h.get("sudo"):
+                e["sudo"] = True
+            out.append(e)
     return out
 
 
@@ -84,7 +96,8 @@ def show():
     if hs:
         for h in hs:
             hw = ("  workdir=" + h["workdir"]) if h.get("workdir") else ""
-            print("  %-20s %s%s" % (h["host"], h["platform"], hw))
+            su = "  sudo" if h.get("sudo") else ""
+            print("  %-20s %-6s%s%s" % (h["host"], h["platform"], su, hw))
     else:
         print("  (no hosts — add one: /wilson-pool:pool add <ssh-target>)")
     wd = (d.get("workdir") or "").strip()
@@ -129,29 +142,72 @@ def main():
     if cmd == "add":
         if len(args) < 2 or not args[1].strip():
             print("sidecar/wilson-pool: `add` needs an ssh target, e.g. "
-                  "`/wilson-pool:pool add ubu-1 linux` "
-                  "(optional 3rd arg: a per-host workdir override)")
+                  "`/wilson-pool:pool add ubu-1 linux` (optional: a "
+                  "per-host workdir override, and `sudo` to auto-prefix "
+                  "root-needing commands on that host)")
             return
         target = args[1].strip()
-        platform = (args[2].strip().lower() if len(args) > 2 else "linux")
+        # args after the target are positional (platform, workdir) plus an
+        # optional `sudo`/`nosudo` keyword recognised anywhere among them.
+        sudo, pos = False, []
+        for a in (x.strip() for x in args[2:] if x.strip()):
+            if a.lower() == "sudo":
+                sudo = True
+            elif a.lower() == "nosudo":
+                sudo = False
+            else:
+                pos.append(a)
+        platform = (pos[0].lower() if pos else "linux")
         if platform not in PLATFORMS:
             print("sidecar/wilson-pool: platform must be one of %s "
                   "(got %r)." % ("/".join(PLATFORMS), platform))
             return
-        host_wd = args[3].strip() if len(args) > 3 else ""
+        host_wd = pos[1] if len(pos) > 1 else ""
         d = load()
         hs = [h for h in roster(d) if h["host"] != target]
         entry = {"host": target, "platform": platform}
         if host_wd:
             entry["workdir"] = host_wd
+        if sudo:
+            entry["sudo"] = True
         hs.append(entry)
         d["hosts"] = hs
         save(d)
-        print("sidecar/wilson-pool: host %s (%s%s) added — roster has %d "
+        print("sidecar/wilson-pool: host %s (%s%s%s) added — roster has %d "
               "host(s). Routing %s." % (
                   target, platform,
-                  ", workdir=" + host_wd if host_wd else "", len(hs),
+                  ", workdir=" + host_wd if host_wd else "",
+                  ", sudo" if sudo else "", len(hs),
                   "ARMED" if armed(d) else "still OFF (need workdir)"))
+        return
+
+    if cmd == "sudo":
+        target = (args[1].strip() if len(args) > 1 else "")
+        val = (args[2].strip().lower() if len(args) > 2 else "")
+        if not target or val not in ("on", "off"):
+            print("sidecar/wilson-pool: `sudo <host> on|off` — `on` lets "
+                  "root-needing routed commands (apt, systemctl, …) "
+                  "auto-prefix `sudo` on that host (assumes passwordless "
+                  "sudo there).")
+            return
+        d = load()
+        hs = roster(d)
+        if not any(h["host"] == target for h in hs):
+            print("sidecar/wilson-pool: no host %r in the roster — "
+                  "`add` it first." % target)
+            return
+        for h in hs:
+            if h["host"] == target:
+                if val == "on":
+                    h["sudo"] = True
+                else:
+                    h.pop("sudo", None)
+        d["hosts"] = hs
+        save(d)
+        print("sidecar/wilson-pool: host %s sudo %s.%s" % (
+            target, val,
+            "  Root-needing routed commands now auto-prefix `sudo` there."
+            if val == "on" else ""))
         return
 
     if cmd == "autosync":
@@ -196,9 +252,10 @@ def main():
               "patterns": "patterns"}
     if cmd not in keymap:
         print("sidecar/wilson-pool: unknown subcommand %r. Use: show | "
-              "add <target> [linux|macos] [workdir] | rm <target> | "
-              "workdir <path|auto> | fallback <path> | autosync "
-              "on|off|mirror | patterns <re> | off" % cmd)
+              "add <target> [linux|macos] [workdir] [sudo] | rm <target> "
+              "| sudo <target> on|off | workdir <path|auto> | fallback "
+              "<path> | autosync on|off|mirror | patterns <re> | off"
+              % cmd)
         return
     if len(args) < 2 or not args[1].strip():
         print("sidecar/wilson-pool: `%s` needs a value." % cmd)

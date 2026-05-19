@@ -318,6 +318,14 @@ if cfg.get("autosync"):
     # tree fresh with zero manual sync. Additive by default — remote
     # build caches survive; `autosync mirror` adds rsync --delete.
     #
+    # `--force` is always on: it lets rsync replace a non-empty remote
+    # directory when the local tree now has a symlink (or file) at that
+    # path — a dir<->symlink type-change collision that otherwise aborts
+    # the whole sync with "could not make way for new symlink" /
+    # "cannot delete non-empty directory" (e.g. after a symlink-
+    # reclassifying mv upstream). Without it one stale remote dir wedges
+    # every routed command on that host.
+    #
     # v1 scope (design.md D4): the autosync path stays on plain `ssh` +
     # `rsync host:` UNCHANGED — rsync-over-`tailscale ssh` is untested,
     # so it is not enabled here. A tailscale-only host should run
@@ -325,7 +333,7 @@ if cfg.get("autosync"):
     local = (payload.get("cwd") or os.getcwd()).rstrip("/") or "."
     delete = " --delete" if str(cfg.get("autosync")) == "mirror" else ""
     new_cmd = (
-        "ssh %s %s && rsync -az%s %s/ %s:%s/ && ssh %s %s  # %s" % (
+        "ssh %s %s && rsync -az --force%s %s/ %s:%s/ && ssh %s %s  # %s" % (
             shlex.quote(host), shlex.quote("mkdir -p " + wd_sh), delete,
             shlex.quote(local), shlex.quote(host), wd_sh,
             shlex.quote(host), shlex.quote(remote), MARK))

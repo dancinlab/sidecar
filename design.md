@@ -482,3 +482,19 @@
   - 최신 결정 — 거기 버전 줄을 다시 넣으면 그 결정과 정면 충돌하고 문서를 재-부풀림
   - ship 스킬 본문 스스로 GROWTH 단계를 separate repo soft cross-repo reference로 규정 — hard step 아님
   - design.md Decision 52–56이 이미 실행 추적을 담당하고 커밋 메시지가 상세 changelog 역할 — 정보 손실 없음
+
+### Decision 58 — block(무조건) + warn 2-mode 구조
+- **picked**: block(무조건) + warn 2-mode 구조
+- **rationale**:
+  - 원래 .py/.sh Write를 deny로 막고(block=기본), warn은 advisory 1줄만
+  - hexa-first가 principle 2순위 — 빨간불이 원칙 강제와 일관
+  - 완화하고 싶을 때만 warn으로 내리면 되니 안전 floor가 기본
+
+### Decision 59 — env 변수만 (SIDECAR_HEXA_FIRST_WARN_MODE) + 제안 deny 문구 채택
+- **picked**: env 변수만 (SIDECAR_HEXA_FIRST_WARN_MODE) + 제안 deny 문구 채택
+- **rationale**:
+  - 이 플러그인은 지금도 env-only 설계 — 같은 모델 재사용이라 변경 ~5줄, 학습 비용 0
+  - 새 파일
+  - JSON 파싱
+  - 슬래시 커맨드 0 — one-plugin-한-가드 미니멀 정체성 유지
+  - 기존 opt-out도 쉘 프로필 방식 — 일관됨, config 파일은 요청 범위(한 줄) 초과

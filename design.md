@@ -370,3 +370,52 @@
   - 지시문은 줄당 ~10단어 고정 구조 문자열 — 영어판이 이미 _inject.py 에 하드코딩돼 있어 번역판도 같은 자리에 두는 게 single-source
   - C2(파일 외부화)는 큰 가변 콘텐츠에 맞는 방식 — 작고 거의 안 바뀌는 구조 문자열엔 이동 부품만 늘림
   - '## Prefs' 헤딩은 wilson-decision-gate 등이 참조하는 anchor 라 리터럴 유지 — 불릿만 현지화
+
+### Decision 44 — A안 — pool.json 직접 Write/Edit를 PreToolUse 훅으로 deny, wilson-pool 명령어(pool.sh) 경유만 허용
+- **picked**: A안 — pool.json 직접 Write/Edit를 PreToolUse 훅으로 deny, wilson-pool 명령어(pool.sh) 경유만 허용
+- **rationale**:
+  - 사용자가 A/B 중 A 선택 — '명령어로 지시할 때만 추가-삭제'라는 요청 의도에 정확히 부합
+  - A는 직접 수정 경로를 deny해 명령어 경유만 남김 — 의도가 구조적으로 강제되고 약속에 기대지 않음
+  - B(복원 가드)는 잘못된 수정을 일단 허용한 뒤 사후 롤백 — 한 턴이라도 깨진 roster가 routing에 노출됨
+
+### Decision 45 — A안 — 가드를 wilson-pool 플러그인 내부 PreToolUse 훅으로 추가 (별도 가드 플러그인 신설 안 함)
+- **picked**: A안 — 가드를 wilson-pool 플러그인 내부 PreToolUse 훅으로 추가 (별도 가드 플러그인 신설 안 함)
+- **rationale**:
+  - 사용자가 A/B 중 A 선택
+  - pool.json 경로 해석(data_dir + 파일명)이 이미 _pool.py 안에 있어 같은 플러그인 내부여야 single-source — 경로 어긋날 위험 0
+  - wilson-pool엔 이미 훅 3종(route/inject) 존재 — PreToolUse 하나 추가가 새 플러그인 신설(marketplace 등록+버전+설치동기화)보다 가벼움
+  - 가드는 roster 무결성 방어라 라우팅과 한 도메인 — 'one plugin = one guardrail' 관례를 어기지 않음
+
+### Decision 46 — A — wilson-research 의 YouTube 자막 추출은 순수 stdlib HTTP: watch 페이지의 ytInitialPlayerResponse JSON 에서 caption track URL 을 뽑아 timedtext 엔드포인트를 받아 파싱, urllib 만 사용
+- **picked**: A — wilson-research 의 YouTube 자막 추출은 순수 stdlib HTTP: watch 페이지의 ytInitialPlayerResponse JSON 에서 caption track URL 을 뽑아 timedtext 엔드포인트를 받아 파싱, urllib 만 사용
+- **rationale**:
+  - 의존성 0 — sidecar 'no binaries / no deps' 정체성(AGENTS.tape id001)과 정확히 일치, /plugin install 한 번으로 완결
+  - B(yt-dlp)
+  - C(youtube-transcript-api)는 더 견고하나 외부 바이너리/pip 의존을 추가해 정체성을 깸 — 미설치 사용자는 그냥 실패
+  - YouTube 페이지 변경 시 깨질 위험은 timedtext 추출 로직을 함수 하나로 격리하면 국소 수정으로 대응 가능
+
+### Decision 47 — 옵션 1 — wilson-research 명령어 표면은 독립 명령어 2개: /wilson-research:yt <url> 와 /wilson-research:arxiv <query>
+- **picked**: 옵션 1 — wilson-research 명령어 표면은 독립 명령어 2개: /wilson-research:yt <url> 와 /wilson-research:arxiv <query>
+- **rationale**:
+  - yt
+  - arxiv 는 하나의 상태 객체에 대한 동사가 아니라 입력
+  - 출력이 다른 독립 fetcher 둘 — 서브커맨드로 묶을 응집성이 없음
+  - 단일 명령어로 묶으면 /wilson-research:research yt 처럼 플러그인명
+  - 명령어명이 겹치는 'research research' 말더듬 발생
+  - 명령어 2개는 /help 에 각각 노출돼 발견성이 높고 호출이 짧음 — prefs/pool 의 단일명령어 패턴은 stateful 제어 플러그인에만 맞는 것
+
+### Decision 48 — A안 — 가드는 pool.json 한 파일의 절대경로만 deny ( .preflight.json 및 디렉토리 전체는 대상 아님)
+- **picked**: A안 — 가드는 pool.json 한 파일의 절대경로만 deny ( .preflight.json 및 디렉토리 전체는 대상 아님)
+- **rationale**:
+  - 사용자가 A/B 중 A 선택
+  - 사용자가 명시한 대상은 pool.json 하나 — roster만 irreplaceable한 사용자 의도라 보호 가치가 그 파일에 집중됨
+  - .preflight.json은 derived ssh 캐시라 지워져도 route.sh가 다음 명령에서 재탐색 — 보호 이득 거의 0
+  - B의 '미래 상태파일 자동 커버'는 지금 없는 파일을 위한 speculative 설계 (karpathy 원칙 위반) — 미래 상태파일은 그때 명시적 결정으로 한 줄 추가가 audit상 더 깨끗함
+
+### Decision 49 — A안 — 가드는 Write/Edit/MultiEdit 도구만 deny, Bash 우회(리다이렉트 등)는 범위 밖
+- **picked**: A안 — 가드는 Write/Edit/MultiEdit 도구만 deny, Bash 우회(리다이렉트 등)는 범위 밖
+- **rationale**:
+  - 사용자가 A/B 중 A 선택
+  - helpful한 AI가 설정파일을 고칠 땐 idiomatic하게 Write/Edit 도구를 씀 — 실제 재발 위협이 그 경로에 있음, JSON 설정에 echo 리다이렉트는 비전형적
+  - B의 Bash 문자열 정규식은 본질적으로 leaky — python/heredoc 변종을 못 잡으면서 오탐 위험만 추가, 부분 커버는 false confidence를 줌
+  - Bash 우회가 실제 문제가 되면 그때 B를 명시적 결정으로 추가하는 게 audit상 깨끗 — 'one plugin ~100 lines' 미니멀 관례에도 부합

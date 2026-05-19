@@ -69,8 +69,8 @@
     {
       "name": "wilson-pool",
       "source": "./plugins/wilson-pool",
-      "description": "Route heavy Bash commands to a remote host roster via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Each host carries a platform tag (macOS-only / Linux-only commands go to a matching host, else round-robined) and an optional per-host workdir override. workdir may be explicit or `auto` (mirror the current project — local ~/<rel> → remote ~/<rel>). `autosync on` rsyncs the local project to the target host before each routed command — a continuously-changing tree stays fresh with zero manual sync, and the workdir is created if absent (additive by default; `autosync mirror` adds rsync --delete); with `autosync off` a pre-flight `test -d` check skips routing to any host lacking the workdir — but a connection failure (ssh transport error / timeout) is never cached as `missing`, so a transient network blip skips that one command only and never benches the host for the session (the host always stays in pool.json — removal is the explicit `rm`/`off` commands only). Spirit-port of wilson's pool roster. Routing is OFF until the roster has >=1 host AND workdir is set; only Bash is routed.",
-      "version": "0.6.3"
+      "description": "Route heavy Bash commands to a remote host roster via ssh (PreToolUse updatedInput) + /wilson-pool:pool config + SessionStart ## Pool block. Each host carries a platform tag (macOS-only / Linux-only commands go to a matching host, else round-robined) and an optional per-host workdir override. workdir may be explicit or `auto` (mirror the current project — local ~/<rel> → remote ~/<rel>). `autosync on` rsyncs the local project to the target host before each routed command — a continuously-changing tree stays fresh with zero manual sync, and the workdir is created if absent (additive by default; `autosync mirror` adds rsync --delete); with `autosync off` a pre-flight `test -d` check skips routing to any host lacking the workdir — but a connection failure (ssh transport error / timeout) is never cached as `missing`, so a transient network blip skips that one command only and never benches the host for the session (the host always stays in pool.json — removal is the explicit `rm`/`off` commands only). A PreToolUse guard denies a direct Write/Edit/MultiEdit to pool.json — the roster is mutated only through the /wilson-pool:pool command, never hand-edited. Spirit-port of wilson's pool roster. Routing is OFF until the roster has >=1 host AND workdir is set; only Bash is routed.",
+      "version": "0.7.0"
     },
     {
       "name": "wilson-checkpoint",
@@ -154,6 +154,12 @@
       "name": "wilson-schedule",
       "source": "./plugins/wilson-schedule",
       "description": "A global daily-routine task list whose `run` action fans every pending task out to a background subagent in parallel. `/wilson-schedule:schedule add \"<task>\"` registers a free-text task; `list` shows the list; `run` — also triggered by typing the phrase `스케쥴 진행`, caught by a UserPromptSubmit hook — dispatches ALL pending tasks at once as background agents (one Agent call per task, run_in_background), per the immediate-full-fan-out model; `running`/`done` move a task's state, `done` capturing a one-line result; `rm`/`clear` prune. A CC hook/bin cannot call the Agent tool itself, so `run` only EMITS a dispatch directive — the bin owns state, the model owns the fan-out. State is a single global JSON file at the home root — ~/SCHEDULE.json (a day is a per-user unit, not per-repo). SessionStart surfaces a pending-count line. No remote cron — that is the built-in /schedule's job; this is a local immediate parallel executor. Default ON. Opt out: SIDECAR_NO_SCHEDULE=1.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "wilson-research",
+      "source": "./plugins/wilson-research",
+      "description": "Research-fetch tools — pull the latest research material from arXiv and from YouTube. `/wilson-research:yt <url-or-id> [lang]` extracts a video's caption transcript (manual or auto-generated, any available language) by POSTing the InnerTube ANDROID player API and flattening the timedtext payload. `/wilson-research:arxiv <query|id> [--n N]` searches the official arXiv API or looks up a paper by id, returning title / authors / date / categories / pdf link / abstract. Pure Python stdlib — no binaries, no pip dependencies, no API key. Two model-invocable slash commands; no hooks.",
       "version": "0.1.0"
     }
   ]

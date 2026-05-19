@@ -1,7 +1,7 @@
 {
   "name": "wilson-bash-guard",
-  "description": "Deny catastrophic Bash commands at the PreToolUse layer — pipe-to-shell from a network downloader (curl|sh), `rm -rf` of a root/home path, fork bombs, disk destroyers (dd of=/dev/disk, mkfs, >/dev/sd*), and recursive chmod 777 on / ~ or `.`. High-confidence destructive patterns only — near-zero false positives. Complements wilson-git-guard (force-push) and wilson-dangerous-path (protected-path writes). Opt out: SIDECAR_NO_BASH_GUARD=1.",
-  "version": "0.1.0",
+  "description": "Deny catastrophic Bash commands at the PreToolUse layer — pipe-to-shell from a network downloader (curl|sh), `rm -rf` of a root/home path, fork bombs, disk destroyers (dd of=/dev/disk, mkfs, >/dev/sd*), recursive chmod/chown on `/` `~` or `.`, and **cwd-suicide** (a `git worktree remove`, `rm -rf`, or `rmdir` whose realpath target IS or contains the session's current cwd — the call would leave every subsequent hook posix_spawn-ENOENT on a dead cwd until the session is restarted; symlink-resolved via realpath, and skipped when the same chain has a prior `cd` so the user is consciously moving out). High-confidence destructive patterns only — near-zero false positives. Complements wilson-git-guard (force-push) and wilson-dangerous-path (protected-path writes). Opt out: SIDECAR_NO_BASH_GUARD=1.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

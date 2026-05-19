@@ -12,6 +12,14 @@
 #   3. fork bomb      — `:(){ :|:& };:` and spelling variants.
 #   4. disk destroyer — `dd of=/dev/disk*`, `mkfs*`, `> /dev/sd*`.
 #   5. recursive chmod/chown on `/`, `~`, or `.`.
+#   6. cwd-suicide    — `git worktree remove`, `rm -rf`, or `rmdir` whose
+#                       target IS (or contains) the session's current
+#                       cwd. After the call, every subsequent hook spawn
+#                       posix_spawn-ENOENTs on the dead cwd until the
+#                       session is restarted. realpath-compared (so
+#                       /var ↔ /private/var symlink mismatches don't
+#                       confuse it). Skipped when the same chain has a
+#                       prior `cd` — the user is consciously moving out.
 #
 # High-confidence patterns ONLY — near-zero false positives by design.
 # SQL injection is deliberately NOT matched: a `psql -c "...$x..."` is not
@@ -118,6 +126,137 @@ def _strip_sudo_env(toks):
     return toks[i:]
 
 
+def _resolve(target, cwd):
+    """Realpath a Bash-style target against `cwd`. Expands `~` and
+    `$HOME`/`${HOME}`; resolves relative paths against `cwd`. Returns
+    "" on any error — caller treats that as "can't decide, skip"."""
+    if not target:
+        return ""
+    t = re.sub(r"^\$\{?HOME\}?", os.path.expanduser("~"), target)
+    t = os.path.expanduser(t)
+    if not os.path.isabs(t):
+        if not cwd:
+            return ""
+        t = os.path.join(cwd, t)
+    try:
+        return os.path.realpath(t)
+    except Exception:
+        return ""
+
+
+def _is_cwd_suicide(target, cwd):
+    """True iff deleting `target` would wipe `cwd` itself or an ancestor
+    of it — making the session's cwd vanish."""
+    if not cwd:
+        return False
+    try:
+        cr = os.path.realpath(cwd)
+    except Exception:
+        return False
+    tr = _resolve(target, cwd)
+    if not tr:
+        return False
+    return cr == tr or cr.startswith(tr + os.sep)
+
+
+def _segment_targets_for_suicide(seg):
+    """Return (cmd, [targets]) iff `seg` is one of the cwd-deletion shapes
+    — `git [-C …] worktree remove [flags] <path>…`, `rm -r[f] <path>…`,
+    or `rmdir <path>…`. None otherwise."""
+    try:
+        toks = shlex.split(seg)
+    except ValueError:
+        toks = seg.split()
+    toks = _strip_sudo_env(toks)
+    if not toks:
+        return None
+    cmd0 = os.path.basename(toks[0])
+    targets = []
+
+    if cmd0 == "git":
+        # Skip git-level options like `-C <path>`, `--git-dir <path>`,
+        # `--work-tree <path>`, etc., so `git -C foo worktree remove X`
+        # is parsed correctly.
+        i = 1
+        while i < len(toks) and toks[i].startswith("-"):
+            if toks[i] in ("-C", "--git-dir", "--work-tree",
+                           "--namespace") and i + 1 < len(toks):
+                i += 2
+            else:
+                i += 1
+        if i + 1 >= len(toks) or toks[i] != "worktree" \
+                or toks[i + 1] != "remove":
+            return None
+        for a in toks[i + 2:]:
+            if not a.startswith("-"):
+                targets.append(a)
+        return ("git worktree remove", targets) if targets else None
+
+    if cmd0 == "rm":
+        recursive = False
+        for a in toks[1:]:
+            if a in ("-r", "-R", "--recursive", "--no-preserve-root"):
+                recursive = True
+            elif a.startswith("-") and not a.startswith("--") \
+                    and ("r" in a or "R" in a):
+                recursive = True
+            elif not a.startswith("-"):
+                targets.append(a)
+        return ("rm -r", targets) if recursive and targets else None
+
+    if cmd0 == "rmdir":
+        for a in toks[1:]:
+            if not a.startswith("-"):
+                targets.append(a)
+        return ("rmdir", targets) if targets else None
+
+    return None
+
+
+def _chain_has_prior_cd(segments, idx):
+    """True iff any segment BEFORE `idx` is a `cd <somewhere>` — the user
+    is moving the shell out before the deletion, so the suicide check
+    should defer to that intent and not block."""
+    for s in segments[:idx]:
+        try:
+            toks = shlex.split(s)
+        except ValueError:
+            toks = s.split()
+        toks = _strip_sudo_env(toks)
+        if toks and os.path.basename(toks[0]) == "cd":
+            return True
+    return False
+
+
+def check_cwd_suicide(cmd_full, cwd):
+    """Return a deny reason iff the full Bash command would delete `cwd`
+    or an ancestor of it. Returns None for any uncertain case (e.g.
+    unparseable command, target outside cwd, prior `cd` in the chain)."""
+    if not cwd:
+        return None
+    segments = re.split(r"&&|\|\||[;\n]", cmd_full)
+    for i, seg in enumerate(segments):
+        if not seg.strip():
+            continue
+        parsed = _segment_targets_for_suicide(seg)
+        if not parsed:
+            continue
+        if _chain_has_prior_cd(segments, i):
+            continue  # user explicitly cd'd out earlier in the chain
+        cmd_label, targets = parsed
+        for t in targets:
+            if _is_cwd_suicide(t, cwd):
+                return ("`%s %s` would delete `%s` — the realpath of "
+                        "that target IS (or contains) the session's "
+                        "current cwd `%s`. After the call every "
+                        "subsequent hook would posix_spawn-ENOENT on a "
+                        "dead cwd. `cd` out of the worktree first (or "
+                        "use `git -C <other> worktree remove ...` "
+                        "AFTER `cd`-ing somewhere else)."
+                        % (cmd_label, t, t, cwd))
+    return None
+
+
 def check_segment(seg):
     """Inspect one simple command for rm / chmod / chown abuse."""
     try:
@@ -207,6 +346,14 @@ def main():
             hit = check_segment(seg)
             if hit:
                 deny(hit)
+
+    # cwd-suicide — looks at the chain as a whole so a prior `cd` can
+    # waive the check (the user is moving the shell out first).
+    cwd = payload.get("cwd") or os.environ.get("PWD") or ""
+    hit = check_cwd_suicide(cmd, cwd)
+    if hit:
+        deny(hit)
+
     sys.exit(0)
 
 

@@ -138,7 +138,13 @@ def canonicalise_id(raw):
 
 
 def parse_registry(text):
-    """Yield (id, topic, status, path, verdict) tuples in document order."""
+    """Yield (id, topic, status, path, verdict) tuples in document order.
+
+    A data row is any pipe-delimited line whose first cell is non-empty
+    and is NOT the header (`§N`) or a markdown separator (`---`). The id
+    cell may be a canonical `§N` OR a free-form basename — pre-§N era
+    entries use the directory basename as their id, and dropping them
+    (an earlier `§N`-only regex did) silently truncates the registry."""
     rows = []
     for line in text.splitlines():
         if not line.startswith("|"):
@@ -147,8 +153,12 @@ def parse_registry(text):
         if len(cells) < 2:
             continue
         first = cells[0]
-        if not ROW_ID_RE.match(first):
-            continue   # header / separator row
+        if not first:
+            continue                       # empty first cell
+        if first == "§N" or first.lower() == "id":
+            continue                       # header row
+        if set(first) <= set("-: "):
+            continue                       # markdown separator row
         # pad to 5 cells
         while len(cells) < 5:
             cells.append("")

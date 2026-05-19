@@ -1,6 +1,8 @@
 {
   "name": "sidecar",
-  "owner": { "name": "dancinlab" },
+  "owner": {
+    "name": "dancinlab"
+  },
   "description": "Battle-tested guardrails for Claude Code, ported from the hexa-native agent wilson.",
   "metadata": {
     "pluginRoot": "./plugins"
@@ -214,7 +216,7 @@
       "name": "wilson-tree",
       "source": "./plugins/wilson-tree",
       "description": "Junk-drawer guard for AI agents in research repos. A project that fires N experiments tends to scatter them across a flat `state/<§N_…>/` tree plus an ever-growing inline progress log, so an agent that re-enters the repo has to re-grep the whole world to figure out where §107 lives or what its verdict was. wilson-tree teaches three habits at the hook layer. (P1 inject) SessionStart / PostCompact / UserPromptSubmit reads the project's `REGISTRY.md` (one line per §N: id · topic · status · path · verdict-slug) and the nearest `AGENTS.md` walk-up and injects a compact summary so the agent walks in with the map. (P2 register) PostToolUse(Write) on `state/**/result.json` auto-classifies the new §N by directory-name keyword substring against the configured topic list (ambiguous → UNCLASSIFIED), and appends a `REGISTRY.md` row. (P3 guard) PreToolUse(Write|Edit|MultiEdit) on `state/**` outside `<tree_root>/<topic>/<state_subdir>/` emits a one-line warning by default; `SIDECAR_TREE_GUARD_STRICT=1` upgrades it to a deny. Inert until the repo has either a `REGISTRY.md` or a `.wilson-tree.json` — a fresh repo sees zero hook side effects. Project-local config at `<repo-root>/.wilson-tree.json` (tree_root / state_subdir / topics / strict / inject_short_max). Slash: /wilson-tree:tree status|init|audit|topics|register|path|off. Opt out: SIDECAR_NO_TREE=1.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

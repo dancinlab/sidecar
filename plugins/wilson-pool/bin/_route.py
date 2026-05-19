@@ -74,12 +74,59 @@ def roster(cfg):
             out.append({"host": str(h["host"]).strip(),
                         "platform": (h.get("platform") or "linux"),
                         "workdir": str(h.get("workdir") or "").strip(),
+                        "transport": str(h.get("transport")
+                                         or "").strip().lower(),
                         "sudo": bool(h.get("sudo"))})
     # migrate a legacy single-host config
     if not out and cfg.get("host"):
         out.append({"host": str(cfg["host"]).strip(),
                     "platform": "linux", "workdir": "", "sudo": False})
     return out
+
+
+_TS_LIVE = {}
+
+
+def tailscale_live():
+    """True if a local tailscale daemon is up so `tailscale ssh` works.
+    Cached per process (the router runs once per Bash call)."""
+    if "v" in _TS_LIVE:
+        return _TS_LIVE["v"]
+    import shutil
+    import subprocess
+    v = False
+    if shutil.which("tailscale"):
+        try:
+            v = subprocess.run(
+                ["tailscale", "status", "--peers=false"],
+                capture_output=True, timeout=5).returncode == 0
+        except Exception:
+            v = False
+    _TS_LIVE["v"] = v
+    return v
+
+
+def transport_of(cfg, pick):
+    """Resolve the connection transport for the chosen host.
+    Precedence: per-host `transport` > global `transport` > auto.
+    auto → `tailscale` when a local tailscale daemon is up, else `ssh`.
+    Returns 'tailscale' or 'ssh'."""
+    t = (str(pick.get("transport") or "").strip().lower()
+         or str(cfg.get("transport") or "").strip().lower()
+         or "auto")
+    if t == "tailscale":
+        return "tailscale"
+    if t == "ssh":
+        return "ssh"
+    return "tailscale" if tailscale_live() else "ssh"
+
+
+def login_wrap(remote):
+    """`tailscale ssh` opens a NON-login shell, so a remote's
+    .bash_profile (Homebrew PATH etc.) is not sourced and `make`/`cargo`
+    can be "command not found". Force a login shell. Applied for plain
+    ssh too — harmless, keeps both transports behaving identically."""
+    return "bash -lc " + shlex.quote(remote)
 
 
 def cd_target(wd):
@@ -121,7 +168,7 @@ def resolve_workdir(pick, cfg, payload):
     return fallback or None        # auto could not mirror → designated path
 
 
-def preflight_ok(host, wd_sh, dd):
+def preflight_ok(host, wd_sh, dd, transport="ssh"):
     """autosync-OFF safety net: confirm the workdir exists on the host
     before routing — else the routed `cd` just fails with
     `no such file or directory`.
@@ -150,13 +197,18 @@ def preflight_ok(host, wd_sh, dd):
         cache = {}
     if key in cache:
         return cache[key] == "ok"
+    if transport == "tailscale":
+        # tailscale ssh owns auth + connectivity; no -o opts. The
+        # subprocess timeout below still bounds a stalled probe.
+        argv = ["tailscale", "ssh", host, "test -d " + wd_sh]
+    else:
+        argv = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6",
+                host, "test -d " + wd_sh]
     try:
         rc = subprocess.run(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6",
-             host, "test -d " + wd_sh],
-            capture_output=True, timeout=12).returncode
+            argv, capture_output=True, timeout=12).returncode
     except Exception:
-        rc = 255                       # timeout / ssh missing → connection failure
+        rc = 255                       # timeout / transport down → connection failure
     if rc == 255:
         # ssh transport failure — host unreachable, NOT a missing workdir.
         # Do not cache; skip this once, the next heavy command re-probes.
@@ -255,6 +307,8 @@ if not wd_remote:                  # auto mode + cwd outside home, no fallback
 wd_sh = cd_target(wd_remote)       # tilde-safe remote-shell form
 remote = "cd %s && %s" % (wd_sh, cmd)
 
+tx = transport_of(cfg, pick)           # 'tailscale' | 'ssh'
+
 if cfg.get("autosync"):
     # incremental rsync of the local project → the remote workdir, run
     # right before the heavy command (as part of the routed command, so
@@ -262,6 +316,11 @@ if cfg.get("autosync"):
     # the workdir (rsync creates it) and keeps a continuously-changing
     # tree fresh with zero manual sync. Additive by default — remote
     # build caches survive; `autosync mirror` adds rsync --delete.
+    #
+    # v1 scope (design.md D4): the autosync path stays on plain `ssh` +
+    # `rsync host:` UNCHANGED — rsync-over-`tailscale ssh` is untested,
+    # so it is not enabled here. A tailscale-only host should run
+    # `autosync off`; autosync on/mirror needs a plain-ssh-reachable host.
     local = (payload.get("cwd") or os.getcwd()).rstrip("/") or "."
     delete = " --delete" if str(cfg.get("autosync")) == "mirror" else ""
     new_cmd = (
@@ -269,16 +328,20 @@ if cfg.get("autosync"):
             shlex.quote(host), shlex.quote("mkdir -p " + wd_sh), delete,
             shlex.quote(local), shlex.quote(host), wd_sh,
             shlex.quote(host), shlex.quote(remote), MARK))
-    note = "auto-synced (rsync%s) → %s:%s" % (delete or " additive",
-                                              host, wd_remote)
+    sync_caveat = ("; NOTE autosync uses plain ssh — tailscale-only host "
+                   "needs `autosync off`") if tx == "tailscale" else ""
+    note = "auto-synced (rsync%s) → %s:%s%s" % (
+        delete or " additive", host, wd_remote, sync_caveat)
 else:
     # autosync off → pre-flight: never route to a host missing the
     # workdir (that just yields `cd: no such file`). Run local instead.
-    if not preflight_ok(host, wd_sh, dd):
+    if not preflight_ok(host, wd_sh, dd, tx):
         allow()
-    new_cmd = "ssh %s %s  # %s" % (
-        shlex.quote(host), shlex.quote(remote), MARK)
-    note = "%s:%s (workdir is user-synced)" % (host, wd_remote)
+    sshc = "tailscale ssh" if tx == "tailscale" else "ssh"
+    new_cmd = "%s %s %s  # %s" % (
+        sshc, shlex.quote(host), shlex.quote(login_wrap(remote)), MARK)
+    note = "%s:%s via %s (workdir is user-synced)" % (
+        host, wd_remote, tx)
 
 print(json.dumps({
     "hookSpecificOutput": {

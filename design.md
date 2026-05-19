@@ -256,3 +256,44 @@
   - the D24/D25/D27 design tracked the TodoWrite checklist as a generic resume narrative — adjacent to `/goal` but not a `/goal` companion; the user explicitly wants a cog that meshes with `/goal` specifically and is inert when no goal is set
   - capture stays deterministic — a native `/goal` appears in the transcript as a user message `<command-name>/goal</command-name>` + `<command-args>CONDITION</command-args>` (verified against real transcripts); wilson-resume reads the most recent one, persists it (a bare `/goal` with empty args = clear → drop state), and re-injects it on SessionStart{startup,clear} as a `/goal <condition>` re-arm directive — the persist+re-inject pattern wilson-goal already proves, which is the "wilson-goal 참고" the user pointed at
   - `resume`/`compact` SessionStart sources are excluded — native `/goal` already carries over a `--resume`d session and compaction is same-session, so re-arm is only needed on a fresh `startup` or after `/clear`
+
+### Decision 30 — Decision 2: /gap 실행 방식 = C(트리아지 후 심화)가 기본 + A(전면 fan-out)는 선택 옵션 — 40개 축을 각각 한 줄 전략으로 뽑아 공통 카탈로그로 두고, C는 인라인 트리아지 후 히트 가족만 심화 subagent, A는 8가족 전부 fan-out
+- **picked**: Decision 2: /gap 실행 방식 = C(트리아지 후 심화)가 기본 + A(전면 fan-out)는 선택 옵션 — 40개 축을 각각 한 줄 전략으로 뽑아 공통 카탈로그로 두고, C는 인라인 트리아지 후 히트 가족만 심화 subagent, A는 8가족 전부 fan-out
+- **rationale**:
+  - C 기본: 현재 대화 맥락을 그대로 쓰는 인라인 트리아지라 정확
+  - 저렴하고, 진짜 gap이 잡힌 가족만 심화해 비용을 한정
+  - A는 옵션으로 보존: 사용자가 트리아지를 건너뛰고 전 가족을 무조건 깊게 훑고 싶을 때 선택 가능
+  - 공통 substrate는 40개 '한 줄 전략' 카탈로그 — C도 A도 같은 one-liner 목록을 소비하므로 모드만 갈리고 전략 집합은 단일 SSOT
+  - B(인라인 1-pass)는 별도 모드로 채택 안 함 — 트리아지 단계가 곧 B의 상위호환이라 중복
+
+### Decision 31 — Decision 3: /gap CLI = A안 단일 커맨드 + 인자 — /gap(맨몸)→C 직행, /gap full→A 전면 fan-out, /gap <텍스트>→범위 한정 C, /gap list→40 한줄전략 카탈로그 출력
+- **picked**: Decision 3: /gap CLI = A안 단일 커맨드 + 인자 — /gap(맨몸)→C 직행, /gap full→A 전면 fan-out, /gap <텍스트>→범위 한정 C, /gap list→40 한줄전략 카탈로그 출력
+- **rationale**:
+  - 사용자가 명시한 '/gap 맨몸→C 직행, /gap <...> 인자형'과 1:1 일치
+  - 기존 sidecar 커맨드(wilson-gpu/decision-gate/pool)가 전부 단일 커맨드+argument-hint 패턴 — 마켓플레이스 일관성 유지
+  - '모든 걸 한 줄 전략으로 뽑아둔다' 요청은 /gap list 진입점으로 자연 흡수
+  - 모드가 늘어도 커맨드 파일은 1개 고정 — B안은 모드마다 새 커맨드
+
+### Decision 32 — Option A — the "예측보다 측정" / instrument-first methodology ships as a new standalone plugin (a fire-gate), NOT as a mode inside wilson-decision-gate
+- **picked**: Option A — the instrument-first ("예측보다 측정") methodology ships as a new standalone plugin — a measurement-specialized fire-gate that injects the instrument-first principle and owns a `### Fire-decision N` ledger in design.md — rather than as a mode folded into wilson-decision-gate
+- **rationale**:
+  - the whole repo is one-plugin-one-concern (Decisions 1-14, D24) — instrument-first is its own distinct methodology (it currently lives as a standalone feedback memory), not a sub-feature of generic step-by-step gating; folding it into wilson-decision-gate dilutes that plugin's single concern
+  - the trigger surfaces differ — wilson-decision-gate reacts to *any* multi-decision branch point, the fire-gate reacts specifically to a measure-vs-predict fork (narrower, domain-specific); separate plugins let each be toggled and tuned independently via `/sidecar`
+  - wilson-decision-gate already ships stable at 0.2.1 — extending it risks regressing a working plugin, whereas a standalone plugin is additive, isolated and reviewable (the same reasoning as D4 keeping wilson-sdlc separate)
+  - naming honesty — `wilson-decision-gate` is a *generic* gate; a measurement-specific principle hidden inside it is a surprise. A separately named plugin is self-describing
+
+### Decision 33 — Option A — the plugin is named `wilson-fire-gate` and unifies on the "fire" vocabulary across name, principle body and ledger
+- **picked**: Option A — plugin name `wilson-fire-gate`; the "fire" vocabulary (a *fire* = executing one real measurement instead of predicting its outcome) is used consistently across the plugin name, the injected principle body and the `### Fire-decision N` ledger
+- **rationale**:
+  - the user consistently says "fire" / "fire-게이트" / "Fire-decision N" — that vocabulary is their mental model, so matching the plugin to it is zero-friction
+  - the ledger header is already fixed at `### Fire-decision N`; naming the plugin `fire` too keeps plugin + body + ledger coherent on one word, where Option B would split the plugin name from the ledger term
+  - "fire" being opaque to a fresh marketplace user is resolved by the friendly first-use-definition rule — the principle body defines it once ("a fire = run a real measurement instead of predicting") and the plugin description states it
+  - sidecar plugin names already use ecosystem vocabulary verbatim — `wilson-pool` ("pool" = host roster), `wilson-tape-recorder` ("tape" = the .tape format)
+
+### Decision 34 — recommended (user delegated "추천방식으로 전부 선택") — the instrument-first principle ships as one focused English canonical sample file, no worked example
+- **picked**: recommended — the instrument-first principle ships as a single focused English canonical sample at `plugins/wilson-fire-gate/samples/instrument-first.md`: the 4 tenets + the Fire-decision recording convention, no worked example. Injected on SessionStart + PostCompact; UserPromptSubmit adds a short reminder only on measurement/benchmark-looking prompts. Mechanism mirrors wilson-decision-gate
+- **rationale**:
+  - the methodology has 4 real tenets (faithful-predict-first; fire only when genuinely uncertain; never re-fire a result already determined by prior measurements; cost-no-object means "do not block a *needed* fire on cost", NOT "fire when the answer is already known") — a one-line block would lose the nuance, so a dedicated sample file is warranted
+  - a worked example is excluded for the same reason D19 excluded a worked routing trace from wilson-pool's sample — worked examples bloat static inject context; the 4 tenets + the recording convention are the durable content
+  - English-only for v0.1.0 matches the code/docs language pref and keeps the first release shippable fast — wilson-decision-gate's 5-language sample was a later maturation, not a v0.1.0 requirement; language variants can follow if wanted
+  - the SessionStart + PostCompact cadence and the branch-point-only UserPromptSubmit reminder are the canonical wilson-* cadence already settled in D20/D21 — mirrored here rather than re-litigated

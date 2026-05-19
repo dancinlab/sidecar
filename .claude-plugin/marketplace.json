@@ -137,6 +137,12 @@
       "source": "./plugins/wilson-sdlc",
       "description": "Spec → Plan → Build → Test&Recover → Review → Simplify → Ship — a 7-stage software-delivery skill pipeline. Skill *structure* is borrowed from addyosmani/agent-skills; the *content* is wilson's own dogfooded workflow, so each stage maps onto sidecar primitives the user already has: Spec→design.md+wilson-decision-gate, Plan→task tools+wilson-goal, Build→worktree-pr+wilson-checkpoint, Test&Recover→wilson-pool routing + systematic root-cause, Review→6-axis (5 generic + design.md decision-conformance), Simplify→sequences the built-in /simplify then re-checks decisions, Ship→the version→marketplace.json→GROWTH §10→commit checklist this very pack ships by. Stages that map to a wilson plugin degrade gracefully when that plugin is absent. Skills load on-demand; the plugin injects nothing on its own.",
       "version": "0.1.0"
+    },
+    {
+      "name": "wilson-gap",
+      "source": "./plugins/wilson-gap",
+      "description": "/gap — multi-axis gap exploration. One slash command sweeps the current work through 40 breakthrough-strategy lenses curated into 8 families from the archived hive repo's state/*_audit catalogue (each lens = one probing one-liner; the catalogue is the single SSOT, inlined in the command body). Bare `/gap` runs mode C: inline-triage all 40 lenses against the current work, then dispatch a deep-dive subagent only for each family that surfaced a candidate gap — zero gaps spawns nothing (the fixpoint lens applied to /gap itself). `/gap full` runs mode A: fan-out one subagent per family with no triage, for an exhaustive audit. `/gap <text>` scopes the sweep. `/gap list` prints the 40-lens catalogue and exits. Surfaces and prioritises gaps only — never fixes; the user drives what gets fixed next. No hooks, no bin script — a pure model-facing command. Injects nothing until invoked.",
+      "version": "0.1.0"
     }
   ]
 }

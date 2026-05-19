@@ -60,6 +60,7 @@ primitives 1:1.
 | `wilson-lsp` | `.lsp.json` LSP servers (not a hook) | Wires `.hexa` → `hexa lsp` and `.tape`·`.n6`·`.hxc`·`.kosmos` → the canonical per-repo servers (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, shipped in `github.com/dancinlab/{tape,n6,hxc,kosmos}`). Graceful — a server not on PATH just shows in `/plugin` Errors. LSP lifecycle is CC-managed (toggle via `/plugin`, not `/sidecar`) |
 | `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal resume inbox guards, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
 | `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
+| `wilson-gap` | `/gap` command (model-facing) | Multi-axis gap exploration — `/gap` sweeps the current work through **40 breakthrough-strategy lenses** in 8 families, curated from the archived `hive` repo's `state/*_audit` catalogue (each lens = one probing one-liner). Bare `/gap` = mode C (inline-triage all 40 → deep-dive subagent only for each family that surfaced a gap; zero gaps spawns nothing); `/gap full` = mode A (fan-out one subagent per family, no triage); `/gap <text>` scopes the sweep; `/gap list` prints the catalogue. Surfaces and prioritises gaps only — never fixes. No hook, no bin script — pure model-facing command |
 
 Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 `wilson-recap` (PreCompact/SessionEnd summarization).
@@ -91,6 +92,7 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 /plugin install wilson-inbox@sidecar            # cross-project handoff inbox (inbox/<kind>/<slug>.md)
 /plugin install wilson-lsp@sidecar              # LSP for .hexa / .tape / .n6 / .hxc / .kosmos
 /plugin install worktree-pr@sidecar             # /worktree-pr:wt workflow command
+/plugin install wilson-gap@sidecar              # /gap multi-axis gap exploration (40 strategy lenses)
 /plugin install sidecar@sidecar                 # /sidecar runtime on/off control
 ```
 

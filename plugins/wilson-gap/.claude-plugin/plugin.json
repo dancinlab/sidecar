@@ -1,0 +1,9 @@
+{
+  "name": "wilson-gap",
+  "description": "/gap — multi-axis gap exploration. One slash command sweeps the current work through 40 breakthrough-strategy lenses curated into 8 families from the archived hive repo's state/*_audit catalogue (each lens = one probing one-liner; the catalogue is the single SSOT, inlined in the command body). Bare `/gap` runs mode C: inline-triage all 40 lenses against the current work, then dispatch a deep-dive subagent only for each family that surfaced a candidate gap — zero gaps spawns nothing (the fixpoint lens applied to /gap itself). `/gap full` runs mode A: fan-out one subagent per family with no triage, for an exhaustive audit. `/gap <text>` scopes the sweep. `/gap list` prints the 40-lens catalogue and exits. Surfaces and prioritises gaps only — never fixes; the user drives what gets fixed next. No hooks, no bin script — a pure model-facing command. Injects nothing until invoked.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "gap-analysis", "exploration", "strategy", "hive", "wilson"]
+}

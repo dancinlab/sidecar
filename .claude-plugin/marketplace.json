@@ -97,6 +97,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "wilson-frontdoor",
+      "source": "./plugins/wilson-frontdoor",
+      "description": "Inject the `frontdoor` operating principle (정공법 — take the orthodox path at a fork) as additionalContext. At a wall the agent should prefer the root-cause fix over a downstream workaround that papers over the symptom; when the root lives in an upstream / another SSOT repo it must NOT silently work around it here but escalate via `wilson-inbox` (a structured cross-repo handoff); a workaround is acceptable only as an explicitly recorded stopgap (decision-gate entry + TODO at the root), never the silent default. Pure text contributor — NO enforcement (a hook fires per tool/turn, not per *fork*, so it cannot detect the workaround-vs-root choice — same reason wilson-decision-gate is text-only); it keeps the principle in context so the model self-applies it. Two-tier cadence (the wilson-prefs / wilson-decision-gate pattern; a principle injected only at SessionStart fades structurally): FULL body on SessionStart + PostCompact, FULL refresh every Nth UserPromptSubmit turn (SIDECAR_FRONTDOOR_REFRESH, default 10), a compact one-line reminder on off-turns so it never decays to a bare label mid-session. Complements wilson-inbox (the escalation target) and wilson-hexa-first (hexa-path-specific; this one is language/project-general). Toggle: /sidecar off frontdoor. Default ON. Opt out: SIDECAR_NO_FRONTDOOR=1 (or WILSON_NO_FRONTDOOR=1).",
+      "version": "0.1.0"
+    },
+    {
       "name": "wilson-tape-recorder",
       "source": "./plugins/wilson-tape-recorder",
       "description": "Record the Claude Code session as a `.tape` v1.2 execution trace (the dancinlab tape format — github.com/dancinlab/tape). One file per session at <DATA>/sessions/<id>.tape: SessionStart writes `@S start`, UserPromptSubmit writes `@U`, PreToolUse writes `@T`, PostToolUse writes `@R`, SessionEnd writes `@S end`. Honest subset of the 17-type alphabet — only what CC hooks actually deliver (no @A assistant text, no @K cost — those signals aren't exposed). Pairs with `wilson-guards/tape-append-only` (the recorder PRODUCES `.tape`, the guard PROTECTS it). /wilson-tape-recorder for status / ls / tail / cat / on / off. Default ON. Opt out: SIDECAR_NO_TAPE_RECORDER=1.",

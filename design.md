@@ -433,3 +433,52 @@
   - 검증 중 발견: DEFAULT_PATTERNS와 SUDO_RE 교집합이 공집합 → sudo-prefix가 절대 안 켜지는 죽은 코드였음
   - 사용자가 승인한 preview가 apt-get 원격 라우팅+sudo 그림이라 분류기 확장이 그 그림을 실현하는 유일한 경로
   - pool 취지(무거운 작업 원격화)에 빌드 의존성 설치가 일관 — linux capability 필터로 linux 호스트에만 가고 없으면 로컬 폴백
+
+### Decision 52 — A — 새 독립 플러그인 (wilson-hexa-first 패턴 복제, 순수 텍스트 기여자, 갈림길 정공법 원칙 주입)
+- **picked**: A — 새 독립 플러그인 (wilson-hexa-first 패턴 복제, 순수 텍스트 기여자, 갈림길 정공법 원칙 주입)
+- **rationale**:
+  - sidecar 정체성 규칙이 one plugin = one guardrail ~100 lines — 정공법 편향은 게이트 프로세스와 직교하는 별개 가드레일이라 decision-gate 확장(B)은 두 책임을 한 플러그인에 섞음
+  - wilson-hexa-first가 순수 텍스트 기여자 + SessionStart/PostCompact 주입의 검증된 1:1 템플릿 — 텍스트만 갈아끼우면 됨, 구현 리스크 최소
+  - C(hexa-first 확장)는 스코프 불일치 — 정공법은 전 언어
+  - 프로젝트 일반 원칙인데 hexa-first는 hexa-native 경로 한정
+
+### Decision 53 — A — 이름은 wilson-frontdoor
+- **picked**: A — 이름은 wilson-frontdoor
+- **rationale**:
+  - sidecar 명명 관례가 행위
+  - 은유 한 단어(wilson-pool/wilson-checkpoint/wilson-fire-gate) — frontdoor가 정공법을 1단어로 가장 정확히 압축
+  - baseline은 ML/벤치마크 기준선 의미가 강해 발견성
+  - 검색성 충돌, strategy는 가드레일 아닌 범용 명사라 한 줄 설명에서 정체성 흐려짐
+  - root-cause는 디버깅 한정 인상이라 설계 선택
+  - 의존성
+  - 에스컬레이션 포함하는 넓은 적용 범위엔 좁음
+
+### Decision 54 — B — 넛지 + 에스컬레이션 사다리 (근본이 상류/타 SSOT면 wilson-inbox 핸드오프)
+- **picked**: B — 넛지 + 에스컬레이션 사다리 (근본이 상류/타 SSOT면 wilson-inbox 핸드오프)
+- **rationale**:
+  - 실제 최빈 실패 모드는 근본이 상류 repo인데 다운스트림에서 조용히 우회 — 근본 수리만 말하고 손 안 닿을 때 행동을 안 주면 무딘 칼
+  - wilson-inbox가 바로 이 크로스-repo 핸드오프 가드레일이라 정공법 원칙이 그 출구를 가리키면 두 플러그인이 단일 SSOT로 합의 (wilson 원칙 6 project-governance 결)
+  - C의 decision-gate 연계까지 본문에 박으면 한 원칙이 세 플러그인을 호명 — one-guardrail 미니멀 관례 위반, 그 연계는 사용자가 필요할 때 별도 결정으로 추가가 audit상 깨끗
+
+### Decision 55 — B — SessionStart + PostCompact + Nth UserPromptSubmit 재주입 (fade 방지 2단)
+- **picked**: B — SessionStart + PostCompact + Nth UserPromptSubmit 재주입 (fade 방지 2단)
+- **rationale**:
+  - 메모리 feedback_style_fade_drift: 희소 주입은 구조적으로 fade — 행동을 바꾸는 원칙은 fade하면 그 순간 우회로 샘, 기본값은 fidelity
+  - 정공법이 가장 필요한 순간은 세션 깊숙이 벽에 부딪힌 디버깅 한복판인데 A는 바로 그때 원칙이 컨텍스트 맨 뒤라 가장 약함 — 타이밍 정반대
+  - wilson-decision-gate/wilson-prefs가 이미 풀바디 Nth + 압축본 매턴의 검증된 2단 패턴 — 재사용이라 추가 구현 비용 거의 0
+
+### Decision 56 — A — 지금 ship (커밋 + push + 로컬 설치본 동기화, wilson-sdlc:ship 체크리스트)
+- **picked**: A — 지금 ship (커밋 + push + 로컬 설치본 동기화, wilson-sdlc:ship 체크리스트)
+- **rationale**:
+  - 빌드가 전 경로 스모크 검증됨 — 미룰 기술적 리스크 없음
+  - sidecar 거버넌스 g_ship_syncs_install이 ship 시 같은 작업 안에서 로컬 설치본 갱신을 required로 요구 — 커밋만(B)은 다음 세션 신
+  - 구 불일치를 거버넌스 위반으로 남김
+  - 신규 0.1.0이라 버전 bump 불필요, 변경이 자기완결적(새 플러그인 + 레지스트리 3줄)이라 부분 출고로 쪼갤 이유 없음
+
+### Decision 57 — A — GROWTH 로그 단계 skip (미니멀 전환 c08efd0 존중)
+- **picked**: A — GROWTH 로그 단계 skip (미니멀 전환 c08efd0 존중)
+- **rationale**:
+  - c08efd0 전면 미니멀 전환이 per-ship 추적 로그를 의도적으로 제거한 명시적
+  - 최신 결정 — 거기 버전 줄을 다시 넣으면 그 결정과 정면 충돌하고 문서를 재-부풀림
+  - ship 스킬 본문 스스로 GROWTH 단계를 separate repo soft cross-repo reference로 규정 — hard step 아님
+  - design.md Decision 52–56이 이미 실행 추적을 담당하고 커밋 메시지가 상세 changelog 역할 — 정보 손실 없음

@@ -3,13 +3,19 @@
 # AGENTS.md / CLAUDE.md) lean. Invoked by minimal-keep.sh so sys.stdin is
 # the Claude Code PreToolUse payload. No wilson binary dependency.
 #
-# Three bloat signals (data-driven — measured across ~/core AGENTS.* on
-# 2026-05-20: healthy files <=200 lines / <=15KB; bloated ones 336-1533
-# lines, several carrying single lines of 7-9KB of jammed-together prose):
+# Three bloat signals (data-driven — calibrated against 164 unique-content
+# master AGENTS.* under ~/core on 2026-05-20, with /.claude/worktrees/
+# duplicates excluded). The three caps target the SAME top-decile bloat
+# tail so fire rates stay roughly aligned (~10%/6%/10%):
 #   S1 total-lines  file > MAX_LINES        (Write only — needs the full file)
+#                   280 ≈ p90 of measured master files → ~10% fire
 #   S2 long-line    any line > MAX_LINE_LEN (the dominant "verbose" signal)
+#                   500 sits between p90 (375) and p95 (565); 0.3.0 dropped
+#                   from 800 (which fired only on p99 outliers, 3%) so the
+#                   three signals share the same top-decile sensitivity
 #   S3 history      a Log/History/Changelog heading, or >=3 dated bullets —
 #                   history belongs in REGISTRY.md / GROWTH.md, not here
+#                   ~10% fire (binary signal — no threshold)
 #
 # Two modes via SIDECAR_MINIMAL_KEEP_MODE (WILSON_ accepted):
 #   block (default)  the write is DENIED at PreToolUse
@@ -25,7 +31,7 @@ import json, os, re, sys
 
 EVENT = "PreToolUse"
 MAX_LINES = 280
-MAX_LINE_LEN = 800
+MAX_LINE_LEN = 500
 BASENAMES = ("AGENTS.tape", "AGENTS.md", "CLAUDE.md")
 EXCLUDE = ("/archive", "/old/", "/vendor/", "/third_party/",
            "/node_modules/", "/.venv/", "/scratch/", "/templates/",

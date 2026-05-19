@@ -21,3 +21,11 @@
   - 이건 실제 bloat 가 아니라 anima 의 isolated-agent 워크트리 격리 메커니즘이 만든 사본들 — guardrail 의 대상은 마스터 1개여야 함
   - 변경 범위 ~1 라인 (EXCLUDE 튜플에 한 항목 추가) · 회귀 위험 0 · 동일 패턴이 Claude Code Agent isolation 등 다른 격리 워크트리에도 일반화 적용됨
   - 후속 calibration (약점 4) 의 분포 측정이 사본 N개 카운팅으로 왜곡되지 않으려면 B 가 *선행* 되어야 함
+
+### Decision 3 — S2 longest-line cap 800 → 500 — 세 신호 fire-rate 정렬
+- **picked**: `MAX_LINE_LEN` 800 → 500
+- **rationale**:
+  - 2026-05-20 분포 측정 (164 unique master AGENTS.*, EXCLUDE 적용) — S2 longest-line cap 800 의 fire rate 3% 가 S1 lines>280 의 10%, S3 history 의 10% 와 정렬되지 않음. 세 신호가 동일 의도 (top-decile bloat detector) 라면 비율도 align 되어야 함
+  - p90 = 375, p95 = 565 → cap 500 은 p95 약간 아래로, "거의 모든 master 가 통과하지만 명백한 single-line jam 은 잡는다" 위치. fire rate 3% → 6%
+  - 진짜 catastrophic (anima 8006, wilson 3915, anima-pcn 2172, demiurge 1584, phanes 1018) 은 cap 무관하게 그대로 fire — 잃는 것 없음, 추가로 754/620/570 같은 borderline jam 도 잡음
+  - 옵션 B (400, p90 근처) 는 fire 8.5% 로 비율 align 면에서 더 정확하지만 healthy borderline master (wilson 754, bedrock 620, hexa-lang 570) 까지 잡아 마찰↑ — 500 이 측정 데이터 기준 균형점

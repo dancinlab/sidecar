@@ -46,7 +46,8 @@ DEFAULT_PATTERNS = (
 MACOS_RE = re.compile(
     r"\b(xcodebuild|xcrun|xcode-select|codesign|notarytool|stapler|"
     r"pkgbuild|productbuild|hdiutil|lipo|otool|install_name_tool|vtool|"
-    r"sw_vers|osascript|launchctl|diskutil|caffeinate|sips|plutil)\b"
+    r"swiftc|sw_vers|osascript|launchctl|diskutil|caffeinate|sips|plutil)\b"
+    r"|\bswift +(build|test|run|package)\b"
     r"|apple-darwin|apple-macos|apple-ios|Mach-O|\.dylib\b|\.dmg\b")
 LINUX_RE = re.compile(
     r"\b(apt|apt-get|dpkg|dpkg-deb|add-apt-repository|yum|dnf|rpm|pacman|"

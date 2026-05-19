@@ -29,7 +29,11 @@ MAX_LINE_LEN = 800
 BASENAMES = ("AGENTS.tape", "AGENTS.md", "CLAUDE.md")
 EXCLUDE = ("/archive", "/old/", "/vendor/", "/third_party/",
            "/node_modules/", "/.venv/", "/scratch/", "/templates/",
-           "/examples/", "/.git/")
+           "/examples/", "/.git/",
+           # isolated-agent worktrees (anima, Claude Code Agent isolation
+           # etc.) carry duplicate AGENTS.* copies of the master file —
+           # flag the master, not each of N copies. Added 0.3.0.
+           "/.claude/worktrees/")
 HISTORY_HEADING = re.compile(r"^#+\s.*\b(log|history|changelog)\b", re.I)
 DATED_BULLET = re.compile(r"^\s*[-*]\s.*20\d\d-[01]?\d")
 
@@ -66,6 +70,11 @@ def scan(root):
         for fn in fns:
             if fn in BASENAMES:
                 fp = os.path.join(dp, fn)
+                # Apply the same EXCLUDE filter the hook uses — without
+                # this, scan reports N duplicate copies under isolated-
+                # agent worktrees as N hits, drowning the master signal.
+                if any(s in fp for s in EXCLUDE):
+                    continue
                 try:
                     c = open(fp, encoding="utf-8", errors="replace").read()
                 except Exception:

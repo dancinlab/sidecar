@@ -27,8 +27,8 @@
     {
       "name": "wilson-prefs",
       "source": "./plugins/wilson-prefs",
-      "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context. SessionStart / PreCompact / PostCompact inject the full `## Prefs` block (PostCompact lands in the clean post-summary context — strictly stronger than PreCompact for surviving compaction); UserPromptSubmit re-asserts only the compact directive lines, EXCEPT every Nth turn (`refresh-every`, default 25) it re-injects the full body so the style stays fresh across a long session. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
-      "version": "0.2.0"
+      "description": "User preferences (reply language / code language / response style) set via the /wilson-prefs:prefs slash command, persisted to plugin data, injected as context. SessionStart / PostCompact inject the full `## Prefs` block (PostCompact lands in the clean post-summary context, surviving compaction); every Nth UserPromptSubmit turn (`refresh-every`, default 10) re-injects the full body, and every other turn injects the compact always-on micro-spec so the style never decays to a bare label between refreshes. With an explicit reply language the contradictory `_common` language-tracking section is stripped before injection and the `## Prefs` directive lines are localized to that language. Standalone port of wilson prefs — working. Injects nothing until the user sets a preference.",
+      "version": "0.3.0"
     },
     {
       "name": "wilson-hexa-verify",

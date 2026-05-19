@@ -78,6 +78,11 @@ def style_files():
             base, lang = _parse_style_fn(fn)
             if base is None:
                 continue
+            # `<style>.micro[.<lang>].md` is the always-on compact
+            # companion of `<style>.md`, not a style the user can pick —
+            # keep it out of the `styles` listing. Decision 42.
+            if base.endswith(".micro"):
+                continue
             r = rows.setdefault(base, {"tag": tag, "langs": set()})
             if lang:
                 r["langs"].add(lang)

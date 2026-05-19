@@ -346,3 +346,27 @@
   - 원래 Decision 2(글로벌 1개 목록)와 일관 — 파일 위치만 ~/.claude/plugin-data → ~/SCHEDULE.json 로, 이름은 SCHEDULE.json
   - JSON 유지 — _sched.py 저장 계층이 이미 JSON이므로 state_path()만 변경, 마크다운 파서 불필요
   - 홈 루트 글로벌이라 어느 repo에서 진행하든 동일한 하루 일과 목록
+
+### Decision 41 — A1 — _inject.py가 명시적 response_lang(≠auto)일 때 _common 본문에서 '언어 추적 규칙' 섹션을 제거한 뒤 주입
+- **picked**: A1 — _inject.py가 명시적 response_lang(≠auto)일 때 _common 본문에서 '언어 추적 규칙' 섹션을 제거한 뒤 주입
+- **rationale**:
+  - 충돌의 근원을 _inject.py 한 곳에서 물리적으로 제거 — 컨텍스트에 모순 지시가 남지 않음
+  - 5개 언어 변형 데이터 파일을 안 건드려도 됨 (헤더 기준 slice ~8줄)
+  - response_lang=auto 일 때는 추적 규칙이 그대로 살아 동작 보존
+  - A2처럼 모델에게 '무시해줘'를 비는 게 아니라 충돌 자체를 없앰 — fade 와 같은 실패 모드 회피
+
+### Decision 42 — B1 — 비-갱신 UserPromptSubmit 턴에 4단어 라벨 대신 7-요소를 압축한 always-on micro-spec(~8줄)을 주입; 풀바디는 여전히 Nth 턴마다
+- **picked**: B1 — 비-갱신 UserPromptSubmit 턴에 4단어 라벨 대신 7-요소를 압축한 always-on micro-spec(~8줄)을 주입; 풀바디는 여전히 Nth 턴마다
+- **rationale**:
+  - fade window를 사실상 0으로 — 비-갱신 턴에도 실행 가능한 행동 스펙이 늘 컨텍스트에 있음
+  - micro-spec은 ~400 tok 수준이라 매 턴 주입해도 5KB 풀바디 대비 가벼움
+  - turns 카운터상 대부분 세션이 10턴 미만이라 재갱신 0회 — micro-spec은 매 턴 가므로 짧은 세션의 fade까지 동시 해결
+  - B2(refresh_every 인하)는 라벨만 있는 빈 구간을 남긴 채 주기만 줄임 — 25→10 인하가 이미 부족했던 같은 약의 증량
+
+### Decision 43 — C1 — _inject.py에 언어별 DIRECTIVES 딕셔너리(en/ko/ja/zh/ru). 주입 지시문(reply/code/terms/style)을 response_lang 로케일로 현지화, auto·미번역 언어는 en 폴백, '## Prefs' 헤딩은 리터럴 anchor 유지
+- **picked**: C1 — _inject.py에 언어별 DIRECTIVES 딕셔너리(en/ko/ja/zh/ru). 주입 지시문(reply/code/terms/style)을 response_lang 로케일로 현지화, auto·미번역 언어는 en 폴백, '## Prefs' 헤딩은 리터럴 anchor 유지
+- **rationale**:
+  - 지시문 자체가 타깃 언어면 출력 유도가 더 강함 — '한국어로 응답하라'가 'Reply in ko'보다 자기강화적
+  - 지시문은 줄당 ~10단어 고정 구조 문자열 — 영어판이 이미 _inject.py 에 하드코딩돼 있어 번역판도 같은 자리에 두는 게 single-source
+  - C2(파일 외부화)는 큰 가변 콘텐츠에 맞는 방식 — 작고 거의 안 바뀌는 구조 문자열엔 이동 부품만 늘림
+  - '## Prefs' 헤딩은 wilson-decision-gate 등이 참조하는 anchor 라 리터럴 유지 — 불릿만 현지화

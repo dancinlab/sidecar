@@ -14,12 +14,17 @@
 #   5. recursive chmod/chown on `/`, `~`, or `.`.
 #   6. cwd-suicide    — `git worktree remove`, `rm -rf`, or `rmdir` whose
 #                       target IS (or contains) the session's current
-#                       cwd. After the call, every subsequent hook spawn
-#                       posix_spawn-ENOENTs on the dead cwd until the
-#                       session is restarted. realpath-compared (so
-#                       /var ↔ /private/var symlink mismatches don't
-#                       confuse it). Skipped when the same chain has a
-#                       prior `cd` — the user is consciously moving out.
+#                       cwd, OR the cwd of any other ACTIVE Claude Code
+#                       session (transcript jsonl with mtime within
+#                       SIDECAR_BASH_GUARD_SESSION_TTL_MIN minutes,
+#                       default 60). After the call, every subsequent
+#                       hook spawn in that session posix_spawn-ENOENTs on
+#                       the dead cwd until the session is restarted.
+#                       realpath-compared (so /var ↔ /private/var symlink
+#                       mismatches don't confuse it). Skipped when the
+#                       same chain has a prior `cd` — the user is
+#                       consciously moving out. Cross-session axis can be
+#                       disabled with SIDECAR_BASH_GUARD_SESSION_TTL_MIN=0.
 #
 # High-confidence patterns ONLY — near-zero false positives by design.
 # SQL injection is deliberately NOT matched: a `psql -c "...$x..."` is not
@@ -32,6 +37,7 @@ import os
 import re
 import shlex
 import sys
+import time
 
 # sidecar control — no-op when /sidecar disabled this plugin
 try:
@@ -228,13 +234,128 @@ def _chain_has_prior_cd(segments, idx):
     return False
 
 
-def check_cwd_suicide(cmd_full, cwd):
-    """Return a deny reason iff the full Bash command would delete `cwd`
-    or an ancestor of it. Returns None for any uncertain case (e.g.
-    unparseable command, target outside cwd, prior `cd` in the chain)."""
-    if not cwd:
+# 0.3.0 — cross-session detection. The same posix_spawn-ENOENT failure
+# mode that 0.2.0 catches in-session also fires when a SIBLING Claude
+# Code session deletes our cwd from the outside (sibling-cleanup of a
+# parallel-agent isolation worktree was the 2026-05-20 case). We can't
+# stop another session's hooks from being installed mid-run, but we CAN
+# stop OUR session from being the one that wipes a sibling's cwd. Active
+# sessions are discovered by scanning `~/.claude/projects/**/*.jsonl` —
+# Claude Code writes a jsonl transcript per session there, every line
+# carries a `cwd` field, and the file's mtime advances with each turn,
+# so mtime within TTL ≈ live session. Read-only probe, no extra infra.
+
+_SESSIONS_TTL_DEFAULT_MIN = 60
+_PROJECTS_ROOT = os.path.join(os.path.expanduser("~"), ".claude", "projects")
+
+
+def _last_jsonl_cwd(path):
+    """Return the `cwd` field of the last non-empty record in a jsonl
+    transcript, or "" if unreadable / absent. Streams from the file's
+    end so multi-MB transcripts aren't loaded whole."""
+    try:
+        with open(path, "rb") as f:
+            f.seek(0, 2)
+            size = f.tell()
+            buf = b""
+            chunk = 4096
+            pos = size
+            while pos > 0 and buf.count(b"\n") < 2:
+                read = min(chunk, pos)
+                pos -= read
+                f.seek(pos)
+                buf = f.read(read) + buf
+            for line in reversed(buf.splitlines()):
+                if not line.strip():
+                    continue
+                try:
+                    rec = json.loads(line.decode("utf-8", "replace"))
+                except Exception:
+                    continue
+                c = rec.get("cwd")
+                if isinstance(c, str) and c:
+                    return c
+    except Exception:
+        pass
+    return ""
+
+
+def _ttl_minutes():
+    """Resolved liveness window in minutes. 0 disables the cross-session
+    axis entirely (escape hatch). Negative / unparseable → default."""
+    raw = os.environ.get("SIDECAR_BASH_GUARD_SESSION_TTL_MIN")
+    if raw is None:
+        return _SESSIONS_TTL_DEFAULT_MIN
+    try:
+        n = int(raw)
+    except ValueError:
+        return _SESSIONS_TTL_DEFAULT_MIN
+    return n if n >= 0 else _SESSIONS_TTL_DEFAULT_MIN
+
+
+def _active_session_cwds(self_session_id):
+    """List of (cwd_realpath, session_id, mtime) for every Claude Code
+    session whose transcript was modified within the TTL window, with the
+    current session excluded by id. Returns [] when the axis is disabled
+    (TTL=0), the projects dir is absent, or anything errors — fail-open."""
+    ttl = _ttl_minutes()
+    if ttl == 0 or not os.path.isdir(_PROJECTS_ROOT):
+        return []
+    cutoff = time.time() - ttl * 60
+    out = []
+    try:
+        projs = list(os.scandir(_PROJECTS_ROOT))
+    except OSError:
+        return []
+    for proj in projs:
+        try:
+            if not proj.is_dir():
+                continue
+            entries = list(os.scandir(proj.path))
+        except OSError:
+            continue
+        for entry in entries:
+            try:
+                if not entry.name.endswith(".jsonl") or not entry.is_file():
+                    continue
+                st = entry.stat()
+            except OSError:
+                continue
+            if st.st_mtime < cutoff:
+                continue
+            sid = entry.name[:-len(".jsonl")]
+            if self_session_id and sid == self_session_id:
+                continue
+            cwd = _last_jsonl_cwd(entry.path)
+            if not cwd:
+                continue
+            try:
+                cwd_real = os.path.realpath(cwd)
+            except Exception:
+                continue
+            out.append((cwd_real, sid, st.st_mtime))
+    return out
+
+
+def _target_hits_other_cwd(target, base_cwd, others):
+    """If realpath(target) IS or contains any other session's cwd_real,
+    return (cwd_real, sid, mtime); else None."""
+    tr = _resolve(target, base_cwd or os.getcwd())
+    if not tr:
         return None
+    for cwd_real, sid, mt in others:
+        if cwd_real == tr or cwd_real.startswith(tr + os.sep):
+            return (cwd_real, sid, mt)
+    return None
+
+
+def check_cwd_suicide(cmd_full, cwd, self_session_id=""):
+    """Return a deny reason iff the full Bash command would delete the
+    cwd of THIS session OR (0.3.0) of any other ACTIVE Claude Code
+    session. Returns None for any uncertain case (unparseable command,
+    target outside any tracked cwd, prior `cd` in the chain)."""
     segments = re.split(r"&&|\|\||[;\n]", cmd_full)
+    others = None  # lazy — only scan transcripts if we find a deletion shape
     for i, seg in enumerate(segments):
         if not seg.strip():
             continue
@@ -245,7 +366,7 @@ def check_cwd_suicide(cmd_full, cwd):
             continue  # user explicitly cd'd out earlier in the chain
         cmd_label, targets = parsed
         for t in targets:
-            if _is_cwd_suicide(t, cwd):
+            if cwd and _is_cwd_suicide(t, cwd):
                 return ("`%s %s` would delete `%s` — the realpath of "
                         "that target IS (or contains) the session's "
                         "current cwd `%s`. After the call every "
@@ -254,6 +375,23 @@ def check_cwd_suicide(cmd_full, cwd):
                         "use `git -C <other> worktree remove ...` "
                         "AFTER `cd`-ing somewhere else)."
                         % (cmd_label, t, t, cwd))
+            if others is None:
+                others = _active_session_cwds(self_session_id)
+            hit = _target_hits_other_cwd(t, cwd, others)
+            if hit:
+                other_cwd, other_sid, other_mt = hit
+                age_min = max(0, int((time.time() - other_mt) / 60))
+                return ("`%s %s` would delete `%s` — the realpath of "
+                        "that target IS (or contains) the cwd of "
+                        "ANOTHER active Claude Code session (`%s`, "
+                        "session %s…, last active %d min ago). Deleting "
+                        "it would posix_spawn-ENOENT every hook in that "
+                        "session until it is restarted. Coordinate with "
+                        "the other session first, or set "
+                        "SIDECAR_BASH_GUARD_SESSION_TTL_MIN=0 to disable "
+                        "the cross-session check entirely."
+                        % (cmd_label, t, t, other_cwd, other_sid[:8],
+                           age_min))
     return None
 
 
@@ -348,9 +486,17 @@ def main():
                 deny(hit)
 
     # cwd-suicide — looks at the chain as a whole so a prior `cd` can
-    # waive the check (the user is moving the shell out first).
+    # waive the check (the user is moving the shell out first). 0.3.0
+    # also blocks deletions targeting another active session's cwd.
     cwd = payload.get("cwd") or os.environ.get("PWD") or ""
-    hit = check_cwd_suicide(cmd, cwd)
+    self_sid = (payload.get("session_id")
+                or payload.get("sessionId") or "")
+    if not self_sid:
+        tp = (payload.get("transcript_path")
+              or payload.get("transcriptPath") or "")
+        if tp.endswith(".jsonl"):
+            self_sid = os.path.basename(tp)[:-len(".jsonl")]
+    hit = check_cwd_suicide(cmd, cwd, self_sid)
     if hit:
         deny(hit)
 

@@ -7,5 +7,12 @@
   "metadata": {
     "pluginRoot": "."
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "commons",
+      "source": "./hooks/commons",
+      "description": "SessionStart hook — injects a cross-project common do/dont layer above the per-project AGENTS.tape.",
+      "version": "0.1.0"
+    }
+  ]
 }

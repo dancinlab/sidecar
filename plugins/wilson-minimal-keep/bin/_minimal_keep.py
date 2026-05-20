@@ -3,10 +3,12 @@
 # AGENTS.md / CLAUDE.md) lean. Invoked by minimal-keep.sh so sys.stdin is
 # the Claude Code PreToolUse payload. No wilson binary dependency.
 #
-# Three bloat signals (data-driven — calibrated against 164 unique-content
-# master AGENTS.* under ~/core on 2026-05-20, with /.claude/worktrees/
-# duplicates excluded). The three caps target the SAME top-decile bloat
-# tail so fire rates stay roughly aligned (~10%/6%/10%):
+# Four bloat signals. S1/S2/S3 are file-level (data-driven — calibrated
+# against 164 unique-content master AGENTS.* under ~/core on 2026-05-20,
+# with /.claude/worktrees/ duplicates excluded). The three file-level caps
+# target the SAME top-decile bloat tail so fire rates stay roughly aligned
+# (~10%/6%/10%). S4 is per-entry — applies only when the content carries
+# tape `@<TYPE>` headers (declarative tape entries).
 #   S1 total-lines  file > MAX_LINES        (Write only — needs the full file)
 #                   280 ≈ p90 of measured master files → ~10% fire
 #   S2 long-line    any line > MAX_LINE_LEN (the dominant "verbose" signal)
@@ -16,6 +18,12 @@
 #   S3 history      a Log/History/Changelog heading, or >=3 dated bullets —
 #                   history belongs in REGISTRY.md / GROWTH.md, not here
 #                   ~10% fire (binary signal — no threshold)
+#   S4 tape-entry   per `@<TYPE>` block: > MAX_ENTRY_CHARS · heredoc in a
+#                   field · > MAX_FIELDS fields. Enforces the `.tape` v1.2
+#                   Compactness invariants (~/core/tape/spec/tape.md
+#                   2026-05-20 amendment). Fires only on files whose
+#                   content contains tape headers — AGENTS.tape and any
+#                   CLAUDE.md symlinked to one.
 #
 # Two modes via SIDECAR_MINIMAL_KEEP_MODE (WILSON_ accepted):
 #   block (default)  the write is DENIED at PreToolUse
@@ -32,6 +40,10 @@ import json, os, re, sys
 EVENT = "PreToolUse"
 MAX_LINES = 280
 MAX_LINE_LEN = 500
+MAX_ENTRY_CHARS = 500    # S4 — per `@<TYPE>` entry total (header + body)
+MAX_FIELDS = 5           # S4 — `key = ...` payload lines per entry
+TAPE_HEADER = re.compile(r"^@[A-Z?]\S*\s")
+FIELD_LINE = re.compile(r"^\s{2}[a-z_][a-z0-9_-]*\s*(?:=|<<)")
 BASENAMES = ("AGENTS.tape", "AGENTS.md", "CLAUDE.md")
 EXCLUDE = ("/archive", "/old/", "/vendor/", "/third_party/",
            "/node_modules/", "/.venv/", "/scratch/", "/templates/",
@@ -76,6 +88,57 @@ def find_bloat(content, is_write):
         out.append("S3 history: log/history heading on line %d" % hist)
     elif dated >= 3:
         out.append("S3 history: %d dated bullets" % dated)
+    out.extend(find_tape_bloat(lines))
+    return out
+
+
+# -- S4 — per-tape-entry Compactness invariants (~/core/tape/spec/tape.md
+# 2026-05-20 amendment). Walks `@<TYPE>` blocks. A block runs from a
+# column-0 header line through its 2-space-indented continuation lines,
+# stopping at the next blank line or column-0 line. Heredoc body counts
+# toward the block but its presence is itself a violation.
+def find_tape_bloat(lines):
+    if not any(TAPE_HEADER.match(x) for x in lines):
+        return []
+    out, i = [], 0
+    while i < len(lines):
+        if not TAPE_HEADER.match(lines[i]):
+            i += 1
+            continue
+        start, block, heredoc = i, [lines[i]], None
+        i += 1
+        while i < len(lines):
+            ln = lines[i]
+            if heredoc is not None:
+                block.append(ln)
+                if ln.strip() == heredoc:
+                    heredoc = None
+                i += 1
+                continue
+            if ln == "" or not ln.startswith("  "):
+                break
+            block.append(ln)
+            m = re.search(r"<<~?(\w+)\s*$", ln)
+            if m:
+                heredoc = m.group(1)
+            i += 1
+        chars = len("\n".join(block))
+        m = re.match(r"^@\S+\s+(\S+)", block[0])
+        eid = m.group(1) if m else "<unknown>"
+        fields = [b for b in block[1:] if FIELD_LINE.match(b)]
+        has_heredoc = any("<<" in b for b in fields)
+        if chars > MAX_ENTRY_CHARS:
+            out.append("S4 entry-too-big: @%s on line %d is %d chars > %d "
+                       "cap (split / shorten — see tape.md v1.2 amendment)"
+                       % (eid, start + 1, chars, MAX_ENTRY_CHARS))
+        if has_heredoc:
+            out.append("S4 entry-multiline: @%s on line %d uses heredoc — "
+                       "field values must be 1 line in declarative tapes"
+                       % (eid, start + 1))
+        if len(fields) > MAX_FIELDS:
+            out.append("S4 too-many-fields: @%s on line %d has %d fields > "
+                       "%d cap (split entry)"
+                       % (eid, start + 1, len(fields), MAX_FIELDS))
     return out
 
 

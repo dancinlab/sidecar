@@ -44,3 +44,13 @@
   - 정밀화: heading body ≤ 60 chars + 키워드가 heading 끝 근처 ([^#\w]{0,10}$) → `## Changelog` / `## Audit log` / `# ─── migration history ────` 같은 진짜 archive-section heading 유지, 부분 일치 narration 차단
   - H1-H4 까지만 (`^#{1,4}`) — H5/H6 의 history section 은 거의 없음, 또한 다른 plugin 들이 heading 깊이로 의도를 시그널 (e.g. H1/H2 = canonical section)
   - 변경 범위 1 라인 (regex compile) · 회귀 위험 작음 · false-positive 직접 줄임
+
+### Decision 6 — S4 tape-entry hard cap — `.tape` v1.2 Compactness invariants 강제
+- **picked**: per `@<TYPE>` 블록 — `MAX_ENTRY_CHARS=500` · 헤더+body 합산 · field 값 1줄 (heredoc ban) · field 수 ≤ 5; 적용은 tape header (`@<TYPE>`) 를 포함하는 content 에 한정
+- **rationale**:
+  - 2026-05-20 사용자 신호 ".tape 너무 길어지지 않게 @ 마다 글자수 제한". 측정: sidecar AGENTS.tape 의 `g_ship_syncs_install` 블록이 ~570 자 — apply 필드가 산문 escape 로 부풀어진 상태. cap 없으면 다음 governance 가 600 → 800 으로 자라는 게 기본 경로
+  - hard cap 500 = 현 최장 블록 미만 → "더 줄여 써라" 압력. 별도 `.md` pointer escape hatch 금지 — 그 hatch 가 있으면 사람들이 거기로 다 도망가고 cap 이 무의미해짐 (사용자 직접 거절)
+  - heredoc (`<<~EOF`) 차단 = 산문 escape 차단의 본체 — 1-line field 강제는 단순 글자수 cap 보다 미시적인 형태 제약, 분리·기호 압축·외부 참조 셋 중 하나로 마이그레이션 강제
+  - spec 측 정의는 `~/core/tape/spec/tape.md` 2026-05-20 amendment 로 같은 PR 에 동반 — detect 와 정의가 한 단계에서 정렬되어야 day-1 dogfood 실패 없음 (g_ship_syncs_install 자체를 단축해서 ≤500 으로 통과시킴)
+  - 측정 범위: 헤더 라인 + 모든 body 라인 (들여쓰기 포함), \n 1자, CJK 와 Latin 동일하게 1자 — 룰 단순 · CJK 정보밀도가 높아 영어보다 약간 빡센 게 의도된 비대칭
+  - 적용 범위: 선언적 placement (`AGENTS.tape` / `identity.tape` / `<DOMAIN>.tape`) 만. append-only event-stream (`<sid>.tape` · `<DOMAIN>.log.tape`) 은 unbounded — runtime 이벤트는 자연스럽게 길이 분포가 다름. plugin 은 content sniff 로 자동 판별 (tape header 없으면 S4 skip)

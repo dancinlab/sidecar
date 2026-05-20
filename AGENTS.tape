@@ -20,8 +20,8 @@
 
 # ─── §2 Governance ───────────────────────────────────────────────────
 
-@D g_ship_syncs_install := "ship syncs the local install — do NOT defer to /plugin" :: governance [required d=2026-05-19 active]
-  rule = "플러그인을 ship(버전 bump + push)하면, 같은 작업 안에서 현재 시스템의 설치본도 즉시 업데이트한다 — 사용자가 /plugin 을 돌릴 때까지 미루지 않는다."
-  apply = "마켓플레이스 클론(~/.claude/plugins/marketplaces/sidecar) git pull → 캐시 ~/.claude/plugins/cache/sidecar/<name>/<ver>/ 를 repo 내용으로 재생성 → installed_plugins.json 의 <name>@sidecar 항목 갱신 (version · installPath · gitCommitSha · lastUpdated)"
-  scope = "모든 sidecar 플러그인 — wilson-sdlc:ship 체크리스트의 사실상 8단계"
-  note = "새 버전은 다음 claude 세션부터 로드된다 — 현재 세션은 구버전 유지"
+@D g_ship_syncs_install := "ship 은 로컬 install 도 즉시 갱신" :: governance [required d=2026-05-19 active]
+  rule  = "version bump + push 와 같은 작업에서 설치본도 갱신; /plugin 대기 금지"
+  apply = "marketplace clone pull → cache 재생성 → installed_plugins.json patch (ver·path·sha·ts)"
+  scope = "모든 sidecar 플러그인 · wilson-sdlc:ship 8단계"
+  note  = "새 버전은 다음 세션부터 로드"

@@ -1,50 +1,54 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# Sidecar Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Concept Separation
+1 plugin = exactly 1 of `{hook, command, skill}`. Each plugin lives under the matching top-level directory (`hooks/<name>/`, `commands/<name>/`, `skills/<name>/`). No mixing — a plugin never combines a PreToolUse hook with a slash command in the same package.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Ship = Commit + Push + Install
+A ship cycle is one atomic operation in three steps: (1) commit, (2) push to `origin/main`, (3) sync the local install (`marketplace pull` → cache copy to `~/.claude/plugins/cache/sidecar/<name>/<version>/` → patch `installed_plugins.json` with `ver/path/sha/ts`). Source on the remote and the version on disk never lag each other.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Evidence Before Ship
+Every new plugin lands with: a `design.md` decision entry (one decision per gate, never batched), a fire-rate or behavioral measurement when applicable, at least one smoke/test, and a README. No measurement = no ship. Functional duplication with an existing plugin = block.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Minimal Write & Implementation
+Code, docs, and configs are written in the smallest form that captures intent. No speculative features, no premature abstraction, no decorative prose. Per-`@D :: governance` entry in any `.tape` file uses only `do` / `dont` body keys — never `rule` / `why` / `apply` / `cross_link` / etc.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Stacked Small PRs
+A change >200 lines or covering >1 logical concern is broken into a chain of stacked PRs, each <200 lines and each `--base` the previous layer's branch. Long-lived feature branches and large multi-purpose PRs are blocked.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+### VI. AI-Native Authoring
+Structured / machine-readable artifacts over prose. English for all artifacts (code, docs, config). The agent responds to the user in Korean while keeping every committed artifact in English.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### VII. Spec-Driven Development
+Work flows through the Spec Kit pipeline: `constitution → specify → (clarify) → plan → (checklist) → tasks → (analyze) → implement`. The pipeline's atomic-task / file-exclusivity check is the prerequisite for parallel agent dispatch.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Repository Layout
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+```
+sidecar/
+├── hooks/            # PreToolUse · SessionStart auto-behavior plugins
+├── commands/         # /slash-command invoked plugins
+├── skills/           # Skill tool invocable plugins
+├── .claude/skills/   # Spec Kit project-scope skills (tracked)
+├── .specify/         # Spec Kit pipeline artifacts (this constitution lives here)
+├── .claude-plugin/marketplace.json   # plugin registry
+└── archive/          # offline reference only · not distributed
+```
+
+## Development Workflow
+
+1. **Decision**: every new direction lands in `design.md` as `### Decision N — <picked>` with 2+ rationale bullets before the next decision opens.
+2. **Spec**: feature work begins with `/speckit-specify "<intent>"`. The resulting `.specify/specs/<NNN-feature>/spec.md` is the contract.
+3. **Plan + Tasks**: `/speckit-plan` and `/speckit-tasks` produce the implementation plan and the file-exclusivity-checked atomic task list.
+4. **Implement**: `/speckit-implement` executes tasks. Parallel agents dispatch only on disjoint file sets.
+5. **Ship**: per Principle II — commit, push, sync local install.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This constitution supersedes prior `AGENTS.tape` governance for sidecar (legacy `AGENTS.tape` is kept dormant for reference).
+- Amendments land via a new `design.md` decision entry and a single PR.
+- The `commons` hook (`hooks/commons/commons.tape`) carries the cross-project layer that sits above any project constitution — when a project rule conflicts with `commons`, `commons` wins unless the project decision explicitly overrides it.
+- Complexity must be justified in the corresponding `design.md` entry. Default = simpler.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-05-21 | **Last Amended**: 2026-05-21

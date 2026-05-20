@@ -13,6 +13,14 @@
   - SessionStart hook (auto-inject) chosen over /slash command — applies regardless of user invocation; matches g_concept_separation (hooks/ ⊂ auto-behavior).
   - body kept to a single `@D :: governance` entry with `do` / `dont` only — same shape as AGENTS.tape governance, very short.
 
+### Decision 5 — `git-guard` plugin (force/no-verify deny)
+- **picked**: `hooks/git-guard/` · PreToolUse(Bash) Python guard · 6 regex patterns (force-push · force-with-lease · refspec-force `+<ref>` · commit/merge/rebase --no-verify).
+- **rationale**:
+  - mirrors the existing `~/.claude/settings.json::permissions.deny` `git push -f*` family but makes the rule portable across every sidecar install (settings is a per-user file, not the marketplace).
+  - extends the surface — refspec-force and `--no-verify` weren't covered by the settings denies; this catches them.
+  - opt-out is `SIDECAR_NO_GIT_GUARD=1` (logged in the deny payload — visible, not silent) + the sidecar disable surface (`~/.claude/sidecar/disabled.json`).
+  - PR auto-merge plugin (sibling idea raised in same instruction) deferred per user — separate scope.
+
 ### Decision 4 — `hexa-lsp` plugin (LSP wiring, minimal scope)
 - **picked**: `hooks/hexa-lsp/` with `.claude-plugin/plugin.json` (lspServers ref) + `lsp.json` (one server entry).
 - **rationale**:

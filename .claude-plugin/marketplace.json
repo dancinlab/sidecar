@@ -25,6 +25,12 @@
       "source": "./hooks/hexa-lsp",
       "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. Minimal: only `.hexa` claimed.",
       "version": "0.1.0"
+    },
+    {
+      "name": "git-guard",
+      "source": "./hooks/git-guard",
+      "description": "PreToolUse(Bash) deny for force-push · force-with-lease · refspec-force · git {commit,merge,rebase} --no-verify. Opt out: SIDECAR_NO_GIT_GUARD=1.",
+      "version": "0.1.0"
     }
   ]
 }

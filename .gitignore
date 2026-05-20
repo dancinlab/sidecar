@@ -1,6 +1,9 @@
 
 # Claude Code worktree internals (background-agent isolation)
 .claude/
+# but track Spec Kit's project-scope skills
+!.claude/skills/
+!.claude/skills/**
 
 # hexa build artifacts (from running plugin .hexa scripts during dev)
 build/

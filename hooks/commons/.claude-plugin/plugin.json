@@ -1,7 +1,7 @@
 {
   "name": "commons",
   "description": "SessionStart hook — injects a cross-project common do/dont layer above the per-project AGENTS.tape.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

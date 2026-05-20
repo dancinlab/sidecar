@@ -1,9 +1,7 @@
 
-# Claude Code worktree internals (background-agent isolation)
-.claude/
-# but track Spec Kit's project-scope skills
+# Claude Code internals — exclude all by default, then whitelist Spec Kit skills
+.claude/*
 !.claude/skills/
-!.claude/skills/**
 
 # hexa build artifacts (from running plugin .hexa scripts during dev)
 build/

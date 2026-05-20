@@ -45,6 +45,15 @@
   - H1-H4 까지만 (`^#{1,4}`) — H5/H6 의 history section 은 거의 없음, 또한 다른 plugin 들이 heading 깊이로 의도를 시그널 (e.g. H1/H2 = canonical section)
   - 변경 범위 1 라인 (regex compile) · 회귀 위험 작음 · false-positive 직접 줄임
 
+### Decision 7 — guard scope 확장 → 모든 declarative `*.tape` (event-stream 면제)
+- **picked**: `BASENAMES`-only 매칭 → `is_guarded(path)` 헬퍼로 모든 `*.tape` 커버; event-stream 만 면제 (`*.log.tape` · `*.history.tape` · `::` 포함 파일명 · `/sessions/` · `/recap/` · `/harness-cli/` 경로)
+- **rationale**:
+  - 2026-05-20 진단 — 0.6.0 까지 cap 은 `AGENTS.tape` · `AGENTS.md` · `CLAUDE.md` 만. 그러나 anima 에는 70+ 개의 declarative `<DOMAIN>.tape` (HEXAD-C/D/E/M/S/W, ANIMA-AGENT, BENCHMARK, IDENTITY, …) 가 있고, 이들이 같은 v1.2 Compactness invariants 의 적용 대상임에도 guard 가 sleep 함. 결과: master AGENTS 만 trim 되고 sibling domain tape 들이 무방비로 bloat → scope 자체가 bug
+  - tape.md v1.2 line 189 가 명확히 분리: declarative (latest-wins editable) = `AGENTS.tape` / `identity.tape` / `<DOMAIN>.tape`; event-stream (append-only unbounded) = `<sid>.tape` / `<DOMAIN>.log.tape` / `recap/index.tape` / `<PROJ>::<DOMAIN>.tape`. spec 의 분리선이 guard 의 적용 경계와 정확히 일치 — 필터로 옮기면 됨
+  - 분류 신호: filename suffix + path part. `.log.tape` / `.history.tape` 접미사 + filename 의 `::` + path 의 `/sessions/` `/recap/` `/harness-cli/` 5개 조합으로 전부 잡힘. content sniff 불필요 (S4 의 tape-header sniff 와 겹쳐 더블 가드)
+  - 변경 범위: `is_guarded()` 헬퍼 1개 추가 + 2 군데 호출부 교체 + 상수 2개. 회귀 위험 작음 — fixed BASENAMES 는 그대로 first-class 통과
+  - 측정: hexa-lang 스캔 hits 5 → 13 (atlas/MAIN.tape, ZETA-equivalents 류가 새로 잡힘); anima 는 70+ 추가 declarative tape 모두 검사 대상으로 진입
+
 ### Decision 6 — S4 tape-entry hard cap — `.tape` v1.2 Compactness invariants 강제
 - **picked**: per `@<TYPE>` 블록 — `MAX_ENTRY_CHARS=500` · 헤더+body 합산 · field 값 1줄 (heredoc ban) · field 수 ≤ 5; 적용은 tape header (`@<TYPE>`) 를 포함하는 content 에 한정
 - **rationale**:

@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
-# wilson-minimal-keep core — keep agent-context files (AGENTS.tape /
-# AGENTS.md / CLAUDE.md) lean. Invoked by minimal-keep.sh so sys.stdin is
-# the Claude Code PreToolUse payload. No wilson binary dependency.
+# wilson-minimal-keep core — keep declarative agent-context files lean.
+# 0.7.0 expanded scope: AGENTS.md / CLAUDE.md, plus every declarative
+# `*.tape` (AGENTS.tape, identity.tape, <DOMAIN>.tape). Event-stream
+# tapes (<sid>.tape, <DOMAIN>.log.tape, *.history.tape, recap/index.tape,
+# <PROJ>::<DOMAIN>.tape) are append-only and unbounded by design — see
+# tape.md v1.2 line 189 — so the guard exempts them via is_guarded().
+# Invoked by minimal-keep.sh so sys.stdin is the Claude Code PreToolUse
+# payload. No wilson binary dependency.
 #
 # Four bloat signals. S1/S2/S3 are file-level (data-driven — calibrated
 # against 164 unique-content master AGENTS.* under ~/core on 2026-05-20,
@@ -44,7 +49,15 @@ MAX_ENTRY_CHARS = 500    # S4 — per `@<TYPE>` entry total (header + body)
 MAX_FIELDS = 5           # S4 — `key = ...` payload lines per entry
 TAPE_HEADER = re.compile(r"^@[A-Z?]\S*\s")
 FIELD_LINE = re.compile(r"^\s{2}[a-z_][a-z0-9_-]*\s*(?:=|<<)")
+# Declarative-equivalent non-tape files. All `*.tape` files are also guarded
+# (0.7.0) per `.tape` v1.2 spec — declarative placements (AGENTS.tape,
+# identity.tape, <DOMAIN>.tape) are latest-wins editable so the Compactness
+# bounds apply. Event-stream tapes (<sid>.tape under sessions/, <DOMAIN>.log
+# .tape, *.history.tape, <PROJ>::<DOMAIN>.tape, recap/index.tape) are
+# append-only and unbounded by design — see is_guarded() below.
 BASENAMES = ("AGENTS.tape", "AGENTS.md", "CLAUDE.md")
+EVENT_STREAM_SUFFIXES = (".log.tape", ".history.tape")
+EVENT_STREAM_PATH_PARTS = ("/sessions/", "/recap/", "/harness-cli/")
 EXCLUDE = ("/archive", "/old/", "/vendor/", "/third_party/",
            "/node_modules/", "/.venv/", "/scratch/", "/templates/",
            "/examples/", "/.git/",
@@ -67,6 +80,28 @@ HISTORY_HEADING = re.compile(
     r"^#{1,4}\s+[^#\n]{0,60}\b(?:log|history|changelog)\b[^#\w\n]*$",
     re.IGNORECASE)
 DATED_BULLET = re.compile(r"^\s*[-*]\s.*20\d\d-[01]?\d")
+
+
+# -- guarded-file filter --------------------------------------------
+def is_guarded(path):
+    """True iff `path` is a declarative agent-context file the guard
+    enforces — the fixed BASENAMES, or any `*.tape` whose name/path
+    doesn't match the .tape v1.2 event-stream exemptions (line 189 of
+    ~/core/tape/spec/tape.md). Event-stream tapes are append-only and
+    unbounded by design — applying compactness bounds to them is wrong."""
+    fn = os.path.basename(path)
+    if fn in BASENAMES:
+        return True
+    if not fn.endswith(".tape"):
+        return False
+    if any(fn.endswith(s) for s in EVENT_STREAM_SUFFIXES):
+        return False
+    if "::" in fn:  # <PROJ>::<DOMAIN>.tape — cross-project federated
+        return False
+    p = path.replace("\\", "/")
+    if any(s in p for s in EVENT_STREAM_PATH_PARTS):
+        return False
+    return True
 
 
 # -- detection (shared by the hook and the scan verb) ----------------
@@ -150,8 +185,8 @@ def scan(root):
         dns[:] = [d for d in dns
                   if d not in (".git", "node_modules", ".venv")]
         for fn in fns:
-            if fn in BASENAMES:
-                fp = os.path.join(dp, fn)
+            fp = os.path.join(dp, fn)
+            if is_guarded(fp):
                 # Apply the same EXCLUDE filter the hook uses — without
                 # this, scan reports N duplicate copies under isolated-
                 # agent worktrees as N hits, drowning the master signal.
@@ -166,7 +201,8 @@ def scan(root):
                     hits.append((fp, f))
     for fp, f in sorted(hits):
         print("%s\n  %s" % (fp, "\n  ".join(f)))
-    print("\n%d bloated AGENTS.* file(s) under %s" % (len(hits), root))
+    print("\n%d bloated declarative-context file(s) under %s"
+          % (len(hits), root))
 
 
 def allow():
@@ -215,7 +251,7 @@ def main():
     if not isinstance(ti, dict):
         allow()
     path = ti.get("file_path") or ti.get("path") or ""
-    if not path or os.path.basename(path) not in BASENAMES:
+    if not path or not is_guarded(path):
         allow()
     if any(s in path for s in EXCLUDE):
         allow()

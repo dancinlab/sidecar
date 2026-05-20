@@ -42,7 +42,7 @@
 | `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | Бандл из 3 guard-ов рабочего процесса dancinlab — `ssot-lock` (запрет правки файла, совпавшего с пунктом `ssot-lock:` в ближайшем `AGENTS.md ## Governance`), `tape-append-only` (история событий `.log.tape` только-добавление — запрет переписывающего Edit / перезаписывающего Write; по разделению architecture-vs-history в tape v1.2 обычный `.tape` — редактируемая архитектура, для неё guard INERT), `domain-lint` (корневой `UPPERCASE.md`-роадмап темы должен быть `Head + --- + ## Log`) — standalone-порт, **работает**; каждый guard INERT, если его соглашения нет (opt out: `SIDECAR_NO_GUARDS=1`) |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Внедрение в контекст SSOT обходом вверх по `AGENTS.md` (эквивалент `agents-md` из wilson) — **работает** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Запрет корневого `README.md`, нарушающего readme-format (эмодзи в прозе / много-глифный H1 / неанглийский At-a-glance / `####`) — standalone-порт wilson `guard-readme-format`, **работает** |
-| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: запрет Bash-вызовов не-hexa верификаторов (sympy/PyPhi/wolframscript/mathematica) → перенаправление на hexa CLI. PostToolUse: когда `hexa verify` сообщает о новом SUPPORTED-уравнении (🔵/🟢), **автоматически открывает PR** в `dancinlab/hexa-lang`, впекая уравнение во встроенный atlas бинарника (заполняет заглушку шага `pr` у `hexa atlas promote`; PR оставляется на ревью, не авто-merge) — при невозможности откатывается на подсказку workflow `worktree-pr`. Standalone-порт + расширение wilson `guard-hexa-verify`, **работает**. ⚠ INERT, если `hexa` нет в PATH |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: запрет Bash-вызовов не-hexa верификаторов (sympy/PyPhi/wolframscript/mathematica) → перенаправление на hexa CLI. PostToolUse: когда `hexa verify` сообщает о новом SUPPORTED-уравнении (🔵/🟢), **автоматически открывает PR** в `dancinlab/hexa-lang`, впекая уравнение во встроенный atlas бинарника (заполняет заглушку шага `pr` у `hexa atlas promote`; PR оставляется на ревью, не авто-merge). Standalone-порт + расширение wilson `guard-hexa-verify`, **работает**. ⚠ INERT, если `hexa` нет в PATH |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Запрет Write/Edit/MultiEdit по защищённым системным путям (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) и путям учётных данных (`~/.ssh`·`~/.aws`·gh config·keychain·credentials) — standalone-порт wilson `guard-dangerous-path`, **работает** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | Запрет force-push — `git push` с `--force`/`-f`/`+refspec` (и `--force-with-lease`, если не задан `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`) блокируется — standalone-порт wilson `git-guard`, **работает** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | Запрет записи реального файла `.env` или контента с высоконадёжными учётными данными (токены AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe, приватные ключи PEM); блокирует промпт, в который вставлены такие данные — только высоконадёжные паттерны, почти ноль ложных срабатываний, **работает** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
@@ -58,7 +58,6 @@
 | `wilson-inbox` | `SessionStart` + `/wilson-inbox:inbox` | Межпроектный inbox для передачи — когда пробел или запрос затрагивает другой SSOT-репозиторий, оформляйте это там как структурированную запись `inbox/<kind>/<slug>.md` (kind: `notes`/`patches`/`poc`/`rfc_drafts`), а не обходите молча вниз по потоку. `/wilson-inbox:inbox` создаёт и ведёт записи — `add`/`list`/`show`/`path`/`verify`/`apply`/`archive`/`rm`; целевой репозиторий — `--to <name>` (`~/core/<name>`) или ближайший `.git` при подъёме от cwd. Light-mode — папка + записи; heavy-mode добавляет `inbox/PATCHES.yaml` с жизненным циклом статусов, которые переключают `apply`/`archive`. `SessionStart` показывает записи inbox текущего репозитория — передача не забывается — **работает** · INERT, если в репозитории нет `inbox/` (opt out: `SIDECAR_NO_INBOX=1`) |
 | `wilson-lsp` | LSP-серверы `.lsp.json` (не hook) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → канонические серверы из repo каждого формата (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, поставляются в `github.com/dancinlab/{tape,n6,hxc,kosmos}`). graceful — сервер не в PATH просто виден в `/plugin` Errors. Жизненный цикл LSP управляется CC (переключать через `/plugin`, не `/sidecar`) |
 | `sidecar` | команда `/sidecar` (контроль) | Рантайм on/off остальных плагинов — `/sidecar status\|on\|off <name>` (имена: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal inbox guards или `all`). Общий `~/.claude/sidecar/disabled.json` проверяется каждым hook · сохраняется между сессиями · дополняет нативный `/plugin` |
-| `worktree-pr` | команда `/worktree-pr:wt` (workflow) | Безопасный процесс **worktree → PR → merge → очистка** — `start <name>` (изолированный worktree+ветка от ветки origin по умолчанию), `ship <name> "<title>"` (push + открыть PR), `finish <name>` (merge PR + удалить worktree + удалить ветку + обновить base), `status`, `abort`. Никогда не трогает основное рабочее дерево или ветку параллельной сессии |
 
 Кандидаты дорожной карты: `wilson-memory` (файловая память
 SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
@@ -88,7 +87,6 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
 /plugin install wilson-goal@sidecar            # сохранение цели сессии (через compaction)
 /plugin install wilson-inbox@sidecar           # межпроектный inbox для передачи (inbox/<kind>/<slug>.md)
 /plugin install wilson-lsp@sidecar             # LSP для .hexa / .tape / .n6 / .hxc / .kosmos
-/plugin install worktree-pr@sidecar            # команда-workflow /worktree-pr:wt
 /plugin install sidecar@sidecar                # /sidecar — рантайм on/off контроль
 ```
 
@@ -130,7 +128,6 @@ SessionStart/SessionEnd), `wilson-recap` (резюме PreCompact/SessionEnd).
     "wilson-goal@sidecar": true,
     "wilson-inbox@sidecar": true,
     "wilson-lsp@sidecar": true,
-    "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
   }
 }
@@ -241,12 +238,9 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + LSP repo tape/n6/hxc/kosmos
-│   ├── sidecar/                      # контрольный плагин
-│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│   │   └── bin/_sidecar.py           # пишет общий disabled.json (работает)
-│   └── worktree-pr/
-│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
-│       └── bin/worktree-pr.sh        # worktree → PR → merge → очистка (работает)
+│   └── sidecar/                      # контрольный плагин
+│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│       └── bin/_sidecar.py           # пишет общий disabled.json (работает)
 └── LICENSE
 ```
 

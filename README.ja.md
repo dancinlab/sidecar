@@ -42,7 +42,7 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | dancinlab ワークフローのガード 3 種バンドル — `ssot-lock`（最も近い `AGENTS.md ## Governance` の `ssot-lock:` 箇条書きにマッチするファイルの編集を拒否）、`tape-append-only`（`.log.tape` イベント履歴は追記専用 — 書き換える Edit / 上書き Write を拒否。tape v1.2 の architecture-vs-history 分割により plain `.tape` は編集可能なアーキテクチャなのでガードは inert）、`domain-lint`（ルート `UPPERCASE.md` トピックロードマップは `Head + --- + ## Log` 構造であること） — standalone 移植、**動作**；各ガードは該当する規約が無ければ inert（opt out: `SIDECAR_NO_GUARDS=1`） |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` の上方探索 SSOT をコンテキスト注入（wilson `agents-md` 相当） — **動作** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo ルート `README.md` の readme-format 違反を拒否（emoji-in-prose / multi-glyph H1 / 非英語 At-a-glance / `####`）— wilson `guard-readme-format` の standalone 移植、**動作** |
-| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 非 hexa 検証器（sympy/PyPhi/wolframscript/mathematica）の Bash 呼び出しを拒否 → hexa CLI へ誘導。PostToolUse: `hexa verify` が新しい SUPPORTED 方程式（🔵/🟢）を報告したら `dancinlab/hexa-lang` に **PR を自動作成** — 方程式を binary built-in atlas に焼き込む（`hexa atlas promote` の stub な `pr` を補完、PR は人手レビュー用・自動マージなし）。自律 PR が不可なら `worktree-pr` ワークフロー誘導に fallback。wilson `guard-hexa-verify` の standalone 移植+拡張、**動作**。⚠ `hexa` が PATH に無ければ inert |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 非 hexa 検証器（sympy/PyPhi/wolframscript/mathematica）の Bash 呼び出しを拒否 → hexa CLI へ誘導。PostToolUse: `hexa verify` が新しい SUPPORTED 方程式（🔵/🟢）を報告したら `dancinlab/hexa-lang` に **PR を自動作成** — 方程式を binary built-in atlas に焼き込む（`hexa atlas promote` の stub な `pr` を補完、PR は人手レビュー用・自動マージなし）。wilson `guard-hexa-verify` の standalone 移植+拡張、**動作**。⚠ `hexa` が PATH に無ければ inert |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | 保護システムパス（`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`）・資格情報パス（`~/.ssh`・`~/.aws`・gh config・keychain・credentials）への Write/Edit/MultiEdit を拒否 — wilson `guard-dangerous-path` の standalone 移植、**動作** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push を拒否 — `git push` に `--force`/`-f`/`+refspec`（および `--force-with-lease`、`SIDECAR_ALLOW_FORCE_WITH_LEASE=1` でなければ）が付くとブロック — wilson `git-guard` の standalone 移植、**動作** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | 実際の `.env` ファイルの書き込み、または高信頼クレデンシャル（AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe トークン、PEM 秘密鍵）を含む内容を拒否；そのクレデンシャルを貼り付けたプロンプトをブロック — 高信頼パターンのみ、誤検出ほぼゼロ、**動作**（opt out: `SIDECAR_NO_SECRET_GUARD=1`） |
@@ -58,7 +58,6 @@ governance だけを追加する **プラグインマーケットプレイス re
 | `wilson-inbox` | `SessionStart` + `/wilson-inbox:inbox` | クロスプロジェクト・ハンドオフ inbox — ギャップや要求が別の SSOT repo に影響するなら、その repo に構造化された `inbox/<kind>/<slug>.md` エントリ（kind: `notes`/`patches`/`poc`/`rfc_drafts`）として提出 → ダウンストリームで黙って回避しない。`/wilson-inbox:inbox` がエントリを scaffold・管理 — `add`/`list`/`show`/`path`/`verify`/`apply`/`archive`/`rm`；対象 repo は `--to <name>`（`~/core/<name>`）か cwd から walk-up した最寄りの `.git`。light-mode はフォルダ+エントリ、heavy-mode は `inbox/PATCHES.yaml` のステータス・ライフサイクルを追加（`apply`/`archive` が遷移）。`SessionStart` が現 repo の inbox エントリを surface → ハンドオフ忘れを防ぐ — **動作**・repo に `inbox/` が無ければ inert（opt out: `SIDECAR_NO_INBOX=1`） |
 | `wilson-lsp` | `.lsp.json` LSP サーバ（hook ではない） | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 各フォーマット repo の canonical サーバ（`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`、`github.com/dancinlab/{tape,n6,hxc,kosmos}` 同梱）に接続。graceful — PATH に無ければ `/plugin` Errors に表示。LSP ライフサイクルは CC 管理（切替は `/plugin`、`/sidecar` ではない） |
 | `sidecar` | `/sidecar` コマンド（コントロール） | 他プラグインのランタイム on/off — `/sidecar status\|on\|off <name>`（名前: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal inbox guards、または `all`）。共有 `~/.claude/sidecar/disabled.json` を各 hook が確認・セッション跨ぎ永続・ネイティブ `/plugin` を補完 |
-| `worktree-pr` | `/worktree-pr:wt` コマンド（ワークフロー） | 安全な **worktree → PR → merge → クリーンアップ** ワークフロー — `start <name>`（origin 既定ブランチから隔離 worktree+ブランチ）、`ship <name> "<title>"`（push + PR 作成）、`finish <name>`（PR merge + worktree 削除 + ブランチ削除 + base 更新）、`status`、`abort`。メイン作業ツリー・並行セッションのブランチに非接触 |
 
 ロードマップ候補: `wilson-memory`（SessionStart/SessionEnd ファイル memory）·
 `wilson-recap`（PreCompact/SessionEnd 要約）。
@@ -88,7 +87,6 @@ governance だけを追加する **プラグインマーケットプレイス re
 /plugin install wilson-goal@sidecar            # セッション目標の永続（compaction 越え）
 /plugin install wilson-inbox@sidecar           # クロスプロジェクト・ハンドオフ inbox (inbox/<kind>/<slug>.md)
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
-/plugin install worktree-pr@sidecar            # /worktree-pr:wt ワークフローコマンド
 /plugin install sidecar@sidecar                # /sidecar ランタイム on/off コントロール
 ```
 
@@ -130,7 +128,6 @@ governance だけを追加する **プラグインマーケットプレイス re
     "wilson-goal@sidecar": true,
     "wilson-inbox@sidecar": true,
     "wilson-lsp@sidecar": true,
-    "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
   }
 }
@@ -240,12 +237,9 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 接続
-│   ├── sidecar/                      # コントロールプラグイン
-│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│   │   └── bin/_sidecar.py           # 共有 disabled.json 書込 (動作)
-│   └── worktree-pr/
-│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
-│       └── bin/worktree-pr.sh        # worktree → PR → merge → 整理 (動作)
+│   └── sidecar/                      # コントロールプラグイン
+│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│       └── bin/_sidecar.py           # 共有 disabled.json 書込 (動作)
 └── LICENSE
 ```
 

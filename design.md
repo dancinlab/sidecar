@@ -67,15 +67,15 @@
   - 본문 노동 최소, wilson-goal '목표 compaction 너머 영속'이 generic엔 없는 차별점
   - 트레이드오프: wilson-goal 결합(disabled면 inert) → fallback 한 줄 완화
 
-### Decision 7 — A — Build 스테이지를 worktree-pr + wilson-checkpoint에 매핑
-- **picked**: A — Build 스테이지를 worktree-pr + wilson-checkpoint에 매핑
+### Decision 7 — A — Build 스테이지를 wilson-checkpoint에 매핑
+- **picked**: A — Build 스테이지를 wilson-checkpoint에 매핑
 - **rationale**:
   - D5
   - D6=A와 같은 프리미티브 매핑 노선 — 3단계 연속 동일 철학, 응집
   - 재사용 대상이 GROWTH §1 히어로 웨지(checkpoint 한도/크래시 무손실) — generic Build엔 없는 차별 자산
   - 얇은 skill
-  - 본문 노동 최소, worktree-pr 이미 출하
-  - 트레이드오프: worktree-pr/checkpoint 결합 disabled면 inert → fallback 한 줄 완화
+  - 본문 노동 최소
+  - 트레이드오프: wilson-checkpoint 결합 disabled면 inert → fallback 한 줄 완화
 
 ### Decision 8 — B — Test & Recover 결합 스테이지 (debugging-and-error-recovery 구조 + wilson-pool 본문, D15 통합)
 - **picked**: B — Test & Recover 결합 스테이지 (debugging-and-error-recovery 구조 + wilson-pool 본문, D15 통합)

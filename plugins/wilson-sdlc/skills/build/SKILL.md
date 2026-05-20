@@ -1,6 +1,6 @@
 ---
 name: build
-description: Implement in small verifiable increments inside a worktree, checkpointing so a usage limit or crash never loses work, landing one PR. Use when implementing any planned task that touches more than one file. Stage 3 of the wilson-sdlc pipeline.
+description: Implement in small verifiable increments on a feature branch, checkpointing so a usage limit or crash never loses work, landing one PR. Use when implementing any planned task that touches more than one file. Stage 3 of the wilson-sdlc pipeline.
 ---
 
 # Build (wilson-sdlc · stage 3/7)
@@ -8,9 +8,9 @@ description: Implement in small verifiable increments inside a worktree, checkpo
 ## Overview
 
 Deliver changes as small, verifiable increments — not one big diff. Implement
-in a worktree (`worktree-pr`), commit per increment, and `wilson-checkpoint`
-so a usage-limit reset or crash resumes instead of restarts. One task → small
-commits → one PR.
+on a feature branch (optionally a `git worktree` for isolation), commit per
+increment, and `wilson-checkpoint` so a usage-limit reset or crash resumes
+instead of restarts. One task → small commits → one PR.
 
 ## When to Use
 
@@ -23,16 +23,16 @@ commits → one PR.
 ## The Workflow
 
 ```
-worktree ┐
-         ├─ commit ✓ checkpoint
-         ├─ commit ✓ checkpoint   ← limit / crash here
-         └─ commit ✓ checkpoint      → resume, not restart
-              ↓
-            one PR (worktree-pr)
+feature branch ┐
+               ├─ commit ✓ checkpoint
+               ├─ commit ✓ checkpoint   ← limit / crash here
+               └─ commit ✓ checkpoint      → resume, not restart
+                    ↓
+                  one PR
 ```
 
-1. **Isolate** — implement in a worktree via the `worktree-pr` workflow; the
-   main checkout stays clean.
+1. **Isolate** — implement on a dedicated feature branch; use `git worktree
+   add` if you want the main checkout to stay untouched.
 2. **Increment** — one logical change per commit; each commit should leave the
    tree buildable. Trace every changed line to the task.
 3. **Checkpoint** — `wilson-checkpoint` after meaningful increments so a 5am
@@ -41,6 +41,5 @@ worktree ┐
 
 ## Fallback
 
-No `worktree-pr` → a feature branch + frequent small commits gives most of the
-isolation. No `wilson-checkpoint` → commit more often and push to a remote;
-the durable-progress property comes from frequent, pushed commits either way.
+No `wilson-checkpoint` → commit more often and push to a remote; the
+durable-progress property comes from frequent, pushed commits either way.

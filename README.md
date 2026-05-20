@@ -42,7 +42,7 @@ primitives 1:1.
 | `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | Three dancinlab-workflow guards in one bundle — `ssot-lock` (deny editing a file matched by an `ssot-lock:` bullet in the nearest `AGENTS.md ## Governance`), `tape-append-only` (a `.log.tape` event history is append-only — deny a rewriting Edit / overwriting Write; per the tape v1.2 architecture-vs-history split a plain `.tape` is editable architecture, so the guard is inert for it), `domain-lint` (a root `UPPERCASE.md` topic roadmap must be `Head + --- + ## Log`) — standalone port, **working**; each guard inert unless its convention is present (opt out: `SIDECAR_NO_GUARDS=1`) |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | Inject `AGENTS.md` walk-up SSOT as context (wilson `agents-md` equivalent) — **working** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | Deny a repo-root `README.md` violating readme-format anti-patterns (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — standalone port of wilson `guard-readme-format`, **working** |
-| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI. PostToolUse: when `hexa verify` reports a new SUPPORTED equation (🔵/🟢), **opens a PR** to `dancinlab/hexa-lang` baking the equation into the binary built-in atlas (fills `hexa atlas promote`'s stubbed `pr` step; PR left for human review, never auto-merged) — falls back to prompting the `worktree-pr` workflow if the autonomous PR isn't possible. Standalone port + extension of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: deny Bash invocations of non-hexa verifiers (sympy / PyPhi / wolframscript / mathematica) → redirect to the hexa CLI. PostToolUse: when `hexa verify` reports a new SUPPORTED equation (🔵/🟢), **opens a PR** to `dancinlab/hexa-lang` baking the equation into the binary built-in atlas (fills `hexa atlas promote`'s stubbed `pr` step; PR left for human review, never auto-merged). Standalone port + extension of wilson `guard-hexa-verify`, **working**. ⚠ INERT unless `hexa` is on PATH |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | Deny Write/Edit/MultiEdit targeting a protected system path (`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`) or a credential path (`~/.ssh`, `~/.aws`, gh config, keychain, credentials) — standalone port of wilson `guard-dangerous-path`, **working** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | Deny force-push — a `git push` carrying `--force` / `-f` / a `+refspec` (and `--force-with-lease` unless `SIDECAR_ALLOW_FORCE_WITH_LEASE=1`) is blocked — standalone port of wilson `git-guard`, **working** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`/`Edit`/`MultiEdit`) + `UserPromptSubmit` | Deny writing a real `.env` file or content carrying a high-confidence credential (AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe tokens, PEM private keys); block a prompt that pastes one — high-confidence patterns only, near-zero false positives, **working** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
@@ -60,7 +60,6 @@ primitives 1:1.
 | `wilson-inbox` | `SessionStart` + `/wilson-inbox:inbox` | Cross-project handoff inbox — when a gap or request affects another SSOT repo, file it there as a structured `inbox/<kind>/<slug>.md` entry (kind: `notes`/`patches`/`poc`/`rfc_drafts`) instead of silently working around it downstream. `/wilson-inbox:inbox` scaffolds and manages entries — `add`/`list`/`show`/`path`/`verify`/`apply`/`archive`/`rm`; target repo is `--to <name>` (`~/core/<name>`) or the nearest `.git` from the cwd. Light-mode is folder + entries; heavy-mode adds `inbox/PATCHES.yaml` with a status lifecycle `apply`/`archive` transition. `SessionStart` surfaces the current repo's inbox entries so a handoff is never forgotten — **working**, inert unless the repo has an `inbox/` (opt out: `SIDECAR_NO_INBOX=1`) |
 | `wilson-lsp` | `.lsp.json` LSP servers (not a hook) | Wires `.hexa` → `hexa lsp` and `.tape`·`.n6`·`.hxc`·`.kosmos` → the canonical per-repo servers (`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, shipped in `github.com/dancinlab/{tape,n6,hxc,kosmos}`). Graceful — a server not on PATH just shows in `/plugin` Errors. LSP lifecycle is CC-managed (toggle via `/plugin`, not `/sidecar`) |
 | `sidecar` | `/sidecar` command (control) | Runtime on/off for the other plugins — `/sidecar status\|on\|off <name>` (names: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal resume inbox guards fire-gate, or `all`). Shared `~/.claude/sidecar/disabled.json` each plugin's hook checks; persists across sessions; complements the native `/plugin` manager |
-| `worktree-pr` | `/worktree-pr:wt` command (workflow) | Safe **worktree → PR → merge → cleanup** workflow — `start <name>` (isolated worktree+branch off origin's default), `ship <name> "<title>"` (push + open PR), `finish <name>` (merge PR + remove worktree + delete branch + refresh base), `status`, `abort`. Never touches the main working tree or a concurrent session's branch |
 | `wilson-gap` | `/gap` command (model-facing) | Multi-axis gap exploration — `/gap` sweeps the current work through **40 breakthrough-strategy lenses** in 8 families, curated from the archived `hive` repo's `state/*_audit` catalogue (each lens = one probing one-liner). Bare `/gap` = mode C (inline-triage all 40 → deep-dive subagent only for each family that surfaced a gap; zero gaps spawns nothing); `/gap full` = mode A (fan-out one subagent per family, no triage); `/gap <text>` scopes the sweep; `/gap list` prints the catalogue. Surfaces and prioritises gaps only — never fixes. No hook, no bin script — pure model-facing command |
 | `wilson-schedule` | `SessionStart`·`PostCompact`·`UserPromptSubmit` + `/wilson-schedule:schedule` | Global daily-routine task list whose `run` **fans every pending task out to a background subagent in parallel** — `add "<task>"` registers a free-text task; `run` (or typing the phrase `스케쥴 진행`, caught by `UserPromptSubmit`) dispatches **all** pending tasks at once as background agents (one `Agent` per task, `run_in_background`), `running`/`done` move state and capture a one-line result, `rm`/`clear` prune. A CC hook/bin can't call the `Agent` tool, so `run` only **emits a dispatch directive** — the bin owns state, the model owns the fan-out. State is `~/SCHEDULE.json` (one global JSON file at the home root); `SessionStart` surfaces a pending count. Not remote cron (that's the built-in `/schedule`) — a local immediate parallel executor — **working**, default ON (opt out: `SIDECAR_NO_SCHEDULE=1`) |
 
@@ -94,7 +93,6 @@ Roadmap candidates: `wilson-memory` (SessionStart/SessionEnd file memory),
 /plugin install wilson-resume@sidecar           # persist + re-arm the native /goal across an abrupt end
 /plugin install wilson-inbox@sidecar            # cross-project handoff inbox (inbox/<kind>/<slug>.md)
 /plugin install wilson-lsp@sidecar              # LSP for .hexa / .tape / .n6 / .hxc / .kosmos
-/plugin install worktree-pr@sidecar             # /worktree-pr:wt workflow command
 /plugin install wilson-gap@sidecar              # /gap multi-axis gap exploration (40 strategy lenses)
 /plugin install wilson-schedule@sidecar         # daily task list — run fans pending tasks to bg subagents
 /plugin install sidecar@sidecar                 # /sidecar runtime on/off control
@@ -140,7 +138,6 @@ plugin on the next start:
     "wilson-resume@sidecar": true,
     "wilson-inbox@sidecar": true,
     "wilson-lsp@sidecar": true,
-    "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
   }
 }
@@ -301,12 +298,9 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # wires hexa lsp + tape/n6/hxc/kosmos repo LSPs
-│   ├── sidecar/                      # control plugin
-│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│   │   └── bin/_sidecar.py           # writes shared disabled.json (working)
-│   └── worktree-pr/
-│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
-│       └── bin/worktree-pr.sh        # worktree → PR → merge → cleanup (working)
+│   └── sidecar/                      # control plugin
+│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│       └── bin/_sidecar.py           # writes shared disabled.json (working)
 └── LICENSE
 ```
 

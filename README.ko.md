@@ -40,7 +40,7 @@
 | `wilson-guards` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) | dancinlab 워크플로 가드 3종 번들 — `ssot-lock`(가장 가까운 `AGENTS.md ## Governance`의 `ssot-lock:` 불릿에 매치되는 파일 편집 차단), `tape-append-only`(`.log.tape` 이벤트 이력은 append-only — 재작성 Edit / 덮어쓰는 Write 차단. tape v1.2 architecture-vs-history 분할상 plain `.tape`는 편집 가능 아키텍처라 가드는 inert), `domain-lint`(루트 `UPPERCASE.md` 토픽 로드맵은 `Head + --- + ## Log` 구조여야) — standalone 포팅, **작동**; 각 가드는 해당 규약이 없으면 inert (opt out: `SIDECAR_NO_GUARDS=1`) |
 | `wilson-ssot` | `SessionStart` · `UserPromptSubmit` | `AGENTS.md` walk-up SSOT를 컨텍스트로 주입 (wilson `agents-md` 대응) — **작동** |
 | `wilson-readme-format` | `PreToolUse` (`Write`·`Edit`) | repo-root `README.md`의 readme-format 위반 차단 (emoji-in-prose / multi-glyph H1 / non-English At-a-glance / `####`) — wilson `guard-readme-format` standalone 포팅, **작동** |
-| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 비-hexa 검증기(sympy/PyPhi/wolframscript/mathematica) Bash 호출 차단 → hexa CLI 유도. PostToolUse: `hexa verify`가 새 SUPPORTED 방정식(🔵/🟢) 보고 시 `dancinlab/hexa-lang`에 **PR 자동 생성** — 방정식을 binary built-in atlas에 베이크(`hexa atlas promote`의 stub `pr` 단계 보완, PR은 사람 리뷰용·자동 머지 안 함). 자율 PR 불가 시 `worktree-pr` 워크플로 유도로 fallback. wilson `guard-hexa-verify` standalone 포팅+확장, **작동**. ⚠ `hexa`가 PATH에 없으면 inert |
+| `wilson-hexa-verify` | `PreToolUse` + `PostToolUse` (`Bash`) | PreToolUse: 비-hexa 검증기(sympy/PyPhi/wolframscript/mathematica) Bash 호출 차단 → hexa CLI 유도. PostToolUse: `hexa verify`가 새 SUPPORTED 방정식(🔵/🟢) 보고 시 `dancinlab/hexa-lang`에 **PR 자동 생성** — 방정식을 binary built-in atlas에 베이크(`hexa atlas promote`의 stub `pr` 단계 보완, PR은 사람 리뷰용·자동 머지 안 함). wilson `guard-hexa-verify` standalone 포팅+확장, **작동**. ⚠ `hexa`가 PATH에 없으면 inert |
 | `wilson-dangerous-path` | `PreToolUse` (`Write`·`Edit`) | 보호 시스템 경로(`/etc` `/usr` `/bin` `/sbin` `/System` `/.git` `/.gnupg`)·자격증명 경로(`~/.ssh`·`~/.aws`·gh config·keychain·credentials) 대상 Write/Edit/MultiEdit 차단 — wilson `guard-dangerous-path` standalone 포팅, **작동** |
 | `wilson-git-guard` | `PreToolUse` (`Bash`) | force-push 차단 — `git push`에 `--force`/`-f`/`+refspec`(및 `--force-with-lease`, `SIDECAR_ALLOW_FORCE_WITH_LEASE=1` 아니면) 있으면 차단 — wilson `git-guard` standalone 포팅, **작동** |
 | `wilson-secret-guard` | `PreToolUse` (`Write`·`Edit`·`MultiEdit`) + `UserPromptSubmit` | 실제 `.env` 파일 쓰기, 또는 고신뢰 크리덴셜(AWS / GitHub / GitLab / Anthropic / OpenAI / Slack / Google / Stripe 토큰, PEM 개인키)을 담은 내용 차단; 그런 크리덴셜을 붙여넣은 프롬프트 차단 — 고신뢰 패턴만, false positive 거의 없음, **작동** (opt out: `SIDECAR_NO_SECRET_GUARD=1`) |
@@ -56,7 +56,6 @@
 | `wilson-inbox` | `SessionStart` + `/wilson-inbox:inbox` | 크로스 프로젝트 핸드오프 inbox — 다른 SSOT 레포에 영향 주는 갭/요청을 그 레포의 구조화된 `inbox/<kind>/<slug>.md` 엔트리(kind: `notes`/`patches`/`poc`/`rfc_drafts`)로 제출 → 다운스트림에서 silently 덮지 않음. `/wilson-inbox:inbox`가 엔트리 scaffold·관리 — `add`/`list`/`show`/`path`/`verify`/`apply`/`archive`/`rm`; 타깃 레포는 `--to <name>`(`~/core/<name>`) 또는 cwd에서 walk-up한 가장 가까운 `.git`. light-mode는 폴더+엔트리, heavy-mode는 `inbox/PATCHES.yaml` 상태 라이프사이클 추가(`apply`/`archive`가 전이). `SessionStart`가 현 레포의 inbox 엔트리 surface → 핸드오프 망각 방지 — **작동** · 레포에 `inbox/` 없으면 inert (opt out: `SIDECAR_NO_INBOX=1`) |
 | `wilson-lsp` | `.lsp.json` LSP 서버 (hook 아님) | `.hexa` → `hexa lsp` · `.tape`·`.n6`·`.hxc`·`.kosmos` → 각 포맷 repo의 canonical 서버(`tape-lsp`/`n6-lsp`/`hxc-lsp`/`kosmos-lsp`, `github.com/dancinlab/{tape,n6,hxc,kosmos}` 동봉) 연결. graceful — PATH에 없으면 `/plugin` Errors에 표시. LSP 라이프사이클은 CC 관리(토글은 `/plugin`, `/sidecar` 아님) |
 | `sidecar` | `/sidecar` 커맨드 (컨트롤) | 나머지 플러그인 런타임 on/off — `/sidecar status\|on\|off <name>` (이름: ssot readme-format hexa-verify dangerous-path git-guard secret-guard bash-guard prefs output-trim pool checkpoint gpu decision-gate tape-recorder goal inbox guards, 또는 `all`). 공유 `~/.claude/sidecar/disabled.json`을 각 hook이 확인 · 세션 넘어 영속 · 네이티브 `/plugin` 보완 |
-| `worktree-pr` | `/worktree-pr:wt` 커맨드 (워크플로) | 안전한 **worktree → PR → merge → 정리** 워크플로 — `start <name>`(origin 기본 브랜치에서 격리 worktree+브랜치), `ship <name> "<title>"`(push + PR 생성), `finish <name>`(PR merge + worktree 제거 + 브랜치 삭제 + base 갱신), `status`, `abort`. 메인 워킹트리·동시세션 브랜치 무접촉 |
 
 로드맵 후보: `wilson-memory`(SessionStart/SessionEnd 파일 memory) ·
 `wilson-recap`(PreCompact/SessionEnd 요약).
@@ -86,7 +85,6 @@
 /plugin install wilson-goal@sidecar            # 세션 목표 영속 (compaction 너머)
 /plugin install wilson-inbox@sidecar           # 크로스 프로젝트 핸드오프 inbox (inbox/<kind>/<slug>.md)
 /plugin install wilson-lsp@sidecar             # .hexa / .tape / .n6 / .hxc / .kosmos LSP
-/plugin install worktree-pr@sidecar            # /worktree-pr:wt 워크플로 커맨드
 /plugin install sidecar@sidecar                # /sidecar 런타임 on/off 컨트롤
 ```
 
@@ -127,7 +125,6 @@
     "wilson-goal@sidecar": true,
     "wilson-inbox@sidecar": true,
     "wilson-lsp@sidecar": true,
-    "worktree-pr@sidecar": true,
     "sidecar@sidecar": true
   }
 }
@@ -237,12 +234,9 @@ sidecar/
 │   ├── wilson-lsp/
 │   │   ├── .claude-plugin/plugin.json
 │   │   └── .lsp.json                 # hexa lsp + tape/n6/hxc/kosmos repo LSP 연결
-│   ├── sidecar/                      # 컨트롤 플러그인
-│   │   ├── commands/sidecar.md       # /sidecar status|on|off <name>
-│   │   └── bin/_sidecar.py           # 공유 disabled.json 기록 (작동)
-│   └── worktree-pr/
-│       ├── commands/wt.md            # /worktree-pr:wt start|ship|finish|...
-│       └── bin/worktree-pr.sh        # worktree → PR → merge → 정리 (작동)
+│   └── sidecar/                      # 컨트롤 플러그인
+│       ├── commands/sidecar.md       # /sidecar status|on|off <name>
+│       └── bin/_sidecar.py           # 공유 disabled.json 기록 (작동)
 └── LICENSE
 ```
 

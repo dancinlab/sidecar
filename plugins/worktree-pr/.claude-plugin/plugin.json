@@ -1,9 +1,0 @@
-{
-  "name": "worktree-pr",
-  "description": "Safe worktree → PR → merge → cleanup workflow as a slash command. /worktree-pr:wt start <name> creates an isolated worktree+branch off origin's default branch; ship pushes it and opens a PR; finish merges the PR, removes the worktree, deletes the remote branch, and refreshes the default branch. Never touches the main working tree or a concurrent session's branch.",
-  "version": "0.1.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "git", "worktree", "pull-request", "workflow"]
-}

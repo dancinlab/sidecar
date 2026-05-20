@@ -12,7 +12,8 @@
 # origin's default branch → commit the atlas change → gh pr create; the
 # PR is left for human review, never auto-merged). If the autonomous
 # path is not possible (no repo / no atlas diff / no gh / any error) it
-# FALLS BACK to prompting the agent to drive the worktree-pr workflow.
+# FALLS BACK to prompting the agent to drive the equivalent git+gh
+# workflow by hand.
 #
 # hexa-lang repo: $SIDECAR_HEXA_REPO, else ~/core/hexa-lang.
 # Opt out per session: SIDECAR_NO_HEXA_VERIFY=1
@@ -67,10 +68,10 @@ FALLBACK = (
     "equation (🔵/🟢) but the PR could not be opened automatically. Drive "
     "it by hand — the equation belongs in hexa-lang's atlas (baked into "
     "the `hexa` binary as a built-in):\n"
-    "  1. `/worktree-pr:wt start atlas-<slug>` in the hexa-lang project\n"
+    "  1. in the hexa-lang repo: `git checkout -b atlas-builtin/<slug> origin/<base>`\n"
     "  2. land the atlas/ change (the verified equation) + commit\n"
-    "  3. `/worktree-pr:wt ship atlas-<slug> \"feat(atlas): bake <eq>\"`\n"
-    "  4. `/worktree-pr:wt finish atlas-<slug>`\n"
+    "  3. `git push -u origin atlas-builtin/<slug>`\n"
+    "  4. `gh pr create --base <base> --title \"feat(atlas): bake <eq>\"`\n"
     "Opt out: SIDECAR_NO_HEXA_VERIFY=1."
 )
 

@@ -24,9 +24,9 @@
   dont = "한 plugin 안에 hook + command 또는 hook + skill 혼합 · plugins/ root 디렉토리 신규"
   @> CLAUDE.md
 
-@D g_ship_syncs_install := "ship→install 즉시 동기" :: governance [required d=2026-05-21 active]
-  do   = "push 후 marketplace pull · cache 재생성 · installed_plugins.json patch (ver·path·sha·ts)"
-  dont = "/plugin 재로딩 대기 (install 동기는 ship 단계)"
+@D g_ship := "ship = commit + push + install" :: governance [required d=2026-05-21 active]
+  do   = "commit · push origin · marketplace pull · cache copy to /<version>/ · installed_plugins.json patch (ver·path·sha·ts) — 한 cycle"
+  dont = "push 만 하고 install 누락 · /plugin 재로딩 대기 · 3 단계 분리 실행"
   @> CLAUDE.md
 
 @D g_evidence_before_ship := "신규 plugin 은 evidence + measurement 동반" :: governance [required d=2026-05-21 active]

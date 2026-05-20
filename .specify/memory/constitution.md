@@ -8,6 +8,10 @@
 ### II. Ship = Commit + Push + Install
 A ship cycle is one atomic operation in three steps: (1) commit, (2) push to `origin/main`, (3) sync the local install (`marketplace pull` → cache copy to `~/.claude/plugins/cache/sidecar/<name>/<version>/` → patch `installed_plugins.json` with `ver/path/sha/ts`). Source on the remote and the version on disk never lag each other.
 
+**Invariant — no unshipped diffs.** Every working-tree modification is shipped before the next user-facing pause. The author does not accumulate uncommitted changes across instructions; if a change is intentionally held, it goes on its own branch with an explicit marker. The default is: edit → ship → ready for the next instruction.
+
+The feature specification for this cycle lives at [`specs/001-ship-cycle/spec.md`](../specs/001-ship-cycle/spec.md).
+
 ### III. Evidence Before Ship
 Every new plugin lands with: a `design.md` decision entry (one decision per gate, never batched), a fire-rate or behavioral measurement when applicable, at least one smoke/test, and a README. No measurement = no ship. Functional duplication with an existing plugin = block.
 

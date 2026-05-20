@@ -58,20 +58,36 @@ case "$tool" in
     ;;
   Bash)
     cmd=$(printf '%s' "$payload" | jq -r '.tool_input.command // empty')
-    # Match a redirect (`>` / `>>`) or `tee [-a]` followed by a token
-    # ending in a protected extension. Anchored so an unrelated `.py`
-    # earlier in the command (e.g. `python3 src.py > out.txt`) does NOT
-    # trigger — only the redirect TARGET matters.
-    re="(>{1,2}[[:space:]]*|tee([[:space:]]+-a)?[[:space:]]+)[^[:space:]|;&<>]+\\.($EXTS_ALT)([^[:alnum:]./_-]|\$)"
-    match=$(printf '%s\n' "$cmd" | grep -oE "$re" | head -1)
-    [ -z "$match" ] && exit 0
-    # Strip the redirect/tee prefix → the target path itself.
-    f=$(printf '%s' "$match" \
-        | sed -E 's/^(>>?|tee([[:space:]]+-a)?)[[:space:]]*//' \
-        | sed -E 's/[^[:alnum:]./_-].*$//')
+    # Two creation surfaces, both anchored on the DESTINATION token only —
+    # the source (e.g. reading from a `.py`) never triggers.
+    #
+    # (1) Redirect (`>` / `>>`) or `tee [-a]` followed by a path ending in
+    #     a protected ext. Closes heredoc / pipe / echo bypasses:
+    #       cat > foo.py <<EOF   echo … > out.sh   tee log.c
+    # (2) Rename / copy / link / touch where the LAST positional arg of the
+    #     command ends in a protected ext. Closes the documented residual:
+    #       cp tmpl dest.sh    mv tmp dispatch.sh    ln -s src link.sh
+    #       install -m755 a b.sh    rsync a b.sh    touch new.sh
+    #     "Last positional" = anchored at command terminator (EOL / `;`
+    #     / `|` / `&`). Source-as-protected (`cp script.sh dest`) does
+    #     NOT match — only the trailing destination counts.
+    re_redirect="(>{1,2}[[:space:]]*|tee([[:space:]]+-a)?[[:space:]]+)[^[:space:]|;&<>]+\\.($EXTS_ALT)([^[:alnum:]./_-]|\$)"
+    re_create="\\b(cp|mv|ln|install|rsync|touch)\\b[^|;&]*[[:space:]][^[:space:]|;&<>]+\\.($EXTS_ALT)[[:space:]]*(\$|[|;&])"
+    match=$(printf '%s\n' "$cmd" | grep -oE "$re_redirect" | head -1)
+    if [ -n "$match" ]; then
+      f=$(printf '%s' "$match" \
+          | sed -E 's/^(>>?|tee([[:space:]]+-a)?)[[:space:]]*//' \
+          | sed -E 's/[^[:alnum:]./_-].*$//')
+      trigger="bash_redirect_or_tee_to_protected_ext"
+    else
+      match=$(printf '%s\n' "$cmd" | grep -oE "$re_create" | head -1)
+      [ -z "$match" ] && exit 0
+      # The destination is the LAST token in the match ending in protected ext.
+      f=$(printf '%s' "$match" | grep -oE "[^[:space:]|;&<>]+\\.($EXTS_ALT)" | tail -1)
+      trigger="bash_create_via_cp_mv_ln_install_rsync_touch_to_protected_ext"
+    fi
     ext="${f##*.}"
     [ -z "$ext" ] && ext="?"
-    trigger="bash_redirect_or_tee_to_protected_ext"
     ;;
   *)
     exit 0

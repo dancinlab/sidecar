@@ -19,6 +19,16 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/session_start.hexa"
+          }
+        ]
+      }
     ]
   }
 }

@@ -1,3 +1,6 @@
 
 # Claude Code worktree internals (background-agent isolation)
 .claude/
+
+# hexa build artifacts (from running plugin .hexa scripts during dev)
+build/

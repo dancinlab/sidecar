@@ -1,0 +1,119 @@
+// @allow-bare-exec
+// wilson-hexa-first-warn :: enforce.hexa
+//
+// Emits the managed-settings.json that closes the bypassPermissions
+// bypass — every Write(**/*.<protected-ext>) lands in permissions.deny,
+// which Claude Code honors above defaultMode:bypassPermissions.
+//
+// Output:
+//   1) a 3-line preamble explaining what the user runs and why
+//   2) the platform-correct `sudo install` heredoc one-liner
+//   3) the JSON body (managed-settings.json content)
+//   4) the heredoc terminator
+//
+// The user (NOT this script) runs sudo. We only emit the recipe.
+//
+// Platforms:
+//   darwin → /Library/Application Support/ClaudeCode/managed-settings.json
+//   linux  → /etc/claude-code/managed-settings.json
+//   other  → printed as a comment; user resolves manually.
+//
+// Cross-link: design.md Decision 4 (0.5.0 — bypass closure via managed
+// settings); claude-code docs §managed-settings (root-protected, deny
+// floor regardless of defaultMode).
+
+fn protected_exts() -> [string] {
+    return ["py", "sh", "c", "h", "cpp", "hpp", "cc", "hh",
+            "s", "S", "v", "sv", "vhd", "vhdl"]
+}
+
+fn managed_path_for(platform: string) -> string {
+    if platform == "darwin" {
+        return "/Library/Application Support/ClaudeCode/managed-settings.json"
+    }
+    if platform == "linux" {
+        return "/etc/claude-code/managed-settings.json"
+    }
+    return ""
+}
+
+fn json_body() -> string {
+    let exts = protected_exts()
+    let mut lines = []
+    lines.push("{")
+    lines.push("  \"permissions\": {")
+    lines.push("    \"deny\": [")
+    let mut i = 0
+    while i < exts.len() {
+        let comma = if i + 1 < exts.len() { "," } else { "" }
+        lines.push("      \"Write(**/*." + exts[i] + ")\"" + comma)
+        i = i + 1
+    }
+    lines.push("    ]")
+    lines.push("  }")
+    lines.push("}")
+    return lines.join("\n")
+}
+
+fn detect_platform() -> string {
+    let raw = exec("uname -s 2>/dev/null").trim()
+    if raw == "Darwin" { return "darwin" }
+    if raw == "Linux"  { return "linux"  }
+    return raw
+}
+
+fn main() {
+    let platform = detect_platform()
+    let mgr = managed_path_for(platform)
+
+    println("# wilson-hexa-first-warn :: OS-level enforce")
+    println("# Run the block below ONCE (sudo required) to make permissions.deny")
+    println("# survive defaultMode:bypassPermissions. Re-run any time to refresh.")
+    println("")
+
+    if mgr.len() == 0 {
+        println("# unsupported platform: " + platform)
+        println("# Locate your Claude Code managed-settings.json equivalent and write:")
+        println(json_body())
+        return
+    }
+
+    let dir_cmd = "sudo mkdir -p " + shell_quote_path(parent_dir(mgr))
+    let install_cmd = "sudo install -m 644 /dev/stdin " + shell_quote_path(mgr) + " <<'WILSON_HEXA_FIRST_WARN_EOF'"
+
+    println(dir_cmd)
+    println(install_cmd)
+    println(json_body())
+    println("WILSON_HEXA_FIRST_WARN_EOF")
+}
+
+// ── helpers ─────────────────────────────────────────────────────────
+
+fn parent_dir(p: string) -> string {
+    let mut i = p.len() - 1
+    while i >= 0 {
+        if p[i] == '/' { return p.substring(0, i) }
+        i = i - 1
+    }
+    return "."
+}
+
+// Single-quote wrap, embed-' becomes '"'"'. Identical strategy to
+// stdlib/sys.hexa::shell_quote — inlined to keep the plugin self-
+// contained (no stdlib import dependency).
+fn shell_quote_path(s: string) -> string {
+    let mut out = []
+    out.push("'")
+    let mut i = 0
+    while i < s.len() {
+        let c = s[i]
+        if c == '\'' {
+            out.push("'\"'\"'")
+        } else {
+            out.push(s.substring(i, i + 1))
+        }
+        i = i + 1
+    }
+    out.push("'")
+    return out.join("")
+}

@@ -100,7 +100,7 @@ case "$mode" in
     exec jq -n --arg t "$trigger" --arg p "$f" --arg e "$ext" '{
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
-        additionalContext: ("HEXA_FIRST_WARN { trigger: " + $t + ", target: " + $p + ", ext: ." + $e + ", primary: write_dot_hexa_instead — .hexa absorbs scripts(.py .sh), C(.c .h .cpp .hpp .cc .hh), asm(.s .S), RTL(.v .sv .vhd .vhdl) in this project, extend: when no existing stdlib/atlas/CLI path fits, `hexa atlas register <file>` then `hexa atlas pr` extends hexa-lang upstream PR-only, optout: SIDECAR_NO_HEXA_FIRST_WARN=1 }")
+        additionalContext: ("HEXA_FIRST_WARN { trigger: " + $t + ", target: " + $p + ", ext: ." + $e + ", primary: write_dot_hexa_instead — .hexa absorbs scripts(.py .sh), C(.c .h .cpp .hpp .cc .hh), asm(.s .S), RTL(.v .sv .vhd .vhdl) in this project, extend: when no existing stdlib/atlas/CLI path fits, `hexa atlas register <file>` then `hexa atlas pr` extends hexa-lang upstream PR-only, enforce: /wilson-hexa-first-warn:enforce — emits sudo install recipe for managed-settings.json (OS-level deny, survives defaultMode:bypassPermissions), optout: SIDECAR_NO_HEXA_FIRST_WARN=1 }")
       }
     }'
     ;;
@@ -109,7 +109,7 @@ case "$mode" in
       hookSpecificOutput: {
         hookEventName: "PreToolUse",
         permissionDecision: "deny",
-        permissionDecisionReason: ("HEXA_FIRST_BLOCK { trigger: " + $t + ", target: " + $p + ", ext: ." + $e + ", primary: write_dot_hexa_instead — .hexa absorbs scripts(.py .sh), C(.c .h .cpp .hpp .cc .hh), asm(.s .S), RTL(.v .sv .vhd .vhdl) in this project, extend: when no existing stdlib/atlas/CLI path fits, `hexa atlas register <file>` then `hexa atlas pr` extends hexa-lang upstream PR-only, downgrade: SIDECAR_HEXA_FIRST_WARN_MODE=warn }")
+        permissionDecisionReason: ("HEXA_FIRST_BLOCK { trigger: " + $t + ", target: " + $p + ", ext: ." + $e + ", primary: write_dot_hexa_instead — .hexa absorbs scripts(.py .sh), C(.c .h .cpp .hpp .cc .hh), asm(.s .S), RTL(.v .sv .vhd .vhdl) in this project, extend: when no existing stdlib/atlas/CLI path fits, `hexa atlas register <file>` then `hexa atlas pr` extends hexa-lang upstream PR-only, enforce: /wilson-hexa-first-warn:enforce — emits sudo install recipe for managed-settings.json (OS-level deny, survives defaultMode:bypassPermissions), downgrade: SIDECAR_HEXA_FIRST_WARN_MODE=warn }")
       }
     }'
     ;;

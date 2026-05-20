@@ -1,0 +1,9 @@
+{
+  "hexa": {
+    "command": "hexa",
+    "args": ["lsp"],
+    "extensionToLanguage": {
+      ".hexa": "hexa"
+    }
+  }
+}

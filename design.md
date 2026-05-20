@@ -13,6 +13,13 @@
   - SessionStart hook (auto-inject) chosen over /slash command — applies regardless of user invocation; matches g_concept_separation (hooks/ ⊂ auto-behavior).
   - body kept to a single `@D :: governance` entry with `do` / `dont` only — same shape as AGENTS.tape governance, very short.
 
+### Decision 4 — `hexa-lsp` plugin (LSP wiring, minimal scope)
+- **picked**: `hooks/hexa-lsp/` with `.claude-plugin/plugin.json` (lspServers ref) + `lsp.json` (one server entry).
+- **rationale**:
+  - LSP wiring is auto-behavior — kicks in when a `.hexa` file opens. Hooks/ is the closest fit among the three concept dirs (no separate `lsp/` dir added — would have been over-engineering for a single plugin).
+  - Minimal scope: only `.hexa` is claimed. Archived `wilson-lsp` also claimed firmware extensions (`.c/.h/.v/.s/...`) under the hexa-first absorption story; that's deferred. Sister-format LSPs (tape/n6/hxc/kosmos) are likewise separate future plugins.
+  - Two files, zero scripts. `hexa lsp` is the canonical LSP server (per `hexa --help`).
+
 ### Decision 3 — `inbox` skill+command (cross-project handoff, minimal)
 - **picked**: `skills/inbox/` with SKILL.md (natural-language trigger) + `commands/inbox.md` (explicit `/inbox list` · `/inbox new <kind> <slug>`) + `bin/inbox.sh` (POSIX shell).
 - **rationale**:

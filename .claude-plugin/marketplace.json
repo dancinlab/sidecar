@@ -19,6 +19,12 @@
       "source": "./skills/inbox",
       "description": "Cross-project handoff inbox — skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
       "version": "0.1.0"
+    },
+    {
+      "name": "hexa-lsp",
+      "source": "./hooks/hexa-lsp",
+      "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. Minimal: only `.hexa` claimed.",
+      "version": "0.1.0"
     }
   ]
 }

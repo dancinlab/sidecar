@@ -20,6 +20,8 @@
 
 # ─── §2 Governance ───────────────────────────────────────────────────
 
-@D g_ship_syncs_install := "ship→install 즉시 동기" :: governance [required d=2026-05-19 active]
-  do   = "push 후 marketplace pull · cache 재생성 · installed_plugins.json patch"
-  dont = "/plugin 재로딩 대기 (install 동기는 ship 단계)"
+@D g_ship_syncs_install := "ship 은 로컬 install 도 즉시 갱신" :: governance [required d=2026-05-19 active]
+  rule  = "version bump + push 와 같은 작업에서 설치본도 갱신; /plugin 대기 금지"
+  apply = "marketplace clone pull → cache 재생성 → installed_plugins.json patch (ver·path·sha·ts)"
+  scope = "모든 sidecar 플러그인 · wilson-sdlc:ship 8단계"
+  note  = "새 버전은 다음 세션부터 로드"

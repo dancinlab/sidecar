@@ -8,12 +8,12 @@
 # Invoked by minimal-keep.sh so sys.stdin is the Claude Code PreToolUse
 # payload. No wilson binary dependency.
 #
-# Four bloat signals. S1/S2/S3 are file-level (data-driven — calibrated
+# Five bloat signals. S1/S2/S3 are file-level (data-driven — calibrated
 # against 164 unique-content master AGENTS.* under ~/core on 2026-05-20,
 # with /.claude/worktrees/ duplicates excluded). The three file-level caps
 # target the SAME top-decile bloat tail so fire rates stay roughly aligned
-# (~10%/6%/10%). S4 is per-entry — applies only when the content carries
-# tape `@<TYPE>` headers (declarative tape entries).
+# (~10%/6%/10%). S4 and S5 are per-entry — apply only when the content
+# carries tape `@<TYPE>` headers (declarative tape entries).
 #   S1 total-lines  file > MAX_LINES        (Write only — needs the full file)
 #                   280 ≈ p90 of measured master files → ~10% fire
 #   S2 long-line    any line > MAX_LINE_LEN (the dominant "verbose" signal)
@@ -29,6 +29,15 @@
 #                   2026-05-20 amendment). Fires only on files whose
 #                   content contains tape headers — AGENTS.tape and any
 #                   CLAUDE.md symlinked to one.
+#   S5 governance   per `@D :: governance` block: body field keys constrained
+#                   to {do, dont} closed set. Enforces the `.tape` v1.3
+#                   amendment (~/core/tape/spec/tape.md 2026-05-20). Size is
+#                   already bounded by S4's 500-char cap, which applies to
+#                   all declarative entries; S5's unique contribution is the
+#                   key-set closure (legacy `rule`/`why`/`apply`/`cross_link`
+#                   /`honest_carve_out`/`scope_guard`/`*_examples` deprecated).
+#                   Other declarative types (@I @C @L @X @F @N @V) keep
+#                   open-key bodies under S4. Added 0.8.0.
 #
 # Two modes via SIDECAR_MINIMAL_KEEP_MODE (WILSON_ accepted):
 #   block (default)  the write is DENIED at PreToolUse
@@ -47,8 +56,15 @@ MAX_LINES = 280
 MAX_LINE_LEN = 500
 MAX_ENTRY_CHARS = 500    # S4 — per `@<TYPE>` entry total (header + body)
 MAX_FIELDS = 5           # S4 — `key = ...` payload lines per entry
+# S5 size cap removed — S4 (500 chars) already applies to all declarative
+# entries. S5's unique contribution is the closed key set {do, dont}, not
+# a tighter size; per-entry size is naturally bounded by 2 fields × ~200
+# chars each + header ~100 ≈ 500, so S4 catches outliers.
+GOV_KEYS = ("do", "dont")  # S5 — closed set of allowed body keys (v1.3)
 TAPE_HEADER = re.compile(r"^@[A-Z?]\S*\s")
 FIELD_LINE = re.compile(r"^\s{2}[a-z_][a-z0-9_-]*\s*(?:=|<<)")
+FIELD_KEY = re.compile(r"^\s{2}([a-z_][a-z0-9_-]*)\s*(?:=|<<)")
+GOVERNANCE_HEADER = re.compile(r"^@D\b.*?::\s*governance\b")
 # Declarative-equivalent non-tape files. All `*.tape` files are also guarded
 # (0.7.0) per `.tape` v1.2 spec — declarative placements (AGENTS.tape,
 # identity.tape, <DOMAIN>.tape) are latest-wins editable so the Compactness
@@ -174,6 +190,21 @@ def find_tape_bloat(lines):
             out.append("S4 too-many-fields: @%s on line %d has %d fields > "
                        "%d cap (split entry)"
                        % (eid, start + 1, len(fields), MAX_FIELDS))
+        # S5 — `@D :: governance` body closed at {do, dont}, total ≤ 250
+        # chars. Per `.tape` v1.3 amendment (~/core/tape/spec/tape.md
+        # 2026-05-20). Other declarative types (@I @C @L @X @F @N @V) keep
+        # open-key bodies under the looser S4 cap.
+        if GOVERNANCE_HEADER.match(block[0]):
+            bad = set()
+            for b in block[1:]:
+                km = FIELD_KEY.match(b)
+                if km and km.group(1) not in GOV_KEYS:
+                    bad.add(km.group(1))
+            if bad:
+                out.append("S5 governance-legacy-keys: @%s on line %d uses "
+                           "{%s} — only {do, dont} allowed in @D :: "
+                           "governance per tape.md v1.3 amendment"
+                           % (eid, start + 1, ", ".join(sorted(bad))))
     return out
 
 

@@ -63,3 +63,14 @@
   - spec 측 정의는 `~/core/tape/spec/tape.md` 2026-05-20 amendment 로 같은 PR 에 동반 — detect 와 정의가 한 단계에서 정렬되어야 day-1 dogfood 실패 없음 (g_ship_syncs_install 자체를 단축해서 ≤500 으로 통과시킴)
   - 측정 범위: 헤더 라인 + 모든 body 라인 (들여쓰기 포함), \n 1자, CJK 와 Latin 동일하게 1자 — 룰 단순 · CJK 정보밀도가 높아 영어보다 약간 빡센 게 의도된 비대칭
   - 적용 범위: 선언적 placement (`AGENTS.tape` / `identity.tape` / `<DOMAIN>.tape`) 만. append-only event-stream (`<sid>.tape` · `<DOMAIN>.log.tape`) 은 unbounded — runtime 이벤트는 자연스럽게 길이 분포가 다름. plugin 은 content sniff 로 자동 판별 (tape header 없으면 S4 skip)
+
+### Decision 8 — S5 governance imperative — `@D :: governance` body closed at {do, dont} (`.tape` v1.3 amendment)
+- **picked**: per `@D :: governance` 블록 — body field keys ∈ `{do, dont}` 닫힘 (key-set 만 강제, size cap 은 S4 의 500 자 그대로 carry — S5 별도 cap 없음). 다른 declarative type (`@I @C @L @X @F @N @V`) 는 unchanged (S4 만 적용).
+- **rationale**:
+  - 2026-05-20 사용자 신호 "AGENTS.tape 여전히 너무 길다 + why 같은 거 필요없음 + 1.해라 2.하지말라 만 간결하게". 진단: v1.2 amendment 의 500 자 cap 도 governance entry 가 `rule` + `apply` + `why` + `cross_link` + `honest_carve_out` + `scope_guard` 6 키로 부풀게 함 (anima `g_no_cost_scope_limit` ~1100 자 측정). field 수 cap (≤5) 도 못 잡음 — *key set 닫힘* 만 그것을 잡음.
+  - 닫힌 키 집합 `{do, dont}` → governance 가 의미하는 바를 형식이 강제: do = 명령, dont = 금지. 그 외 모든 메타데이터 (rationale · 이력 · 적용 범위) 는 archive/PHILOSOPHY.tape · commit message · `<DOMAIN>.md` 산문으로 routed.
+  - S5 별도 size cap 없음: do/dont 2 field × ~200 자 + header ~100 = ~500 자가 자연 상한, S4 가 이미 catch. 초기 안 250 자 → 350 자 → 결국 폐기. 측정: 5 개 AGENTS.tape scrub 결과 governance entry 의 자연 분포가 200-450 자 범위, 추가 cap 은 정직한 내용까지 잘라냄 → noisy false-positive.
+  - scope = `@D :: governance` ONLY. `@I` identity persona 같은 다중 필드 entries 는 그대로 (governance 가 아니라 정체성 payload). `@D :: decision` (event-stream) 는 plugin scope 밖.
+  - spec 정의는 `~/core/tape/spec/tape.md` v1.3 amendment 로 동반 — S4 패턴 동형 (detect + 정의 same PR).
+  - grandfather: 기존 legacy entries 는 next Write 가 그 entry 를 touch 할 때까지 carry. Edit 의 `new_string` 에 legacy entry 가 안 들어 있으면 S5 안 잡음 → 무관한 다른 entry 편집은 영향 없음. Write of full file 은 모든 entry 검사 → 한 번에 cleanup 강제.
+  - 첫 dogfood: anima · hexa-lang · phanes · demiurge · sidecar 5 개 AGENTS.tape 동시 scrub (이 Decision 의 land 작업에 포함, 각각 ~24% line reduction).

@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "SessionStart hook — injects a cross-project common do/dont layer above the per-project AGENTS.tape.",
-      "version": "0.3.4"
+      "version": "0.3.5"
     },
     {
       "name": "inbox",

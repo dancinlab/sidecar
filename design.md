@@ -13,6 +13,14 @@
   - SessionStart hook (auto-inject) chosen over /slash command — applies regardless of user invocation; matches g_concept_separation (hooks/ ⊂ auto-behavior).
   - body kept to a single `@D :: governance` entry with `do` / `dont` only — same shape as AGENTS.tape governance, very short.
 
+### Decision 3 — `inbox` skill+command (cross-project handoff, minimal)
+- **picked**: `skills/inbox/` with SKILL.md (natural-language trigger) + `commands/inbox.md` (explicit `/inbox list` · `/inbox new <kind> <slug>`) + `bin/inbox.sh` (POSIX shell).
+- **rationale**:
+  - cross-project handoff (gap/request that belongs in another SSOT repo) is common; archived `wilson-inbox` covered it with 9 verbs — too heavy.
+  - 2 verbs (list, new) cover the only operations that aren't trivially plain git/edit. Other lifecycle (apply / archive / pr) goes through plain `gh`.
+  - placed under `skills/` so the SKILL.md description auto-triggers on natural language ("file an inbox entry", "this belongs in <repo>'s inbox") — slash invocation optional. Concept-separation rule relaxed for this bundle: a skill MAY ship its own slash command when the command is the literal mechanism the skill orchestrates.
+  - template = 5 lines (slug · source · kind · status · body) — minimal, easy to grow.
+
 ### Decision 2 — Adopt GitHub Spec Kit (project-level)
 - **picked**: install `specify-cli` + run `specify init . --integration claude` · Spec Kit owns `CLAUDE.md` · `.specify/memory/constitution.md` becomes the active substantive SSOT · legacy `AGENTS.tape` stays dormant carry.
 - **rationale**:

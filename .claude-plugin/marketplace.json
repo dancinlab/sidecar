@@ -13,6 +13,12 @@
       "source": "./hooks/commons",
       "description": "SessionStart hook — injects a cross-project common do/dont layer above the per-project AGENTS.tape.",
       "version": "0.2.0"
+    },
+    {
+      "name": "inbox",
+      "source": "./skills/inbox",
+      "description": "Cross-project handoff inbox — skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
+      "version": "0.1.0"
     }
   ]
 }

@@ -23,9 +23,6 @@
 @D s5 := "project.tape carries project-level rules" :: governance [active]
   do   = "this file (`<project-root>/project.tape`, linked as CLAUDE.md) carries sidecar-specific identity + governance; project-tape hook re-injects on PreCompact + PostCompact"
 
-@D bypass := "auto-execute · don't punt" :: governance [required active]
-  dont = "punt to user on agent-executable work (catalog: `next user action:` blocks · `Should I proceed?` · `Want me to check?` deferrals · option-trees w/ obvious default · over-clarification · defer-by-waiting · excessive recap) — self-check: interactive human input · unauthorized destructive · external visible · explicit user-review request → if all NO, just execute"
-
 @D ship := "ship cycle — atomic commit + push + install-sync (no unshipped diffs)" :: governance [required active]
   do    = "ship as one atomic op: commit (stage explicit paths · credential scan first) → push origin/<branch> → marketplace clone pull → cache copy to ~/.claude/plugins/cache/sidecar/<name>/<ver>/ → patch installed_plugins.json (version · installPath · lastUpdated · gitCommitSha)"
   dont  = "unshipped diffs between user-facing pauses · `git add -A` / `-u` instead of explicit paths · defer install sync to `/plugin` after push · skip credential scan (rpa_ · sk-[A-Za-z0-9]{20} · hf_[A-Za-z0-9]{30} · AKIA)"

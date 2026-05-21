@@ -16,7 +16,7 @@ The feature specification for this cycle lives at [`specs/001-ship-cycle/spec.md
 Every new plugin lands with: a `design.md` decision entry (one decision per gate, never batched), a fire-rate or behavioral measurement when applicable, at least one smoke/test, and a README. No measurement = no ship. Functional duplication with an existing plugin = block.
 
 ### IV. Minimal Write & Implementation
-Code, docs, and configs are written in the smallest form that captures intent. No speculative features, no premature abstraction, no decorative prose. Per-`@D :: governance` entry in any `.tape` file uses only `do` / `dont` body keys — never `rule` / `why` / `apply` / `cross_link` / etc.
+Code, docs, and configs are written in the smallest form that captures intent. No speculative features, no premature abstraction, no decorative prose. Carrier data (`commons.json`, plugin `plugin.json`, hook `hooks.json`) stays in structured form — never re-encoded as prose.
 
 ### V. Stacked Small PRs
 A change >200 lines or covering >1 logical concern is broken into a chain of stacked PRs, each <200 lines and each `--base` the previous layer's branch. Long-lived feature branches and large multi-purpose PRs are blocked.
@@ -27,11 +27,14 @@ Structured / machine-readable artifacts over prose. English for all artifacts (c
 ### VII. Spec-Driven Development
 Work flows through the Spec Kit pipeline: `constitution → specify → (clarify) → plan → (checklist) → tasks → (analyze) → implement`. The pipeline's atomic-task / file-exclusivity check is the prerequisite for parallel agent dispatch.
 
+### VIII. Cross-Project Carrier for hexa-native Rules
+sidecar is the carrier of the cross-project do/dont layer that lives in `hooks/commons/commons.json`. That layer propagates hexa-native rules (hexa-first, `hexa verify`, `hexa kick`, atlas citation discipline, lattice-as-tool) into every Claude Code session. Authority for the *content* of those rules — stdlib, atlas, grammar, lattice policy — remains with the `hexa-lang` constitution. sidecar carries; it does not override.
+
 ## Repository Layout
 
 ```
 sidecar/
-├── hooks/            # PreToolUse · SessionStart auto-behavior plugins
+├── hooks/            # PreToolUse · SessionStart · PreCompact · PostCompact plugins
 ├── commands/         # /slash-command invoked plugins
 ├── skills/           # Skill tool invocable plugins
 ├── .claude/skills/   # Spec Kit project-scope skills (tracked)
@@ -41,16 +44,17 @@ sidecar/
 
 ## Development Workflow
 
-1. **Decision**: every new direction lands in `design.md` as `### Decision N — <picked>` with 2+ rationale bullets before the next decision opens.
-2. **Spec**: feature work begins with `/speckit-specify "<intent>"`. The resulting `.specify/specs/<NNN-feature>/spec.md` is the contract.
-3. **Plan + Tasks**: `/speckit-plan` and `/speckit-tasks` produce the implementation plan and the file-exclusivity-checked atomic task list.
-4. **Implement**: `/speckit-implement` executes tasks. Parallel agents dispatch only on disjoint file sets.
-5. **Ship**: per Principle II — commit, push, sync local install.
+1. **Decision.** Every new direction lands in `design.md` as `### Decision N — <picked>` with 2+ rationale bullets before the next decision opens.
+2. **Spec.** Feature work begins with `/speckit-specify "<intent>"`. The resulting `.specify/specs/<NNN-feature>/spec.md` is the contract.
+3. **Plan + Tasks.** `/speckit-plan` and `/speckit-tasks` produce the implementation plan and the file-exclusivity-checked atomic task list.
+4. **Implement.** `/speckit-implement` executes tasks. Parallel agents dispatch only on disjoint file sets.
+5. **Ship.** Per Principle II — commit, push, sync local install.
 
 ## Governance
 
 - Amendments land via a new `design.md` decision entry and a single PR.
-- The `commons` hook (`hooks/commons/commons.tape`) carries the cross-project layer that sits above any project constitution — when a project rule conflicts with `commons`, `commons` wins unless the project decision explicitly overrides it.
+- The `commons` hook (`hooks/commons/commons.json`) carries the cross-project do/dont layer above any project constitution — when a project rule conflicts with `commons` on a cross-project subject, `commons` wins unless the project decision explicitly overrides it.
+- On hexa-native subjects (stdlib · atlas · grammar · lattice policy · sister formats), the `hexa-lang` constitution is the authority. The `commons` rules on those subjects mirror hexa-lang's decisions — they do not contradict.
 - Complexity must be justified in the corresponding `design.md` entry. Default = simpler.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-21 | **Last Amended**: 2026-05-21
+**Version**: 1.1.0 | **Ratified**: 2026-05-21 | **Last Amended**: 2026-05-21

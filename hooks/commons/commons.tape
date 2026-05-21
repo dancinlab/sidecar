@@ -69,3 +69,7 @@
 @D g20 := "no hardcoding · implement generically" :: governance [required active]
   do   = "implement once, parameterize over instances · code in one canonical home (single stdlib · single dispatcher) · manifest-driven extension (new instance = manifest only, no code change) · universal generic path"
   dont = "hard-code per-instance / per-domain / per-tenant branches · duplicate implementation across topical folders · per-instance Producer / Dispatcher / Handler class family · branch on instance name in the generic layer"
+
+@D g21 := "no workaround / temp-fix as user choice — go straight to the proper fix" :: governance [required active]
+  do   = "when the proper fix is identifiable, just implement it (the proper fix is THE action, not one option among many)"
+  dont = "offer the user a menu like `quick patch vs proper refactor vs workaround` when the proper path is clear · present workaround / temp-fix / band-aid as alternatives to be picked between"

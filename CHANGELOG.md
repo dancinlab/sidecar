@@ -8,6 +8,9 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-21
 
+- **Spec Kit removed** — `.specify/` (memory · scripts · templates · workflows · integrations · 001-ship-cycle spec) and `.claude/skills/speckit-*` deleted. `<root>/project.tape` is the substantive project SSOT (CLAUDE.md symlink + `project-tape` hook re-injects on PreCompact/PostCompact). `design.md` Decision 2 records the current SSOT shape.
+- **sidecar project.tape — minimal Ⓑ shape** — `@V` + `@I` (kind/brief/parent/ssot) + `@D` (do/dont). Layout tree + named governance rules removed; their content is captured in `design.md` decisions and the README plugin table.
+- **commons → 0.6.1** — strip 3 Spec Kit `do` entries (recognize `.specify/`, treat constitution.md as SSOT, use the Spec Kit pipeline) + 1 `dont` (skip Spec Kit pipeline for >200 lines). Carrier shape unchanged.
 - **project-tape 0.1.0 — new** — PreCompact + PostCompact hook that re-injects `<project-root>/project.tape` as `additionalContext` so project identity + governance survive auto-compaction. SessionStart is intentionally skipped because the harness already loads `CLAUDE.md → project.tape` (symlink) at session bootstrap. No-op when `project.tape` is absent.
 - **tape-lsp 0.1.0 — new** — wires the canonical `.tape` v1.2 LSP server (`tape-lsp` — see `dancinlab/tape`) into Claude Code. Diagnostics + hover. Requires `tape-lsp` on PATH (`hx install dancinlab/tape`).
 - **sidecar CLI — new** — `bin/sidecar`, single verb `sidecar init` that scaffolds `project.tape` + `CLAUDE.md → project.tape` symlink in the current dir. Installable via `hx install dancinlab/sidecar`.

@@ -1,7 +1,5 @@
-
-# Claude Code internals — exclude all by default, then whitelist Spec Kit skills
-.claude/*
-!.claude/skills/
+# Claude Code internals — exclude all
+.claude/
 
 # hexa build artifacts (from running plugin .hexa scripts during dev)
 build/

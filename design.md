@@ -36,10 +36,9 @@
   - placed under `skills/` so the SKILL.md description auto-triggers on natural language ("file an inbox entry", "this belongs in <repo>'s inbox") — slash invocation optional. Concept-separation rule relaxed for this bundle: a skill MAY ship its own slash command when the command is the literal mechanism the skill orchestrates.
   - template = 5 lines (slug · source · kind · status · body) — minimal, easy to grow.
 
-### Decision 2 — Adopt GitHub Spec Kit (project-level)
-- **picked**: install `specify-cli` + run `specify init . --integration claude` · Spec Kit owns `CLAUDE.md` · `.specify/memory/constitution.md` becomes the active substantive SSOT · legacy `AGENTS.tape` stays dormant carry.
+### Decision 2 — `project.tape` as project SSOT
+- **picked**: project identity + governance live in `<root>/project.tape` (`.tape` v1.2 — `@V` spec · `@I` identity (kind/brief/parent/ssot) · `@D` governance (do/dont)). `CLAUDE.md → project.tape` symlink for harness auto-load. `hooks/project-tape/` re-injects the same file on PreCompact + PostCompact (auto-compaction survival).
 - **rationale**:
-  - industry-validated 2026 pattern: spec → plan → tasks → implement with explicit file-exclusivity check at the tasks stage — directly addresses the multi-agent same-branch conflict problem.
-  - 9 project-scope skills (`speckit-{constitution,specify,clarify,plan,checklist,tasks,analyze,implement,taskstoissues}`) make the pipeline a single-keystroke flow.
-  - rolled out to ~71 dancinlab repos in the same session (see batch log) — sidecar is the canonical reference.
-  - `gh-stack` skill + waitlist (private preview) covers the stacked-PR side; Spec Kit covers the spec→code side. The two compose.
+  - one canonical carrier — same `.tape` v1.2 grammar as `commons.tape`; one validator (`tape-lsp`) covers both.
+  - portable across any project — `sidecar init` scaffolds `project.tape` + symlink in any working tree.
+  - minimal surface — kind/brief + do/dont only; named rules live as separate decisions in `design.md`.

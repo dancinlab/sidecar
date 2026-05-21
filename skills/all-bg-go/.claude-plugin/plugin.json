@@ -1,7 +1,7 @@
 {
   "name": "all-bg-go",
   "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says \"all bg go\" (or equivalent), spawn one background Agent per branch in parallel instead of picking one.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

@@ -38,7 +38,15 @@ Use this skill any time that signal lands. Do not re-ask the user which one to d
    - Code change + verification → `general-purpose`
    - If unsure → `general-purpose`
 
-5. **Confirm tersely.** After dispatch, output one short message listing what was launched (`N agents launched in parallel: …`) and stop. Do NOT poll or sleep — the harness notifies on completion.
+5. **Confirm tersely.** After dispatch, output one short message in this exact shape, then stop. Do NOT poll or sleep — the harness notifies on completion:
+
+   ```
+   N agents launched in parallel: <branch labels>
+
+   Next iteration: `all bg go` to fan out the next round of branches once results land.
+   ```
+
+   The trailing line is intentional — it biases Claude Code's prompt-suggestion-generator (the ghost-text auto-suggest in the TUI input box) toward proposing `all bg go` again, so the user can keep firing rounds with one keystroke.
 
 ## Example
 

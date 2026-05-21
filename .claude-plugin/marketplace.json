@@ -57,6 +57,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "domain",
+      "source": "./skills/domain",
+      "description": "Maintain UPPERCASE <DOMAIN>.md files at project root as living current-state snapshots (overwrite, NOT append; no history inside the file — git log is the only chronological record). /domain <NAME> [update directive] · NL trigger. Examples: ROADMAP.md · STATUS.md · PLAN.md · GOAL.md · BACKLOG.md · ARCHITECTURE.md · DECISIONS.md.",
+      "version": "0.1.0"
+    },
+    {
       "name": "bypass",
       "source": "./skills/bypass",
       "description": "Anti-punt — DEFAULT BEHAVIOR (auto-fires, not opt-in). Universal self-check before any move that hands control back to the user (interactive input · unauthorized destructive · external visible · explicit user-review request); if all NO, just execute. Extensible catalog of patterns: 'next user action:' blocks · 'Should I proceed?' confirmations · 'Want me to check?' deferrals · option-trees with obvious default · over-clarification · defer-by-waiting · excessive recap. Cross-project always-on enforcement in commons.tape ≥0.7.3.",

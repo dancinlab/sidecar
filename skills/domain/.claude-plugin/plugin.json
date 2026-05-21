@@ -1,0 +1,9 @@
+{
+  "name": "domain",
+  "description": "Maintain UPPERCASE <DOMAIN>.md files at project root as living current-state snapshots (overwrite, NOT append; no history inside the file — git log is the only chronological record). /domain <NAME> [update directive] · NL trigger ('ROADMAP 업데이트', 'STATUS.md 정리해줘'). Examples: ROADMAP.md · STATUS.md · PLAN.md · GOAL.md · BACKLOG.md · ARCHITECTURE.md · DECISIONS.md.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "domain", "snapshot", "current-state", "completed-form"]
+}

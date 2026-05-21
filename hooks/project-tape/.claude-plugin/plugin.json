@@ -1,0 +1,9 @@
+{
+  "name": "project-tape",
+  "description": "PreCompact + PostCompact hook — re-injects <project-root>/project.tape as additionalContext so the project's identity + governance survive auto-compaction. No-op when project.tape is absent.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "compaction", "project"]
+}

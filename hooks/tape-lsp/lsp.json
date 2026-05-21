@@ -1,0 +1,9 @@
+{
+  "tape": {
+    "command": "tape-lsp",
+    "args": [],
+    "extensionToLanguage": {
+      ".tape": "tape"
+    }
+  }
+}

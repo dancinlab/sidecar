@@ -8,6 +8,10 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-21
 
+- **project-tape 0.1.0 — new** — PreCompact + PostCompact hook that re-injects `<project-root>/project.tape` as `additionalContext` so project identity + governance survive auto-compaction. SessionStart is intentionally skipped because the harness already loads `CLAUDE.md → project.tape` (symlink) at session bootstrap. No-op when `project.tape` is absent.
+- **tape-lsp 0.1.0 — new** — wires the canonical `.tape` v1.2 LSP server (`tape-lsp` — see `dancinlab/tape`) into Claude Code. Diagnostics + hover. Requires `tape-lsp` on PATH (`hx install dancinlab/tape`).
+- **sidecar CLI — new** — `bin/sidecar`, single verb `sidecar init` that scaffolds `project.tape` + `CLAUDE.md → project.tape` symlink in the current dir. Installable via `hx install dancinlab/sidecar`.
+- **sidecar dogfood** — repo root now carries `project.tape` (identity + ship-cycle + cross-project-carrier governance in `.tape` v1.2 grammar) with `CLAUDE.md → project.tape` symlink.
 - **commons → 0.6.0** — carrier reverted to `commons.tape` (single `@D commons :: governance` entry with `do` / `dont` fields). `bin/commons.sh` emits the tape verbatim as `additionalContext`; the JSON-render path is gone.
 - **commons → 0.4.1** — added DO entry: use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification), not `tail -f` / sleep-poll loops.
 - **commons → 0.4.0** — carrier moved from `commons.tape` to `commons.json` (structured `{ "do": [...], "dont": [...] }`, rendered to markdown by `bin/commons.sh`). Added do/dont entries codifying the "docs in completed-form · history in CHANGELOG / archive/" rule.

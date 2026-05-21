@@ -1,0 +1,64 @@
+#!/bin/sh
+# sidecar — CLI for the sidecar Claude Code marketplace.
+#
+# usage:
+#   sidecar init      Drop project.tape + CLAUDE.md symlink into the current dir.
+#   sidecar --help    Show this help.
+
+set -eu
+
+show_help() {
+  sed -n '2,8p' "$0" | sed 's/^# *//; s/^#//'
+}
+
+case "${1:-}" in
+  ""|-h|--help)
+    show_help
+    exit 0
+    ;;
+esac
+
+VERB="$1"; shift
+
+case "$VERB" in
+  init)
+    if [ -e project.tape ]; then
+      echo "sidecar: project.tape already exists — refusing to overwrite" >&2
+      exit 1
+    fi
+    NAME=$(basename "$PWD")
+    cat > project.tape <<TAPE
+@V := "tape" :: spec [active]
+  version = "1.2"
+
+@I := "$NAME" :: identity [active]
+  kind   = "<one line — what this project is>"
+  brief  = "<2-4 sentences — purpose · scope · why it exists>"
+  parent = "<org / parent project>"
+  ssot   = "<canonical location>"
+  layout = "
+    $NAME/
+    ├── ...
+    └── ...
+  "
+
+@D := "$NAME" :: governance [active]
+  do   = "..."
+  dont = "..."
+TAPE
+    if [ -e CLAUDE.md ] && [ ! -L CLAUDE.md ]; then
+      mv CLAUDE.md CLAUDE.md.bak
+      echo "sidecar: existing CLAUDE.md backed up to CLAUDE.md.bak"
+    elif [ -L CLAUDE.md ]; then
+      rm CLAUDE.md
+    fi
+    ln -s project.tape CLAUDE.md
+    echo "sidecar: created project.tape · CLAUDE.md → project.tape (symlink)"
+    echo "sidecar: edit project.tape to fill in @I and @D blocks"
+    ;;
+  *)
+    echo "sidecar: unknown verb '$VERB'" >&2
+    echo "  valid verbs: init" >&2
+    exit 1
+    ;;
+esac

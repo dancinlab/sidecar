@@ -1,0 +1,10 @@
+{
+  "name": "tape-lsp",
+  "description": "Wire the `tape-lsp` server (canonical .tape v1.2 LSP — diagnostics + hover, zero deps) for `.tape` files in Claude Code. Requires `tape-lsp` on PATH (install via `hx install dancinlab/tape`).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "lsp", "tape"],
+  "lspServers": "./lsp.json"
+}

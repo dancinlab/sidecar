@@ -1,8 +1,9 @@
 #!/bin/sh
-# SessionStart + PreCompact hook — render commons.json (do/dont) as
-# additionalContext. Event name is read from the stdin payload so
-# PreCompact re-injection after compaction is reported as PreCompact
-# (not a stale SessionStart).
+# SessionStart + PreCompact + PostCompact hook — render commons.json
+# (do/dont) as additionalContext. Event name is read from the stdin
+# payload so each fire reports the actual event (SessionStart on session
+# bootstrap, PreCompact before compaction, PostCompact after the recap
+# to re-inject fresh into the post-compaction context).
 DATA="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}/commons.json"
 python3 -c "
 import json, pathlib, sys

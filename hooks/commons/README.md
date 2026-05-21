@@ -1,6 +1,6 @@
 # commons
 
-SessionStart + PreCompact hook that injects a cross-project **do / dont** layer above the per-project context.
+SessionStart + PreCompact + PostCompact hook that injects a cross-project **do / dont** layer above the per-project context. PostCompact fires after auto-compaction completes (the `※ recap: …` line in the TUI) so the do/dont layer is re-injected fresh on top of the post-compaction context.
 
 ## Carrier
 

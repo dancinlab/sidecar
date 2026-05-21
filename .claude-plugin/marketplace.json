@@ -63,6 +63,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "research",
+      "source": "./skills/research",
+      "description": "Research-fetch tools — `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title · authors · abstract · pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Pure Python stdlib — no pip deps, no API keys, no binaries.",
+      "version": "0.1.0"
+    },
+    {
       "name": "gh-stack",
       "source": "./skills/gh-stack",
       "description": "Stacked-PR workflow skill — proposes `gh stack` commands (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes the <200-lines-per-layer · 1-concern governance.",

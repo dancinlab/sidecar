@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-21
 
+- **gh-stack 0.1.0 — new skill** — natural-language trigger that proposes the stacked-PR workflow. Two modes: `gh stack` commands (private-preview enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes sidecar's <200-lines-per-layer · 1-concern governance. Per-org status tracked in `gh-stack.md`.
+- **README — `sidecar init` walkthrough** — install section spells out the `project.tape` field placeholders (kind/brief/parent/ssot/do/dont) + the `CLAUDE.md → project.tape` symlink + project-tape re-injection. Install commands switched to bare names (`hx install sidecar`, `hx install tape`) since both resolve via the trimmed default org-probe.
 - **Spec Kit removed** — `.specify/` (memory · scripts · templates · workflows · integrations · 001-ship-cycle spec) and `.claude/skills/speckit-*` deleted. `<root>/project.tape` is the substantive project SSOT (CLAUDE.md symlink + `project-tape` hook re-injects on PreCompact/PostCompact). `design.md` Decision 2 records the current SSOT shape.
 - **sidecar project.tape — minimal Ⓑ shape** — `@V` + `@I` (kind/brief/parent/ssot) + `@D` (do/dont). Layout tree + named governance rules removed; their content is captured in `design.md` decisions and the README plugin table.
 - **commons → 0.6.1** — strip 3 Spec Kit `do` entries (recognize `.specify/`, treat constitution.md as SSOT, use the Spec Kit pipeline) + 1 `dont` (skip Spec Kit pipeline for >200 lines). Carrier shape unchanged.

@@ -1,0 +1,9 @@
+{
+  "name": "gh-stack",
+  "description": "Stacked-PR workflow skill — natural-language trigger that proposes `gh stack` commands (when the repo is enabled) or the manual `gh pr create --base previous-layer` fallback (pre-enablement). Encodes sidecar's stacked-PR governance: each layer <200 lines, 1 logical concern, --base previous-layer.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "gh-stack", "stacked-prs", "pull-requests"]
+}

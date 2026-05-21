@@ -7,7 +7,7 @@ Wire the canonical `.tape` v1.2 LSP server (`tape-lsp` — see [`dancinlab/tape`
 `tape-lsp` must be on `PATH`:
 
 ```
-hx install dancinlab/tape
+hx install tape
 ```
 
 If `tape-lsp` is not resolvable, Claude Code surfaces the error in `/plugin` Errors.

@@ -1,0 +1,9 @@
+{
+  "name": "bypass",
+  "description": "Bypass the 'next user action' punt. When the agent is about to emit a block of bash commands as 'user action:' and the agent itself can run them, this skill kicks in — just execute instead of asking. Triggers on natural language ('bypass', '그냥 해', '그냥 진행') OR the agent's own self-check for the punt-pattern.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "bypass", "autonomy", "anti-punt"]
+}

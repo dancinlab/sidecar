@@ -8,6 +8,7 @@
     "use markdown tables actively in responses",
     "use ASCII structure diagrams (tree · box · arrow) when shape/flow matters",
     "write & implement minimally",
+    "recognize that a project uses Spec Kit when `.specify/` is present — its authoritative project rules + governance live at `.specify/memory/constitution.md`",
     "treat .specify/memory/constitution.md as the substantive SSOT (CLAUDE.md is a Spec Kit wrapper)",
     "use the Spec Kit pipeline (constitution → specify → plan → tasks → implement) for feature work",
     "stacked PRs (<200 lines · 1 logical thing · gh pr create --base previous-layer)",

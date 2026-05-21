@@ -4,9 +4,6 @@
 @D g1 := "ai-native + canonical first" :: governance [required active]
   do   = "ai-native · hexa-native first · native + canonical patterns first when implementing (per language / framework)"
 
-@D g2 := "english artifacts · korean response" :: governance [required active]
-  do   = "english artifacts (code · docs · config) · korean responses to the user"
-
 @D g3 := "minimal authoring + tables + ASCII" :: governance [required active]
   do   = "write & implement minimally · use markdown tables actively · use ASCII structure diagrams (tree · box · arrow) when shape/flow matters"
   dont = "prose-only · verbose · over-engineered"

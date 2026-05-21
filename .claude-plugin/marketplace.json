@@ -12,7 +12,13 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape (granular `@D g1..g17` form, no tool/usage — Sonnet bench v4 winner at 33/36).",
-      "version": "0.8.5"
+      "version": "0.9.0"
+    },
+    {
+      "name": "prefs",
+      "source": "./hooks/prefs",
+      "description": "User language preferences — 3 axes (code authoring · doc authoring · response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values. /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language prefs (commons g2 removed in 0.9.0 — this plugin owns it).",
+      "version": "0.1.0"
     },
     {
       "name": "inbox",

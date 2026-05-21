@@ -1,8 +1,9 @@
 #!/bin/sh
-# SessionStart + PreCompact hook — emit commons.tape as additionalContext.
-# event name read from stdin payload so re-injection on context compaction
-# is treated as a real PreCompact response (not a stale SessionStart).
-TAPE="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}/commons.tape"
+# SessionStart + PreCompact hook — render commons.json (do/dont) as
+# additionalContext. Event name is read from the stdin payload so
+# PreCompact re-injection after compaction is reported as PreCompact
+# (not a stale SessionStart).
+DATA="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}/commons.json"
 python3 -c "
 import json, pathlib, sys
 payload = {}
@@ -11,9 +12,14 @@ try:
 except Exception:
     pass
 event = payload.get('hookEventName', 'SessionStart')
-body = pathlib.Path(sys.argv[1]).read_text(encoding='utf-8')
+data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+lines = ['# commons — cross-project do/dont', '', '## Do']
+lines += [f'- {x}' for x in data.get('do', [])]
+lines += ['', \"## Don't\"]
+lines += [f'- {x}' for x in data.get('dont', [])]
+body = '\n'.join(lines) + '\n'
 print(json.dumps({'hookSpecificOutput': {
     'hookEventName': event,
     'additionalContext': body,
 }}))
-" "$TAPE"
+" "$DATA"

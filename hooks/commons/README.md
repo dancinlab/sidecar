@@ -1,5 +1,16 @@
 # commons
 
-SessionStart hook that injects `commons.tape` as `additionalContext`. The tape carries a single `@D :: governance` entry with `do` / `dont` fields — a cross-project common layer that sits above the per-project `AGENTS.tape`.
+SessionStart + PreCompact hook that injects a cross-project **do / dont** layer above the per-project context.
 
-Edit `commons.tape` to change the layer; the hook reads it verbatim every SessionStart.
+## Carrier
+
+`commons.json` — structured data:
+
+```json
+{
+  "do":   [ "ai-native", "hexa-native first", ... ],
+  "dont": [ "implement workarounds for known gaps", ... ]
+}
+```
+
+The hook renders it to markdown (`# commons …  ## Do … ## Don't …`) and emits the markdown as `additionalContext`. Edit `commons.json` to change the layer; the hook reads it every fire (SessionStart + PreCompact).

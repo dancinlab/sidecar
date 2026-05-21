@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape (granular `@D g1..g17` form, no tool/usage — Sonnet bench v4 winner at 33/36).",
-      "version": "0.9.1"
+      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape (granular `@D g1..g23` form, no tool/usage — Sonnet bench v4 winner at 33/36).",
+      "version": "0.9.2"
     },
     {
       "name": "prefs",
@@ -61,6 +61,24 @@
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), print a plan table first (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. Skill (natural language) + /all-bg-go command.",
       "version": "0.2.0"
+    },
+    {
+      "name": "pool",
+      "source": "./skills/pool",
+      "description": "/pool <args> — wraps the `pool` CLI (host roster + remote exec — minimal Python, zero deps). Verbs: list · add <host> · on <host> <cmd> · status · install tailscale · rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "cloud",
+      "source": "./skills/cloud",
+      "description": "/cloud <args> — wraps `hexa-cloud` (runpod dispatch · SEPARATE BINARY at hexa-lang/bin/hexa-cloud, NOT a `hexa cloud` subcommand). Subverbs: run · nohup · poll · copy-to · copy-from. Fails fast with install hint if hexa-cloud not on PATH. NL trigger via skill. Pairs with commons g8 + g12.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "hexa-help",
+      "source": "./skills/hexa-help",
+      "description": "/hexa-help [verb] — wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific). Per commons g7. NL trigger via skill.",
+      "version": "0.1.0"
     },
     {
       "name": "kick",

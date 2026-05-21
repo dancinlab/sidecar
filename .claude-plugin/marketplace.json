@@ -3,7 +3,7 @@
   "owner": {
     "name": "dancinlab"
   },
-  "description": "Claude Code plugin pack with strict concept separation. Top-level dirs: hooks/ (PreToolUse·SessionStart auto-behavior), commands/ (/slash-command invoked), skills/ (Skill tool invocable). 1 plugin = 1 concept; no mixing.",
+  "description": "Claude Code plugin pack with strict concept separation. Top-level dirs: hooks/ (PreToolUse\u00b7SessionStart auto-behavior), commands/ (/slash-command invoked), skills/ (Skill tool invocable). 1 plugin = 1 concept; no mixing.",
   "metadata": {
     "pluginRoot": "."
   },
@@ -11,19 +11,19 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape (granular `@D g1..g23` form, no tool/usage — Sonnet bench v4 winner at 33/36).",
-      "version": "0.9.3"
+      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g23` form, no tool/usage \u2014 Sonnet bench v4 winner at 33/36).",
+      "version": "0.9.4"
     },
     {
       "name": "prefs",
       "source": "./hooks/prefs",
-      "description": "User language preferences — 3 axes (code authoring · doc authoring · response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values. /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language prefs (commons g2 removed in 0.9.0 — this plugin owns it).",
+      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language prefs (commons g2 removed in 0.9.0 \u2014 this plugin owns it).",
       "version": "0.1.0"
     },
     {
       "name": "inbox",
       "source": "./skills/inbox",
-      "description": "Cross-project handoff inbox — skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
+      "description": "Cross-project handoff inbox \u2014 skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
       "version": "0.1.0"
     },
     {
@@ -35,67 +35,73 @@
     {
       "name": "tape-lsp",
       "source": "./hooks/tape-lsp",
-      "description": "Wire `tape-lsp` (canonical .tape v1.2 LSP — diagnostics + hover) for `.tape` files. Requires `tape-lsp` on PATH (install via `hx install dancinlab/tape`).",
+      "description": "Wire `tape-lsp` (canonical .tape v1.2 LSP \u2014 diagnostics + hover) for `.tape` files. Requires `tape-lsp` on PATH (install via `hx install dancinlab/tape`).",
       "version": "0.1.0"
     },
     {
       "name": "project-tape",
       "source": "./hooks/project-tape",
-      "description": "PreCompact + PostCompact hook — re-injects <project-root>/project.tape as additionalContext so the project's identity + governance survive auto-compaction. No-op when project.tape is absent.",
+      "description": "PreCompact + PostCompact hook \u2014 re-injects <project-root>/project.tape as additionalContext so the project's identity + governance survive auto-compaction. No-op when project.tape is absent.",
       "version": "0.1.0"
     },
     {
       "name": "git-guard",
       "source": "./hooks/git-guard",
-      "description": "PreToolUse(Bash) deny for force-push · force-with-lease · refspec-force · git {commit,merge,rebase} --no-verify. Opt out: SIDECAR_NO_GIT_GUARD=1.",
+      "description": "PreToolUse(Bash) deny for force-push \u00b7 force-with-lease \u00b7 refspec-force \u00b7 git {commit,merge,rebase} --no-verify. Opt out: SIDECAR_NO_GIT_GUARD=1.",
       "version": "0.1.0"
     },
     {
       "name": "pool-route",
       "source": "./hooks/pool-route",
-      "description": "PreToolUse(Bash) suggestion hook — when a command is host-specific (macOS-only: swift/xcodebuild/xcrun · GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",
+      "description": "PreToolUse(Bash) suggestion hook \u2014 when a command is host-specific (macOS-only: swift/xcodebuild/xcrun \u00b7 GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",
       "version": "0.1.0"
     },
     {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
-      "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), print a plan table first (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. Skill (natural language) + /all-bg-go command.",
+      "description": "Parallel fan-out trigger \u2014 when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), print a plan table first (branch \u00b7 subagent_type \u00b7 isolation \u00b7 goal) then spawn one background Agent per branch in the same message. Skill (natural language) + /all-bg-go command.",
       "version": "0.2.0"
     },
     {
       "name": "pool",
       "source": "./skills/pool",
-      "description": "/pool <args> — wraps the `pool` CLI (host roster + remote exec — minimal Python, zero deps). Verbs: list · add <host> · on <host> <cmd> · status · install tailscale · rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
+      "description": "/pool <args> \u2014 wraps the `pool` CLI (host roster + remote exec \u2014 minimal Python, zero deps). Verbs: list \u00b7 add <host> \u00b7 on <host> <cmd> \u00b7 status \u00b7 install tailscale \u00b7 rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
       "version": "0.1.0"
     },
     {
       "name": "cloud",
       "source": "./skills/cloud",
-      "description": "/cloud <args> — wraps `hexa cloud` (runpod dispatch · canonical subcommand form, structured argv — never raw ssh/scp per commons g8). Subverbs: run · nohup · poll · copy-to · copy-from. Upstream gap tracked at hexa-lang/inbox/patches/hexa-cloud-subcommand.md. NL trigger via skill. Pairs with commons g8 + g12.",
+      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw ssh/scp per commons g8). Subverbs: run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. Upstream gap tracked at hexa-lang/inbox/patches/hexa-cloud-subcommand.md. NL trigger via skill. Pairs with commons g8 + g12.",
       "version": "0.1.0"
     },
     {
       "name": "hexa-help",
       "source": "./skills/hexa-help",
-      "description": "/hexa-help [verb] — wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific). Per commons g7. NL trigger via skill.",
+      "description": "/hexa-help [verb] \u2014 wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific). Per commons g7. NL trigger via skill.",
       "version": "0.1.0"
     },
     {
       "name": "kick",
       "source": "./skills/kick",
-      "description": "/kick <natural-language seed> — runs `hexa kick --seed \"<seed>\"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via skill (`kick this`, `돌파해줘`, `discover for`). Pairs with commons g6.",
+      "description": "/kick <natural-language seed> \u2014 runs `hexa kick --seed \"<seed>\"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via skill (`kick this`, `\ub3cc\ud30c\ud574\uc918`, `discover for`). Pairs with commons g6.",
       "version": "0.1.0"
     },
     {
       "name": "verify",
       "source": "./skills/verify",
-      "description": "/verify <args> — runs `hexa verify \"$@\"` (cross-project tier rubric, TECS-L-aligned). Forms: <id> (atlas atom), --expr <fn> <n> <v> (numerical), --fence \"<claim>\" (honest ⚪), rubric / list. Returns 🔵🟢🟡🟠🔴⚪ tier badge VERBATIM. NL trigger via skill (`verify this`, `확인해`, `검증해`, `맞아?`). Pairs with commons g5.",
+      "description": "/verify <args> \u2014 runs `hexa verify \"$@\"` (cross-project tier rubric, TECS-L-aligned). Forms: <id> (atlas atom), --expr <fn> <n> <v> (numerical), --fence \"<claim>\" (honest \u26aa), rubric / list. Returns \ud83d\udd35\ud83d\udfe2\ud83d\udfe1\ud83d\udfe0\ud83d\udd34\u26aa tier badge VERBATIM. NL trigger via skill (`verify this`, `\ud655\uc778\ud574`, `\uac80\uc99d\ud574`, `\ub9de\uc544?`). Pairs with commons g5.",
       "version": "0.1.0"
+    },
+    {
+      "name": "domain",
+      "source": "./skills/domain",
+      "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) \u00b7 /domain <task> (append `- [x]`) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Records progress as work proceeds \u2014 log accumulates a checkbox audit trail.",
+      "version": "0.3.0"
     },
     {
       "name": "gap",
       "source": "./commands/gap",
-      "description": "/gap — multi-axis gap exploration. 42 breakthrough-strategy lenses · 8 families (F4 + F6 each have 6 lenses; `occams-razor` lives in both — hypothesis side and design side). Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",
+      "description": "/gap \u2014 multi-axis gap exploration. 42 breakthrough-strategy lenses \u00b7 8 families (F4 + F6 each have 6 lenses; `occams-razor` lives in both \u2014 hypothesis side and design side). Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",
       "version": "0.2.0"
     },
     {
@@ -105,39 +111,33 @@
       "version": "0.1.0"
     },
     {
-      "name": "domain",
-      "source": "./skills/domain",
-      "description": "Maintain UPPERCASE <DOMAIN>.md (living current-state snapshot, overwrite) + sister <DOMAIN>.log.md (append-only history, newest on top) at project root — single invocation writes BOTH. /domain <NAME> [update] · NL trigger ('ROADMAP 업데이트', 'STATUS.md 정리해줘'). Examples: ROADMAP.md+ROADMAP.log.md · STATUS.md+STATUS.log.md · PLAN.md+PLAN.log.md. Markdown analog of tape v1.2 <DOMAIN>.tape + <DOMAIN>.log.tape sister pattern.",
-      "version": "0.2.0"
-    },
-    {
       "name": "bypass",
       "source": "./skills/bypass",
-      "description": "Anti-punt — DEFAULT BEHAVIOR (auto-fires, not opt-in). Universal self-check before any move that hands control back to the user (interactive input · unauthorized destructive · external visible · explicit user-review request); if all NO, just execute. Extensible catalog of patterns: 'next user action:' blocks · 'Should I proceed?' confirmations · 'Want me to check?' deferrals · option-trees with obvious default · over-clarification · defer-by-waiting · excessive recap. Cross-project always-on enforcement in commons.tape ≥0.7.3.",
+      "description": "Anti-punt \u2014 DEFAULT BEHAVIOR (auto-fires, not opt-in). Universal self-check before any move that hands control back to the user (interactive input \u00b7 unauthorized destructive \u00b7 external visible \u00b7 explicit user-review request); if all NO, just execute. Extensible catalog of patterns: 'next user action:' blocks \u00b7 'Should I proceed?' confirmations \u00b7 'Want me to check?' deferrals \u00b7 option-trees with obvious default \u00b7 over-clarification \u00b7 defer-by-waiting \u00b7 excessive recap. Cross-project always-on enforcement in commons.tape \u22650.7.3.",
       "version": "0.2.0"
     },
     {
       "name": "brainstorm",
       "source": "./skills/brainstorm",
-      "description": "Iterative brainstorming — given a seed, generates ideas in rounds and keeps going until depletion (no genuinely new ideas vs prior rounds; hard cap 8 rounds). For breadth over selection. Skill (natural language) + /brainstorm command.",
+      "description": "Iterative brainstorming \u2014 given a seed, generates ideas in rounds and keeps going until depletion (no genuinely new ideas vs prior rounds; hard cap 8 rounds). For breadth over selection. Skill (natural language) + /brainstorm command.",
       "version": "0.1.0"
     },
     {
       "name": "easy",
       "source": "./skills/easy",
-      "description": "Easy (friendly) response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare). Skill (natural-language trigger) + /easy command. 5 language samples: en · ko · ja · zh · ru.",
+      "description": "Easy (friendly) response style \u2014 7-element pattern (icon \u00b7 name \u00b7 alias \u00b7 plain-line \u00b7 analogy \u00b7 ASCII \u00b7 compare). Skill (natural-language trigger) + /easy command. 5 language samples: en \u00b7 ko \u00b7 ja \u00b7 zh \u00b7 ru.",
       "version": "0.1.0"
     },
     {
       "name": "research",
       "source": "./skills/research",
-      "description": "Research-fetch tools — `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title · authors · abstract · pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Pure Python stdlib — no pip deps, no API keys, no binaries.",
+      "description": "Research-fetch tools \u2014 `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title \u00b7 authors \u00b7 abstract \u00b7 pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Pure Python stdlib \u2014 no pip deps, no API keys, no binaries.",
       "version": "0.1.0"
     },
     {
       "name": "gh-stack",
       "source": "./skills/gh-stack",
-      "description": "Stacked-PR workflow skill — proposes `gh stack` commands (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes the <200-lines-per-layer · 1-concern governance.",
+      "description": "Stacked-PR workflow skill \u2014 proposes `gh stack` commands (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes the <200-lines-per-layer \u00b7 1-concern governance.",
       "version": "0.1.0"
     }
   ]

@@ -1,0 +1,9 @@
+{
+  "name": "gap",
+  "description": "/gap — multi-axis gap exploration. Sweeps the current work through 40 breakthrough-strategy lenses curated into 8 families from the archived hive repo's state/*_audit catalogue. Bare /gap = mode C (inline-triage all 40 lenses, then deep-dive via subagents only the hot families). /gap full = mode A (fan-out one subagent per family, no triage — exhaustive). /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps only — never fixes; user drives what gets fixed next.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "gap-analysis", "exploration", "strategy", "breakthrough"]
+}

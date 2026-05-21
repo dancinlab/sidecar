@@ -57,6 +57,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "gap",
+      "source": "./commands/gap",
+      "description": "/gap — multi-axis gap exploration. 40 breakthrough-strategy lenses · 8 families. Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",
+      "version": "0.1.0"
+    },
+    {
       "name": "inject",
       "source": "./skills/inject",
       "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn.",

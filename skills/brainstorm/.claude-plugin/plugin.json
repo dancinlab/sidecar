@@ -1,0 +1,9 @@
+{
+  "name": "brainstorm",
+  "description": "Iterative brainstorming skill — given a seed, generates ideas in rounds and keeps going until depletion (no genuinely new ideas vs prior rounds; hard cap 8 rounds). For breadth over selection. Skill (natural language) + /brainstorm command.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "brainstorm", "ideation", "discovery"]
+}

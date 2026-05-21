@@ -57,6 +57,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "brainstorm",
+      "source": "./skills/brainstorm",
+      "description": "Iterative brainstorming — given a seed, generates ideas in rounds and keeps going until depletion (no genuinely new ideas vs prior rounds; hard cap 8 rounds). For breadth over selection. Skill (natural language) + /brainstorm command.",
+      "version": "0.1.0"
+    },
+    {
       "name": "easy",
       "source": "./skills/easy",
       "description": "Easy (friendly) response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare). Skill (natural-language trigger) + /easy command. 5 language samples: en · ko · ja · zh · ru.",

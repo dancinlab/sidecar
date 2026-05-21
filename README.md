@@ -42,6 +42,8 @@ The substantive constitution lives at `.specify/memory/constitution.md` (Spec Ki
 
 ## Reference
 
+- [GitHub Spec Kit](https://github.com/github/spec-kit) — upstream of the `/speckit-*` skill set bundled under `.claude/skills/` and the `.specify/` pipeline (`constitution → specify → clarify → plan → tasks → analyze → implement`).
+- [`.specify/memory/constitution.md`](.specify/memory/constitution.md) — sidecar's project constitution (Spec Kit format).
 - [`CHANGELOG.md`](CHANGELOG.md) — chronological log of notable changes (one entry per ship batch).
 - [`gh-stack.md`](gh-stack.md) — stacked PR workflow notes (private preview status + manual fallback).
 

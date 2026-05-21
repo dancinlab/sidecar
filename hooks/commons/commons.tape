@@ -1,3 +1,60 @@
-@D commons := "cross-project common" :: governance [required active]
-  do   = "ai-native · hexa-native first · native + canonical patterns first when implementing (per language / framework) · english artifacts · korean response · use markdown tables actively in responses · use ASCII structure diagrams (tree · box · arrow) when shape/flow matters · write & implement minimally · stacked PRs (<200 lines · 1 logical thing · gh pr create --base previous-layer) · use `hexa verify` for correctness · purity · grade · identity claims (paste the verdict verbatim) · use `hexa kick --seed \"<expr>\" [--rounds N]` for gap breakthroughs · discovery · consult `hexa --help` for unfamiliar verbs · know that `pool` (host roster + remote exec — pool list / add / on / status / install tailscale) and `/inbox` (cross-project handoff — list · new <kind> <slug>) are available CLIs · file hexa-lang upstream gaps as `<hexa-lang-repo>/inbox/patches/<slug>.md` immediately on discovery (no downstream workaround) · mark major events with 5-count emoji (🛸*5 transcend / ⭐️*5 win / 🔥*5 breakthrough) — never on routine OK · for runpod dispatch use `hexa cloud {run|nohup|poll|copy-to|copy-from}` (structured-argv) — not raw `ssh`/`scp` · fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint) · write docs in completed-form (describe current state) — migration / replacement notes go in a dedicated history surface (`CHANGELOG.md` for chronological log · `git log` for the full audit trail) · use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification) — not `tail -f` / `sleep`-poll loops"
-  dont = "punt to user on clearly-OK agent-executable work (extensible catalog: `next user action:` blocks · `Should I proceed?` confirmations · `Want me to check?` deferrals · option-trees with obvious default · over-clarification on inferable details · defer-by-waiting · excessive recap-before-action) — universal self-check: needs interactive human input · unauthorized destructive · external visible message · explicit user-review request → if all NO, just execute · implement workarounds for known gaps (file an upstream inbox patch instead — fix at source, never paper over) · hardcoded absolute paths (use `$HOME` · `${HOME}` · relative paths · `<repo-name>/<relpath>` notation) · prose-only · non-english artifacts · verbose · over-engineered · touch AGENTS.tape (kept dormant carry — user-request override only) · touch project.tape unprompted (active project SSOT — read freely, but modify only on explicit user request) · large multi-purpose PRs · long-lived feature branches · LLM self-judge correctness without `hexa verify` · cite sympy / PyPhi / Wolfram / Mathematica as primary evidence · mix migration history into living docs (no inline `replaces X` · `migrated from Y` · `archived YYYY-MM-DD` — that's `CHANGELOG.md` / git log territory)"
+@V := "tape" :: spec [active]
+  version = "1.2"
+
+@D g1 := "ai-native + canonical first" :: governance [required active]
+  do   = "ai-native · hexa-native first · native + canonical patterns first when implementing (per language / framework)"
+
+@D g2 := "english artifacts · korean response" :: governance [required active]
+  do   = "english artifacts (code · docs · config) · korean responses to the user"
+
+@D g3 := "minimal authoring + tables + ASCII" :: governance [required active]
+  do   = "write & implement minimally · use markdown tables actively · use ASCII structure diagrams (tree · box · arrow) when shape/flow matters"
+  dont = "prose-only · verbose · over-engineered"
+
+@D g4 := "stacked PRs" :: governance [required active]
+  do   = "stacked PRs (<200 lines · 1 logical thing · gh pr create --base previous-layer)"
+  dont = "large multi-purpose PRs · long-lived feature branches"
+
+@D g5 := "verify via hexa CLI only" :: governance [required active]
+  do   = "use `hexa verify` for correctness · purity · grade · identity claims (paste the verdict VERBATIM)"
+  dont = "LLM self-judge correctness without `hexa verify` · cite sympy / PyPhi / Wolfram / Mathematica as primary evidence"
+
+@D g6 := "hexa kick for gap discovery" :: governance [active]
+  do   = "use `hexa kick --seed \"<expr>\" [--rounds N]` for gap breakthroughs · discovery"
+
+@D g7 := "consult hexa --help for unfamiliar verbs" :: governance [active]
+  do   = "consult `hexa --help` for unfamiliar hexa CLI verbs"
+
+@D g8 := "runpod dispatch via hexa cloud" :: governance [required active]
+  do   = "for runpod dispatch use `hexa cloud {run|nohup|poll|copy-to|copy-from}` (structured argv)"
+  dont = "raw `ssh` / `scp` for runpod dispatch"
+
+@D g9 := "pool + /inbox CLIs available" :: governance [active]
+  do   = "know that `pool` (host roster + remote exec — pool list / add / on / status / install tailscale) and `/inbox` (cross-project handoff — list · new <kind> <slug>) are available CLIs"
+
+@D g10 := "Monitor tool for streaming" :: governance [active]
+  do   = "use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification)"
+  dont = "`tail -f` / `sleep`-poll loops for background-event streaming"
+
+@D g11 := "no gap workarounds — fix at source" :: governance [required active]
+  do   = "file hexa-lang upstream gaps as `<hexa-lang-repo>/inbox/patches/<slug>.md` immediately on discovery"
+  dont = "implement workarounds for known gaps (file an upstream inbox patch instead — fix at source, never paper over)"
+
+@D g12 := "fan out parallel pods" :: governance [active]
+  do   = "fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint)"
+
+@D g13 := "portable paths only" :: governance [required active]
+  dont = "hardcoded absolute paths (use `$HOME` · `${HOME}` · relative paths · `<repo-name>/<relpath>` notation)"
+
+@D g14 := "5-count emoji for major events" :: governance [active]
+  do   = "mark major events with 5-count emoji (🛸*5 transcend / ⭐️*5 win / 🔥*5 breakthrough) — never on routine OK"
+
+@D g15 := "current-state docs · history in dedicated surfaces" :: governance [required active]
+  do   = "write docs in completed-form (describe current state) — history goes in `CHANGELOG.md` (chronological) / `git log` (full audit trail)"
+  dont = "mix migration history into living docs (no inline `replaces X` / `migrated from Y` / `archived YYYY-MM-DD`)"
+
+@D g16 := "AGENTS.tape dormant · don't touch" :: governance [required active]
+  dont = "touch AGENTS.tape (kept dormant carry — user-request override only)"
+
+@D g17 := "project.tape user-request only" :: governance [required active]
+  dont = "touch project.tape unprompted (active project SSOT — read freely, but modify only on explicit user request)"

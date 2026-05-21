@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape.",
-      "version": "0.7.3"
+      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape (granular `@D g1..g17` form, no tool/usage — Sonnet bench v4 winner at 33/36).",
+      "version": "0.8.0"
     },
     {
       "name": "inbox",

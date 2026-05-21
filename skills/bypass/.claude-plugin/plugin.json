@@ -1,7 +1,7 @@
 {
   "name": "bypass",
-  "description": "Bypass the 'next user action' punt. When the agent is about to emit a block of bash commands as 'user action:' and the agent itself can run them, this skill kicks in — just execute instead of asking. Triggers on natural language ('bypass', '그냥 해', '그냥 진행') OR the agent's own self-check for the punt-pattern.",
-  "version": "0.1.0",
+  "description": "Bypass the 'next user action' punt — DEFAULT BEHAVIOR (auto-fires, not opt-in). Before emitting any 'user action:' / 'you need to run:' block, the agent self-checks: if the commands are agent-executable (no interactive input, no unauthorized destructive ops, no external visible messages), just run them. Cross-project always-on enforcement in commons.tape ≥0.7.2; this skill is the named handle + fallback reinforcement surface.",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

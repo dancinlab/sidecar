@@ -1,33 +1,34 @@
 # bypass
 
-Kill the "next user action" punt — when the agent is about to write a block of bash commands the agent itself can run, just run them.
+**Default-on** — kill the "next user action" punt. When the agent is about to write a block of bash commands the agent itself can run, just run them. **No user request needed** — it's the default, not opt-in.
 
-## Trigger
+## How it fires
 
-- Natural language: *"bypass"*, *"그냥 해"*, *"그냥 진행해"*, *"do it yourself"*, *"skip the ask"*, *"just run it"*, *"execute it for me"*
-- Self-check: agent recognizes the punt-pattern about to happen and the commands are agent-executable
+- **Auto (default)**: agent self-check before any punt-block (see SKILL.md). Always-on cross-project guard lives in `commons.tape` ≥ 0.7.2 as a `dont` entry.
+- **Explicit (fallback)**: user says *"bypass"* / *"그냥 해"* / *"그냥 진행해"* / *"do it yourself"* / *"just run it"* — used only when the auto-guard slipped.
+
+## Self-check the agent runs
+
+| Question | If YES |
+|---|---|
+| Needs human input? (password / OAuth / 2FA / GUI) | keep in block |
+| Destructive without prior auth? (force-push / rm system / prod deploy) | keep + ask first |
+| External visible message? (slack / email / public PR) | keep + ask first |
+| User explicitly asked to review plan first? | keep in block |
+| **None of the above** | **RUN IT** — don't write as user-action |
 
 ## Anti-pattern this kills
 
 ```
 다음 user action:
-python3.11 -m venv ~/local/bete-net/venv
+python3.11 -m venv ...
 bash setup.sh
 source activate.sh
-bash run_n5_funnel.sh ...
+bash run.sh ...
 ```
 
-— all runnable. Bypass + just run. User shouldn't have to say "해줘".
-
-## When NOT to bypass
-
-- Interactive human input (password / OAuth / 2FA / GUI)
-- Destructive without prior auth (force-push / rm system / prod deploy)
-- External visible messages (slack / email / public PR comments)
-- User explicitly asked to review first
-
-For commands that genuinely need human input: isolate JUST those, execute the rest.
+— all runnable. Should have been executed, not punted. User shouldn't have to say "해줘".
 
 ## Related
 
-- Cross-project rule in `commons.tape` (≥0.7.2) bakes the anti-punt as a `dont` — fires always-on; this skill is the explicit-trigger surface.
+- `commons.tape` ≥ 0.7.2 — cross-project always-on `dont` enforcement.

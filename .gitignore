@@ -3,3 +3,6 @@
 
 # hexa build artifacts (from running plugin .hexa scripts during dev)
 build/
+
+# install markers from build hooks (runtime)
+state/

@@ -65,3 +65,7 @@
 @D g19 := "project.tape — granular B form" :: governance [required active]
   do   = "when editing any `<project-root>/project.tape` (or commons-style multi-rule `.tape` carrier), use granular @D blocks — one rule per entry · single concept · do/dont only · no `tool` / `usage` keys on multi-rule carriers (the v4 Sonnet bench showed they net-negative); single-rule isolated blocks like `@D ship` MAY use `tool` per tape v1.4 spec"
   dont = "monolithic `@D := \"<name>\" :: governance` block mashing many concepts into one do/dont string — that exceeds v1.2's 500-char/entry cap and dilutes LLM attention (v4 bench: granular 33/36 vs single-block 31/36)"
+
+@D g20 := "no hardcoding · implement generically" :: governance [required active]
+  do   = "implement once, parameterize over instances · code in one canonical home (single stdlib · single dispatcher) · manifest-driven extension (new instance = manifest only, no code change) · universal generic path"
+  dont = "hard-code per-instance / per-domain / per-tenant branches · duplicate implementation across topical folders · per-instance Producer / Dispatcher / Handler class family · branch on instance name in the generic layer"

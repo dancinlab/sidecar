@@ -1,9 +1,0 @@
-{
-  "name": "wilson-bash-guard",
-  "description": "Deny catastrophic Bash commands at the PreToolUse layer — pipe-to-shell from a network downloader (curl|sh), `rm -rf` of a root/home path, fork bombs, disk destroyers (dd of=/dev/disk, mkfs, >/dev/sd*), recursive chmod/chown on `/` `~` or `.`, and **cwd-suicide** (a `git worktree remove`, `rm -rf`, or `rmdir` whose realpath target IS or contains the cwd of THIS session OR — added in 0.3.0 — of ANY OTHER active Claude Code session, discovered by scanning ~/.claude/projects/**/*.jsonl for transcripts whose mtime is within SIDECAR_BASH_GUARD_SESSION_TTL_MIN minutes, default 60; set to 0 to disable the cross-session axis). After such a call every subsequent hook in the affected session posix_spawn-ENOENTs on the dead cwd until the session is restarted; symlink-resolved via realpath, and skipped when the same chain has a prior `cd` so the user is consciously moving out. High-confidence destructive patterns only — near-zero false positives. Complements wilson-git-guard (force-push) and wilson-dangerous-path (protected-path writes). Opt out: SIDECAR_NO_BASH_GUARD=1.",
-  "version": "0.3.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hooks", "guardrail", "bash", "security", "pipe-to-shell", "wilson"]
-}

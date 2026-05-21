@@ -1,9 +1,0 @@
-{
-  "name": "wilson-roi",
-  "description": "UserPromptSubmit hook — when the user types a bare ROI keyword (`roi` / `ROI` / `투자대비` / `roi표`), inject a 5-column traffic-light table skeleton (등급 · id · 프로젝트 · 한 줄 · 효과) as additionalContext, telling Claude to fill it in this turn for the prior user context. Color enum: 🔴 Critical / 🟡 Important / 🟢 OK / ⚪ Backlog (per archive-nexus tool/rules_loader.hexa::level_to_severity, the cross-repo signal canon). Header label appears only on the first row of each color group; subsequent rows in the same group leave column-1 empty for visual grouping (the dashboard-tri pattern from archive-nexus docs/atlas_meta_dashboard.md, commit ab098d20 2026-04-22). Match is exact-after-strip+lower so `roi for X` does NOT trigger — only a bare keyword. Sidecar-minimal: no scoring engine, no persistence; the model fills the table. Toggle: /sidecar off roi. Default ON. Opt out: SIDECAR_NO_ROI=1.",
-  "version": "0.1.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hooks", "context", "roi", "decision", "table", "traffic-light", "wilson"]
-}

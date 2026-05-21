@@ -20,7 +20,7 @@
     "mark major events with 5-count emoji (🛸*5 transcend / ⭐️*5 win / 🔥*5 breakthrough) — never on routine OK",
     "for runpod dispatch use `hexa cloud {run|nohup|poll|copy-to|copy-from}` (structured-argv) — not raw `ssh`/`scp`",
     "fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint)",
-    "write docs in completed-form (describe current state) — migration / replacement / archive notes go in a dedicated history surface (`CHANGELOG.md` for chronological log · `archive/` folder for retained dead artifacts)",
+    "write docs in completed-form (describe current state) — migration / replacement notes go in a dedicated history surface (`CHANGELOG.md` for chronological log · `git log` for the full audit trail)",
     "use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification) — not `tail -f` / `sleep`-poll loops"
   ],
   "dont": [
@@ -36,6 +36,6 @@
     "long-lived feature branches",
     "LLM self-judge correctness without `hexa verify`",
     "cite sympy / PyPhi / Wolfram / Mathematica as primary evidence",
-    "mix migration history into living docs (no inline `replaces X` · `migrated from Y` · `archived YYYY-MM-DD` — that's `CHANGELOG.md` / git log / `archive/` territory)"
+    "mix migration history into living docs (no inline `replaces X` · `migrated from Y` · `archived YYYY-MM-DD` — that's `CHANGELOG.md` / git log territory)"
   ]
 }

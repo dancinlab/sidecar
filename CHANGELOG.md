@@ -2,7 +2,7 @@
 
 Chronological log of notable changes. One section per ship batch, date-keyed. Per-plugin version bumps inline.
 
-For dead-artifact retention (prior carriers, retired plugin shapes), see [`archive/`](archive/). For the full audit trail, see `git log`.
+For the full audit trail, see `git log`.
 
 ---
 

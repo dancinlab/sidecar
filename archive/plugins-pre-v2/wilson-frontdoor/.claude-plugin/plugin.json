@@ -1,9 +1,0 @@
-{
-  "name": "wilson-frontdoor",
-  "description": "Inject the `frontdoor` operating principle (정공법 — take the orthodox path at a fork) as additionalContext. At a wall the agent should prefer the root-cause fix over a downstream workaround that papers over the symptom; when the root lives in an upstream / another SSOT repo it must NOT silently work around it here but escalate via `wilson-inbox` (a structured cross-repo handoff). A workaround is acceptable only as an explicitly recorded stopgap, never the silent default. Pure text contributor — NO enforcement (a hook cannot detect a fork; this keeps the principle in context so the model self-applies it). Two-tier cadence like wilson-prefs / wilson-decision-gate: full body on SessionStart + PostCompact, refreshed every Nth UserPromptSubmit turn (SIDECAR_FRONTDOOR_REFRESH, default 10), with a compact one-line reminder on the off-turns so the principle never decays to a bare label mid-session. Toggle via /sidecar off frontdoor. Opt out: SIDECAR_NO_FRONTDOOR=1 (or WILSON_NO_FRONTDOOR=1).",
-  "version": "0.1.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hooks", "context", "principle", "root-cause", "frontdoor", "wilson"]
-}

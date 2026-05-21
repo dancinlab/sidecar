@@ -1,9 +1,0 @@
-{
-  "name": "wilson-checkpoint",
-  "description": "Never lose work to a usage limit / rate-limit / crash. A Claude Code hook cannot see the limit event, so this keeps a always-fresh non-destructive snapshot instead: on Stop / PreCompact / SessionEnd it runs `git stash create` (a dangling commit — working tree, index and branches untouched), pins it under refs/wilson-checkpoint/, and writes a resume note. SessionStart re-injects an unconsumed snapshot so the next session continues. Restore/list/clear via /wilson-checkpoint:checkpoint. Opt out: SIDECAR_NO_CHECKPOINT=1.",
-  "version": "0.1.1",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hooks", "checkpoint", "recovery", "git-stash", "wilson"]
-}

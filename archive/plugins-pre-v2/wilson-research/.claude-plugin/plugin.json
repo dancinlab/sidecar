@@ -1,9 +1,0 @@
-{
-  "name": "wilson-research",
-  "description": "Research-fetch tools for Claude Code — pull the latest research material from arXiv and from YouTube. `/wilson-research:yt <url>` extracts a video's caption transcript (manual or auto-generated, any available language); `/wilson-research:arxiv <query>` searches the official arXiv API or looks up a paper by id, returning title / authors / abstract / categories / pdf link. Pure Python stdlib — no binaries, no pip dependencies, no API key.",
-  "version": "0.1.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "research", "arxiv", "youtube", "transcript", "wilson"]
-}

@@ -36,8 +36,7 @@ sidecar/
 ├── skills/           # Skill tool invocable plugins
 ├── .claude/skills/   # Spec Kit project-scope skills (tracked)
 ├── .specify/         # Spec Kit pipeline artifacts (this constitution lives here)
-├── .claude-plugin/marketplace.json   # plugin registry
-└── archive/          # offline reference only · not distributed
+└── .claude-plugin/marketplace.json   # plugin registry
 ```
 
 ## Development Workflow
@@ -50,7 +49,6 @@ sidecar/
 
 ## Governance
 
-- This constitution supersedes prior `AGENTS.tape` governance for sidecar (legacy `AGENTS.tape` is kept dormant for reference).
 - Amendments land via a new `design.md` decision entry and a single PR.
 - The `commons` hook (`hooks/commons/commons.tape`) carries the cross-project layer that sits above any project constitution — when a project rule conflicts with `commons`, `commons` wins unless the project decision explicitly overrides it.
 - Complexity must be justified in the corresponding `design.md` entry. Default = simpler.

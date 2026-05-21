@@ -23,7 +23,7 @@
 @D s5 := "project.tape carries project-level rules" :: governance [active]
   do   = "this file (`<project-root>/project.tape`, linked as CLAUDE.md) carries sidecar-specific identity + governance; project-tape hook re-injects on PreCompact + PostCompact"
 
-@D ship := "ship cycle — atomic commit + push + install-sync (no unshipped diffs)" :: governance [required active]
-  do    = "ship as one atomic op: commit (stage explicit paths · credential scan first) → push origin/<branch> → marketplace clone pull → cache copy to ~/.claude/plugins/cache/sidecar/<name>/<ver>/ → patch installed_plugins.json (version · installPath · lastUpdated · gitCommitSha)"
-  dont  = "unshipped diffs between user-facing pauses · `git add -A` / `-u` instead of explicit paths · defer install sync to `/plugin` after push · skip credential scan (rpa_ · sk-[A-Za-z0-9]{20} · hf_[A-Za-z0-9]{30} · AKIA)"
-  tool  = "git + gh + ~/.claude/plugins/{marketplaces,cache,installed_plugins.json}"
+@D ship := "ship cycle — sidecar plugin atomic commit + push + install-sync" :: governance [required active]
+  do    = "the word `ship` refers to THIS REPO's plugin ship cycle (sidecar), NOT a cross-repo git push batch. atomic op: commit (stage explicit paths · credential scan first) → push origin/<branch> → marketplace clone pull → cache copy to ~/.claude/plugins/cache/sidecar/<name>/<ver>/ → patch installed_plugins.json (version · installPath · lastUpdated · gitCommitSha) — equivalent to `sidecar sync` after the push"
+  dont  = "interpret `ship` as a cross-repo batch (sweeping git push across hexa-lang · demiurge · anima · etc. — those are other repos' own ship cycles) · unshipped diffs between user-facing pauses · `git add -A` / `-u` instead of explicit paths · defer install sync to `/plugin` after push · skip credential scan (rpa_ · sk-[A-Za-z0-9]{20} · hf_[A-Za-z0-9]{30} · AKIA)"
+  tool  = "git + gh + sidecar sync (= marketplace pull + cache copy + installed_plugins.json patch)"

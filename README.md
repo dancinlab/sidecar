@@ -23,6 +23,7 @@ sidecar/
 ├── skills/               # Skill tool invocable plugins
 ├── .claude/skills/       # Spec Kit project-scope skills (tracked)
 ├── .specify/             # Spec Kit pipeline artifacts (constitution + templates + workflows)
+├── archive/              # Deprecated artifacts (e.g. legacy .tape carriers) — kept for reference, not active
 └── .claude-plugin/marketplace.json
 ```
 
@@ -30,13 +31,17 @@ sidecar/
 
 | Name | Kind | Version | Summary |
 |---|---|---|---|
-| [`commons`](hooks/commons/) | hook | 0.2.6 | SessionStart hook — injects a cross-project `do` / `dont` layer above the per-project context. |
-| [`inbox`](skills/inbox/) | skill + command | 0.1.0 | Cross-project handoff inbox. Natural-language trigger + `/inbox list` · `/inbox new <kind> <slug>`. |
+| [`commons`](hooks/commons/) | hook | 0.3.8 | SessionStart + PreCompact hook — injects a cross-project `do` / `dont` layer above the per-project context. |
+| [`git-guard`](hooks/git-guard/) | hook | 0.1.0 | PreToolUse(Bash) deny — blocks `git push --force(-with-lease)` · refspec-force · `git {commit,merge,rebase} --no-verify`. Opt out via `SIDECAR_NO_GIT_GUARD=1`. |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.0 | Wire the hexa-lang LSP server for `.hexa` files. |
+| [`inbox`](skills/inbox/) | skill + command | 0.1.0 | Cross-project handoff inbox. Natural-language trigger + `/inbox list` · `/inbox new <kind> <slug>`. |
+| [`all-bg-go`](skills/all-bg-go/) | skill + command | 0.1.0 | Parallel fan-out trigger — when the previous turn offered multiple branches and the user says "all bg go", spawn one background Agent per branch in parallel. Also `/all-bg-go`. |
 
 ## Governance
 
-The substantive constitution lives at `.specify/memory/constitution.md` (Spec Kit). Cross-project rules live in [`hooks/commons/commons.tape`](hooks/commons/commons.tape) and are auto-injected at SessionStart. Local sidecar rules (concept separation, ship cycle, evidence-before-ship) are recorded in [`design.md`](design.md) as numbered decisions.
+The substantive constitution lives at `.specify/memory/constitution.md` (Spec Kit). Cross-project `do` / `dont` rules ride inside the `commons` hook plugin and are auto-injected at SessionStart + PreCompact. Local sidecar rules (concept separation, ship cycle, evidence-before-ship) are recorded in [`design.md`](design.md) as numbered decisions.
+
+> Note: `.tape` carriers (e.g. legacy `commons.tape`, `AGENTS.tape`) are no longer the live source — they were retired into [`archive/`](archive/) on 2026-05-21. Active plugin logic lives in each plugin's `bin/` + `hooks/` directly.
 
 ## Reference
 

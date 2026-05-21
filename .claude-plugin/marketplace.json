@@ -11,7 +11,7 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart hook — injects a cross-project common do/dont layer above the per-project AGENTS.tape.",
+      "description": "SessionStart + PreCompact hook — injects a cross-project common do/dont layer above the per-project context.",
       "version": "0.3.8"
     },
     {
@@ -30,6 +30,12 @@
       "name": "git-guard",
       "source": "./hooks/git-guard",
       "description": "PreToolUse(Bash) deny for force-push · force-with-lease · refspec-force · git {commit,merge,rebase} --no-verify. Opt out: SIDECAR_NO_GIT_GUARD=1.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "all-bg-go",
+      "source": "./skills/all-bg-go",
+      "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), spawn one background Agent per branch in parallel instead of picking one. Skill (natural language) + /all-bg-go command.",
       "version": "0.1.0"
     }
   ]

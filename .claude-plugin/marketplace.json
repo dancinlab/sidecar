@@ -33,6 +33,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "pool-route",
+      "source": "./hooks/pool-route",
+      "description": "PreToolUse(Bash) suggestion hook — when a command is host-specific (macOS-only: swift/xcodebuild/xcrun · GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), spawn one background Agent per branch in parallel instead of picking one. Skill (natural language) + /all-bg-go command.",

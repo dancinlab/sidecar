@@ -19,7 +19,8 @@
     "mark major events with 5-count emoji (🛸*5 transcend / ⭐️*5 win / 🔥*5 breakthrough) — never on routine OK",
     "for runpod dispatch use `hexa cloud {run|nohup|poll|copy-to|copy-from}` (structured-argv) — not raw `ssh`/`scp`",
     "fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint)",
-    "write docs in completed-form (describe current state) — migration / replacement / archive notes go in a dedicated history surface (`CHANGELOG.md` for chronological log · `archive/` folder for retained dead artifacts)"
+    "write docs in completed-form (describe current state) — migration / replacement / archive notes go in a dedicated history surface (`CHANGELOG.md` for chronological log · `archive/` folder for retained dead artifacts)",
+    "use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification) — not `tail -f` / `sleep`-poll loops"
   ],
   "dont": [
     "implement workarounds for known gaps (file an upstream inbox patch instead — fix at source, never paper over)",

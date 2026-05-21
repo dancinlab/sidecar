@@ -30,7 +30,7 @@ sidecar/
 
 | Name | Kind | Version | Summary |
 |---|---|---|---|
-| [`commons`](hooks/commons/) | hook | 0.4.0 | SessionStart + PreCompact hook — injects a cross-project `do` / `dont` layer (from `commons.json`) above the per-project context. |
+| [`commons`](hooks/commons/) | hook | 0.4.1 | SessionStart + PreCompact hook — injects a cross-project `do` / `dont` layer (from `commons.json`) above the per-project context. |
 | [`git-guard`](hooks/git-guard/) | hook | 0.1.0 | PreToolUse(Bash) deny — blocks `git push --force(-with-lease)` · refspec-force · `git {commit,merge,rebase} --no-verify`. Opt out via `SIDECAR_NO_GIT_GUARD=1`. |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.0 | Wire the hexa-lang LSP server for `.hexa` files. |
 | [`inbox`](skills/inbox/) | skill + command | 0.1.0 | Cross-project handoff inbox. Natural-language trigger + `/inbox list` · `/inbox new <kind> <slug>`. |

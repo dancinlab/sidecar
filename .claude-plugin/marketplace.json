@@ -57,6 +57,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "inject",
+      "source": "./skills/inject",
+      "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn.",
+      "version": "0.1.0"
+    },
+    {
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <DOMAIN>.md (living current-state snapshot, overwrite) + sister <DOMAIN>.log.md (append-only history, newest on top) at project root — single invocation writes BOTH. /domain <NAME> [update] · NL trigger ('ROADMAP 업데이트', 'STATUS.md 정리해줘'). Examples: ROADMAP.md+ROADMAP.log.md · STATUS.md+STATUS.log.md · PLAN.md+PLAN.log.md. Markdown analog of tape v1.2 <DOMAIN>.tape + <DOMAIN>.log.tape sister pattern.",

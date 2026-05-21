@@ -1,7 +1,7 @@
 {
   "name": "domain",
-  "description": "Maintain UPPERCASE <DOMAIN>.md (living current-state snapshot, overwrite) + sister <DOMAIN>.log.md (append-only history, newest on top) at project root — single invocation writes BOTH. /domain <NAME> [update] · NL trigger ('ROADMAP 업데이트', 'STATUS.md 정리해줘'). Examples: ROADMAP.md+ROADMAP.log.md · STATUS.md+STATUS.log.md · PLAN.md+PLAN.log.md. Markdown analog of tape v1.2 <DOMAIN>.tape + <DOMAIN>.log.tape sister pattern.",
-  "version": "0.2.0",
+  "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root — auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) · /domain <task> (append `- [x]`) · /domain todo <task> (`- [ ]`) · /domain done <match> (flip [ ]→[x]) · /domain new <header> · /domain <NAME> <task>. Record progress as work proceeds — log accumulates a checkbox audit trail.",
+  "version": "0.3.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

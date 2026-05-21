@@ -1,64 +1,49 @@
 # domain
 
-Maintain UPPERCASE `<DOMAIN>.md` (living current-state snapshot) + sister `<DOMAIN>.log.md` (append-only history) at project root. Single invocation writes BOTH.
+UPPERCASE `<NAME>.md` (current-state snapshot) + sister `<NAME>.log.md` (append-only checkbox-task log) at project root. NAME defaults to uppercase basename of git root. Auto-scaffolds both files.
 
-## Two-file pattern
-
-| File | Mode | Role |
-|---|---|---|
-| `<DOMAIN>.md` | overwrite | living current-state snapshot |
-| `<DOMAIN>.log.md` | append-only · newest on top | chronological history sister |
-
-Markdown analog of tape v1.2's `<DOMAIN>.tape` + `<DOMAIN>.log.tape` sister pattern.
-
-## Trigger
-
-- Slash: `/domain <NAME> [update directive]` — e.g. `/domain ROADMAP "Q3 priorities: X, Y, Z"`
-- Natural language: *"ROADMAP 업데이트"*, *"STATUS.md 정리해줘"*, *"PLAN.md 새로 만들어"*, *"completed-form 으로 X 유지"*
-
-## Targets
-
-`<project-root>/<DOMAIN>.md` + `<project-root>/<DOMAIN>.log.md` where project-root is the git repo root (`git rev-parse --show-toplevel`).
-
-Examples: `ROADMAP.md`+`ROADMAP.log.md` · `STATUS.md`+`STATUS.log.md` · `PLAN.md`+`PLAN.log.md` · `GOAL.md`+`GOAL.log.md` · `BACKLOG.md`+`BACKLOG.log.md` · `ARCHITECTURE.md`+`ARCHITECTURE.log.md` · `DECISIONS.md`+`DECISIONS.log.md`.
-
-## Invariants
-
-### `<DOMAIN>.md` (snapshot)
-
-| Rule | Form |
-|---|---|
-| UPPERCASE filename | `ROADMAP.md` ✓ · `roadmap.md` ✗ |
-| Project root | `<repo-root>/<DOMAIN>.md` ✓ · `docs/<DOMAIN>.md` ✗ |
-| Completed-form | each read = current state ✓ · log of updates ✗ |
-| No history inside | clean snapshot ✓ · `## 2026-XX-XX Update:` ✗ · `~~struck~~` ✗ · `Last updated:` footer ✗ |
-| Overwrite | rewrite whole file ✓ · append section ✗ |
-
-### `<DOMAIN>.log.md` (history sister)
-
-| Rule | Form |
-|---|---|
-| Same dir as `<DOMAIN>.md` | `<repo-root>/<DOMAIN>.log.md` ✓ |
-| Append-only | never edit prior entries ✓ · corrections = NEW entry ✓ |
-| Newest on top | reverse chronological ✓ |
-| Entry header | `## <ISO timestamp> — <one-line summary>` ✓ · `## Latest update:` ✗ |
-| Body | optional 1-3 lines (semantic delta, NOT full snapshot) |
-
-## Example session
+## Verbs
 
 ```
-$ /domain ROADMAP "Q3 priorities: ship sidecar v0.8 · finish bench v4 · roll out project.tape to remaining 60 repos"
+/domain                       show <PROJECT>.md + .log.md (scaffold if missing)
+/domain <NAME>                show specific NAME.md + .log.md
+/domain <task-text>           append "- [x] <task-text>" to top log entry
+/domain todo <task-text>      append "- [ ] <task-text>"  (pending)
+/domain done <match>          flip first "- [ ] *match*" → "- [x] ..."
+/domain new <header>          start new entry "## <ISO ts> — <header>"
+/domain <NAME> <task-text>    same as above, targeting specific NAME
 ```
 
-→ writes:
-- `ROADMAP.md` (overwrite) with the new current roadmap
-- `ROADMAP.log.md` (prepend at top): `## 2026-05-22T01:35 — Q3 priorities set: sidecar v0.8 · bench v4 · project.tape rollout`
+NAME detection: first arg = NAME if `^[A-Z][A-Z0-9_]*$`, else task text.
 
-Recap: `✓ ROADMAP.md (current) + ROADMAP.log.md (entry N)`
+## Two-file shape
+
+| File | Mode |
+|---|---|
+| `<NAME>.md` | overwrite — current-state snapshot |
+| `<NAME>.log.md` | append-only — newest entry on top, checkbox tasks inside |
+
+Default NAME = `$(basename $(git rev-parse --show-toplevel) | upper)`.
+
+## Record all steps as work proceeds
+
+For multi-step agent work, each step gets logged as a checkbox:
+
+```
+/domain "step 1 done"            → - [x] step 1 done
+/domain "step 2 done"            → - [x] step 2 done
+/domain todo "step 3 planned"    → - [ ] step 3 planned
+... work happens ...
+/domain done "step 3"            → flip step 3 to [x]
+```
+
+The log accumulates a checkbox audit trail.
+
+## Auto-scaffold
+
+If `<NAME>.md` or `<NAME>.log.md` is missing, both get scaffolded with the project-name fallback (`$(basename $(git rev-parse --show-toplevel) | upper)`). No setup needed — just `/domain "first step"` in a fresh repo and the files appear.
 
 ## Related
 
-- `commons.tape` g15: "write docs in completed-form (describe current state) — history in CHANGELOG.md / git log territory"
-- `CHANGELOG.md` — repo-wide chronological log (cross-domain). `<DOMAIN>.log.md` is per-domain.
-- tape v1.2 spec — `<DOMAIN>.tape` + `<DOMAIN>.log.tape` is the official sister pattern this mirrors in markdown form.
-- Sidecar's own `project.tape` is the same snapshot pattern in `.tape` form.
+- `commons.tape g15` — completed-form docs; history in dedicated surfaces.
+- tape v1.2 — `<DOMAIN>.tape` + `<DOMAIN>.log.tape` (this is the markdown analog).

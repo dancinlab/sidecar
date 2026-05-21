@@ -1,152 +1,80 @@
 ---
 name: domain
 description: |
-  Maintain UPPERCASE <DOMAIN>.md files at project root as living
-  current-state snapshots — NOT append-only. A sister append-only
-  history file <DOMAIN>.log.md is auto-written in the same dir.
-  Invoke when the user wants to update, create, or sync a domain
-  doc like ROADMAP.md, STATUS.md, PLAN.md, GOAL.md, BACKLOG.md,
-  NOTES.md, ARCHITECTURE.md, DECISIONS.md, OPEN_QUESTIONS.md.
-  Triggers on phrases like "update ROADMAP", "현재 상태 STATUS.md
-  에 정리해줘", "<X>.md 갱신", "<도메인>.md 에 적어", "ROADMAP
-  업데이트", "PLAN.md 새로 만들어", "completed-form 으로 X 유지".
-allowed-tools: Read, Write, Edit, Bash
+  Maintain UPPERCASE <DOMAIN>.md (current snapshot) + sister
+  <DOMAIN>.log.md (append-only checkbox-task log) at project root.
+  NAME defaults to uppercase basename of git root if omitted.
+  Auto-scaffolds both files when missing. Log entries use checkbox
+  tasks (`- [x]` done · `- [ ]` pending) — flip with `done <match>`.
+  Invoke when the user wants to record progress, plan next steps,
+  or maintain a domain doc (ROADMAP · STATUS · PLAN · GOAL · ...).
+  Triggers on phrases like "domain log", "기록해줘", "체크 추가",
+  "이거 todo 로", "이것 완료 처리", "ROADMAP 업데이트", "STATUS.md
+  정리해줘", "<X>.md 추가".
+allowed-tools: Bash
 ---
 
-# domain — UPPERCASE <DOMAIN>.md (snapshot) + <DOMAIN>.log.md (history sister)
+# domain — UPPERCASE <DOMAIN>.md snapshot + <DOMAIN>.log.md checkbox log
 
-## Two-file pattern
+## Two-file pattern (auto-scaffolded)
 
 | File | Mode | Role |
 |---|---|---|
-| `<project-root>/<DOMAIN>.md` | overwrite each update | living **current-state** snapshot (the file readers consult) |
-| `<project-root>/<DOMAIN>.log.md` | **append-only** | chronological history sister (one entry per update) |
+| `<project-root>/<NAME>.md` | overwrite | living **current-state** snapshot |
+| `<project-root>/<NAME>.log.md` | append-only · newest on top | checkbox-task log (`- [x]` done · `- [ ]` pending) |
 
-Every `domain` invocation writes BOTH — single user call, two-file sync.
+**Default NAME** = uppercase basename of git root (e.g. cwd `~/core/demiurge` → `DEMIURGE`). If either file is missing on any invocation, both get scaffolded with the project-name fallback.
 
-## When to use
-
-The user wants a per-domain markdown file at the project root that holds the CURRENT state — not a log, not an append-only history.
-
-Examples: `ROADMAP.md` · `STATUS.md` · `PLAN.md` · `GOAL.md` · `BACKLOG.md` · `NOTES.md` · `ARCHITECTURE.md` · `DECISIONS.md` · `OPEN_QUESTIONS.md` · `MILESTONES.md`.
-
-## Invariants — `<DOMAIN>.md` (snapshot)
-
-- **UPPERCASE filename** at project root: `<DOMAIN>.md` (`ROADMAP.md`, not `roadmap.md`, not `docs/roadmap.md`).
-- **Completed-form**: every read reflects the CURRENT state, NOT a log of changes.
-- **No history inside the file**: no `## Changelog`, no `### 2026-05-22 update:` sections, no `OLD / NEW` blocks, no `~~struck-through~~` legacy items, no "last updated: ..." footer.
-- **Overwrite, not append**: each update REWRITES the file. The merge happens in your head (read current → integrate update → write new snapshot).
-
-## Invariants — `<DOMAIN>.log.md` (history sister)
-
-- **Same directory** as `<DOMAIN>.md`, with `.log.md` suffix.
-- **Append-only**: never edit prior entries.
-- **One entry per update**: header line + optional body lines.
-- **Entry shape**:
-  ```
-  ## <ISO timestamp> — <one-line summary>
-  
-  <optional 1–3 line body — what changed semantically, not the full new snapshot>
-  ```
-- **ISO timestamp**: `YYYY-MM-DDTHH:MM` (UTC; minute precision is enough).
-- **Newest entry on TOP** (reverse chronological — most recent first when reading).
-- **Body is optional** — if the one-line summary suffices, omit body.
-
-## How to update (every invocation does BOTH)
-
-1. **Resolve target dir**: project root = `git rev-parse --show-toplevel` (NOT cwd if differs).
-2. **Read current** `<DOMAIN>.md` if it exists.
-3. **Integrate the user's update** semantically into the current snapshot.
-4. **Write `<DOMAIN>.md`** — single `Write` call, whole-file overwrite, NEW current state.
-5. **Append to `<DOMAIN>.log.md`** — prepend a new entry at TOP under a `# <Domain> — log` header. If the file doesn't exist, scaffold it (see below).
-6. **Brief confirm**: `✓ ROADMAP.md (current) + ROADMAP.log.md (entry N)` — 1-line recap.
-
-## Scaffolding (new domain)
-
-**`<DOMAIN>.md`** — minimal structure, no boilerplate:
+## Verbs (via `bin/domain.sh`)
 
 ```
-# <Domain> — <one-line subject>
-
-<short paragraph: what this file holds · who reads it · how it's updated>
-
-## <Top-level section 1>
-- ...
-
-## <Top-level section 2>
-- ...
+/domain                           show <PROJECT>.md + .log.md (scaffold if missing)
+/domain <NAME>                    show specific NAME.md + .log.md
+/domain <task-text>               append "- [x] <task-text>" to top log entry
+/domain todo <task-text>          append "- [ ] <task-text>"  (pending)
+/domain done <match>              flip first "- [ ] *match*" → "- [x] ..."
+/domain new <header>              start a new entry "## <ISO ts> — <header>"
+/domain <NAME> <task-text>        same as above, targeting specific NAME
 ```
 
-NO `## History` / `## Changelog` / version field / `Last updated:` footer.
+**NAME detection**: first arg is treated as NAME if it matches `^[A-Z][A-Z0-9_]*$` (uppercase alphanumeric + underscore). Otherwise it's task text and the project-default NAME applies.
 
-**`<DOMAIN>.log.md`** — sister scaffold:
+## Record all steps as work proceeds
 
-```
-# <Domain> — log
+Per the user's "기록 하도록" intent — when the agent is doing multi-step work, each step gets logged as a checkbox:
 
-Append-only history sister of `<DOMAIN>.md`. Each entry = `## <ISO timestamp> — <one-line summary>` (newest on top). The current state lives in [`<DOMAIN>.md`](<DOMAIN>.md).
+- **Completed step** → `/domain "<step description>"` (defaults to `- [x]`)
+- **Planned step** → `/domain todo "<step description>"` (`- [ ]`)
+- **Finishing a pending step** → `/domain done "<match>"` (flip)
+- **Starting a new session/topic** → `/domain new "<session topic>"` (new entry)
 
-## <ISO timestamp> — initial <domain> created
+Default mode: every action the agent takes that's worth recording = `/domain "<action>"`. The log accumulates a checkbox audit trail of the session.
 
-<optional 1–3 line body describing the initial content>
-```
+## Invariants
 
-## Anti-patterns (REJECT in `<DOMAIN>.md`)
+### `<NAME>.md` (snapshot)
+- UPPERCASE filename at git root
+- completed-form (current state, NOT a log)
+- no `## Changelog` / `### YYYY-MM-DD update:` / `~~struck~~` / `Last updated:` footer inside
 
-### ❌ Embedded changelog (this is what `.log.md` is for)
+### `<NAME>.log.md` (checkbox log)
+- append-only (new entries on top); checkboxes flip in-place via `done`
+- new tasks inserted at TOP of most-recent entry
+- entry header: `## <ISO timestamp UTC YYYY-MM-DDTHH:MM> — <session header>`
+- bullet shape: `- [x] <text>` (done) · `- [ ] <text>` (pending)
 
-```
-# ROADMAP
+## Anti-patterns
 
-## 2026-05-22 Update
-- ...
-
-## 2026-05-21 Update
-- ...
-```
-
-— that history goes in `ROADMAP.log.md`, NOT inside `ROADMAP.md`.
-
-### ❌ Preserved-legacy state
-
-```
-- ~~Feature X (done 2026-05-15)~~
-- Feature Y (was "exploring" until 2026-05-10)
-```
-
-— delete completed/abandoned items. The `.log.md` entry records the removal.
-
-### ❌ Footer metadata
-
-```
-*Last updated: 2026-05-22 by Claude*
-```
-
-— this is automatic-history creep. The `.log.md` has the timestamps.
-
-## Anti-patterns (REJECT in `<DOMAIN>.log.md`)
-
-### ❌ Mutating prior entries
-
-Once an entry is appended, never edit it. Corrections go in a NEW entry (`## <ts> — correction: <prior-entry-summary> was inaccurate, actual: ...`).
-
-### ❌ Full snapshot dump in the body
-
-The body summarizes WHAT CHANGED, not the full new snapshot — that's what `<DOMAIN>.md` is for. `git diff HEAD~1 <DOMAIN>.md` shows the actual diff.
-
-### ❌ Entry without timestamp
-
-Every entry MUST start with `## <ISO timestamp> — <summary>`. No `## Latest update:` / `## Yesterday:` placeholders.
-
-## Output style
-
-- Markdown headings (`#`, `##`) for structure
-- Bulleted lists for items
-- No emojis unless the user's project style explicitly uses them
-- Tight prose — completed-form, declarative, present tense in `<DOMAIN>.md`; past tense in `.log.md` entries
+| ❌ Reject | ✅ Use instead |
+|---|---|
+| `## 2026-05-22 Update:` headings inside `<NAME>.md` | append entries to `<NAME>.log.md` |
+| `~~struck-through~~` legacy items in snapshot | delete from snapshot; `[x]` in log |
+| `Last updated: ...` footer | git log / log.md timestamps |
+| Editing prior `.log.md` entry's text | new entry with correction note |
+| Forgetting to record steps as work proceeds | `/domain <step>` per meaningful action |
 
 ## Related
 
-- Cross-project rule `commons.tape` g15: "write docs in completed-form (describe current state) — history in CHANGELOG.md / git log territory". The `.log.md` sister is the per-domain markdown sibling of `CHANGELOG.md` / `git log`.
-- Sidecar's own `project.tape` is the same snapshot pattern in `.tape` form (tape grammar instead of markdown).
-- tape v1.2 spec has the official sister pattern `<DOMAIN>.tape` (current) + `<DOMAIN>.log.tape` (append). `.log.md` is the markdown analog.
+- `commons.tape g15` — write docs in completed-form; history in dedicated surfaces.
+- tape v1.2 spec — `<DOMAIN>.tape` + `<DOMAIN>.log.tape` is the official sister pattern this mirrors in markdown.
+- sidecar's own `project.tape` — same snapshot pattern in `.tape` form.

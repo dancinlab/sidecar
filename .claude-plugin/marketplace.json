@@ -65,8 +65,8 @@
     {
       "name": "gap",
       "source": "./commands/gap",
-      "description": "/gap — multi-axis gap exploration. 40 breakthrough-strategy lenses · 8 families. Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",
-      "version": "0.1.0"
+      "description": "/gap — multi-axis gap exploration. 42 breakthrough-strategy lenses · 8 families (F4 + F6 each have 6 lenses; `occams-razor` lives in both — hypothesis side and design side). Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",
+      "version": "0.2.0"
     },
     {
       "name": "inject",

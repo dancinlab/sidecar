@@ -1,5 +1,5 @@
 ---
-description: /gap — multi-axis gap exploration. Sweeps the current work through 40 breakthrough-strategy lenses (8 families) curated from the archived hive repo's state/*_audit catalogue. Bare `/gap` = mode C (inline-triage all 40 lenses against the current work, then deep-dive — via subagents — only the families that surfaced a candidate gap). `/gap full` = mode A (fan-out one subagent per family, no triage). `/gap <text>` scopes the sweep to <text>. `/gap list` prints the 40-lens catalogue and exits.
+description: /gap — multi-axis gap exploration. Sweeps the current work through 42 breakthrough-strategy lenses (8 families) curated from the archived hive repo's state/*_audit catalogue. Bare `/gap` = mode C (inline-triage all 40 lenses against the current work, then deep-dive — via subagents — only the families that surfaced a candidate gap). `/gap full` = mode A (fan-out one subagent per family, no triage). `/gap <text>` scopes the sweep to <text>. `/gap list` prints the 40-lens catalogue and exits.
 argument-hint: "[full | list | <scope text>]"
 ---
 
@@ -52,6 +52,7 @@ discussion, else the repo at the cwd — and proceed; do not stop to ask.
 - `counterfactual` — had we not done this, what happens — true cause vs mere correlation?
 - `falsifier` — was it pre-declared what observation would prove this wrong?
 - `honesty-triad` — does every claim carry a citation and a severity (claim/proof/severity)?
+- `occams-razor` — among competing hypotheses for the same observation, is the simplest one (fewest assumptions) tried first?
 
 ### F5 · Convergence-Closure — is it done?
 - `fixpoint` — have iteration returns gone flat — have we hit the stop-here fixed point?
@@ -66,6 +67,7 @@ discussion, else the repo at the cwd — and proceed; do not stop to ask.
 - `canonical-ssot` — is the same fact written in two places that can disagree?
 - `duplicated-helper` — is the same helper / logic cloned instead of shared?
 - `surgical-scope` — does every changed line trace to the request, or did scope leak?
+- `occams-razor` — among working designs for the same outcome, is the one with the fewest parts / abstractions chosen?
 
 ### F7 · Temporal-Dynamics — over time
 - `temporal-decay` — does this value / cache / assumption rot with time; what refreshes it?
@@ -83,7 +85,7 @@ discussion, else the repo at the cwd — and proceed; do not stop to ask.
 
 ## Step 2 — mode C (default): triage, then deepen
 
-1. **Triage all 40 lenses inline.** For each lens, against the target, emit a
+1. **Triage all 42 lenses inline.** For each lens, against the target, emit a
    one-line verdict: `gap` (a real shortfall) · `clean` (handled well) · `n/a`
    (lens does not apply). Keep it terse — one line per lens, grouped by family.
 2. **Collect hits.** A family is "hot" if it has ≥1 `gap` verdict.
@@ -98,7 +100,8 @@ discussion, else the repo at the cwd — and proceed; do not stop to ask.
 ## Step 2′ — mode A (`/gap full`): fan-out everything
 
 Skip triage. Dispatch **8 subagents in parallel** (one per family, all in a
-single message), each sweeping the target through all 5 of its lenses and
+single message), each sweeping the target through all of its lenses (5 for
+F1·F2·F3·F5·F7·F8, 6 for F4 and F6 — `occams-razor` lives in both) and
 returning per-lens findings. Use this when triage might miss a latent gap and
 an exhaustive audit is worth the cost.
 

@@ -8,6 +8,7 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-21
 
+- **commons → 0.6.0** — carrier reverted to `commons.tape` (single `@D commons :: governance` entry with `do` / `dont` fields). `bin/commons.sh` emits the tape verbatim as `additionalContext`; the JSON-render path is gone.
 - **commons → 0.4.1** — added DO entry: use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification), not `tail -f` / sleep-poll loops.
 - **commons → 0.4.0** — carrier moved from `commons.tape` to `commons.json` (structured `{ "do": [...], "dont": [...] }`, rendered to markdown by `bin/commons.sh`). Added do/dont entries codifying the "docs in completed-form · history in CHANGELOG / archive/" rule.
 - **all-bg-go 0.1.0 — new** — parallel fan-out trigger. When the prior assistant turn offered N branches and the user says "all bg go" (or 전부 병렬 발사 / fan it all out), spawn one background Agent per branch in a single message. Skill + `/all-bg-go` command.

@@ -4,13 +4,4 @@ SessionStart + PreCompact + PostCompact hook that injects a cross-project **do /
 
 ## Carrier
 
-`commons.json` — structured data:
-
-```json
-{
-  "do":   [ "ai-native", "hexa-native first", ... ],
-  "dont": [ "implement workarounds for known gaps", ... ]
-}
-```
-
-The hook renders it to markdown (`# commons …  ## Do … ## Don't …`) and emits the markdown as `additionalContext`. Edit `commons.json` to change the layer; the hook reads it every fire (SessionStart + PreCompact).
+`commons.tape` — single `@D commons :: governance` entry with `do` / `dont` fields. The hook reads the file every fire and emits it verbatim as `additionalContext`. Edit `commons.tape` to change the layer.

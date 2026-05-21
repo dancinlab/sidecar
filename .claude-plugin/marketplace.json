@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.json (rendered to markdown).",
-      "version": "0.5.1"
+      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape.",
+      "version": "0.6.0"
     },
     {
       "name": "inbox",

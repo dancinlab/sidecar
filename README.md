@@ -30,7 +30,7 @@ sidecar/
 
 | Name | Kind | Version | Summary |
 |---|---|---|---|
-| [`commons`](hooks/commons/) | hook | 0.5.1 | SessionStart + PreCompact + PostCompact hook — injects a cross-project `do` / `dont` layer (from `commons.json`) above the per-project context. PostCompact re-injects after the `※ recap` so the layer survives auto-compaction. |
+| [`commons`](hooks/commons/) | hook | 0.6.0 | SessionStart + PreCompact + PostCompact hook — injects a cross-project `do` / `dont` layer (from `commons.tape`) above the per-project context. PostCompact re-injects after the `※ recap` so the layer survives auto-compaction. |
 | [`git-guard`](hooks/git-guard/) | hook | 0.1.0 | PreToolUse(Bash) deny — blocks `git push --force(-with-lease)` · refspec-force · `git {commit,merge,rebase} --no-verify`. Opt out via `SIDECAR_NO_GIT_GUARD=1`. |
 | [`pool-route`](hooks/pool-route/) | hook | 0.1.0 | PreToolUse(Bash) suggestion — when a command is macOS-only (`swift` · `xcodebuild` · `xcrun` · `pod install`) or GPU-bound (`nvidia-smi` · `nvcc`), inject an `additionalContext` proposing `pool on <host> -- <cmd>`. Non-blocking. Opt out via `SIDECAR_NO_POOL_ROUTE=1`. |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.0 | Wire the hexa-lang LSP server for `.hexa` files. |

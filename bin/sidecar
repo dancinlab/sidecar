@@ -8,7 +8,7 @@
 set -eu
 
 show_help() {
-  sed -n '2,8p' "$0" | sed 's/^# *//; s/^#//'
+  sed -n '2,6p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 case "${1:-}" in

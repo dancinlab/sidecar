@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact hook — injects a cross-project do/dont layer from commons.json (rendered to markdown).",
-      "version": "0.4.1"
+      "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.json (rendered to markdown).",
+      "version": "0.5.0"
     },
     {
       "name": "inbox",
@@ -36,6 +36,12 @@
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), spawn one background Agent per branch in parallel instead of picking one. Skill (natural language) + /all-bg-go command.",
+      "version": "0.1.1"
+    },
+    {
+      "name": "easy",
+      "source": "./skills/easy",
+      "description": "Easy (friendly) response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare). Skill (natural-language trigger) + /easy command. 5 language samples: en · ko · ja · zh · ru.",
       "version": "0.1.0"
     }
   ]

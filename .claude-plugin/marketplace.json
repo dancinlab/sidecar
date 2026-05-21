@@ -53,8 +53,8 @@
     {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
-      "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), spawn one background Agent per branch in parallel instead of picking one. Skill (natural language) + /all-bg-go command.",
-      "version": "0.1.1"
+      "description": "Parallel fan-out trigger — when the previous assistant turn offered multiple branches/options and the user says 'all bg go' (or equivalent), print a plan table first (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. Skill (natural language) + /all-bg-go command.",
+      "version": "0.2.0"
     },
     {
       "name": "easy",

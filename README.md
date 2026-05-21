@@ -62,7 +62,7 @@ sidecar/
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.0 | Wire the hexa-lang LSP server for `.hexa` files. |
 | [`tape-lsp`](hooks/tape-lsp/) | hook | 0.1.0 | Wire the `tape-lsp` server (canonical `.tape` v1.2 LSP — diagnostics + hover) for `.tape` files. Requires `tape-lsp` on PATH (`hx install tape`). |
 | [`inbox`](skills/inbox/) | skill + command | 0.1.0 | Cross-project handoff inbox. Natural-language trigger + `/inbox list` · `/inbox new <kind> <slug>`. |
-| [`all-bg-go`](skills/all-bg-go/) | skill + command | 0.1.1 | Parallel fan-out trigger — when the previous turn offered multiple branches and the user says "all bg go", spawn one background Agent per branch in parallel. Also `/all-bg-go`. |
+| [`all-bg-go`](skills/all-bg-go/) | skill + command | 0.2.0 | Parallel fan-out trigger — when the previous turn offered multiple branches and the user says "all bg go", print a plan table first (branch · subagent_type · isolation · goal), then spawn one background Agent per branch in the same message. Also `/all-bg-go`. |
 | [`easy`](skills/easy/) | skill + command | 0.1.0 | Friendly response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII diagram · compare). Triggered by natural language ("친근하게" · "easy mode" · multilingual equivalents) or `/easy`. 5 language samples (en · ko · ja · zh · ru). |
 | [`gh-stack`](skills/gh-stack/) | skill | 0.1.0 | Stacked-PR workflow — proposes `gh stack` (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes sidecar's <200-lines-per-layer · 1-concern governance. Status in [`gh-stack.md`](gh-stack.md). |
 

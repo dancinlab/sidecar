@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-22
+
+- **all-bg-go → 0.2.0** — plan-then-fire flow. Before dispatching the N background Agents, the skill prints a compact plan table (`| # | label | subagent_type | iso | goal |`) so the parallel plan is visible to the user. Plan + dispatch stay in ONE message (no extra turn). The >8 cap now uses the plan table to make cost visible before confirming.
+
 ## 2026-05-21
 
 - **gh-stack 0.1.0 — new skill** — natural-language trigger that proposes the stacked-PR workflow. Two modes: `gh stack` commands (private-preview enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes sidecar's <200-lines-per-layer · 1-concern governance. Per-org status tracked in `gh-stack.md`.

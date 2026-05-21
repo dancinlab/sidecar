@@ -58,3 +58,6 @@
 
 @D g17 := "project.tape user-request only" :: governance [required active]
   dont = "touch project.tape unprompted (active project SSOT — read freely, but modify only on explicit user request)"
+
+@D g18 := "bypass — auto-execute, don't punt" :: governance [required active]
+  dont = "punt to user on clearly-OK agent-executable work (catalog: `next user action:` blocks · `Should I proceed?` · `Want me to check?` deferrals · option-trees with obvious default · over-clarification · defer-by-waiting · excessive recap) — self-check: interactive human input · unauthorized destructive · external visible · explicit user-review request → if all NO, just execute"

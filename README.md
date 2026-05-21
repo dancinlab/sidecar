@@ -18,7 +18,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 
 ```
 sidecar/
-├── hooks/                # PreToolUse · SessionStart · LSP auto-behavior plugins
+├── hooks/                # PreToolUse · SessionStart · PreCompact · PostCompact · LSP plugins
 ├── commands/             # /slash-command invoked plugins
 ├── skills/               # Skill tool invocable plugins
 ├── .claude/skills/       # Spec Kit project-scope skills (tracked)
@@ -30,15 +30,17 @@ sidecar/
 
 | Name | Kind | Version | Summary |
 |---|---|---|---|
-| [`commons`](hooks/commons/) | hook | 0.4.1 | SessionStart + PreCompact hook — injects a cross-project `do` / `dont` layer (from `commons.json`) above the per-project context. |
+| [`commons`](hooks/commons/) | hook | 0.5.1 | SessionStart + PreCompact + PostCompact hook — injects a cross-project `do` / `dont` layer (from `commons.json`) above the per-project context. PostCompact re-injects after the `※ recap` so the layer survives auto-compaction. |
 | [`git-guard`](hooks/git-guard/) | hook | 0.1.0 | PreToolUse(Bash) deny — blocks `git push --force(-with-lease)` · refspec-force · `git {commit,merge,rebase} --no-verify`. Opt out via `SIDECAR_NO_GIT_GUARD=1`. |
+| [`pool-route`](hooks/pool-route/) | hook | 0.1.0 | PreToolUse(Bash) suggestion — when a command is macOS-only (`swift` · `xcodebuild` · `xcrun` · `pod install`) or GPU-bound (`nvidia-smi` · `nvcc`), inject an `additionalContext` proposing `pool on <host> -- <cmd>`. Non-blocking. Opt out via `SIDECAR_NO_POOL_ROUTE=1`. |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.0 | Wire the hexa-lang LSP server for `.hexa` files. |
 | [`inbox`](skills/inbox/) | skill + command | 0.1.0 | Cross-project handoff inbox. Natural-language trigger + `/inbox list` · `/inbox new <kind> <slug>`. |
-| [`all-bg-go`](skills/all-bg-go/) | skill + command | 0.1.0 | Parallel fan-out trigger — when the previous turn offered multiple branches and the user says "all bg go", spawn one background Agent per branch in parallel. Also `/all-bg-go`. |
+| [`all-bg-go`](skills/all-bg-go/) | skill + command | 0.1.1 | Parallel fan-out trigger — when the previous turn offered multiple branches and the user says "all bg go", spawn one background Agent per branch in parallel. Also `/all-bg-go`. |
+| [`easy`](skills/easy/) | skill + command | 0.1.0 | Friendly response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII diagram · compare). Triggered by natural language ("친근하게" · "easy mode" · multilingual equivalents) or `/easy`. 5 language samples (en · ko · ja · zh · ru). |
 
 ## Governance
 
-The substantive constitution lives at `.specify/memory/constitution.md` (Spec Kit). Cross-project `do` / `dont` rules ride inside the `commons` hook plugin and are auto-injected at SessionStart + PreCompact. Local sidecar rules (concept separation, ship cycle, evidence-before-ship) are recorded in [`design.md`](design.md) as numbered decisions.
+The substantive constitution lives at `.specify/memory/constitution.md` (Spec Kit). Cross-project `do` / `dont` rules ride inside the `commons` hook plugin and are auto-injected at SessionStart + PreCompact + PostCompact. Local sidecar rules (concept separation, ship cycle, evidence-before-ship, cross-project carrier) are recorded in [`design.md`](design.md) as numbered decisions.
 
 ## Reference
 

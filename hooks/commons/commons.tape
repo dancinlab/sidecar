@@ -73,3 +73,7 @@
 @D g21 := "no workaround / temp-fix as user choice — go straight to the proper fix" :: governance [required active]
   do   = "when the proper fix is identifiable, just implement it (the proper fix is THE action, not one option among many)"
   dont = "offer the user a menu like `quick patch vs proper refactor vs workaround` when the proper path is clear · present workaround / temp-fix / band-aid as alternatives to be picked between"
+
+@D g22 := "version discipline — bump SemVer + lockstep all version surfaces" :: governance [required active]
+  do   = "any user-visible behavior change → bump SemVer (patch = fix / new entry · minor = new feature / format · major = breaking) + update ALL version-bearing surfaces in the SAME commit (manifest · README plugin row · CHANGELOG · marketplace · cache · etc.) + ship per project's ship cycle"
+  dont = "ship behavior change without a version bump · update some version surfaces but skip others (drift between files) · skip the CHANGELOG entry"

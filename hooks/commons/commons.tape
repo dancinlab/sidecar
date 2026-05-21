@@ -74,3 +74,6 @@
 @D g22 := "version discipline — bump SemVer + lockstep all version surfaces" :: governance [required active]
   do   = "any user-visible behavior change → bump SemVer (patch = fix / new entry · minor = new feature / format · major = breaking) + update ALL version-bearing surfaces in the SAME commit (manifest · README plugin row · CHANGELOG · marketplace · cache · etc.) + ship per project's ship cycle"
   dont = "ship behavior change without a version bump · update some version surfaces but skip others (drift between files) · skip the CHANGELOG entry"
+
+@D g23 := "sidecar slash commands — use when applicable" :: governance [active]
+  do   = "use sidecar slash commands when the situation fits — discovery: `/brainstorm` (depletion ideation) · `/gap` (42-lens audit) · `/kick` (hexa kick wrapper) · `/verify` (hexa verify wrapper) · workflow: `/inbox` (cross-project handoff) · `/all-bg-go` (parallel fan-out) · `/domain <NAME>` (UPPERCASE snapshot + log sister) · `/inject` (mid-session sidecar refresh) · `/prefs` (language settings) · style: `/easy` (friendly response) · research: `/research:arxiv` · `/research:yt`"

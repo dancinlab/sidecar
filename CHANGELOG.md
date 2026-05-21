@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-22
 
+- **bypass → 0.2.0** — extensible anti-punt catalog. 0.1.x covered just the "next user action:" block; 0.2.0 generalizes to a universal self-check (interactive input · unauthorized destructive · external visible · explicit user-review request) applicable to any punt-form, plus a numbered catalog of common punt-patterns (1: user-action blocks · 2: `Should I proceed?` · 3: `Want me to check?` · 4: option-trees with obvious default · 5: over-clarification on inferable details · 6: defer-by-waiting · 7: excessive recap-before-action · 8: plan-then-ask for reversible work). Catalog is extensible — new patterns appended as observed.
+- **commons → 0.7.3** — expand the bypass `dont` entry to mirror the new catalog (was specific to `next user action:` blocks in 0.7.2; now covers the whole category with the universal self-check stated inline).
 - **bypass → 0.1.1** — reframe as DEFAULT behavior (auto-fire, not opt-in). Original 0.1.0 framing said "triggers on phrases" — implied opt-in; corrected to "auto-fires before any punt-block via self-check; explicit invocation is fallback only". Cross-project enforcement stays in `commons.tape` ≥ 0.7.2.
 - **bypass 0.1.0 — new skill** — kills the "next user action:" punt. When the agent is about to emit a block of bash commands as user-action and the agent itself can run them (no interactive human input · no unauthorized destructive ops · no external visible messages), just execute.
 - **commons → 0.7.2** — add `dont` entry mirroring the new `bypass` skill: "punt to user with `next user action:` block when the listed commands are agent-executable — just run them". Cross-project always-on guard; the skill is the explicit-trigger surface.

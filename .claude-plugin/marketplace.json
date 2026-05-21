@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape.",
-      "version": "0.7.2"
+      "version": "0.7.3"
     },
     {
       "name": "inbox",
@@ -59,8 +59,8 @@
     {
       "name": "bypass",
       "source": "./skills/bypass",
-      "description": "Bypass the 'next user action' punt — DEFAULT BEHAVIOR (auto-fires, not opt-in). Before emitting any 'user action:' / 'you need to run:' block, the agent self-checks: if commands are agent-executable (no interactive input · no unauthorized destructive ops · no external visible messages), just run them. Cross-project always-on enforcement in commons.tape ≥0.7.2; this skill is the named handle + fallback surface.",
-      "version": "0.1.1"
+      "description": "Anti-punt — DEFAULT BEHAVIOR (auto-fires, not opt-in). Universal self-check before any move that hands control back to the user (interactive input · unauthorized destructive · external visible · explicit user-review request); if all NO, just execute. Extensible catalog of patterns: 'next user action:' blocks · 'Should I proceed?' confirmations · 'Want me to check?' deferrals · option-trees with obvious default · over-clarification · defer-by-waiting · excessive recap. Cross-project always-on enforcement in commons.tape ≥0.7.3.",
+      "version": "0.2.0"
     },
     {
       "name": "brainstorm",

@@ -8,6 +8,7 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-22
 
+- **commons → 0.6.2** — add `dont` entry: "touch project.tape unprompted (active project SSOT — read freely, but modify only on explicit user request)". Mirrors the existing AGENTS.tape dormant-carry rule for the active SSOT case.
 - **all-bg-go → 0.2.0** — plan-then-fire flow. Before dispatching the N background Agents, the skill prints a compact plan table (`| # | label | subagent_type | iso | goal |`) so the parallel plan is visible to the user. Plan + dispatch stay in ONE message (no extra turn). The >8 cap now uses the plan table to make cost visible before confirming.
 
 ## 2026-05-21

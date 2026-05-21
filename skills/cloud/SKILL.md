@@ -1,7 +1,7 @@
 ---
 name: cloud
 description: |
-  Wrap `hexa-cloud` (runpod dispatch with structured argv — never
+  Wrap `hexa cloud` (runpod dispatch with structured argv — never
   raw ssh/scp per commons.tape g8). Subverbs: run · nohup · poll ·
   copy-to · copy-from. Invoke when the user wants to dispatch
   training / compute to a runpod GPU pod, poll a long-running job,
@@ -11,11 +11,11 @@ description: |
 allowed-tools: Bash
 ---
 
-# cloud — wrap `hexa-cloud` for runpod dispatch
+# cloud — wrap `hexa cloud` for runpod dispatch
 
 ## When to use
 
-Runpod GPU work: training dispatch, long-running compute, file movement to/from a pod. Per `commons.tape g8`, ALWAYS use `hexa-cloud` (structured argv) — NEVER raw `ssh` / `scp`.
+Runpod GPU work: training dispatch, long-running compute, file movement to/from a pod. Per `commons.tape g8`, ALWAYS use `hexa cloud` (structured argv) — NEVER raw `ssh` / `scp`.
 
 ## Subverbs
 
@@ -31,6 +31,6 @@ Runpod GPU work: training dispatch, long-running compute, file movement to/from 
 
 ## Related
 
-- `commons.tape g8` — mandates `hexa-cloud` over raw ssh/scp for runpod.
+- `commons.tape g8` — mandates `hexa cloud` over raw ssh/scp for runpod.
 - `commons.tape g12` — fan out up to 8 parallel pods when wall time shrinks.
 - `/pool` — sister wrapper for the `pool` CLI (different host surface — pool = your own host roster, cloud = runpod GPU).

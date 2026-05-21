@@ -1,6 +1,6 @@
 # cloud
 
-`/cloud <args>` — wrap `hexa-cloud` (runpod dispatch · structured argv · never raw ssh/scp).
+`/cloud <args>` — wrap `hexa cloud` (runpod dispatch · structured argv · never raw ssh/scp).
 
 ## Subverbs
 
@@ -21,6 +21,6 @@
 
 ## Related
 
-- `commons.tape g8` — mandates `hexa-cloud` over raw ssh/scp for runpod.
+- `commons.tape g8` — mandates `hexa cloud` over raw ssh/scp for runpod.
 - `commons.tape g12` — fan out up to 8 parallel pods when wall time shrinks.
 - `/pool` — sister wrapper (pool = your own host roster, cloud = runpod GPU).

@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape (granular `@D g1..g23` form, no tool/usage — Sonnet bench v4 winner at 33/36).",
-      "version": "0.9.2"
+      "version": "0.9.3"
     },
     {
       "name": "prefs",
@@ -71,7 +71,7 @@
     {
       "name": "cloud",
       "source": "./skills/cloud",
-      "description": "/cloud <args> — wraps `hexa-cloud` (runpod dispatch · SEPARATE BINARY at hexa-lang/bin/hexa-cloud, NOT a `hexa cloud` subcommand). Subverbs: run · nohup · poll · copy-to · copy-from. Fails fast with install hint if hexa-cloud not on PATH. NL trigger via skill. Pairs with commons g8 + g12.",
+      "description": "/cloud <args> — wraps `hexa cloud` (runpod dispatch · canonical subcommand form, structured argv — never raw ssh/scp per commons g8). Subverbs: run · nohup · poll · copy-to · copy-from. Upstream gap tracked at hexa-lang/inbox/patches/hexa-cloud-subcommand.md. NL trigger via skill. Pairs with commons g8 + g12.",
       "version": "0.1.0"
     },
     {

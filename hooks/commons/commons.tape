@@ -22,9 +22,9 @@
 @D g7 := "consult hexa --help for unfamiliar verbs" :: governance [active]
   do   = "consult `hexa --help` for unfamiliar hexa CLI verbs"
 
-@D g8 := "runpod dispatch via hexa-cloud (separate binary, NOT `hexa cloud`)" :: governance [required active]
-  do   = "for runpod dispatch use `hexa-cloud {run|nohup|poll|copy-to|copy-from}` — SEPARATE BINARY at `hexa-lang/bin/hexa-cloud`, structured argv"
-  dont = "raw `ssh` / `scp` for runpod dispatch · `hexa cloud` invocation (no such subcommand; commons-pre-0.9.2 had this wrong)"
+@D g8 := "runpod dispatch via hexa cloud" :: governance [required active]
+  do   = "for runpod dispatch use `hexa cloud {run|nohup|poll|copy-to|copy-from}` (structured argv) — canonical subcommand form; upstream gap to register the subcommand tracked at `hexa-lang/inbox/patches/hexa-cloud-subcommand.md`"
+  dont = "raw `ssh` / `scp` for runpod dispatch · fall back to a separate `hexa-cloud` binary (that's the upstream gap; don't paper over per g11)"
 
 @D g9 := "pool + /inbox CLIs available" :: governance [active]
   do   = "know that `pool` (host roster + remote exec — pool list / add / on / status / install tailscale) and `/inbox` (cross-project handoff — list · new <kind> <slug>) are available CLIs"

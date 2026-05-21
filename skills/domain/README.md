@@ -1,6 +1,15 @@
 # domain
 
-UPPERCASE `<DOMAIN>.md` files at project root as living current-state snapshots — overwrite, not append. History lives in `git log`.
+Maintain UPPERCASE `<DOMAIN>.md` (living current-state snapshot) + sister `<DOMAIN>.log.md` (append-only history) at project root. Single invocation writes BOTH.
+
+## Two-file pattern
+
+| File | Mode | Role |
+|---|---|---|
+| `<DOMAIN>.md` | overwrite | living current-state snapshot |
+| `<DOMAIN>.log.md` | append-only · newest on top | chronological history sister |
+
+Markdown analog of tape v1.2's `<DOMAIN>.tape` + `<DOMAIN>.log.tape` sister pattern.
 
 ## Trigger
 
@@ -9,25 +18,47 @@ UPPERCASE `<DOMAIN>.md` files at project root as living current-state snapshots 
 
 ## Targets
 
-`<project-root>/<DOMAIN>.md` where project-root is the git repo root (`git rev-parse --show-toplevel`).
+`<project-root>/<DOMAIN>.md` + `<project-root>/<DOMAIN>.log.md` where project-root is the git repo root (`git rev-parse --show-toplevel`).
 
-Examples: `ROADMAP.md` · `STATUS.md` · `PLAN.md` · `GOAL.md` · `BACKLOG.md` · `ARCHITECTURE.md` · `DECISIONS.md` · `OPEN_QUESTIONS.md` · `MILESTONES.md` · `NOTES.md`.
+Examples: `ROADMAP.md`+`ROADMAP.log.md` · `STATUS.md`+`STATUS.log.md` · `PLAN.md`+`PLAN.log.md` · `GOAL.md`+`GOAL.log.md` · `BACKLOG.md`+`BACKLOG.log.md` · `ARCHITECTURE.md`+`ARCHITECTURE.log.md` · `DECISIONS.md`+`DECISIONS.log.md`.
 
 ## Invariants
+
+### `<DOMAIN>.md` (snapshot)
 
 | Rule | Form |
 |---|---|
 | UPPERCASE filename | `ROADMAP.md` ✓ · `roadmap.md` ✗ |
 | Project root | `<repo-root>/<DOMAIN>.md` ✓ · `docs/<DOMAIN>.md` ✗ |
 | Completed-form | each read = current state ✓ · log of updates ✗ |
-| No history inside | (clean snapshot) ✓ · `## 2026-XX-XX Update:` ✗ · `~~struck~~` ✗ · `Last updated:` footer ✗ |
-| Overwrite | rewrite whole file each update ✓ · append section ✗ |
+| No history inside | clean snapshot ✓ · `## 2026-XX-XX Update:` ✗ · `~~struck~~` ✗ · `Last updated:` footer ✗ |
+| Overwrite | rewrite whole file ✓ · append section ✗ |
 
-## History
+### `<DOMAIN>.log.md` (history sister)
 
-`git log -p <DOMAIN>.md` is the only chronological record. The file itself never carries timestamps or change-log sections.
+| Rule | Form |
+|---|---|
+| Same dir as `<DOMAIN>.md` | `<repo-root>/<DOMAIN>.log.md` ✓ |
+| Append-only | never edit prior entries ✓ · corrections = NEW entry ✓ |
+| Newest on top | reverse chronological ✓ |
+| Entry header | `## <ISO timestamp> — <one-line summary>` ✓ · `## Latest update:` ✗ |
+| Body | optional 1-3 lines (semantic delta, NOT full snapshot) |
+
+## Example session
+
+```
+$ /domain ROADMAP "Q3 priorities: ship sidecar v0.8 · finish bench v4 · roll out project.tape to remaining 60 repos"
+```
+
+→ writes:
+- `ROADMAP.md` (overwrite) with the new current roadmap
+- `ROADMAP.log.md` (prepend at top): `## 2026-05-22T01:35 — Q3 priorities set: sidecar v0.8 · bench v4 · project.tape rollout`
+
+Recap: `✓ ROADMAP.md (current) + ROADMAP.log.md (entry N)`
 
 ## Related
 
 - `commons.tape` g15: "write docs in completed-form (describe current state) — history in CHANGELOG.md / git log territory"
-- Sidecar's own `project.tape` is the same pattern in `.tape` form.
+- `CHANGELOG.md` — repo-wide chronological log (cross-domain). `<DOMAIN>.log.md` is per-domain.
+- tape v1.2 spec — `<DOMAIN>.tape` + `<DOMAIN>.log.tape` is the official sister pattern this mirrors in markdown form.
+- Sidecar's own `project.tape` is the same snapshot pattern in `.tape` form.

@@ -63,6 +63,18 @@
       "version": "0.2.0"
     },
     {
+      "name": "kick",
+      "source": "./skills/kick",
+      "description": "/kick <natural-language seed> — runs `hexa kick --seed \"<seed>\"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via skill (`kick this`, `돌파해줘`, `discover for`). Pairs with commons g6.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "verify",
+      "source": "./skills/verify",
+      "description": "/verify <args> — runs `hexa verify \"$@\"` (cross-project tier rubric, TECS-L-aligned). Forms: <id> (atlas atom), --expr <fn> <n> <v> (numerical), --fence \"<claim>\" (honest ⚪), rubric / list. Returns 🔵🟢🟡🟠🔴⚪ tier badge VERBATIM. NL trigger via skill (`verify this`, `확인해`, `검증해`, `맞아?`). Pairs with commons g5.",
+      "version": "0.1.0"
+    },
+    {
       "name": "gap",
       "source": "./commands/gap",
       "description": "/gap — multi-axis gap exploration. 42 breakthrough-strategy lenses · 8 families (F4 + F6 each have 6 lenses; `occams-razor` lives in both — hypothesis side and design side). Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",

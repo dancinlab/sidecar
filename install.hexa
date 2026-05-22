@@ -1,0 +1,208 @@
+// install.hexa — sidecar one-shot bootstrap (hx build hook).
+//
+// `hx install sidecar` runs this automatically — hx's build-hook step
+// looks for `bin/build.hexa` | `install.hexa` | `bin/build.sh` and runs
+// the first it finds. So `hx install sidecar` ALONE sets everything up.
+// Also re-runnable any time:  hexa run install.hexa
+//
+// What it does (idempotent — every JSON file is .bak'd, parsed, merged,
+// re-emitted; re-running only updates what changed):
+//   1. clone / pull the Claude Code marketplace at
+//      ~/.claude/plugins/marketplaces/sidecar
+//   2. register it in known_marketplaces.json
+//   3. copy each plugin into the version cache + patch installed_plugins.json
+//   4. ENABLE every sidecar plugin in ~/.claude/settings.json
+//      (enabledPlugins) — the step plain `sidecar sync` used to skip,
+//      which is why freshly-synced plugins never showed up.
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _now() -> string {
+    return _trim(to_string(exec("date -u +%Y-%m-%dT%H:%M:%S"))) + ".000Z"
+}
+
+fn _exists(path: string) -> bool {
+    return exec_with_status("test -e " + _shq(path))[1] == 0
+}
+
+fn _is_dir(path: string) -> bool {
+    return exec_with_status("test -d " + _shq(path))[1] == 0
+}
+
+fn _read_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+// parse a JSON file, falling back to `fallback` when missing / unreadable
+fn _parse_or(path: string, fallback: string) -> map {
+    let raw = _trim(_read_safe(path))
+    if raw == "" { return json_parse(fallback) }
+    let mut m = json_parse(fallback)
+    let mut ok = true
+    try { m = json_parse(raw) }
+    catch e { ok = false }
+    if !ok { return json_parse(fallback) }
+    return m
+}
+
+// back up (.bak) then re-emit a JSON file
+fn _write_json(path: string, value: map) {
+    if _exists(path) {
+        let _b = exec("cp " + _shq(path) + " " + _shq(path + ".bak"))
+    }
+    write_file(path, json_stringify(value) + "\n")
+}
+
+fn main() {
+    let home = env_var("HOME")
+    if home == "" {
+        eprintln("sidecar install: $HOME not set — cannot locate Claude Code config")
+        return
+    }
+    let plugins_dir = home + "/.claude/plugins"
+    let mp = plugins_dir + "/marketplaces/sidecar"
+    let cache = plugins_dir + "/cache/sidecar"
+    let installed_path = plugins_dir + "/installed_plugins.json"
+    let known_path = plugins_dir + "/known_marketplaces.json"
+    let settings_path = home + "/.claude/settings.json"
+    let repo = "https://github.com/dancinlab/sidecar"
+
+    let _mk = exec("mkdir -p " + _shq(cache) + " " + _shq(plugins_dir + "/marketplaces"))
+
+    // ── 1. marketplace clone / pull ──────────────────────────────────
+    println("sidecar install: setting up the Claude Code marketplace…")
+    if _is_dir(mp + "/.git") {
+        let _p = exec("git -C " + _shq(mp) + " pull --ff-only origin main 2>/dev/null")
+        println("  marketplace · pulled latest main")
+    } else {
+        let cl = exec_with_status("git clone --depth 1 " + _shq(repo) + " " + _shq(mp) + " 2>&1")
+        if cl[1] != 0 {
+            eprintln("  marketplace clone failed: " + _trim(to_string(cl[0])))
+            eprintln("sidecar install: cannot continue without the marketplace — CC plugin setup skipped")
+            return
+        }
+        println("  marketplace · cloned")
+    }
+    let sha = _trim(to_string(exec("git -C " + _shq(mp) + " rev-parse HEAD 2>/dev/null")))
+    let mut shortsha = sha
+    if len(sha) >= 7 { shortsha = sha.substring(0, 7) }
+
+    let manifest_raw = _trim(_read_safe(mp + "/.claude-plugin/marketplace.json"))
+    if manifest_raw == "" {
+        eprintln("sidecar install: marketplace.json not found at " + mp)
+        return
+    }
+    let manifest = json_parse(manifest_raw)
+    let plugins = manifest["plugins"]
+    let now = _now()
+
+    // ── 2. register the marketplace in known_marketplaces.json ───────
+    let known = _parse_or(known_path, "{}")
+    let src = json_parse("{}")
+    src["source"] = "github"
+    src["repo"] = "dancinlab/sidecar"
+    let mentry = json_parse("{}")
+    mentry["source"] = src
+    mentry["installLocation"] = mp
+    mentry["lastUpdated"] = now
+    known["sidecar"] = mentry
+    _write_json(known_path, known)
+    println("  known_marketplaces.json · sidecar registered")
+
+    // ── 3. cache + installed_plugins.json · 4. settings.json enable ──
+    let installed = _parse_or(installed_path, "{\"version\":2,\"plugins\":{}}")
+    if !has_key(installed, "plugins") { installed["plugins"] = json_parse("{}") }
+    let settings = _parse_or(settings_path, "{}")
+    if !has_key(settings, "enabledPlugins") { settings["enabledPlugins"] = json_parse("{}") }
+
+    let subs = ["hooks", "skills", "commands"]
+    let mut n = 0
+    let mut i = 0
+    while i < len(plugins) {
+        let p = plugins[i]
+        let name = to_string(p["name"])
+        let ver = to_string(p["version"])
+
+        // locate the plugin's source dir (hooks/ · skills/ · commands/)
+        let mut srcdir = ""
+        let mut si = 0
+        while si < len(subs) {
+            let cand = mp + "/" + subs[si] + "/" + name
+            if _is_dir(cand) { srcdir = cand }
+            si = si + 1
+        }
+        if srcdir == "" {
+            i = i + 1
+            continue
+        }
+
+        // copy into the version cache (only when that version is absent)
+        let dest = cache + "/" + name + "/" + ver
+        if !_is_dir(dest) {
+            let _m = exec("mkdir -p " + _shq(dest))
+            let _c = exec("cp -R " + _shq(srcdir) + "/. " + _shq(dest) + "/")
+        }
+
+        let key = name + "@sidecar"
+        // preserve the original installedAt when the entry already exists
+        let mut installed_at = now
+        if has_key(installed["plugins"], key) {
+            let arr = installed["plugins"][key]
+            if len(arr) > 0 && has_key(arr[0], "installedAt") {
+                installed_at = to_string(arr[0]["installedAt"])
+            }
+        }
+        let entry = json_parse("{}")
+        entry["scope"] = "user"
+        entry["installPath"] = dest
+        entry["version"] = ver
+        entry["installedAt"] = installed_at
+        entry["lastUpdated"] = now
+        entry["gitCommitSha"] = sha
+        installed["plugins"][key] = [entry]
+
+        // the step that fixes "commands don't show up"
+        settings["enabledPlugins"][key] = true
+
+        n = n + 1
+        i = i + 1
+    }
+
+    _write_json(installed_path, installed)
+    _write_json(settings_path, settings)
+
+    println("sidecar install: " + to_string(n)
+        + " plugin(s) cached · installed · enabled  (HEAD " + shortsha + ")")
+    println("  → run /reload-plugins in Claude Code (or restart) to load them now.")
+}

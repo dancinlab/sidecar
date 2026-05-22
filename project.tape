@@ -27,6 +27,6 @@
   do   = "SKILL.md body = one `@D <name> :: skill` block · do/dont only · project.tape lint standard"
   dont = "prose · tables · examples in a SKILL.md body · keys beyond do/dont · per-skill README.md"
 
-@D ship := "ship cycle — atomic commit + push + install-sync" :: governance [required active]
-  do   = "atomic: commit (explicit paths · g28 cred-scan) → push origin/<branch> → `sidecar sync`"
-  dont = "`ship` as cross-repo batch · defer sync to `/plugin` · `git add -A`/`-u` · unshipped diffs at pauses"
+@D ship := "ship cycle — atomic commit + push + sync (install + enable)" :: governance [required active]
+  do   = "commit (explicit paths · g28 cred-scan) → push → `sidecar sync` (cache · install · enable)"
+  dont = "`ship` as cross-repo batch · sync without enable · `git add -A`/`-u` · unshipped diffs at pauses"

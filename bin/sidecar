@@ -3,7 +3,7 @@
 #
 # usage:
 #   sidecar init      Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
-#   sidecar sync      Pull latest marketplace + cache copy + patch installed_plugins.json.
+#   sidecar sync      Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
 #   sidecar --help    Show this help.
 
 set -eu
@@ -84,57 +84,21 @@ TAPE
     echo "sidecar: edit project.tape to fill in @I and @D blocks"
     ;;
   sync)
-    MP="${HOME}/.claude/plugins/marketplaces/sidecar"
-    CACHE="${HOME}/.claude/plugins/cache/sidecar"
-    JSON="${HOME}/.claude/plugins/installed_plugins.json"
-    if [ ! -d "$MP/.git" ]; then
-      echo "sidecar sync: marketplace not installed at $MP" >&2
+    # Delegate to install.hexa — the single source of truth for local-install
+    # setup: marketplace pull + version cache + installed_plugins.json AND
+    # enabledPlugins. Patching installed_plugins.json alone left every synced
+    # plugin installed-but-disabled (no command/hook/skill loaded); the enable
+    # step is what makes `sidecar sync` a complete ship-cycle tail.
+    ROOT=$(sidecar_root)
+    if [ ! -f "$ROOT/install.hexa" ]; then
+      echo "sidecar sync: install.hexa not found at $ROOT" >&2
       exit 1
     fi
-    git -C "$MP" pull origin main >/dev/null 2>&1 || { echo "sidecar sync: marketplace pull failed" >&2; exit 1; }
-    SHA=$(git -C "$MP" rev-parse HEAD)
-    python3 - "$MP" "$CACHE" "$JSON" "$SHA" <<'PY'
-import json, pathlib, shutil, sys, datetime
-mp, cache, json_p, sha = (pathlib.Path(a) if i < 3 else a for i, a in enumerate(sys.argv[1:5]))
-shutil.copy2(json_p, str(json_p) + ".bak")
-manifest = json.loads((mp / ".claude-plugin/marketplace.json").read_text())
-installed = json.loads(json_p.read_text())
-now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-synced = []
-for p in manifest["plugins"]:
-    name, ver = p["name"], p["version"]
-    src = None
-    for sub in ("hooks", "skills", "commands"):
-        cand = mp / sub / name
-        if cand.exists():
-            src = cand; break
-    if src is None:
-        continue
-    dest = cache / name / ver
-    if not dest.exists():
-        dest.mkdir(parents=True, exist_ok=True)
-        for item in src.iterdir():
-            if item.is_dir():
-                shutil.copytree(item, dest / item.name, dirs_exist_ok=True)
-            else:
-                shutil.copy2(item, dest / item.name)
-    key = f"{name}@sidecar"
-    cur = installed["plugins"].get(key, [{}])[0] if installed["plugins"].get(key) else {}
-    if cur.get("version") != ver or cur.get("gitCommitSha") != sha:
-        installed["plugins"][key] = [{
-            "scope": "user",
-            "installPath": str(dest),
-            "version": ver,
-            "installedAt": cur.get("installedAt", now),
-            "lastUpdated": now,
-            "gitCommitSha": sha,
-        }]
-        synced.append(f"{name}@{ver}")
-json_p.write_text(json.dumps(installed, indent=2) + "\n")
-print(f"sidecar sync: {len(synced)} plugin(s) updated · HEAD={sha[:7]}")
-for s in synced:
-    print(f"  ✓ {s}")
-PY
+    if ! command -v hexa >/dev/null 2>&1; then
+      echo "sidecar sync: hexa not on PATH (install.hexa is a hexa-lang script)" >&2
+      exit 1
+    fi
+    exec hexa run "$ROOT/install.hexa"
     ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2

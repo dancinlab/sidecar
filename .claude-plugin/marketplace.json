@@ -17,8 +17,8 @@
     {
       "name": "prefs",
       "source": "./hooks/prefs",
-      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
-      "version": "0.1.0"
+      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values; UserPromptSubmit re-injects every turn so the preference never fades. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
+      "version": "0.2.0"
     },
     {
       "name": "inbox",

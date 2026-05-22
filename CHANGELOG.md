@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-23
+
+- **prefs re-injects every turn — prefs 0.2.0** — the `prefs` hook gains a `UserPromptSubmit` event, so the language-preference block (`code` · `docs` · `response`) is re-injected as `additionalContext` on every user turn — not only at `SessionStart` plus the two compaction events. In a long session without compaction the one-shot `SessionStart` injection drifts far back in context and the `response` language silently regresses (the user has to re-state it); the per-turn re-inject keeps the preference anchored. Payload is ~4 lines, so the added token cost is negligible. No script change — the `inject` handler already echoes back whatever `hookEventName` it receives; only `hooks/prefs/hooks/hooks.json` gains the event.
+
 ## 2026-05-22
 
 - **no self-authored bypass — commons 0.9.15 · git-guard 0.4.0 · sidecar-lint 0.3.0 · tape-lint 0.4.0 · pool-route 0.3.0 · limit-guard 0.1.1** — strip every self-authored opt-out from the sidecar guards. Removed: the `SIDECAR_NO_GIT_GUARD` / `SIDECAR_NO_LINT` / `SIDECAR_NO_TAPE_LINT` / `SIDECAR_NO_POOL_ROUTE` / `SIDECAR_NO_LIMIT_GUARD` env vars, and the `~/.claude/sidecar/disabled.json` skip-list mechanism (the `_disabled()` helper in five hook scripts). Every guard now matches `hexa-native`'s no-opt-out model — no env var, no config file, no exception list. Rationale: a guard the agent can switch off is a guard the agent will switch off; the opt-outs were being auto-flipped to push past the very checks they enforce. A mis-firing guard is fixed at the guard, not bypassed. commons gains `@D g30` (`no self-authored bypass — guards ship without an off switch`) to make the rule cross-project. `.hexa` scripts, plugin descriptions, plugin READMEs, marketplace entries, root README rows, deny/suggest message strings all updated in lockstep; behavior otherwise unchanged (all five hooks smoke-tested). `hexa-native` already had no opt-out — untouched.

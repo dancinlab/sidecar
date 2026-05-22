@@ -2,7 +2,7 @@
 # sidecar — CLI for the sidecar Claude Code marketplace.
 #
 # usage:
-#   sidecar init      Drop project.tape + CLAUDE.md symlink into the current dir.
+#   sidecar init      Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
 #   sidecar sync      Pull latest marketplace + cache copy + patch installed_plugins.json.
 #   sidecar --help    Show this help.
 
@@ -10,6 +10,20 @@ set -eu
 
 show_help() {
   sed -n '2,7p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+}
+
+# Absolute path of the sidecar repo root (this script lives in <root>/bin/sidecar,
+# follow symlinks so it works when `sidecar` is symlinked onto PATH).
+sidecar_root() {
+  self="$0"
+  while [ -L "$self" ]; do
+    link=$(readlink "$self")
+    case "$link" in
+      /*) self="$link" ;;
+      *)  self="$(dirname "$self")/$link" ;;
+    esac
+  done
+  CDPATH='' cd -- "$(dirname "$self")/.." && pwd
 }
 
 case "${1:-}" in
@@ -55,6 +69,18 @@ TAPE
     fi
     ln -s project.tape CLAUDE.md
     echo "sidecar: created project.tape · CLAUDE.md → project.tape (symlink)"
+    # LATTICE_POLICY.md — cross-project real-limits-first policy, carried by sidecar.
+    if [ -e LATTICE_POLICY.md ]; then
+      echo "sidecar: LATTICE_POLICY.md already exists — left untouched"
+    else
+      LATTICE_SRC="$(sidecar_root)/LATTICE_POLICY.md" || LATTICE_SRC=""
+      if [ -n "$LATTICE_SRC" ] && [ -f "$LATTICE_SRC" ]; then
+        cp "$LATTICE_SRC" LATTICE_POLICY.md
+        echo "sidecar: created LATTICE_POLICY.md (real-limits-first policy)"
+      else
+        echo "sidecar: warning — LATTICE_POLICY.md source not found; skipped" >&2
+      fi
+    fi
     echo "sidecar: edit project.tape to fill in @I and @D blocks"
     ;;
   sync)

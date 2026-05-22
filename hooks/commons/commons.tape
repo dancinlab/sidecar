@@ -83,5 +83,9 @@
   dont = "serialize independent research paths · present a pick-one menu when the paths are disjoint + parallelizable · sink hours into one path unilaterally while equally-viable paths sit idle (only gate the genuinely huge-cost path for explicit confirm)"
 
 @D g25 := "real-limits-first — anchor ceilings to real math/physics bounds" :: governance [required active]
-  do   = "anchor any ceiling / limit claim to a REAL mathematical or physical bound (Shannon · c · ℏ · Carnot · type-soundness · NP-hardness · secp256k1 · sha256) — the actual limit, not a convenience number"
+  do   = "anchor any ceiling / limit claim to a REAL mathematical or physical bound (Shannon · c · ℏ · Carnot · type-soundness · NP-hardness · secp256k1 · sha256) — the actual limit, not a convenience number; full policy = `LATTICE_POLICY.md` (sidecar/hooks/commons/)"
   dont = "use lattice n=6 / any lattice-fit as the ceiling for external-system claims · invent artificial ceilings · apply lattice derivation to external entities (vendors · labs · benchmarks)"
+
+@D g26 := "lattice-as-tool, not constraint" :: governance [required active]
+  do   = "treat the n=6 lattice as an analytical / organizing tool — use it where it naturally fits (hexa-native specs · internal structure); full cross-project policy = `LATTICE_POLICY.md` (sidecar/hooks/commons/, the SSOT)"
+  dont = "treat the lattice as a hard constraint or a derivation rule · force-fit lattice claims onto external entities (TSMC · ASML · NIST · CERN · NASA · published benchmarks) — cite their own invariants instead"

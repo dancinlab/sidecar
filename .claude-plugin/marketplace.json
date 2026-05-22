@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g25` form, no tool/usage \u2014 Sonnet bench v4 winner at 33/36).",
-      "version": "0.9.7"
+      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g26` form, no tool/usage \u2014 Sonnet bench v4 winner at 33/36). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.8"
     },
     {
       "name": "prefs",

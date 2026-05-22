@@ -105,3 +105,7 @@
 @D g30 := "no self-authored bypass — guards ship without an off switch" :: governance [required active]
   do   = "if a guard / hook / lint mis-fires, fix or remove the guard itself"
   dont = "add an opt-out / bypass (env var · flag · skip-list) to a guard or rule you authored"
+
+@D g31 := "passwordless sudo is available" :: governance [required active]
+  do   = "passwordless sudo available — use it to clear uid/ownership permission blocks, don't punt"
+  dont = "expect sudo to escape the harness sandbox — protected paths stay EPERM even as root"

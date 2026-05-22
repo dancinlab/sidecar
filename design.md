@@ -13,13 +13,22 @@
   - SessionStart hook (auto-inject) chosen over /slash command — applies regardless of user invocation; matches g_concept_separation (hooks/ ⊂ auto-behavior).
   - body kept to a single `@D :: governance` entry with `do` / `dont` only — same shape as AGENTS.tape governance, very short.
 
-### Decision 5 — `git-guard` plugin (force/no-verify deny)
-- **picked**: `hooks/git-guard/` · PreToolUse(Bash) Python guard · 6 regex patterns (force-push · force-with-lease · refspec-force `+<ref>` · commit/merge/rebase --no-verify).
+### Decision 5 — `git-guard` plugin (force-push deny only)
+- **picked**: `hooks/git-guard/` · PreToolUse(Bash) Python guard · 3 regex patterns (force-push, force-with-lease, refspec-level force `+<ref>`).
 - **rationale**:
   - mirrors the existing `~/.claude/settings.json::permissions.deny` `git push -f*` family but makes the rule portable across every sidecar install (settings is a per-user file, not the marketplace).
-  - extends the surface — refspec-force and `--no-verify` weren't covered by the settings denies; this catches them.
+  - extends the surface — refspec-level force (`git push origin +ref`) wasn't covered by the settings denies; this catches it.
+  - scope **narrowed to force-type only**: `--no-verify` family (commit / merge / rebase) intentionally NOT enforced here — left to user discipline so the guard doesn't over-block routine work.
   - opt-out is `SIDECAR_NO_GIT_GUARD=1` (logged in the deny payload — visible, not silent) + the sidecar disable surface (`~/.claude/sidecar/disabled.json`).
-  - PR auto-merge plugin (sibling idea raised in same instruction) deferred per user — separate scope.
+
+### Decision 6 — `sidecar-lint` plugin (auto-lint on `git commit`)
+- **picked**: `hooks/sidecar-lint/` · PreToolUse(Bash) Python lint · fires only when `git commit` is the invoked verb AND the cwd's git root carries `.claude-plugin/marketplace.json` (= any Claude Code marketplace plugin pack).
+- **rationale**:
+  - the governance surface (`commons.tape` cross-project rules + sidecar `project.tape`) names invariants that are easy to violate in a one-line description change — version surface drift (`@D g22`), stale-history footnotes (`@D g15`), hardcoded absolute paths (`@D g13` · `@D s3`), hook script exec bits. A lint at commit time catches them before they ship.
+  - **non-blocking** by design — emits `additionalContext` rather than denying. Lint is for hygiene, not for force. Complements `git-guard` (which IS blocking, but only for the truly destructive force-push family).
+  - **self-exclusion**: staged-diff checks skip lines under `hooks/sidecar-lint/` and `CHANGELOG.md` so the plugin's own documentation of the patterns + the legitimate history surface don't false-positive.
+  - **scope kept tight**: only version drift (not description drift — too noisy across rewrites). Description sync stays a soft norm, not a lint signal.
+  - opt-out is `SIDECAR_NO_LINT=1` + the sidecar disable surface (`~/.claude/sidecar/disabled.json`).
 
 ### Decision 4 — `hexa-lsp` plugin (LSP wiring, minimal scope)
 - **picked**: `hooks/hexa-lsp/` with `.claude-plugin/plugin.json` (lspServers ref) + `lsp.json` (one server entry).

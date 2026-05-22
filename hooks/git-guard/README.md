@@ -1,6 +1,6 @@
 # git-guard
 
-PreToolUse(Bash) guard that denies force / hook-bypass git operations.
+PreToolUse(Bash) guard that denies force-type git push operations.
 
 ## Patterns blocked
 
@@ -9,13 +9,10 @@ PreToolUse(Bash) guard that denies force / hook-bypass git operations.
 | `git push --force` / `-f` | `git push --force origin main` |
 | `git push --force-with-lease` | `git push --force-with-lease origin main` |
 | refspec-level force (`+<ref>`) | `git push origin +feat:main` |
-| `git commit --no-verify` | `git commit --no-verify -m x` |
-| `git merge --no-verify` | `git merge --no-verify x` |
-| `git rebase --no-verify` | `git rebase --no-verify x` |
 
 ## Why
 
-Every blocked pattern either rewrites history on a shared remote or skips a configured safety hook. Both are foot-guns that almost always indicate the wrong remedy was chosen. The right path is to fix the underlying issue (resolve the conflict / debug the failing hook), not silence it.
+Each blocked pattern rewrites history on a shared remote — almost always the wrong remedy. The right path is to resolve the conflict at the source, not overwrite. Hook-bypass (`--no-verify`) is intentionally NOT blocked here; it's a developer-local discipline call rather than something to enforce mechanically.
 
 ## Opt out
 

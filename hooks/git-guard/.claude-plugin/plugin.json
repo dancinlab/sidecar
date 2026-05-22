@@ -1,7 +1,7 @@
 {
   "name": "git-guard",
-  "description": "PreToolUse(Bash) guard that denies force-push, force-with-lease, refspec-force, and hook-bypass git operations. Catches `git push --force`, `git push -f`, `git push <remote> +<ref>`, `git push --force-with-lease`, `git commit --no-verify`, `git merge --no-verify`, `git rebase --no-verify`. Opt out: SIDECAR_NO_GIT_GUARD=1.",
-  "version": "0.1.0",
+  "description": "PreToolUse(Bash) guard that denies force-type git push operations only. Catches `git push --force`, `git push -f`, `git push --force-with-lease`, and `git push <remote> +<ref>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked — left to user discipline. Opt out: SIDECAR_NO_GIT_GUARD=1.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

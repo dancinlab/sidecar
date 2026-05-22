@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-# git-guard — PreToolUse(Bash) deny for force / hook-bypass git operations.
+# git-guard — PreToolUse(Bash) deny for force-type git operations only.
 #
 # Patterns blocked:
 #   git push --force      / git push -f
 #   git push --force-with-lease
 #   git push <remote> +<refspec>   (refspec-level force)
-#   git commit --no-verify
-#   git merge  --no-verify
-#   git rebase --no-verify
 #
 # Opt out: SIDECAR_NO_GIT_GUARD=1 (logged in the deny payload so opt-out
 # is visible, not silent). Sidecar /sidecar disable surface also honored.
@@ -22,12 +19,6 @@ PATTERNS = [
      "git push --force-with-lease"),
     (re.compile(r"\bgit\s+push\b\s+\S+\s+\+\S+"),
      "git push <remote> +<refspec> (refspec-level force)"),
-    (re.compile(r"\bgit\s+commit\b[^\n]*\s--no-verify(\s|$)"),
-     "git commit --no-verify (hook bypass)"),
-    (re.compile(r"\bgit\s+merge\b[^\n]*\s--no-verify(\s|$)"),
-     "git merge --no-verify (hook bypass)"),
-    (re.compile(r"\bgit\s+rebase\b[^\n]*\s--no-verify(\s|$)"),
-     "git rebase --no-verify (hook bypass)"),
 ]
 
 

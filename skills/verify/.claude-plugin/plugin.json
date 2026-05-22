@@ -1,7 +1,7 @@
 {
   "name": "verify",
   "description": "/verify <args> — runs `hexa verify \"$@\"` (cross-project tier rubric, TECS-L-aligned). Forms: <id> (atlas atom recompute), --expr <fn> <n> <v> (numerical), --fence \"<claim>\" (honest ⚪ speculation-fenced), rubric / list. NL trigger via skill ('verify this', '확인해', '검증해'). Pairs with commons.tape g5.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

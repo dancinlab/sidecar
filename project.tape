@@ -2,28 +2,31 @@
   version = "1.4"
 
 @I := "sidecar" :: identity [active]
-  kind   = "Claude Code marketplace plugin pack (concept-separated guardrails · commands · skills)"
-  brief  = "Side-mounts onto Claude Code. Carries the cross-project do/dont layer in hooks/commons/commons.tape."
+  kind   = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
+  brief  = "Side-mounts onto Claude Code · carries the cross-project do/dont layer in hooks/commons/"
   parent = "dancinlab"
   ssot   = "github.com/dancinlab/sidecar (`hx install sidecar`)"
 
 @D s1 := "concept separation" :: governance [required active]
   do   = "1 plugin = exactly 1 of {hook · command · skill} · top-level dir matches the concept"
-  dont = "mix concepts in one plugin (skill+command relax allowed when the command is the literal mechanism the skill orchestrates)"
+  dont = "mix concepts in one plugin (skill+command ok when the command IS the skill's mechanism)"
 
 @D s2 := "structured carriers over prose" :: governance [required active]
-  do   = "use structured carriers: `.tape` · `plugin.json` · `hooks.json` · `marketplace.json` · `lsp.json`"
+  do   = "use structured carriers: `.tape` · `plugin.json` · `hooks.json` · `marketplace.json` · `.lsp.json`"
 
 @D s3 := "portable plugin scripts" :: governance [required active]
-  dont = "hardcoded absolute paths in plugin scripts (use `${CLAUDE_PLUGIN_ROOT}` · `$HOME` · `$CLAUDE_PLUGIN_DATA` · PATH-resolved binaries)"
+  dont = "absolute paths in plugin scripts — use ${CLAUDE_PLUGIN_ROOT} · $HOME · $CLAUDE_PLUGIN_DATA · PATH"
 
 @D s4 := "commons carries cross-project rules" :: governance [active]
-  do   = "the `commons` hook plugin carries cross-project hexa-native do/dont rules across all sessions (SessionStart + PreCompact + PostCompact re-inject)"
+  do   = "`commons` hook carries cross-project do/dont · re-injects SessionStart + PreCompact + PostCompact"
 
 @D s5 := "project.tape carries project-level rules" :: governance [active]
-  do   = "this file (`<project-root>/project.tape`, linked as CLAUDE.md) carries sidecar-specific identity + governance; project-tape hook re-injects on PreCompact + PostCompact"
+  do   = "project.tape (= CLAUDE.md) carries sidecar identity + governance · re-injected on compact"
 
-@D ship := "ship cycle — sidecar plugin atomic commit + push + install-sync" :: governance [required active]
-  do    = "atomic op: commit (explicit paths · credential scan per commons g28) → push origin/<branch> → marketplace clone pull → cache copy to `~/.claude/plugins/cache/sidecar/<name>/<ver>/` → patch `installed_plugins.json` (version · installPath · lastUpdated · gitCommitSha) — equivalent to `sidecar sync` after the push"
-  dont  = "interpret `ship` as cross-repo git push batch (those are other repos' own ship cycles) · defer install sync to `/plugin` after push · `git add -A` / `-u` instead of explicit paths · unshipped diffs between user-facing pauses"
-  tool  = "git + gh + sidecar sync (= marketplace pull + cache copy + installed_plugins.json patch)"
+@D s6 := "skill SKILL.md — minimal tape-style do/dont body" :: governance [required active]
+  do   = "SKILL.md body = one `@D <name> :: skill` block · do/dont only · project.tape lint standard"
+  dont = "prose · tables · examples in a SKILL.md body · keys beyond do/dont · per-skill README.md"
+
+@D ship := "ship cycle — atomic commit + push + install-sync" :: governance [required active]
+  do   = "atomic: commit (explicit paths · g28 cred-scan) → push origin/<branch> → `sidecar sync`"
+  dont = "`ship` as cross-repo batch · defer sync to `/plugin` · `git add -A`/`-u` · unshipped diffs at pauses"

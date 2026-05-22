@@ -24,7 +24,7 @@
       "name": "inbox",
       "source": "./skills/inbox",
       "description": "Cross-project handoff inbox \u2014 skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "hexa-lsp",
@@ -84,55 +84,55 @@
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command.",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "name": "cycle",
       "source": "./skills/cycle",
       "description": "Autonomous work-loop driver — /cycle runs next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. Repeat /cycle to march through a goal in parallel batches. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "pool",
       "source": "./skills/pool",
       "description": "/pool <args> \u2014 wraps the `pool` CLI (host roster + remote exec \u2014 minimal Python, zero deps). Verbs: list \u00b7 add <host> \u00b7 on <host> <cmd> \u00b7 status \u00b7 install tailscale \u00b7 rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "cloud",
       "source": "./skills/cloud",
       "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw ssh/scp per commons g8). Subverbs: preflight \u00b7 run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup \u00b7 no LLM \u00b7 $0). NL trigger via skill. Pairs with commons g8 + g12.",
-      "version": "0.3.0"
+      "version": "0.3.1"
     },
     {
       "name": "hexa-help",
       "source": "./skills/hexa-help",
       "description": "/hexa-help [verb] \u2014 wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific). Per commons g7. NL trigger via skill.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "secret",
       "source": "./skills/secret",
       "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync). Verbs: get · set · rotate · check · delete · list · service · init [icloud|github <url>] · backup [enable <url>|disable|status] · sync · migrate. Two independent sync channels (iCloud Drive primary + optional private GitHub mirror) push the same encrypted blob — master password is the only decryption secret. Auto-push ON by default once `backup enable` runs (opt out via SECRET_BACKUP_AUTO=0). High-value protection on set (BIP39 wordlist-validated · xprv/WIF/64-hex auto-detect → refuse without --allow-mnemonic + stdin/tty). rotate emits sentinel only.",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "name": "kick",
       "source": "./skills/kick",
       "description": "/kick <natural-language seed> \u2014 runs `hexa kick --seed \"<seed>\"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via skill (`kick this`, `\ub3cc\ud30c\ud574\uc918`, `discover for`). Pairs with commons g6.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "verify",
       "source": "./skills/verify",
       "description": "/verify <args> \u2014 runs `hexa verify \"$@\"` (cross-project tier rubric, TECS-L-aligned). Forms: <id> (atlas atom), --expr <fn> <n> <v> (numerical), --fence \"<claim>\" (honest \u26aa), rubric / list. Returns \ud83d\udd35\ud83d\udfe2\ud83d\udfe1\ud83d\udfe0\ud83d\udd34\u26aa tier badge VERBATIM. NL trigger via skill (`verify this`, `\ud655\uc778\ud574`, `\uac80\uc99d\ud574`, `\ub9de\uc544?`). Pairs with commons g5.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) \u00b7 /domain <task> (append `- [x]`) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Records progress as work proceeds \u2014 log accumulates a checkbox audit trail.",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "name": "gap",
@@ -144,55 +144,55 @@
       "name": "inject",
       "source": "./skills/inject",
       "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "ship",
       "source": "./skills/ship",
       "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. NL trigger via skill (ship · 배포 · 출시).",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "bypass",
       "source": "./skills/bypass",
       "description": "Anti-punt \u2014 DEFAULT BEHAVIOR (auto-fires, not opt-in). Universal self-check before any move that hands control back to the user (interactive input \u00b7 unauthorized destructive \u00b7 external visible \u00b7 explicit user-review request); if all NO, just execute. Extensible catalog of patterns: 'next user action:' blocks \u00b7 'Should I proceed?' confirmations \u00b7 'Want me to check?' deferrals \u00b7 option-trees with obvious default \u00b7 over-clarification \u00b7 defer-by-waiting \u00b7 excessive recap. Cross-project always-on enforcement in commons.tape \u22650.7.3.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "brainstorm",
       "source": "./skills/brainstorm",
       "description": "Iterative brainstorming \u2014 given a seed, generates ideas in rounds and keeps going until depletion (no genuinely new ideas vs prior rounds; hard cap 8 rounds). For breadth over selection. Skill (natural language) + /brainstorm command.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "easy",
       "source": "./skills/easy",
       "description": "Easy (friendly) response style \u2014 7-element pattern (icon \u00b7 name \u00b7 alias \u00b7 plain-line \u00b7 analogy \u00b7 ASCII \u00b7 compare). Skill (natural-language trigger) + /easy command. 5 language samples: en \u00b7 ko \u00b7 ja \u00b7 zh \u00b7 ru.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "research",
       "source": "./skills/research",
-      "description": "Research-fetch tools \u2014 `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title \u00b7 authors \u00b7 abstract \u00b7 pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Pure Python stdlib \u2014 no pip deps, no API keys, no binaries.",
-      "version": "0.1.0"
+      "description": "Research-fetch tools \u2014 `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title \u00b7 authors \u00b7 abstract \u00b7 pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`_arxiv.hexa` / `_yt.hexa`, invoked via `hexa run`); HTTP via curl, no API key.",
+      "version": "0.1.1"
     },
     {
       "name": "gh-stack",
       "source": "./skills/gh-stack",
       "description": "Stacked-PR workflow skill \u2014 proposes `gh stack` commands (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes the <200-lines-per-layer \u00b7 1-concern governance.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "paper",
       "source": "./skills/paper",
       "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/, ships with a working matplotlib figure example + `make figures` target) \u00b7 sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 list (bundled samples) \u00b7 help. Template is a minimal arxiv-style single-column 11pt skeleton (main.tex + references.bib + Makefile + README.md + figures/_scripts/fig01_example.py + figures/fig01_example.pdf + figures/_prompts/) \u2014 compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin (also in sidecar marketplace).",
-      "version": "0.3.1"
+      "version": "0.3.2"
     },
     {
       "name": "imagine",
       "source": "./skills/imagine",
-      "description": "/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model] \u2014 generic AI image generator. Two backends out of the box: `fal` (queue+poll fal.ai, default \u2014 `secret get fal.api_key`, model = openai/gpt-image-2 firm-pinned default) and `openai` (sync /v1/images/generations \u2014 `secret get openai.api_key`, model = gpt-image-1). Canonical fal-style size tokens (`square_hd` / `landscape_16_9` / `portrait_16_9` / `square`) translate per-backend. Prompt always read from a file (provenance), payload JSON via mktemp (prompt never on argv). Backend pluggable \u2014 drop a new `_backends/<name>.sh` to add one.",
-      "version": "0.1.0"
+      "description": "/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model] \u2014 generic AI image generator. Two backends out of the box: `fal` (queue+poll fal.ai, default \u2014 `secret get fal.api_key`, model = openai/gpt-image-2 firm-pinned default) and `openai` (sync /v1/images/generations \u2014 `secret get openai.api_key`, model = gpt-image-1). Canonical fal-style size tokens (`square_hd` / `landscape_16_9` / `portrait_16_9` / `square`) translate per-backend. Prompt always read from a file (provenance), payload JSON via mktemp (prompt never on argv). Backend pluggable \u2014 drop a new `_backends/<name>.hexa` to add one.",
+      "version": "0.1.1"
     }
   ]
 }

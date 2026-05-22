@@ -1,7 +1,7 @@
 {
   "name": "bypass",
   "description": "Anti-punt — DEFAULT BEHAVIOR (auto-fires, not opt-in). Before any move that hands control back to the user unnecessarily, the agent runs the universal self-check (interactive human input · unauthorized destructive · external visible · explicit user-review request); if all NO, just execute. Extensible catalog of patterns: 'next user action:' blocks · 'Should I proceed?' confirmations · 'Want me to check?' deferrals · option-trees with obvious default · over-clarification · defer-by-waiting · excessive recap. Cross-project always-on enforcement in commons.tape ≥0.7.3.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

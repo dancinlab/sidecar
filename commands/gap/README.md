@@ -34,6 +34,5 @@ Never fixes — surfaces and prioritises only. User drives what gets fixed.
 
 ## Related
 
-- Restored from pre-v2 `wilson-gap` (commit `4566a2a feat(wilson-gap): new /gap multi-axis gap-exploration plugin`); brand strings updated `wilson-gap → gap`.
 - Complements [`brainstorm`](../skills/brainstorm/) (depletion-style breadth ideation) — gap is gap-finding on existing work, brainstorm is fresh-angle generation.
 - Complements `hexa kick` (commons g6 · gap breakthroughs via the hexa CLI engine).

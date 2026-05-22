@@ -1,7 +1,7 @@
 // _pool_route.hexa — PreToolUse(Bash) pool auto-router.
 //
-// When pool routing is ARMED (pool.json has >=1 roster host AND a workdir)
-// and a Bash command matches the heavy classifier, rewrite the command via
+// When pool routing is armed (`~/.pool/pool.json` has ≥1 enabled host) and
+// a Bash command matches the heavy classifier, the command is rewritten via
 // the hook `updatedInput` field so it runs on a pool host over ssh:
 //     ssh <host> 'cd <workdir> && <cmd>'
 //
@@ -11,7 +11,7 @@
 // runs local. autosync -> rsync the project to the host first; else a
 // preflight `test -d` confirms the workdir exists before routing.
 //
-// Ported from wilson-pool _route.py (sidecar commit ca62ff4, 0.10.2).
+// Roster source of truth: the `pool` CLI's `~/.pool/pool.json`.
 // NO opt-out by design — no env var, no config file, no exception list.
 
 let MARK = "__SIDECAR_POOL__"
@@ -217,60 +217,41 @@ fn main() {
 
     let home = _env("HOME")
 
-    // locate pool.json — written by the `pool` skill plugin; search the
-    // known data dirs (concept-separation split the routing hook from the
-    // pool CLI, so they no longer share one CLAUDE_PLUGIN_DATA).
-    let mut cands = []
-    let cpd = _env("CLAUDE_PLUGIN_DATA")
-    if cpd != "" { cands.push(cpd) }
-    cands.push(home + "/.claude/plugins/data/pool-sidecar")
-    cands.push(home + "/.claude/plugins/data/wilson-pool-sidecar")
-    cands.push(home + "/.claude/plugin-data/wilson-pool")
-
-    let mut dd = ""
+    // roster — the `pool` CLI's single source of truth, ~/.pool/pool.json
+    // (schema: hosts[] of {name, ssh, enabled, sudo, os}).
+    let dd = home + "/.pool"
     let mut cfg = json_parse("{}")
-    let mut ci = 0
-    while ci < len(cands) {
-        let p = cands[ci] + "/pool.json"
-        try {
-            let txt = read_file(p)
-            let parsed = json_parse(txt)
-            if type_of(parsed) == "map" {
-                cfg = parsed
-                dd = cands[ci]
-            }
-        } catch e { }
-        if dd != "" { ci = len(cands) } else { ci = ci + 1 }
-    }
-    if dd == "" { _allow() }
+    try {
+        let parsed = json_parse(read_file(dd + "/pool.json"))
+        if type_of(parsed) == "map" { cfg = parsed }
+    } catch e { _allow() }
 
-    // ARM check — roster (parallel arrays) + a workdir must both be set.
+    // ARM check — at least one enabled roster host.
     if !has_key(cfg, "hosts") { _allow() }
     let hosts = cfg["hosts"]
     if type_of(hosts) != "array" { _allow() }
 
     let mut h_name = []
     let mut h_plat = []
-    let mut h_wd = []
-    let mut h_tx = []
     let mut h_sudo = []
     let mut hi = 0
     while hi < len(hosts) {
         let h = hosts[hi]
         if type_of(h) == "map" {
-            if has_key(h, "host") {
-                let hn = h["host"]
-                if type_of(hn) == "string" && hn != "" {
-                    h_name.push(hn)
+            let mut enabled = true
+            if has_key(h, "enabled") { if type_of(h["enabled"]) == "bool" { enabled = h["enabled"] } }
+            if enabled {
+                // ssh target — the `ssh` field, falling back to `name`
+                let mut tgt = ""
+                if has_key(h, "ssh") { if type_of(h["ssh"]) == "string" { tgt = h["ssh"] } }
+                if tgt == "" {
+                    if has_key(h, "name") { if type_of(h["name"]) == "string" { tgt = h["name"] } }
+                }
+                if tgt != "" {
+                    h_name.push(tgt)
                     let mut pl = "linux"
-                    if has_key(h, "platform") { if type_of(h["platform"]) == "string" { pl = h["platform"] } }
+                    if has_key(h, "os") { if type_of(h["os"]) == "string" { pl = h["os"] } }
                     h_plat.push(pl)
-                    let mut wd = ""
-                    if has_key(h, "workdir") { if type_of(h["workdir"]) == "string" { wd = h["workdir"] } }
-                    h_wd.push(wd)
-                    let mut tx = ""
-                    if has_key(h, "transport") { if type_of(h["transport"]) == "string" { tx = h["transport"] } }
-                    h_tx.push(tx)
                     let mut su = false
                     if has_key(h, "sudo") { if type_of(h["sudo"]) == "bool" { su = h["sudo"] } }
                     h_sudo.push(su)
@@ -281,9 +262,8 @@ fn main() {
     }
     if len(h_name) == 0 { _allow() }
 
-    let mut workdir = ""
-    if has_key(cfg, "workdir") { if type_of(cfg["workdir"]) == "string" { workdir = cfg["workdir"] } }
-    if workdir == "" { _allow() }
+    // pool.json is roster-only — workdir mirrors the local cwd by default.
+    let workdir = "auto"
 
     let toks = _tokens(cmd)
 
@@ -333,7 +313,7 @@ fn main() {
     if len(elig) == 0 { _allow() }
 
     // round-robin across the eligible hosts
-    let rr_path = dd + "/.rr"
+    let rr_path = dd + "/.pool-route.rr"
     let mut n = 0
     try {
         let rr = read_file(rr_path).trim()
@@ -353,9 +333,8 @@ fn main() {
         sudo_note = ", sudo-prefixed"
     }
 
-    // resolve the remote workdir — per-host > global > auto (mirror cwd)
-    let mut wd_remote = h_wd[pick]
-    if wd_remote == "" { wd_remote = workdir }
+    // resolve the remote workdir — `auto` mirrors the local cwd under $HOME
+    let mut wd_remote = workdir
     if wd_remote.to_lower() == "auto" {
         let mut cwd = ""
         if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd = payload["cwd"] } }
@@ -365,22 +344,15 @@ fn main() {
         } else if cwd.starts_with(home + "/") {
             wd_remote = "~/" + cwd.substring(len(home) + 1, len(cwd))
         } else {
-            let mut fb = ""
-            if has_key(cfg, "workdir_fallback") { if type_of(cfg["workdir_fallback"]) == "string" { fb = cfg["workdir_fallback"] } }
-            if fb == "" { _allow() }
-            wd_remote = fb
+            _allow()        // cwd outside $HOME — cannot mirror, run local
         }
     }
     if wd_remote == "" { _allow() }
     let wd_sh = _cd_target(wd_remote)
     let remote = "cd " + wd_sh + " && " + rcmd
 
-    // transport — per-host > global > auto (tailscale if a local daemon is up)
-    let mut tx = h_tx[pick]
-    if tx == "" {
-        if has_key(cfg, "transport") { if type_of(cfg["transport"]) == "string" { tx = cfg["transport"] } }
-    }
-    if tx == "" { tx = "auto" }
+    // transport — tailscale if a local daemon is up, else plain ssh
+    let mut tx = "auto"
     if tx == "auto" {
         tx = "ssh"
         if _exec_rc("command -v tailscale >/dev/null 2>&1") == 0 {
@@ -388,13 +360,9 @@ fn main() {
         }
     }
 
-    // autosync vs preflight
-    let mut autosync = ""
-    if has_key(cfg, "autosync") {
-        let a = cfg["autosync"]
-        if type_of(a) == "bool" { if a { autosync = "on" } }
-        else if type_of(a) == "string" { autosync = a }
-    }
+    // autosync — pool.json is roster-only; default on so routing is
+    // self-sufficient (rsync creates + freshens the remote workdir).
+    let autosync = "on"
 
     let mut new_cmd = ""
     let mut note = ""

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/tape-lint.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_tape_lint.hexa"
           }
         ]
       }

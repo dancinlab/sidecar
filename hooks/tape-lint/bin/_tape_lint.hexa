@@ -1,0 +1,529 @@
+// _tape_lint.hexa — PreToolUse(Edit|Write) lint for `.tape` files.
+//
+// Checks (any *.tape):
+//   * fields rule — `@D` blocks accept only `do` / `dont`.
+//
+// Checks (commons.tape / project.tape only):
+//   * length cap — `do`/`dont` value > 100 chars.
+//   * authoring-language — when sidecar prefs.code == english, lines
+//     newly introducing non-Latin scripts (Hangul/CJK/Kana) are refused.
+//
+// Diff-aware on every check.
+// Opt out: SIDECAR_NO_TAPE_LINT=1
+//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["tape-lint",...]}
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let ne = len(suffix)
+    if ne > ns { return false }
+    return s.substring(ns - ne, ns) == suffix
+}
+
+fn _basename(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return path }
+    return path.substring(i + 1, len(path))
+}
+
+fn _replace_first(s: string, old: string, new_str: string) -> string {
+    if len(old) == 0 { return s }
+    let i = s.index_of(old)
+    if i < 0 { return s }
+    return s.substring(0, i) + new_str + s.substring(i + len(old), len(s))
+}
+
+fn _replace_all(s: string, old: string, new_str: string) -> string {
+    if len(old) == 0 { return s }
+    let mut out = ""
+    let mut rest = s
+    let mut guard = 0
+    while guard < 1000000 {
+        let i = rest.index_of(old)
+        if i < 0 { return out + rest }
+        out = out + rest.substring(0, i) + new_str
+        rest = rest.substring(i + len(old), len(rest))
+        guard = guard + 1
+    }
+    return out + rest
+}
+
+fn _starts_with_indent(line: string) -> bool {
+    if len(line) == 0 { return false }
+    let c = line[0]
+    return c == " " || c == "\t"
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut start = 0
+    while start < n {
+        let c = s[start]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        start = start + 1
+    }
+    let mut end = n
+    while end > start {
+        let c = s[end - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        end = end - 1
+    }
+    return s.substring(start, end)
+}
+
+fn _is_alpha_under(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 65 && k <= 90 { return true }
+    if k >= 97 && k <= 122 { return true }
+    if k == 95 { return true }
+    return false
+}
+
+fn _is_alnum_hyphen(c: string) -> bool {
+    if _is_alpha_under(c) { return true }
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k == 45 { return true }
+    return false
+}
+
+// Parse "@D <name> :=" header → name (empty string if not a header).
+fn _parse_block_header(line: string) -> string {
+    if len(line) < 4 { return "" }
+    if line.substring(0, 3) != "@D " { return "" }
+    let rest = line.substring(3, len(line))
+    let n = len(rest)
+    let mut i = 0
+    while i < n {
+        let c = rest[i]
+        if c != " " && c != "\t" { break }
+        i = i + 1
+    }
+    let mut j = i
+    while j < n {
+        let c = rest[j]
+        if !_is_alnum_hyphen(c) { break }
+        j = j + 1
+    }
+    if j == i { return "" }
+    let name = rest.substring(i, j)
+    let mut k = j
+    while k < n {
+        let c = rest[k]
+        if c != " " && c != "\t" { break }
+        k = k + 1
+    }
+    if k + 1 >= n { return "" }
+    if rest.substring(k, k + 2) != ":=" { return "" }
+    return name
+}
+
+// Parse indented "key = ..." field line → key (empty if shape doesn't match).
+fn _parse_field_key(line: string) -> string {
+    if !_starts_with_indent(line) { return "" }
+    let n = len(line)
+    let mut i = 0
+    while i < n {
+        let c = line[i]
+        if c != " " && c != "\t" { break }
+        i = i + 1
+    }
+    if i == 0 { return "" }
+    if i >= n { return "" }
+    if !_is_alpha_under(line[i]) { return "" }
+    let mut j = i
+    while j < n {
+        let c = line[j]
+        if !_is_alnum_hyphen(c) { break }
+        j = j + 1
+    }
+    let key = line.substring(i, j)
+    let mut k = j
+    while k < n {
+        let c = line[k]
+        if c != " " && c != "\t" { break }
+        k = k + 1
+    }
+    if k >= n { return "" }
+    if line[k] != "=" { return "" }
+    return key
+}
+
+fn _has_canonical_value(line: string) -> bool {
+    let i = line.index_of("\"")
+    if i < 0 { return false }
+    let j = line.last_index_of("\"")
+    return j > i
+}
+
+fn _extract_value(line: string) -> string {
+    let i = line.index_of("\"")
+    if i < 0 { return "" }
+    let j = line.last_index_of("\"")
+    if j <= i { return "" }
+    return line.substring(i + 1, j)
+}
+
+// Iterate @D blocks; emit packed entries "block\tfield\tvlen".
+// vlen: -1 if non-canonical do/dont shape, -2 if non-do/dont field, else len.
+fn _scan_blocks(text: string) -> array {
+    let lines = text.split("\n")
+    let mut out = []
+    let mut cur = ""
+    let n = len(lines)
+    let mut i = 0
+    while i < n {
+        let line = lines[i]
+        let h = _parse_block_header(line)
+        if h != "" {
+            cur = h
+            i = i + 1
+            continue
+        }
+        if cur == "" {
+            i = i + 1
+            continue
+        }
+        let stripped = _trim(line)
+        if stripped == "" {
+            i = i + 1
+            continue
+        }
+        if !_starts_with_indent(line) {
+            cur = ""
+            i = i + 1
+            continue
+        }
+        if stripped[0] == "@" {
+            cur = ""
+            i = i + 1
+            continue
+        }
+        let key = _parse_field_key(line)
+        if key == "" {
+            i = i + 1
+            continue
+        }
+        if key == "do" || key == "dont" {
+            if _has_canonical_value(line) {
+                let v = _extract_value(line)
+                out.push(cur + "\t" + key + "\t" + to_string(len(v)))
+            } else {
+                out.push(cur + "\t" + key + "\t-1")
+            }
+        } else {
+            out.push(cur + "\t" + key + "\t-2")
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn _set_contains(arr: array, x: string) -> bool {
+    let n = len(arr)
+    let mut i = 0
+    while i < n {
+        if arr[i] == x { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// hexa strings are UTF-8 byte arrays; decode each codepoint then range-check.
+// Lead-byte payload: 2-byte = b0-0xC0 (5 bits), 3-byte = b0-0xE0 (4 bits),
+// 4-byte = b0-0xF0 (3 bits). Continuation = b-0x80 (6 bits).
+fn _has_non_latin(line: string) -> bool {
+    let n = len(line)
+    let mut i = 0
+    while i < n {
+        let b0 = char_code(line[i], 0)
+        if b0 < 0x80 { i = i + 1; continue }
+        if b0 < 0xC0 { i = i + 1; continue }
+        let mut cp = 0
+        let mut adv = 1
+        if b0 < 0xE0 {
+            if i + 1 >= n { return false }
+            let b1 = char_code(line[i + 1], 0)
+            cp = ((b0 - 0xC0) * 64) + (b1 - 0x80)
+            adv = 2
+        } else if b0 < 0xF0 {
+            if i + 2 >= n { return false }
+            let b1 = char_code(line[i + 1], 0)
+            let b2 = char_code(line[i + 2], 0)
+            cp = ((b0 - 0xE0) * 4096) + ((b1 - 0x80) * 64) + (b2 - 0x80)
+            adv = 3
+        } else {
+            if i + 3 >= n { return false }
+            let b1 = char_code(line[i + 1], 0)
+            let b2 = char_code(line[i + 2], 0)
+            let b3 = char_code(line[i + 3], 0)
+            cp = ((b0 - 0xF0) * 262144) + ((b1 - 0x80) * 4096) + ((b2 - 0x80) * 64) + (b3 - 0x80)
+            adv = 4
+        }
+        if cp >= 0x1100 && cp <= 0x11FF { return true }
+        if cp >= 0x3040 && cp <= 0x30FF { return true }
+        if cp >= 0x3130 && cp <= 0x318F { return true }
+        if cp >= 0x4E00 && cp <= 0x9FFF { return true }
+        if cp >= 0xAC00 && cp <= 0xD7AF { return true }
+        i = i + adv
+    }
+    return false
+}
+
+fn _non_latin_lines(text: string) -> array {
+    let lines = text.split("\n")
+    let mut out = []
+    let n = len(lines)
+    let mut i = 0
+    while i < n {
+        if _has_non_latin(lines[i]) {
+            out.push(lines[i])
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn _prefs_code() -> string {
+    let path = env_var("HOME") + "/.claude/plugins/data/prefs-sidecar/prefs.json"
+    let raw = _read_file_safe(path)
+    if raw == "" { return "english" }
+    let mut result = "english"
+    try {
+        let m = json_parse(raw)
+        if type_of(m) == "map" {
+            if has_key(m, "code") { result = m["code"] }
+        }
+    } catch e { result = "english" }
+    return result
+}
+
+fn _disabled() -> bool {
+    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
+    let raw = _read_file_safe(path)
+    if raw == "" { return false }
+    let mut hit = false
+    try {
+        let m = json_parse(raw)
+        if type_of(m) == "map" && has_key(m, "disabled") {
+            let arr = m["disabled"]
+            if type_of(arr) == "array" {
+                let n = len(arr)
+                let mut i = 0
+                while i < n {
+                    if arr[i] == "tape-lint" { hit = true }
+                    i = i + 1
+                }
+            }
+        }
+    } catch e { hit = false }
+    return hit
+}
+
+// Returns [file_path, new_text] or [] if not applicable.
+fn _compute_proposed(payload: map) -> array {
+    if type_of(payload) != "map" { return [] }
+    if !has_key(payload, "tool_name") { return [] }
+    let tool = payload["tool_name"]
+    if !has_key(payload, "tool_input") { return [] }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { return [] }
+    if !has_key(ti, "file_path") { return [] }
+    let fp = ti["file_path"]
+    if !_ends_with(fp, ".tape") { return [] }
+    if tool == "Write" {
+        let mut content = ""
+        if has_key(ti, "content") { content = ti["content"] }
+        return [fp, content]
+    }
+    if tool == "Edit" {
+        let mut old = ""
+        if has_key(ti, "old_string") { old = ti["old_string"] }
+        let mut new_s = ""
+        if has_key(ti, "new_string") { new_s = ti["new_string"] }
+        let cur = _read_file_safe(fp)
+        if old == "" { return [fp, cur] }
+        let mut replace_all = false
+        if has_key(ti, "replace_all") {
+            if ti["replace_all"] == true { replace_all = true }
+        }
+        if replace_all { return [fp, _replace_all(cur, old, new_s)] }
+        return [fp, _replace_first(cur, old, new_s)]
+    }
+    return []
+}
+
+fn main() {
+    if _disabled() { _allow() }
+    if env_var("SIDECAR_NO_TAPE_LINT") == "1" { _allow() }
+
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    let pr = _compute_proposed(payload)
+    if len(pr) != 2 { _allow() }
+    let fp = pr[0]
+    let new_text = pr[1]
+    let cur_text = _read_file_safe(fp)
+    let base = _basename(fp)
+    let in_scope = base == "commons.tape" || base == "project.tape"
+
+    let new_entries = _scan_blocks(new_text)
+    let cur_entries = _scan_blocks(cur_text)
+    let nn = len(new_entries)
+    let cn = len(cur_entries)
+
+    // (1) fields rule — newly-introduced non-do/dont fields
+    let mut cur_bad = []
+    let mut i = 0
+    while i < cn {
+        let parts = cur_entries[i].split("\t")
+        if parts[2] == "-2" { cur_bad.push(parts[0] + "\t" + parts[1]) }
+        i = i + 1
+    }
+    let mut new_bad = []
+    i = 0
+    while i < nn {
+        let parts = new_entries[i].split("\t")
+        if parts[2] == "-2" {
+            let key = parts[0] + "\t" + parts[1]
+            if !_set_contains(cur_bad, key) {
+                new_bad.push("@D " + parts[0] + " <- new field `" + parts[1] + "`")
+            }
+        }
+        i = i + 1
+    }
+
+    // (2) length cap — only on commons.tape / project.tape
+    let mut length_viols = []
+    if in_scope {
+        // current len map (packed "block|field" -> len)
+        let mut cur_lens = json_parse("{}")
+        i = 0
+        while i < cn {
+            let parts = cur_entries[i].split("\t")
+            let code = parts[2]
+            if code != "-2" && code != "-1" {
+                let key = parts[0] + "|" + parts[1]
+                cur_lens[key] = to_int(code)
+            }
+            i = i + 1
+        }
+        i = 0
+        while i < nn {
+            let parts = new_entries[i].split("\t")
+            let code = parts[2]
+            if code != "-2" && code != "-1" {
+                let plen = to_int(code)
+                if plen > 100 {
+                    let key = parts[0] + "|" + parts[1]
+                    let mut clen = 0
+                    if has_key(cur_lens, key) { clen = cur_lens[key] }
+                    if plen > clen {
+                        length_viols.push("@D " + parts[0] + " " + parts[1] + ": " + to_string(plen) + " chars > 100 cap (was " + to_string(clen) + ")")
+                    }
+                }
+            }
+            i = i + 1
+        }
+    }
+
+    // (3) authoring language
+    let mut new_lang = []
+    let mut code_lang = ""
+    if in_scope { code_lang = _prefs_code() }
+    if in_scope && code_lang == "english" {
+        let new_nl = _non_latin_lines(new_text)
+        let cur_nl = _non_latin_lines(cur_text)
+        let m = len(new_nl)
+        i = 0
+        while i < m {
+            if !_set_contains(cur_nl, new_nl[i]) { new_lang.push(new_nl[i]) }
+            i = i + 1
+        }
+    }
+
+    let any = len(new_bad) > 0 || len(length_viols) > 0 || len(new_lang) > 0
+    if !any { _allow() }
+
+    let mut sections = []
+    if len(new_bad) > 0 {
+        let mut bullets = []
+        let bn = len(new_bad)
+        i = 0
+        while i < bn && i < 8 {
+            bullets.push("    " + new_bad[i])
+            i = i + 1
+        }
+        sections.push("fields rule (@D blocks accept only `do` / `dont` — fold rationale/tooling/refs into prose or drop):\n" + bullets.join("\n"))
+    }
+    if len(length_viols) > 0 {
+        let mut bullets = []
+        let ln = len(length_viols)
+        i = 0
+        while i < ln && i < 8 {
+            bullets.push("    " + length_viols[i])
+            i = i + 1
+        }
+        sections.push("length cap (do/dont value > 100 chars in commons.tape / project.tape — keep each line minimal; split overflow):\n" + bullets.join("\n"))
+    }
+    if len(new_lang) > 0 {
+        let mut bullets = []
+        let gn = len(new_lang)
+        i = 0
+        while i < gn && i < 6 {
+            let line = new_lang[i]
+            let mut snip = line
+            if len(line) > 120 { snip = line.substring(0, 120) }
+            bullets.push("    " + snip)
+            i = i + 1
+        }
+        sections.push("authoring language (prefs.code = " + code_lang + " — non-Latin script on a new line):\n" + bullets.join("\n"))
+    }
+
+    _deny("TAPE_LINT_BLOCK { file: " + base + ", rule: see findings, action: edit refused (pre-existing violations grandfathered, only newly-introduced or worsened items block). Findings:\n\n" + sections.join("\n\n") + "\n\nOverride: SIDECAR_NO_TAPE_LINT=1 }")
+}

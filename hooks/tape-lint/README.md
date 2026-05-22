@@ -2,6 +2,8 @@
 
 PreToolUse(Edit|Write) deny for `.tape` file edits. Three checks, all diff-aware (pre-existing violations on disk are grandfathered; only newly introduced or worsened items block).
 
+Implemented in **hexa-lang** (`bin/_tape_lint.hexa`), invoked via `hexa run` directly from `hooks/hooks.json` — no Python interpreter, no shell shim. First sidecar hook to land hexa-native per `hexa-native` plugin policy.
+
 ## Checks
 
 | # | check | scope | rule |
@@ -15,7 +17,7 @@ PreToolUse(Edit|Write) deny for `.tape` file edits. Three checks, all diff-aware
 Each check compares the proposed file content against the on-disk content and acts only on the set difference:
 
 - **fields**: only newly introduced `(@D <block>, <bad-field>)` pairs block.
-- **length cap**: per `(@D <block>, do|dont)`, a proposed value blocks only when its length exceeds the cap AND exceeds the on-disk length. Shortening an already-too-long line, or leaving it alone, never blocks.
+- **length cap**: per `(@D <block>, do|dont)`, a proposed value blocks only when its length exceeds the cap AND exceeds the on-disk length.
 - **authoring language**: only lines containing non-Latin script that don't already appear (verbatim) in the on-disk file block.
 
 Legacy violations stay readable + editable around them. Forward-only cleanup, no flag day.
@@ -38,3 +40,13 @@ Or via the sidecar disable surface:
 ```sh
 echo '{"disabled":["tape-lint"]}' > ~/.claude/sidecar/disabled.json
 ```
+
+## Runtime
+
+Requires `hexa` on PATH (install via `hx install hexa-lang`). The hook line in `hooks/hooks.json` is:
+
+```json
+{ "type": "command", "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_tape_lint.hexa" }
+```
+
+`hexa run` compiles the script to a native binary on first call (cached under `~/.hexa-cache/`) and reuses the binary on subsequent calls.

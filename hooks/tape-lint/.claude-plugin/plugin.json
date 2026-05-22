@@ -1,9 +1,9 @@
 {
   "name": "tape-lint",
-  "description": "PreToolUse(Edit|Write) deny for `.tape` edits. Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule — `@D` blocks accept only `do` / `dont`; new `why` · `tool` · `note` · `ref` · `ex` · ... refused. Fires on any `*.tape` path. (2) length cap — `do` / `dont` value content > 100 chars refused (split overflow into multiple do/dont or distinct @D blocks). commons.tape + project.tape only. (3) authoring-language — when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul · CJK · Hiragana · Katakana) are refused. Pref is read at runtime so `/prefs code <lang>` reshapes the rule. commons.tape + project.tape only. Opt out: SIDECAR_NO_TAPE_LINT=1.",
-  "version": "0.2.0",
+  "description": "PreToolUse(Edit|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` from hooks.json — no Python, no shell shim). Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule — `@D` blocks accept only `do` / `dont`; new `why` · `tool` · `note` · `ref` · `ex` · ... refused. Fires on any `*.tape` path. (2) length cap — `do` / `dont` value content > 100 chars refused (split overflow into multiple do/dont or distinct @D blocks). commons.tape + project.tape only. (3) authoring-language — when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul · CJK · Hiragana · Katakana) are refused. Pref is read at runtime so `/prefs code <lang>` reshapes the rule. commons.tape + project.tape only. Opt out: SIDECAR_NO_TAPE_LINT=1.",
+  "version": "0.3.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "hook", "lint", "tape", "governance"]
+  "keywords": ["claude-code", "hook", "lint", "tape", "governance", "hexa"]
 }

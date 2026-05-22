@@ -9,7 +9,7 @@ verbatim, plus a fal.ai gpt-image-2 figure generator.
 ```
 /paper new <slug>                          scaffold ./<slug>/ from template
 /paper sample <slug>                       copy the bundled demiurge sample verbatim
-/paper fig <image_size> <prompt> <out.png> fal.ai gpt-image-2 (queue + poll)
+/paper fig <image_size> <prompt> <out.png> delegates to /imagine → fal.ai openai/gpt-image-2
 /paper compile [dir]                       pdflatex × 3 + bibtex
 /paper list                                list bundled samples
 /paper help                                show usage
@@ -17,6 +17,9 @@ verbatim, plus a fal.ai gpt-image-2 figure generator.
 
 `<image_size>`: `square_hd` (1024×1024) · `landscape_16_9` (1792×1024) ·
 `portrait_16_9` (1024×1792) · `square` (512×512).
+
+`fig` requires the sister [`imagine`](../imagine/) plugin (sidecar
+marketplace).
 
 ## Examples
 
@@ -26,7 +29,8 @@ cd mp-cache-roadmap
 # edit main.tex, references.bib …
 /paper compile
 
-# generate an AI cover (requires `secret set fal.api_key`)
+# generate an AI cover via the sister imagine plugin (fal.ai openai/gpt-image-2)
+# requires: `secret set fal.api_key` once
 echo "abstract cover for ..." > figures/_prompts/cover.txt
 /paper fig square_hd figures/_prompts/cover.txt figures/cover.png
 
@@ -41,8 +45,7 @@ cd ref-bcs && /paper compile   # ~14-page demiurge sample, builds standalone
 skills/paper/
 ├── SKILL.md
 ├── commands/paper.md         # /paper slash command
-├── bin/paper.sh              # verb dispatcher
-├── _tools/fal_gen.sh         # fal.ai gpt-image-2 queue+poll
+├── bin/paper.sh              # verb dispatcher (delegates `fig` to sister imagine plugin)
 ├── template/                 # what `/paper new` copies
 │   ├── main.tex              # single-column 11pt arxiv preamble
 │   ├── references.bib        # placeholder bib entry
@@ -74,4 +77,4 @@ Carried over from the demiurge PAPERS repo:
 |---|---|
 | `new`, `sample` | a writable cwd and an unused slug |
 | `compile` | `pdflatex` + `bibtex` (BasicTeX / TeX Live) |
-| `fig` | `secret` CLI on PATH + `fal.api_key` set (`secret set fal.api_key`) |
+| `fig` | sister [`imagine`](../imagine/) plugin installed + `secret` CLI on PATH + `fal.api_key` set (`secret set fal.api_key`) |

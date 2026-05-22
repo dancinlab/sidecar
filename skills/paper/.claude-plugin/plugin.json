@@ -1,7 +1,7 @@
 {
   "name": "paper",
-  "description": "/paper <args> — arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/) · sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) · fig <size> <prompt-file> <out-png> (fal.ai gpt-image-2 queue+poll, uses `secret get fal.api_key`) · compile [dir] (pdflatex × 3 + bibtex) · list (bundled samples) · help. Template is a minimal arxiv-style single-column 11pt skeleton (main.tex + references.bib + Makefile + README.md + figures/_prompts/).",
-  "version": "0.1.0",
+  "description": "/paper <args> — arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/) · sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) · fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin → fal.ai `openai/gpt-image-2`) · compile [dir] (pdflatex × 3 + bibtex) · list (bundled samples) · help. Template is a minimal arxiv-style single-column 11pt skeleton (main.tex + references.bib + Makefile + README.md + figures/_prompts/). `fig` requires the sister `imagine` plugin (also in sidecar marketplace).",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

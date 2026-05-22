@@ -14,7 +14,29 @@ set -eu
 ROOT="${CLAUDE_PLUGIN_ROOT:-$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)}"
 TEMPLATE_DIR="$ROOT/template"
 SAMPLES_DIR="$ROOT/samples"
-TOOLS_DIR="$ROOT/_tools"
+
+# Resolve sister `imagine` plugin's dispatcher. Sidecar installs every plugin
+# under ~/.claude/plugins/cache/sidecar/<name>/<ver>/, and the source repo
+# keeps them as siblings in skills/. Try both layouts; fall back to PATH.
+find_imagine() {
+  parent=$(dirname -- "$ROOT")  # e.g. ~/.claude/plugins/cache/sidecar/paper, or sidecar/skills
+  # Source layout: <parent>/imagine/bin/imagine.sh
+  if [ -x "$parent/imagine/bin/imagine.sh" ]; then
+    echo "$parent/imagine/bin/imagine.sh"; return
+  fi
+  # Installed layout: parent of paper is ~/.claude/plugins/cache/sidecar/paper,
+  # so grandparent is .../cache/sidecar/, sibling versioned dir is .../imagine/<ver>/.
+  grandparent=$(dirname -- "$parent")
+  candidate=$(ls -d "$grandparent"/imagine/*/bin/imagine.sh 2>/dev/null | sort -V | tail -1)
+  if [ -n "$candidate" ] && [ -x "$candidate" ]; then
+    echo "$candidate"; return
+  fi
+  # PATH fallback (rare — sidecar doesn't expose imagine as a bin yet)
+  if command -v imagine >/dev/null 2>&1; then
+    command -v imagine; return
+  fi
+  return 1
+}
 
 usage() {
   cat <<'USAGE'
@@ -23,7 +45,7 @@ paper — arxiv-style LaTeX paper scaffolder
 usage:
   /paper new <slug>                          scaffold ./<slug>/ from template
   /paper sample <slug>                       copy bundled demiurge sample verbatim
-  /paper fig <image_size> <prompt> <out.png> fal.ai gpt-image-2 (queue + poll)
+  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine, model = openai/gpt-image-2)
   /paper compile [dir]                       pdflatex × 3 + bibtex
   /paper list                                list bundled samples
   /paper help                                this message
@@ -32,7 +54,7 @@ image_size: square_hd | landscape_16_9 | portrait_16_9 | square
 
 requirements:
   new / sample : cp · cwd writable · slug not already a directory
-  fig          : `secret` CLI on PATH + `fal.api_key` set · curl · python3 · jq-free
+  fig          : sister `imagine` plugin installed (sidecar marketplace) + `secret` CLI on PATH + `fal.api_key` set
   compile      : pdflatex + bibtex (BasicTeX / TeX Live)
 USAGE
 }
@@ -78,15 +100,17 @@ cmd_fig() {
   if [ $# -lt 3 ]; then
     echo "paper fig: usage: /paper fig <image_size> <prompt_file> <out.png>" >&2; exit 2
   fi
-  if [ ! -x "$TOOLS_DIR/fal_gen.sh" ]; then
-    echo "paper fig: $TOOLS_DIR/fal_gen.sh missing or not executable" >&2; exit 1
-  fi
-  if ! command -v secret >/dev/null 2>&1; then
-    echo "paper fig: \`secret\` CLI not on PATH (needed for fal.api_key)" >&2
-    echo "  install: hx install secret  # or git clone https://github.com/dancinlab/secret" >&2
+  IMAGINE_BIN=$(find_imagine || true)
+  if [ -z "${IMAGINE_BIN:-}" ]; then
+    echo "paper fig: sister \`imagine\` plugin not found" >&2
+    echo "  install via: sidecar sync  (or /inject in Claude Code)" >&2
+    echo "  imagine plugin provides the image-generation backend (fal.ai · openai)" >&2
     exit 1
   fi
-  exec "$TOOLS_DIR/fal_gen.sh" "$@"
+  # paper-fig argv: <size> <prompt> <out.png>
+  # imagine argv:   <prompt> <out.png> -s <size>   (default backend=fal, model=openai/gpt-image-2)
+  size="$1"; prompt="$2"; out="$3"
+  exec "$IMAGINE_BIN" "$prompt" "$out" -s "$size"
 }
 
 cmd_compile() {

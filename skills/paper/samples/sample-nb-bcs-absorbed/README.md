@@ -24,12 +24,31 @@ make distclean  # also remove PDF
 ## Figures
 
 One inline TikZ figure (Fig.\,\ref{fig:consensus}, measurement panel
-+ consensus + threshold band). No external image dependencies for the
-sample. Future figures could include:
++ consensus + threshold band) plus three matplotlib-exported PDFs
+under `figures/`. Bundled prompt files under `figures/_prompts/` show
+the verbatim text for AI covers / framework schematics:
 
 - TikZ: 4-tier expansion path block diagram (RTSC.md §8.7)
 - matplotlib: BCS gap ratio across SC families (literature scatter)
-- OpenAI DALL-E (cover/teaser only, if added)
+- AI cover / teaser via the sidecar `/imagine` plugin
+  (fal.ai `openai/gpt-image-2`):
+
+  ```bash
+  /imagine figures/_prompts/01_cover.txt      figures/cover.png      -s square_hd
+  /imagine figures/_prompts/02_framework.txt  figures/framework.png  -s landscape_16_9
+  /imagine figures/_prompts/03_bcs_condensation.txt figures/bcs.png  -s square_hd
+  /imagine figures/_prompts/04_cross_domain.txt figures/cross.png    -s landscape_16_9
+  ```
+
+  Or via the `/paper fig` wrapper which delegates to the same backend:
+
+  ```bash
+  /paper fig square_hd      figures/_prompts/01_cover.txt    figures/cover.png
+  /paper fig landscape_16_9 figures/_prompts/02_framework.txt figures/framework.png
+  ```
+
+  Prompts are stored verbatim under `figures/_prompts/` so the input
+  is reproducible (provenance).
 
 ## Companion records
 

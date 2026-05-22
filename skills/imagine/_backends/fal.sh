@@ -1,38 +1,26 @@
 #!/bin/bash
-# fal.ai gpt-image-2 image generator (queue + poll pattern).
-# Args: <image_size> <prompt_file> <out_png>
-#   image_size: square_hd | landscape_16_9 | portrait_16_9 | square
+# fal.ai queue+poll backend — fal.api_key via `secret get`. Default model: openai/gpt-image-2.
+# argv (from imagine.sh): <prompt_abs> <out_abs> <size_token> <model_id_or_empty>
 #
-# Reads the fal.ai API key via `secret get fal.api_key` (sidecar `secret`
-# plugin; macOS Keychain). Payload JSON is routed through a mktemp file
-# so the prompt never appears on argv.
+# Canonical default = openai/gpt-image-2 (user-pinned, do not silently
+# downgrade to gpt-image-1 / dall-e-3 / flux / etc.). Override only via
+# explicit `-m <model>` on the imagine command line.
 set -euo pipefail
 
-if [ "$#" -ne 3 ]; then
-  echo "fal_gen.sh: usage: <image_size> <prompt_file> <out_png>" >&2
-  exit 2
-fi
-
-SIZE="$1"
-PROMPT_FILE="$2"
-OUT_PNG="$3"
-
-if [ ! -f "$PROMPT_FILE" ]; then
-  echo "fal_gen.sh: prompt file not found: $PROMPT_FILE" >&2
-  exit 2
-fi
-if ! command -v secret >/dev/null 2>&1; then
-  echo "fal_gen.sh: \`secret\` CLI not on PATH" >&2
-  exit 1
-fi
+PROMPT_FILE="$1"
+OUT_PNG="$2"
+SIZE="$3"
+DEFAULT_MODEL="openai/gpt-image-2"
+MODEL="${4:-$DEFAULT_MODEL}"
+[ -z "$MODEL" ] && MODEL="$DEFAULT_MODEL"
 
 FAL_KEY=$(secret get fal.api_key)
 if [ -z "$FAL_KEY" ]; then
-  echo "fal_gen.sh: \`secret get fal.api_key\` returned empty value" >&2
-  echo "  set with: secret set fal.api_key" >&2
+  echo "[fal] secret get fal.api_key returned empty — set with: secret set fal.api_key" >&2
   exit 1
 fi
 
+# fal.ai accepts canonical size tokens directly.
 PAYLOAD_FILE=$(mktemp)
 trap 'rm -f "$PAYLOAD_FILE"' EXIT
 PROMPT_TEXT="$(cat "$PROMPT_FILE")" SIZE_VAL="$SIZE" python3 - <<'PY' > "$PAYLOAD_FILE"
@@ -46,7 +34,8 @@ print(json.dumps({
 }))
 PY
 
-RESP=$(curl -sS -X POST "https://queue.fal.run/openai/gpt-image-2" \
+ENDPOINT="https://queue.fal.run/${MODEL}"
+RESP=$(curl -sS -X POST "$ENDPOINT" \
   -H "Authorization: Key $FAL_KEY" \
   -H "Content-Type: application/json" \
   --data-binary @"$PAYLOAD_FILE")
@@ -58,13 +47,12 @@ if [ -z "$RID" ] || [ -z "$STATUS_URL" ] || [ -z "$RESULT_URL" ]; then
   echo "[fal] submit failed: $RESP" >&2
   exit 1
 fi
-echo "[fal] queued $(basename "$OUT_PNG") request_id=$RID" >&2
+echo "[fal] queued $(basename "$OUT_PNG") model=$MODEL size=$SIZE request_id=$RID" >&2
 
 for i in $(seq 1 80); do
   STATUS_JSON=$(curl -sS "$STATUS_URL" -H "Authorization: Key $FAL_KEY")
   STATUS=$(echo "$STATUS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','UNKNOWN'))" 2>/dev/null || echo "UNKNOWN")
-  if [ "$STATUS" = "COMPLETED" ]; then
-    break
+  if [ "$STATUS" = "COMPLETED" ]; then break
   elif [ "$STATUS" = "FAILED" ] || [ "$STATUS" = "ERROR" ]; then
     echo "[fal] $(basename "$OUT_PNG") FAILED status=$STATUS json=$STATUS_JSON" >&2
     exit 2
@@ -79,5 +67,5 @@ if [ -z "$URL" ]; then
   exit 3
 fi
 curl -sSL "$URL" -o "$OUT_PNG"
-SZ=$(stat -f %z "$OUT_PNG" 2>/dev/null || echo 0)
+SZ=$(stat -f %z "$OUT_PNG" 2>/dev/null || stat -c %s "$OUT_PNG" 2>/dev/null || echo 0)
 echo "[fal] wrote $OUT_PNG ($SZ bytes)"

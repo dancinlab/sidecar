@@ -22,7 +22,7 @@ allowed-tools: Bash
 - *"새 논문 시작해줘"* / *"scaffold a new arxiv paper"* → `/paper new <slug>`
 - *"BCS 샘플 가져와"* / *"copy that demiurge sample"* → `/paper sample <slug>`
 - *"이 논문 컴파일"* / *"compile this paper"* → `/paper compile [dir]`
-- *"figure 생성"* / *"fal.ai cover image"* → `/paper fig <size> <prompt-file> <out>.png`
+- *"figure 생성"* / *"AI cover image"* → `/paper fig <size> <prompt-file> <out>.png`  (delegates to sister `imagine` plugin → fal.ai `openai/gpt-image-2`)
 - *"어떤 샘플 있어?"* → `/paper list`
 
 The slash command writes scaffolded files, runs `pdflatex`/`bibtex`, or
@@ -33,7 +33,7 @@ calls fal.ai — output lands in the conversation context.
 ```
 /paper new <slug>                          scaffold ./<slug>/ from template/
 /paper sample <slug>                       copy bundled samples/sample-nb-bcs-absorbed/ verbatim
-/paper fig <image_size> <prompt> <out.png> fal.ai gpt-image-2 (queue + poll)
+/paper fig <image_size> <prompt> <out.png> delegates to /imagine — fal.ai openai/gpt-image-2
 /paper compile [dir]                       pdflatex × 3 + bibtex (default cwd)
 /paper list                                list bundled samples
 /paper help                                show usage
@@ -53,9 +53,10 @@ calls fal.ai — output lands in the conversation context.
   (~14 pages compiled): main.tex + references.bib + Makefile + figures/
   + _prompts/. Arxiv-quality reference exhibit; copy with `/paper sample`
   to study the structure.
-- `_tools/fal_gen.sh` — queue-pattern fal.ai gpt-image-2 generator
-  (1 submit → 3s × 80 poll → fetch). Reads key via `secret get
-  fal.api_key`; payload JSON via mktemp (argv never exposes prompt).
+No embedded image-gen tool — `/paper fig` delegates to the sister
+[`imagine`](../imagine/) plugin (sidecar marketplace), which carries
+the fal.ai (`openai/gpt-image-2`) and OpenAI backends. Keeps `paper`
+focused on LaTeX + samples and avoids duplicating the generator.
 
 ## Provenance discipline (carried over from demiurge PAPERS)
 
@@ -68,9 +69,10 @@ calls fal.ai — output lands in the conversation context.
 
 ## Guardrails
 
-- `/paper fig` requires the `secret` CLI on PATH and a stored
-  `fal.api_key` (set via `secret set fal.api_key`). The script exits
-  with a clear error if the key isn't there.
+- `/paper fig` requires the sister [`imagine`](../imagine/) plugin
+  installed (sidecar marketplace) plus the `secret` CLI on PATH with a
+  stored `fal.api_key` (set via `secret set fal.api_key`). The script
+  exits with a clear error if either is missing.
 - `/paper compile` requires `pdflatex` + `bibtex` (BasicTeX or TeX Live).
 - `/paper new <slug>` refuses to overwrite an existing `./<slug>/`.
 - Compiled `.pdf` / `.aux` / `.log` / `.bbl` / `.blg` / `.out` are NOT

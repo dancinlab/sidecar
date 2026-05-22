@@ -1,0 +1,9 @@
+{
+  "name": "imagine",
+  "description": "/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model] — generic AI image generator. Backend-agnostic dispatcher with 2 backends out of the box: `fal` (queue+poll fal.ai, default — `secret get fal.api_key`) and `openai` (sync /v1/images/generations — `secret get openai.api_key`). Canonical size names (`square_hd` / `landscape_16_9` / `portrait_16_9` / `square`) translate per-backend. Prompt always read from file (provenance discipline — verbatim prompt stays on disk). Payload JSON via mktemp, prompt never on argv.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "image", "generation", "fal.ai", "openai", "imagine"]
+}

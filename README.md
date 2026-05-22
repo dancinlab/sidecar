@@ -25,7 +25,7 @@ Then in any project root:
 sidecar init
 ```
 
-`sidecar init` drops two files into the current directory:
+`sidecar init` drops three things into the current directory:
 
 - **`project.tape`** — the project's identity + governance carrier (`.tape` v1.2). Open it and fill in the placeholders:
   - `kind` — one line describing what the project is.
@@ -34,6 +34,7 @@ sidecar init
   - `ssot` — canonical location (repo URL or `hx install <name>`).
   - `do` / `dont` — project-level governance bullets, `·` separated.
 - **`CLAUDE.md → project.tape`** — symlink so the harness auto-loads project identity on SessionStart.
+- **`LATTICE_POLICY.md`** — the cross-project real-limits-first verification policy, carried by sidecar. Skipped if one already exists.
 
 The [`project-tape`](hooks/project-tape/) hook re-injects `project.tape` on PreCompact + PostCompact so identity + governance survive auto-compaction.
 
@@ -41,11 +42,12 @@ The [`project-tape`](hooks/project-tape/) hook re-injects `project.tape` on PreC
 
 ```
 sidecar/
-├── bin/sidecar               # CLI — `sidecar init` scaffolds project.tape + CLAUDE.md symlink
+├── bin/sidecar               # CLI — `sidecar init` scaffolds project.tape + CLAUDE.md + LATTICE_POLICY.md
 ├── hooks/                    # PreToolUse · SessionStart · PreCompact · PostCompact · LSP plugins
 ├── commands/                 # /slash-command invoked plugins
 ├── skills/                   # Skill tool invocable plugins
 ├── project.tape              # sidecar's identity + governance (also linked as CLAUDE.md)
+├── LATTICE_POLICY.md         # real-limits-first policy (→ hooks/commons/, dropped by `sidecar init`)
 ├── DESIGN.md                 # current design rules pointer (live spec)
 ├── DESIGN.log.md             # decision audit trail (one decision per gate)
 ├── CHANGELOG.md              # chronological ship log
@@ -64,6 +66,7 @@ sidecar/
 | [`tape-lint`](hooks/tape-lint/) | hook | 0.3.0 | PreToolUse(Edit\|Write) deny for `.tape` edits, implemented in **hexa-lang** (`_tape_lint.hexa` invoked via `hexa run` — no Python, no shell shim; first sidecar hook to land hexa-native). Three diff-aware checks: **(1) fields** — `@D` blocks accept only `do` / `dont`; new `why` · `tool` · `note` · `ref` · `ex` · ... refused (any `*.tape`). **(2) length cap** — `do` / `dont` value > 100 chars refused (`commons.tape` + `project.tape`). **(3) authoring-language** — when `sidecar prefs` `code` axis is `english`, newly-introduced non-Latin lines (Hangul · CJK · 仮名) refused (`commons.tape` + `project.tape`). Pre-existing violations grandfathered. Opt out via `SIDECAR_NO_TAPE_LINT=1`. |
 | [`hexa-native`](hooks/hexa-native/) | hook | 0.2.0 | **PreToolUse(Write\|Edit\|NotebookEdit) hard block** — `.py` / `.sh` writes are **denied** inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file). Reason message redirects the operator to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` unaffected. hexa-lang (`_hexa_native.hexa`). **NO opt-out** by design — no env var, no config file, no exception list, no self-exclusion; uninstall the plugin if you need a way out. |
 | [`pool-route`](hooks/pool-route/) | hook | 0.2.0 | PreToolUse(Bash) suggestion — when a command is macOS-only (`swift` · `xcodebuild` · `xcrun` · `pod install`) or GPU-bound (`nvidia-smi` · `nvcc`), inject an `additionalContext` proposing `pool on <host> -- <cmd>`. Non-blocking. hexa-lang (`_pool_route.hexa`). Opt out via `SIDECAR_NO_POOL_ROUTE=1`. |
+| [`limit-guard`](hooks/limit-guard/) | hook | 0.1.0 | PostToolUse(Task) — detects a session/usage-limit signal in a subagent result and injects a checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out. Non-blocking. hexa-lang (`_limit_guard.hexa`). Opt out via `SIDECAR_NO_LIMIT_GUARD=1`. |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.1 | Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files via plugin-root `.lsp.json` (canonical Claude Code LSP filename, dot-prefixed). |
 | [`tape-lsp`](hooks/tape-lsp/) | hook | 0.1.1 | Wire the `tape-lsp` server (canonical `.tape` v1.2 LSP — diagnostics + hover) for `.tape` files via plugin-root `.lsp.json` (dot-prefixed). Requires `tape-lsp` on PATH (`hx install tape`). |
 | [`inbox`](skills/inbox/) | skill + command | 0.1.0 | Cross-project handoff inbox. Natural-language trigger + `/inbox list` · `/inbox new <kind> <slug>`. |

@@ -75,6 +75,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "limit-guard",
+      "source": "./hooks/limit-guard",
+      "description": "PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) \u2014 detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out and switch to sequential commit-per-unit work. Opt out: SIDECAR_NO_LIMIT_GUARD=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command.",

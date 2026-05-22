@@ -1,0 +1,93 @@
+// _limit_guard.hexa — PostToolUse(Task) hook.
+//
+// Detects a session/usage-limit signal in a tool result (typically a
+// subagent that stopped mid-work) and injects a checkpoint directive:
+// report progress, commit + push uncommitted work, write a resume
+// manifest, stop parallel fan-out.
+//
+// Non-blocking: emits PostToolUse additionalContext, never denies.
+// Opt out: SIDECAR_NO_LIMIT_GUARD=1
+//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["limit-guard",...]}
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    return hay.index_of(needle) >= 0
+}
+
+fn _disabled() -> bool {
+    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
+    let raw = _read_file_safe(path)
+    if raw == "" { return false }
+    let mut hit = false
+    try {
+        let m = json_parse(raw)
+        if type_of(m) == "map" && has_key(m, "disabled") {
+            let arr = m["disabled"]
+            if type_of(arr) == "array" {
+                let n = len(arr)
+                let mut i = 0
+                while i < n {
+                    if arr[i] == "limit-guard" { hit = true }
+                    i = i + 1
+                }
+            }
+        }
+    } catch e { hit = false }
+    return hit
+}
+
+fn main() {
+    if _disabled() { _allow() }
+    if env_var("SIDECAR_NO_LIMIT_GUARD") == "1" { _allow() }
+
+    let raw = _read_stdin()
+
+    let hit = _contains(raw, "hit your session limit")
+        || _contains(raw, "hit your usage limit")
+        || (_contains(raw, "session limit") && _contains(raw, "resets"))
+        || (_contains(raw, "usage limit") && _contains(raw, "resets"))
+    if !hit { _allow() }
+
+    let ctx = "SESSION-LIMIT SIGNAL detected in a tool result -- a usage/session limit was hit (a subagent likely stopped mid-work). Before anything else:\n\n1. REPORT how far you got: per work item, state what is COMMITTED (list commit SHAs) vs UNCOMMITTED, and exactly where work stopped.\n2. COMMIT + PUSH uncommitted work now -- stage explicit paths; a limit hit mid-edit loses uncommitted work.\n3. Write .claude/RESUME.md -- a resume manifest: done items, remaining items, the limit reset time if visible, and the next concrete step.\n4. STOP remaining parallel fan-out -- do not spawn more background agents; switch to sequential foreground work, one committed increment at a time.\n\nWhy: parallel subagent fan-outs burn quota fast -- when the limit hits, N agents fail at once and uncommitted work is lost. Sequential + commit-per-unit caps the loss at one unit. Opt out: SIDECAR_NO_LIMIT_GUARD=1"
+
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(ctx) + "}}"
+    println(payload)
+    exit(0)
+}

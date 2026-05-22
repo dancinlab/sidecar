@@ -1,7 +1,7 @@
 {
   "name": "domain",
   "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root — auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) · /domain <task> (append `- [x]`) · /domain todo <task> (`- [ ]`) · /domain done <match> (flip [ ]→[x]) · /domain new <header> · /domain <NAME> <task>. Record progress as work proceeds — log accumulates a checkbox audit trail.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

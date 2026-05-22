@@ -25,7 +25,7 @@ allowed-tools: Bash
 
 **Default NAME** = uppercase basename of git root (e.g. cwd `~/core/demiurge` → `DEMIURGE`). If either file is missing on any invocation, both get scaffolded with the project-name fallback.
 
-## Verbs (via `bin/domain.sh`)
+## Verbs (via `bin/_domain.hexa`)
 
 ```
 /domain                           show <PROJECT>.md + .log.md (scaffold if missing)

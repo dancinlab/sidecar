@@ -1,0 +1,279 @@
+// _domain.hexa — UPPERCASE <DOMAIN>.md (snapshot) + <DOMAIN>.log.md
+// (checkbox log). Project-name fallback: if NAME not given, uppercase the
+// project-root basename. Auto-scaffolds both files when missing.
+//
+// usage: hexa run _domain.hexa [NAME | <task> | todo .. | done .. | new .. | show ..]
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _basename(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return path }
+    return path.substring(i + 1, len(path))
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    return hay.index_of(needle) >= 0
+}
+
+// uppercase a-z, map '-' to '_', keep the rest — mirrors `tr 'a-z-' 'A-Z_'`.
+fn _domain_name(s: string) -> string {
+    let mut out = ""
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        let k = char_code(c, 0)
+        if k >= 97 && k <= 122 {
+            out = out + chr(k - 32)
+        } else if c == "-" {
+            out = out + "_"
+        } else {
+            out = out + c
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn _is_name(s: string) -> bool {
+    let n = len(s)
+    if n == 0 { return false }
+    let k0 = char_code(s[0], 0)
+    if !(k0 >= 65 && k0 <= 90) { return false }
+    let mut i = 1
+    while i < n {
+        let k = char_code(s[i], 0)
+        let ok = (k >= 65 && k <= 90) || (k >= 48 && k <= 57) || (k == 95)
+        if !ok { return false }
+        i = i + 1
+    }
+    return true
+}
+
+fn _join_from(arr: array, from: int) -> string {
+    let mut out = ""
+    let n = len(arr)
+    let mut i = from
+    while i < n {
+        if i > from { out = out + " " }
+        out = out + arr[i]
+        i = i + 1
+    }
+    return out
+}
+
+fn _iso_ts() -> string {
+    return _trim(to_string(exec("date -u +%Y-%m-%dT%H:%M")))
+}
+
+// ── global root + default name (set in main, passed explicitly) ──
+
+fn _scaffold_snapshot(path: string, name: string) {
+    write_file(path, "# " + name + " — current state\n\n(edit me — describe current state in completed-form; no history, no changelog inside this file)\n")
+}
+
+fn _scaffold_log(path: string, name: string) {
+    write_file(path, "# " + name + " — log\n\nAppend-only history sister of `" + name + ".md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.\n\n")
+}
+
+fn _ensure_files(root: string, name: string) {
+    let snap = root + "/" + name + ".md"
+    let log = root + "/" + name + ".log.md"
+    if !file_exists(snap) { _scaffold_snapshot(snap, name) }
+    if !file_exists(log) { _scaffold_log(log, name) }
+}
+
+// index of first line starting with "## ", or -1
+fn _first_header(lines: array) -> int {
+    let n = len(lines)
+    let mut i = 0
+    while i < n {
+        if _starts_with(lines[i], "## ") { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+fn _append_task(root: string, name: string, mark: string, text: string) {
+    _ensure_files(root, name)
+    let log = root + "/" + name + ".log.md"
+    let ts = _iso_ts()
+    let body = _read_file_safe(log)
+    let lines = body.split("\n")
+    let h = _first_header(lines)
+    let task = "- [" + mark + "] " + text
+    if h < 0 {
+        write_file(log, body + "\n## " + ts + " — session\n\n" + task + "\n")
+        return
+    }
+    let mut pos = h + 1
+    if pos < len(lines) && lines[pos] == "" { pos = pos + 1 }
+    let mut out = []
+    let mut i = 0
+    while i < len(lines) {
+        if i == pos { out.push(task) }
+        out.push(lines[i])
+        i = i + 1
+    }
+    if pos >= len(lines) { out.push(task) }
+    write_file(log, out.join("\n"))
+}
+
+fn _new_entry(root: string, name: string, header: string) {
+    _ensure_files(root, name)
+    let log = root + "/" + name + ".log.md"
+    let ts = _iso_ts()
+    let body = _read_file_safe(log)
+    let lines = body.split("\n")
+    let h = _first_header(lines)
+    if h < 0 {
+        write_file(log, body + "\n## " + ts + " — " + header + "\n\n")
+        return
+    }
+    let mut out = []
+    let mut i = 0
+    while i < len(lines) {
+        if i == h {
+            out.push("## " + ts + " — " + header)
+            out.push("")
+            out.push("")
+        }
+        out.push(lines[i])
+        i = i + 1
+    }
+    write_file(log, out.join("\n"))
+}
+
+fn _flip_done(root: string, name: string, term: string) {
+    _ensure_files(root, name)
+    let log = root + "/" + name + ".log.md"
+    let body = _read_file_safe(log)
+    let lines = body.split("\n")
+    let mut hit = -1
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [ ] ") && _contains(ln, term) {
+            hit = i
+            break
+        }
+        i = i + 1
+    }
+    if hit < 0 {
+        eprintln("domain: no pending task matching '" + term + "'")
+        exit(1)
+    }
+    let old = lines[hit]
+    lines[hit] = "- [x] " + old.substring(6, len(old))
+    write_file(log, lines.join("\n"))
+    println("flipped: " + term)
+}
+
+fn _show(root: string, name: string) {
+    _ensure_files(root, name)
+    let snap = root + "/" + name + ".md"
+    let log = root + "/" + name + ".log.md"
+    println("═══ " + snap + " ═══")
+    print(_read_file_safe(snap))
+    println("")
+    println("═══ " + log + " ═══")
+    print(_read_file_safe(log))
+}
+
+fn _usage() {
+    eprintln("usage:")
+    eprintln("  domain                      Show <PROJECT>.md + .log.md (scaffold if missing)")
+    eprintln("  domain <NAME>               Show specific NAME.md + .log.md")
+    eprintln("  domain <task-text>          Append \"- [x] <task-text>\" to top log entry")
+    eprintln("  domain todo <task-text>     Append \"- [ ] <task-text>\"")
+    eprintln("  domain done <match>         Flip the first \"- [ ] *<match>*\" -> \"- [x] ...\"")
+    eprintln("  domain new <header>         Start a new log entry")
+}
+
+fn main() {
+    let rr = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+    let mut root = ""
+    if rr[1] == 0 { root = _trim(to_string(rr[0])) }
+    if root == "" { root = _trim(to_string(exec("pwd"))) }
+    let def_name = _domain_name(_basename(root))
+
+    let raw = argv()
+    let mut args = []
+    let mut ai = 1
+    while ai < len(raw) { args.push(raw[ai]); ai = ai + 1 }
+    let argc = len(args)
+
+    if argc == 0 {
+        _show(root, def_name)
+        return
+    }
+    let v = args[0]
+    if v == "-h" || v == "--help" {
+        _usage()
+        return
+    }
+
+    if v == "todo" || v == "done" || v == "new" {
+        if argc < 2 {
+            _usage()
+            exit(1)
+        }
+        let mut name = def_name
+        let mut from = 1
+        if _is_name(args[1]) && argc >= 3 {
+            name = args[1]
+            from = 2
+        }
+        let text = _join_from(args, from)
+        if v == "todo" { _append_task(root, name, " ", text) }
+        else if v == "done" { _flip_done(root, name, text) }
+        else { _new_entry(root, name, text) }
+        return
+    }
+
+    if v == "show" {
+        let mut name = def_name
+        if argc >= 2 && _is_name(args[1]) { name = args[1] }
+        _show(root, name)
+        return
+    }
+
+    // bare: NAME-only show · NAME + task · default task
+    if _is_name(args[0]) && argc == 1 {
+        _show(root, args[0])
+        return
+    }
+    if _is_name(args[0]) && argc >= 2 {
+        _append_task(root, args[0], "x", _join_from(args, 1))
+        return
+    }
+    _append_task(root, def_name, "x", _join_from(args, 0))
+}

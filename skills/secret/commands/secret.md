@@ -4,4 +4,4 @@ argument-hint: "<get <k> | set [--allow-mnemonic] <k> [v] | rotate <k> [--bytes 
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/secret.sh" $ARGUMENTS`
+!`secret $ARGUMENTS`

@@ -24,7 +24,7 @@
       "name": "inbox",
       "source": "./skills/inbox",
       "description": "Cross-project handoff inbox \u2014 skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "hexa-lsp",
@@ -96,43 +96,43 @@
       "name": "pool",
       "source": "./skills/pool",
       "description": "/pool <args> \u2014 wraps the `pool` CLI (host roster + remote exec \u2014 minimal Python, zero deps). Verbs: list \u00b7 add <host> \u00b7 on <host> <cmd> \u00b7 status \u00b7 install tailscale \u00b7 rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "cloud",
       "source": "./skills/cloud",
       "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw ssh/scp per commons g8). Subverbs: preflight \u00b7 run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup \u00b7 no LLM \u00b7 $0). NL trigger via skill. Pairs with commons g8 + g12.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "hexa-help",
       "source": "./skills/hexa-help",
       "description": "/hexa-help [verb] \u2014 wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific). Per commons g7. NL trigger via skill.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "secret",
       "source": "./skills/secret",
       "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync). Verbs: get · set · rotate · check · delete · list · service · init [icloud|github <url>] · backup [enable <url>|disable|status] · sync · migrate. Two independent sync channels (iCloud Drive primary + optional private GitHub mirror) push the same encrypted blob — master password is the only decryption secret. Auto-push ON by default once `backup enable` runs (opt out via SECRET_BACKUP_AUTO=0). High-value protection on set (BIP39 wordlist-validated · xprv/WIF/64-hex auto-detect → refuse without --allow-mnemonic + stdin/tty). rotate emits sentinel only.",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
       "name": "kick",
       "source": "./skills/kick",
       "description": "/kick <natural-language seed> \u2014 runs `hexa kick --seed \"<seed>\"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via skill (`kick this`, `\ub3cc\ud30c\ud574\uc918`, `discover for`). Pairs with commons g6.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "verify",
       "source": "./skills/verify",
       "description": "/verify <args> \u2014 runs `hexa verify \"$@\"` (cross-project tier rubric, TECS-L-aligned). Forms: <id> (atlas atom), --expr <fn> <n> <v> (numerical), --fence \"<claim>\" (honest \u26aa), rubric / list. Returns \ud83d\udd35\ud83d\udfe2\ud83d\udfe1\ud83d\udfe0\ud83d\udd34\u26aa tier badge VERBATIM. NL trigger via skill (`verify this`, `\ud655\uc778\ud574`, `\uac80\uc99d\ud574`, `\ub9de\uc544?`). Pairs with commons g5.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) \u00b7 /domain <task> (append `- [x]`) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Records progress as work proceeds \u2014 log accumulates a checkbox audit trail.",
-      "version": "0.3.0"
+      "version": "0.4.0"
     },
     {
       "name": "gap",
@@ -150,7 +150,7 @@
       "name": "ship",
       "source": "./skills/ship",
       "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. NL trigger via skill (ship · 배포 · 출시).",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "bypass",

@@ -1,7 +1,7 @@
 {
   "name": "hexa-help",
   "description": "/hexa-help [verb] — wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific signature). Per commons.tape g7 (consult `hexa --help` for unfamiliar verbs before guessing). NL trigger via skill ('hexa 뭐있어', 'hexa <verb> 뭐야', 'hexa 사용법').",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

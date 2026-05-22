@@ -1,0 +1,158 @@
+// _ship.hexa — mechanical tail of the sidecar ship cycle:
+//   stage explicit paths -> credential-scan staged diff -> commit ->
+//   push origin/<branch> -> sidecar sync.
+// The CALLER owns the judgment part (version bump · surface lockstep ·
+// commit message) BEFORE this runs.
+//
+// usage: hexa run _ship.hexa -m "<commit message>" <path> [<path>...]
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+// single-quote wrap for safe shell interpolation
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _is_key_char(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k >= 65 && k <= 90 { return true }
+    if k >= 97 && k <= 122 { return true }
+    return false
+}
+
+fn _is_upper_digit(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k >= 65 && k <= 90 { return true }
+    return false
+}
+
+// count run of class chars from idx
+fn _run_key(s: string, idx: int) -> int {
+    let n = len(s)
+    let mut i = idx
+    let mut c = 0
+    while i < n && _is_key_char(s[i]) { i = i + 1; c = c + 1 }
+    return c
+}
+
+fn _run_upper_digit(s: string, idx: int) -> int {
+    let n = len(s)
+    let mut i = idx
+    let mut c = 0
+    while i < n && _is_upper_digit(s[i]) { i = i + 1; c = c + 1 }
+    return c
+}
+
+// real credential key SHAPES — prefix + token-length, not bare prefixes.
+fn _prefix_hits(diff: string, prefix: string, minlen: int, upper_only: bool) -> bool {
+    let n = len(diff)
+    let mut from = 0
+    let mut guard = 0
+    while guard < 200000 {
+        let rest = diff.substring(from, n)
+        let rel = rest.index_of(prefix)
+        if rel < 0 { return false }
+        let at = from + rel + len(prefix)
+        let mut run = 0
+        if upper_only { run = _run_upper_digit(diff, at) }
+        else { run = _run_key(diff, at) }
+        if run >= minlen { return true }
+        from = from + rel + 1
+        guard = guard + 1
+    }
+    return false
+}
+
+fn _has_credential(diff: string) -> bool {
+    if _prefix_hits(diff, "rpa_", 16, false) { return true }
+    if _prefix_hits(diff, "sk-", 20, false) { return true }
+    if _prefix_hits(diff, "hf_", 30, false) { return true }
+    if _prefix_hits(diff, "AKIA", 16, true) { return true }
+    return false
+}
+
+fn _usage() {
+    eprintln("usage: /ship -m \"<commit message>\" <path> [<path>...]")
+    eprintln("  stages ONLY the given paths, credential-scans the staged diff,")
+    eprintln("  commits, pushes to origin/<branch>, then runs 'sidecar sync'.")
+}
+
+fn main() {
+    let a = argv()
+    let n = len(a)
+    if n < 3 || a[1] != "-m" || a[2] == "" {
+        _usage()
+        exit(1)
+    }
+    let msg = a[2]
+    let mut paths = []
+    let mut i = 3
+    while i < n { paths.push(a[i]); i = i + 1 }
+    if len(paths) == 0 {
+        eprintln("ship: at least one explicit path required (never -A / -u)")
+        exit(1)
+    }
+
+    let mut pq = ""
+    i = 0
+    while i < len(paths) { pq = pq + " " + _shq(paths[i]); i = i + 1 }
+
+    let _add = exec_with_status("git add --" + pq)
+
+    let chk = exec_with_status("git diff --cached --quiet --" + pq)
+    if chk[1] == 0 {
+        eprintln("ship: no staged changes for given paths — nothing to ship")
+        exit(1)
+    }
+
+    let diff = to_string(exec("git diff --cached --" + pq))
+    if _has_credential(diff) {
+        let _r = exec_with_status("git restore --staged --" + pq)
+        eprintln("ship: credential pattern in staged diff — aborting (unstaged)")
+        exit(1)
+    }
+
+    let cr = exec_with_status("git commit -m " + _shq(msg) + " 2>&1")
+    println(_trim(to_string(cr[0])))
+    if cr[1] != 0 { exit(cr[1]) }
+
+    let branch = _trim(to_string(exec("git rev-parse --abbrev-ref HEAD")))
+    let pr = exec_with_status("git push origin " + _shq(branch) + " 2>&1")
+    println(_trim(to_string(pr[0])))
+    if pr[1] != 0 { exit(pr[1]) }
+    println("ship: pushed to origin/" + branch + " — syncing local install…")
+
+    let sc = exec_with_status("command -v sidecar >/dev/null 2>&1")
+    if sc[1] == 0 {
+        let ss = exec_with_status("sidecar sync 2>&1")
+        println(_trim(to_string(ss[0])))
+    } else {
+        eprintln("ship: 'sidecar' not on PATH — skipping install sync (run 'sidecar sync' manually)")
+    }
+}

@@ -4,4 +4,4 @@ argument-hint: "[verb]"
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/hexa-help.sh" $ARGUMENTS`
+!`hexa $ARGUMENTS --help`

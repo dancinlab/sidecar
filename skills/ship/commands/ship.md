@@ -4,4 +4,4 @@ argument-hint: "-m \"<commit message>\" <path> [<path>...]"
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/ship.sh" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_ship.hexa" $ARGUMENTS`

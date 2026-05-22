@@ -4,4 +4,4 @@ argument-hint: "<preflight | run | nohup | poll | copy-to | copy-from> [args...]
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/cloud.sh" $ARGUMENTS`
+!`hexa cloud $ARGUMENTS`

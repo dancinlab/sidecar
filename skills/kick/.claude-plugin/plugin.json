@@ -1,7 +1,7 @@
 {
   "name": "kick",
   "description": "/kick <natural-language seed> — runs `hexa kick --seed \"<seed>\"` (the hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via the skill ('kick this', '돌파해줘', 'discover for'). Pairs with commons.tape g6.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

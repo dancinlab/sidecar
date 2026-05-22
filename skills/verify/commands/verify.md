@@ -4,4 +4,4 @@ argument-hint: "<id | --expr <fn> <n> <v> | --fence \"<claim>\" | rubric>"
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/verify.sh" $ARGUMENTS`
+!`hexa verify $ARGUMENTS`

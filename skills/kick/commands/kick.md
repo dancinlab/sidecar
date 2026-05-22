@@ -4,4 +4,4 @@ argument-hint: "<seed expression — natural language allowed>"
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/kick.sh" $ARGUMENTS`
+!`hexa kick --seed "$ARGUMENTS"`

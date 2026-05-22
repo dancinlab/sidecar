@@ -30,7 +30,7 @@ Per `@D g22` (version discipline), before `/ship`:
 /ship -m "<commit message>" <path> [<path>...]
 ```
 
-`bin/ship.sh` runs, in order:
+`bin/_ship.hexa` (via `hexa run`) runs, in order:
 
 1. `git add -- <paths>` — **explicit paths only** (never `-A` / `-u`).
 2. **Credential scan** the staged diff (`rpa_` · `sk-…` · `hf_…` · `AKIA`) — abort + unstage on hit.

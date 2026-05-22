@@ -4,4 +4,4 @@ argument-hint: "<list | add <host> | on <host> <cmd> | status | install tailscal
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/pool.sh" $ARGUMENTS`
+!`pool $ARGUMENTS`

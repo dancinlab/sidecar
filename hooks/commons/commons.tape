@@ -109,3 +109,18 @@
 @D g31 := "permission-blocked write — diagnose + clear, don't punt" :: governance [required active]
   do   = "EPERM write? check `ls -lO` flags (uchg/schg) + ACLs — clear via chflags / passwordless sudo"
   dont = "declare a write impossible before diagnosing — sudo is available, immutable flags are clearable"
+
+@D g32 := "think before coding — surface ambiguity, don't guess" :: governance [required active]
+  do   = "state assumptions · surface real interpretation forks · ask when genuinely unclear"
+  dont = "guess silently past ambiguity · fake ambiguity to punt clearly-OK work (g18)"
+
+@D g33 := "simplicity first — minimum code, nothing speculative" :: governance [required active]
+  do   = "minimum code that solves the asked problem — 200 lines that could be 50 → rewrite"
+  dont = "speculative abstraction / flexibility with no current caller · handling for impossible states"
+
+@D g34 := "surgical changes — touch only what the request needs" :: governance [required active]
+  do   = "match existing style · every changed line traces to the request · remove only orphans you created"
+  dont = "refactor / reformat adjacent working code · delete pre-existing dead code unprompted — flag it"
+
+@D g35 := "goal-driven execution — verifiable success criteria" :: governance [required active]
+  do   = "recast tasks as verifiable goals — bug → failing test → green · loop until verified"

@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g31` form, no tool/usage); UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.20"
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g35` form, no tool/usage); UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.21"
     },
     {
       "name": "prefs",

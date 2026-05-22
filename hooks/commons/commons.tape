@@ -94,3 +94,7 @@
 @D g27 := "ship cycle — commit + push + reinstall local copy" :: governance [required active]
   do   = "ship as one atomic op: commit (explicit paths · credential scan) → push origin/<branch> → reinstall the local copy so it matches HEAD (`hx install <name>` for hx-packaged repos · project-specific install otherwise) — especially after native / launchd / daemon / compiled-source changes"
   dont = "build-and-stop (leave a stale install / `.app` / daemon running) · defer the reinstall · `git add -A` / `-u` instead of explicit paths · skip the credential scan (rpa_ · sk-[A-Za-z0-9]{20} · hf_[A-Za-z0-9]{30} · AKIA)"
+
+@D g28 := "credentials — never expose verbatim · `secret` CLI is the only channel" :: governance [required active]
+  do   = "fetch credentials only via `secret get <key>` — use inline `$(secret get <k>)` for env-var / stdin / tty consume (process-lifetime ephemeral, no file dump)"
+  dont = "print / echo / log / commit / paste a credential value anywhere (chat · doc · log · state JSON · commit msg · scrollback · shell history · clipboard · env-var dump · `ps aux`) · pass creds in subprocess argv (`--token $V` → process-listing leak) · Read / cat / head / tail credential files directly"

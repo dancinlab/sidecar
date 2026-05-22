@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/hexa-native.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_hexa_native.hexa"
           }
         ]
       }

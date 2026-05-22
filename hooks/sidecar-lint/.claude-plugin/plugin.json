@@ -1,9 +1,9 @@
 {
   "name": "sidecar-lint",
-  "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in repos with .claude-plugin/marketplace.json. Non-blocking — emits additionalContext for: stale-history patterns in staged diff (commons @D g15), hardcoded /Users//home/ absolute paths (commons @D g13 · sidecar @D s3), marketplace.json plugin entry ↔ each plugin.json version drift (commons @D g22), hook .sh missing user-exec bit. Self-excludes its own files + CHANGELOG.md. Opt out: SIDECAR_NO_LINT=1.",
-  "version": "0.1.0",
+  "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in repos with .claude-plugin/marketplace.json, implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking — emits additionalContext for: stale-history patterns in staged diff (commons @D g15), hardcoded /Users//home/ absolute paths (commons @D g13 · sidecar @D s3), marketplace.json plugin entry ↔ each plugin.json version drift (commons @D g22), hook .sh missing user-exec bit. Self-excludes its own files + CHANGELOG.md. Opt out: SIDECAR_NO_LINT=1.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "hook", "lint", "marketplace", "governance"]
+  "keywords": ["claude-code", "hook", "lint", "marketplace", "governance", "hexa"]
 }

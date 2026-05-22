@@ -1,7 +1,7 @@
 {
   "name": "hexa-native",
-  "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.py` / `.sh` writes inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file). Walks up parent dirs of the target file path; if `project.tape` is found, the write is denied with a message redirecting the operator to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). NO opt-out: no env var, no config file, no exception list, no self-exclusion for this plugin's own files — uninstall the plugin if you need a way out. Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` are unaffected.",
-  "version": "0.1.1",
+  "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.py` / `.sh` writes inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file), implemented in hexa-lang (`_hexa_native.hexa`, invoked via `hexa run`). Walks up parent dirs of the target file path; if `project.tape` is found, the write is denied with a message redirecting the operator to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). NO opt-out: no env var, no config file, no exception list, no self-exclusion for this plugin's own files — uninstall the plugin if you need a way out. Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` are unaffected.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

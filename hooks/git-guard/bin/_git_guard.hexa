@@ -1,0 +1,162 @@
+// _git_guard.hexa — PreToolUse(Bash) deny for force-type git push only.
+//
+// Blocked:
+//   git push --force / -f
+//   git push --force-with-lease
+//   git push <remote> +<refspec>   (refspec-level force)
+//
+// Opt out: SIDECAR_NO_GIT_GUARD=1
+//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["git-guard",...]}
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _disabled() -> bool {
+    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
+    let raw = _read_file_safe(path)
+    if raw == "" { return false }
+    let mut hit = false
+    try {
+        let m = json_parse(raw)
+        if type_of(m) == "map" && has_key(m, "disabled") {
+            let arr = m["disabled"]
+            if type_of(arr) == "array" {
+                let n = len(arr)
+                let mut i = 0
+                while i < n {
+                    if arr[i] == "git-guard" { hit = true }
+                    i = i + 1
+                }
+            }
+        }
+    } catch e { hit = false }
+    return hit
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn main() {
+    if _disabled() { _allow() }
+    if env_var("SIDECAR_NO_GIT_GUARD") == "1" { _allow() }
+
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd = ti["command"]
+    if cmd == "" { _allow() }
+
+    let toks = _tokens(cmd)
+    let n = len(toks)
+
+    // first `git push` token adjacency
+    let mut gp = -1
+    let mut i = 0
+    while i + 1 < n {
+        if toks[i] == "git" && toks[i + 1] == "push" {
+            gp = i
+            break
+        }
+        i = i + 1
+    }
+    if gp < 0 { _allow() }
+
+    let mut label = ""
+    let mut j = gp + 2
+    while j < n {
+        let t = toks[j]
+        if t == "-f" || t == "--force" {
+            label = "git push --force / -f"
+        }
+        if t == "--force-with-lease" || _starts_with(t, "--force-with-lease=") {
+            label = "git push --force-with-lease"
+        }
+        j = j + 1
+    }
+    // refspec-level force — `git push <remote> +<refspec>`
+    if label == "" {
+        if gp + 3 < n {
+            let remote = toks[gp + 2]
+            let ref_t = toks[gp + 3]
+            if len(remote) > 0 && len(ref_t) > 1 && ref_t[0] == "+" {
+                label = "git push <remote> +<refspec> (refspec-level force)"
+            }
+        }
+    }
+
+    if label == "" { _allow() }
+
+    let mut snippet = cmd
+    if len(cmd) > 180 { snippet = cmd.substring(0, 177) + "..." }
+    _deny("GIT_GUARD_BLOCK { pattern: " + label + ", command: " + snippet + ", action: this operation rewrites or bypasses safety. To override, set SIDECAR_NO_GIT_GUARD=1 }")
+}

@@ -1,0 +1,138 @@
+// _hexa_native.hexa — PreToolUse(Write|Edit|NotebookEdit) hard block.
+//
+// If the target file's enclosing project (any ancestor dir holding a
+// `project.tape` marker) exists AND the target ends in `.py` / `.sh`,
+// deny the write with a fixed message redirecting to `.hexa`.
+//
+// DESIGN NOTE — explicitly no opt-out: no env-var bypass, no
+// ~/.claude/sidecar/disabled.json honoring, no per-project exception
+// list. Enforcement stands or the plugin is uninstalled.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let ne = len(suffix)
+    if ne > ns { return false }
+    return s.substring(ns - ne, ns) == suffix
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _dirname(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return "" }
+    if i == 0 { return "/" }
+    return path.substring(0, i)
+}
+
+fn _basename(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return path }
+    return path.substring(i + 1, len(path))
+}
+
+// Walk up parent dirs from the target's enclosing dir; return the first
+// ancestor that holds a `project.tape` marker, or "" if none.
+fn _find_project_root(target: string) -> string {
+    let home = env_var("HOME")
+    let mut cur = _dirname(target)
+    let mut guard = 0
+    while guard < 256 {
+        if cur == "" { return "" }
+        if cur == "/" { return "" }
+        if cur == home { return "" }
+        if file_exists(cur + "/project.tape") { return cur }
+        let parent = _dirname(cur)
+        if parent == cur { return "" }
+        cur = parent
+        guard = guard + 1
+    }
+    return ""
+}
+
+fn _ext_of(path: string) -> string {
+    let base = _basename(path)
+    let i = base.last_index_of(".")
+    if i < 0 { return "" }
+    return base.substring(i + 1, len(base))
+}
+
+fn _relpath(target: string, root: string) -> string {
+    let prefix = root + "/"
+    if _starts_with(target, prefix) {
+        return target.substring(len(prefix), len(target))
+    }
+    return _basename(target)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    let tool = payload["tool_name"]
+    if tool != "Write" && tool != "Edit" && tool != "NotebookEdit" { _allow() }
+
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    let mut target = ""
+    if has_key(ti, "file_path") { target = ti["file_path"] }
+    if target == "" {
+        if has_key(ti, "notebook_path") { target = ti["notebook_path"] }
+    }
+    if target == "" { _allow() }
+
+    if !_ends_with(target, ".py") && !_ends_with(target, ".sh") { _allow() }
+
+    let root = _find_project_root(target)
+    if root == "" { _allow() }
+
+    let ext = _ext_of(target)
+    let rel = _relpath(target, root)
+    let proj = _basename(root)
+    let reason = "hexa-native: this project (" + proj + ") is hexa-native — `project.tape` marker found at the project root.\n  Refusing to write `" + rel + "` (." + ext + ").\n  `.py` / `.sh` are already supported as ai-native (English) in other environments — this project intentionally only accepts `.hexa` source.\n  Write your logic in `.hexa` instead. There is no env-var / flag override by design."
+    _deny(reason)
+}

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/git-guard.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_git_guard.hexa"
           }
         ]
       }

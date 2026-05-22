@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/sidecar-lint.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_sidecar_lint.hexa"
           }
         ]
       }

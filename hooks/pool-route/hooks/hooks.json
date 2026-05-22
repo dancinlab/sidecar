@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/pool-route.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_pool_route.hexa"
           }
         ]
       }

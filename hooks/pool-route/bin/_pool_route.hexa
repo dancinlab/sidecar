@@ -1,0 +1,171 @@
+// _pool_route.hexa — PreToolUse(Bash) suggest `pool on <host>` for
+// host-specific commands. Non-blocking — only emits additionalContext.
+//
+// Patterns:
+//   swift / xcodebuild / xcrun / pod install  ->  pool on mini   (macOS)
+//   nvidia-smi / nvcc                         ->  pool on ubu-1 | ubu-2
+//
+// Skip when the command already contains `pool on`.
+// Opt out: SIDECAR_NO_POOL_ROUTE=1
+//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["pool-route",...]}
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _suggest(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _disabled() -> bool {
+    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
+    let raw = _read_file_safe(path)
+    if raw == "" { return false }
+    let mut hit = false
+    try {
+        let m = json_parse(raw)
+        if type_of(m) == "map" && has_key(m, "disabled") {
+            let arr = m["disabled"]
+            if type_of(arr) == "array" {
+                let n = len(arr)
+                let mut i = 0
+                while i < n {
+                    if arr[i] == "pool-route" { hit = true }
+                    i = i + 1
+                }
+            }
+        }
+    } catch e { hit = false }
+    return hit
+}
+
+fn _is_word_char(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k >= 65 && k <= 90 { return true }
+    if k >= 97 && k <= 122 { return true }
+    if k == 95 { return true }
+    return false
+}
+
+// `\bword\b` — substring match bounded by non-word chars / string ends.
+fn _has_word(hay: string, word: string) -> bool {
+    let hn = len(hay)
+    let wn = len(word)
+    if wn == 0 { return false }
+    let mut i = 0
+    while i + wn <= hn {
+        if hay.substring(i, i + wn) == word {
+            let mut ok = true
+            if i > 0 {
+                if _is_word_char(hay[i - 1]) { ok = false }
+            }
+            if i + wn < hn {
+                if _is_word_char(hay[i + wn]) { ok = false }
+            }
+            if ok { return true }
+        }
+        i = i + 1
+    }
+    return false
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+// adjacency: token a immediately followed by token b
+fn _has_adjacent(toks: array, a: string, b: string) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i + 1 < n {
+        if toks[i] == a && toks[i + 1] == b { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn main() {
+    if _disabled() { _allow() }
+    if env_var("SIDECAR_NO_POOL_ROUTE") == "1" { _allow() }
+
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd = ti["command"]
+    if cmd == "" { _allow() }
+
+    let toks = _tokens(cmd)
+
+    // already routed — skip
+    if _has_adjacent(toks, "pool", "on") { _allow() }
+
+    let macos = _has_word(cmd, "swift") || _has_word(cmd, "xcodebuild") || _has_word(cmd, "xcrun") || _has_adjacent(toks, "pod", "install")
+    if macos {
+        _suggest("pool-route: macOS-only command detected. Consider dispatching on the appropriate host: `pool on mini -- <cmd>`. Roster: `pool list`. Opt out: SIDECAR_NO_POOL_ROUTE=1.")
+    }
+
+    let gpu = _has_word(cmd, "nvidia-smi") || _has_word(cmd, "nvcc")
+    if gpu {
+        _suggest("pool-route: GPU/CUDA command detected. Consider dispatching on the appropriate host: `pool on ubu-1` or `ubu-2 -- <cmd>`. Roster: `pool list`. Opt out: SIDECAR_NO_POOL_ROUTE=1.")
+    }
+
+    _allow()
+}

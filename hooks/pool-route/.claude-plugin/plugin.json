@@ -1,9 +1,9 @@
 {
   "name": "pool-route",
-  "description": "PreToolUse(Bash) suggestion hook — when a command is host-specific (macOS-only: swift/xcodebuild/xcrun · GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",
-  "version": "0.1.0",
+  "description": "PreToolUse(Bash) suggestion hook, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`) — when a command is host-specific (macOS-only: swift/xcodebuild/xcrun · GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "hook", "pool", "routing", "pre-tool-use", "bash"]
+  "keywords": ["claude-code", "hook", "pool", "routing", "bash", "hexa"]
 }

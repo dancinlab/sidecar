@@ -1,0 +1,444 @@
+// _sidecar_lint.hexa — PreToolUse(Bash) auto-lint on `git commit` for
+// Claude Code marketplace plugin packs. Non-blocking — emits findings as
+// additionalContext.
+//
+// Fires when tool_name == Bash, the command contains `git commit`, and the
+// repo root holds `.claude-plugin/marketplace.json`.
+//
+// Checks:
+//   1. staged diff added lines — stale-history patterns (commons @D g15)
+//   2. staged diff added lines — hardcoded /Users//home/ paths (g13 / s3)
+//   3. marketplace.json plugin entry vs each plugin.json — version drift
+//   4. hooks/*/bin/*.sh missing user-exec bit
+//
+// Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
+// Opt out: SIDECAR_NO_LINT=1
+//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["sidecar-lint",...]}
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _emit(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _disabled() -> bool {
+    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
+    let raw = _read_file_safe(path)
+    if raw == "" { return false }
+    let mut hit = false
+    try {
+        let m = json_parse(raw)
+        if type_of(m) == "map" && has_key(m, "disabled") {
+            let arr = m["disabled"]
+            if type_of(arr) == "array" {
+                let n = len(arr)
+                let mut i = 0
+                while i < n {
+                    if arr[i] == "sidecar-lint" { hit = true }
+                    i = i + 1
+                }
+            }
+        }
+    } catch e { hit = false }
+    return hit
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _lstrip(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" { break }
+        a = a + 1
+    }
+    return s.substring(a, n)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _is_digit(c: string) -> bool {
+    let k = char_code(c, 0)
+    return k >= 48 && k <= 57
+}
+
+fn _is_lower(c: string) -> bool {
+    let k = char_code(c, 0)
+    return k >= 97 && k <= 122
+}
+
+fn _is_alnum_lower(c: string) -> bool {
+    if _is_digit(c) { return true }
+    return _is_lower(c)
+}
+
+// `replaces ` argument char class — [@a-z0-9_/-]
+fn _is_replaces_char(c: string) -> bool {
+    if _is_alnum_lower(c) { return true }
+    let k = char_code(c, 0)
+    if k == 64 { return true }   // @
+    if k == 95 { return true }   // _
+    if k == 47 { return true }   // /
+    if k == 45 { return true }   // -
+    return false
+}
+
+// `removed in ` + N+.N+ (semver-ish prefix)
+fn _version_at(lo: string, idx: int) -> bool {
+    let n = len(lo)
+    let mut i = idx
+    let mut d = 0
+    while i < n && _is_digit(lo[i]) { i = i + 1; d = d + 1 }
+    if d == 0 { return false }
+    if i >= n || lo[i] != "." { return false }
+    i = i + 1
+    let mut d2 = 0
+    while i < n && _is_digit(lo[i]) { i = i + 1; d2 = d2 + 1 }
+    return d2 > 0
+}
+
+// `archived 20` + \d\d-\d\d-\d\d
+fn _date_at(lo: string, idx: int) -> bool {
+    let n = len(lo)
+    if idx + 8 > n { return false }
+    if !_is_digit(lo[idx]) { return false }
+    if !_is_digit(lo[idx + 1]) { return false }
+    if lo[idx + 2] != "-" { return false }
+    if !_is_digit(lo[idx + 3]) { return false }
+    if !_is_digit(lo[idx + 4]) { return false }
+    if lo[idx + 5] != "-" { return false }
+    if !_is_digit(lo[idx + 6]) { return false }
+    if !_is_digit(lo[idx + 7]) { return false }
+    return true
+}
+
+// phrase found, then char-after passes the class — `kind` selects the class.
+fn _phrase_then(lo: string, phrase: string, kind: string) -> bool {
+    let n = len(lo)
+    let mut from = 0
+    let mut guard = 0
+    while guard < 100000 {
+        let rest = lo.substring(from, n)
+        let rel = rest.index_of(phrase)
+        if rel < 0 { return false }
+        let at = from + rel + len(phrase)
+        if kind == "version" {
+            if _version_at(lo, at) { return true }
+        } else if kind == "date" {
+            if _date_at(lo, at) { return true }
+        } else if at < n {
+            let c = lo[at]
+            if kind == "replaces" {
+                if _is_replaces_char(c) { return true }
+            } else if kind == "lower" {
+                if _is_lower(c) { return true }
+            } else if kind == "alnum" {
+                if _is_alnum_lower(c) { return true }
+            }
+        }
+        from = from + rel + 1
+        guard = guard + 1
+    }
+    return false
+}
+
+fn _stale_hist(body: string) -> bool {
+    let lo = body.to_lower()
+    if _phrase_then(lo, "removed in ", "version") { return true }
+    if _phrase_then(lo, "replaces ", "replaces") { return true }
+    if _phrase_then(lo, "migrated from ", "lower") { return true }
+    if _phrase_then(lo, "archived 20", "date") { return true }
+    if _phrase_then(lo, "deprecated as of ", "alnum") { return true }
+    if _phrase_then(lo, "formerly known as ", "alnum") { return true }
+    if _phrase_then(lo, "previously named ", "alnum") { return true }
+    return false
+}
+
+fn _is_hardpath_char(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k >= 65 && k <= 90 { return true }
+    if k >= 97 && k <= 122 { return true }
+    if k == 46 { return true }   // .
+    if k == 95 { return true }   // _
+    if k == 45 { return true }   // -
+    return false
+}
+
+// (?:/Users|/home)/[A-Za-z0-9._-]+/
+fn _hardpath_from(body: string, marker: string) -> bool {
+    let n = len(body)
+    let mut from = 0
+    let mut guard = 0
+    while guard < 100000 {
+        let rest = body.substring(from, n)
+        let rel = rest.index_of(marker)
+        if rel < 0 { return false }
+        let mut at = from + rel + len(marker)
+        let mut cnt = 0
+        while at < n && _is_hardpath_char(body[at]) { at = at + 1; cnt = cnt + 1 }
+        if cnt > 0 && at < n && body[at] == "/" { return true }
+        from = from + rel + 1
+        guard = guard + 1
+    }
+    return false
+}
+
+fn _hardpath(body: string) -> bool {
+    if _hardpath_from(body, "/Users/") { return true }
+    if _hardpath_from(body, "/home/") { return true }
+    return false
+}
+
+fn _repo_root() -> string {
+    let r = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+    if r[1] != 0 { return "" }
+    return _trim(to_string(r[0]))
+}
+
+// Parse `git diff --cached -U0` → array of "path\tbody" for added lines.
+fn _staged_added(root: string) -> array {
+    let r = exec_with_status("git -C '" + root + "' diff --cached --no-color -U0 2>/dev/null")
+    let mut out = []
+    if r[1] != 0 { return out }
+    let lines = to_string(r[0]).split("\n")
+    let n = len(lines)
+    let mut cur = ""
+    let mut i = 0
+    while i < n {
+        let line = lines[i]
+        if _starts_with(line, "+++ b/") {
+            cur = line.substring(6, len(line))
+        } else if _starts_with(line, "+") && !_starts_with(line, "+++") {
+            let body = line.substring(1, len(line))
+            out.push(cur + "\t" + body)
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn _is_git_commit(cmd: string) -> bool {
+    let toks = _tokens(cmd)
+    let n = len(toks)
+    let mut i = 0
+    while i + 1 < n {
+        if toks[i] == "git" && toks[i + 1] == "commit" { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn main() {
+    if _disabled() { _allow() }
+    if env_var("SIDECAR_NO_LINT") == "1" { _allow() }
+
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd = ti["command"]
+    if cmd == "" { _allow() }
+    if !_is_git_commit(cmd) { _allow() }
+
+    let root = _repo_root()
+    if root == "" { _allow() }
+    if !file_exists(root + "/.claude-plugin/marketplace.json") { _allow() }
+
+    // (1) + (2) staged diff scans
+    let mut hist = []
+    let mut paths = []
+    let staged = _staged_added(root)
+    let sn = len(staged)
+    let mut i = 0
+    while i < sn {
+        let parts = staged[i].split("\t")
+        let p = parts[0]
+        let mut body = ""
+        if len(parts) > 1 { body = parts[1] }
+        let skip = _starts_with(p, "hooks/sidecar-lint/") || p == "CHANGELOG.md"
+        if !skip {
+            if len(hist) < 5 && _stale_hist(body) {
+                hist.push("  " + p + ": " + _trim(body))
+            }
+            if len(paths) < 5 && _hardpath(body) {
+                let st = _lstrip(body)
+                let mut is_comment = false
+                if len(st) > 0 {
+                    if st[0] == "#" || st[0] == "*" { is_comment = true }
+                    if _starts_with(st, "//") || _starts_with(st, "--") { is_comment = true }
+                }
+                if !is_comment {
+                    paths.push("  " + p + ": " + _trim(body))
+                }
+            }
+        }
+        i = i + 1
+    }
+
+    // (3) marketplace.json <-> plugin.json version drift
+    let mut drift = []
+    let mraw = _read_file_safe(root + "/.claude-plugin/marketplace.json")
+    if mraw != "" {
+        try {
+            let m = json_parse(mraw)
+            if type_of(m) == "map" && has_key(m, "plugins") {
+                let plugs = m["plugins"]
+                if type_of(plugs) == "array" {
+                    let pn = len(plugs)
+                    let mut j = 0
+                    while j < pn && len(drift) < 8 {
+                        let entry = plugs[j]
+                        if type_of(entry) == "map" {
+                            let mut src = ""
+                            if has_key(entry, "source") { src = entry["source"] }
+                            if _starts_with(src, "./") { src = src.substring(2, len(src)) }
+                            let mut name = src
+                            if has_key(entry, "name") { name = entry["name"] }
+                            if src != "" {
+                                let pjpath = root + "/" + src + "/.claude-plugin/plugin.json"
+                                let pjraw = _read_file_safe(pjpath)
+                                if pjraw != "" {
+                                    let pj = json_parse(pjraw)
+                                    if type_of(pj) == "map" {
+                                        let mut mv = ""
+                                        if has_key(entry, "version") { mv = entry["version"] }
+                                        let mut pv = ""
+                                        if has_key(pj, "version") { pv = pj["version"] }
+                                        if mv != "" && pv != "" && mv != pv {
+                                            drift.push("  " + name + ": marketplace.json=" + mv + " vs plugin.json=" + pv + " (version drift)")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        j = j + 1
+                    }
+                }
+            }
+        } catch e { drift = drift }
+    }
+
+    // (4) hooks/*/bin/*.sh missing user-exec bit
+    let mut noexec = []
+    let fr = exec_with_status("find '" + root + "/hooks' -path '*/bin/*.sh' 2>/dev/null")
+    if fr[1] == 0 {
+        let fl = to_string(fr[0]).split("\n")
+        let fn_count = len(fl)
+        let mut k = 0
+        while k < fn_count && len(noexec) < 5 {
+            let f = _trim(fl[k])
+            if f != "" {
+                let xr = exec_with_status("test -x '" + f + "'")
+                if xr[1] != 0 {
+                    let mut rel = f
+                    if _starts_with(f, root + "/") {
+                        rel = f.substring(len(root) + 1, len(f))
+                    }
+                    noexec.push("  " + rel + ": missing user-exec bit (chmod +x)")
+                }
+            }
+            k = k + 1
+        }
+    }
+
+    let mut sections = []
+    if len(hist) > 0 {
+        sections.push("stale-history patterns in staged diff (commons @D g15 — write current-state only):\n" + hist.join("\n"))
+    }
+    if len(paths) > 0 {
+        sections.push("hardcoded absolute paths in staged diff (commons @D g13 / sidecar @D s3 — use $HOME / ${CLAUDE_PLUGIN_ROOT} / $CLAUDE_PLUGIN_DATA):\n" + paths.join("\n"))
+    }
+    if len(drift) > 0 {
+        sections.push("marketplace.json <-> plugin.json version drift (commons @D g22 — lockstep version surfaces):\n" + drift.join("\n"))
+    }
+    if len(noexec) > 0 {
+        sections.push("hook .sh missing user-exec bit (PreToolUse / SessionStart fires die with Permission denied):\n" + noexec.join("\n"))
+    }
+
+    if len(sections) == 0 { _allow() }
+
+    _emit("sidecar-lint findings (non-blocking — opt out: SIDECAR_NO_LINT=1):\n\n" + sections.join("\n\n"))
+}

@@ -81,3 +81,7 @@
 @D g24 := "research/experiment — explore all viable paths in parallel, not pick-one" :: governance [active]
   do   = "in research / experiment / breakthrough work, when multiple disjoint candidate paths surface (different methods · datasets · approaches), fan out ALL viable ones in parallel (`all-bg-go` · parallel pods · `hexa cloud` fanout) and let evidence converge — that's the default for research domains"
   dont = "serialize independent research paths · present a pick-one menu when the paths are disjoint + parallelizable · sink hours into one path unilaterally while equally-viable paths sit idle (only gate the genuinely huge-cost path for explicit confirm)"
+
+@D g25 := "real-limits-first — anchor ceilings to real math/physics bounds" :: governance [required active]
+  do   = "anchor any ceiling / limit claim to a REAL mathematical or physical bound (Shannon · c · ℏ · Carnot · type-soundness · NP-hardness · secp256k1 · sha256) — the actual limit, not a convenience number"
+  dont = "use lattice n=6 / any lattice-fit as the ceiling for external-system claims · invent artificial ceilings · apply lattice derivation to external entities (vendors · labs · benchmarks)"

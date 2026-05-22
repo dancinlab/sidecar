@@ -8,6 +8,7 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-22
 
+- **commons → 0.9.7** — add `@D g25` (real-limits-first). Anchor any ceiling/limit claim to a REAL mathematical or physical bound (Shannon · c · ℏ · Carnot · type-soundness · NP-hardness · secp256k1 · sha256), not a convenience number; don't use lattice n=6 / lattice-fit as the ceiling for external claims, invent artificial ceilings, or apply lattice derivation to external entities. Surfaced during the per-repo project.tape candidate sweep — hexa-lang · echoes · hexa-codex · forge independently referenced it, so it belongs in commons not each project.tape.
 - **cycle 0.1.0 — new skill + command** — autonomous work-loop driver: `/cycle` runs next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one bg Agent per item, same message) → loop. Repeat `/cycle` to march through a goal in parallel batches. The self-enumerate behavior briefly added to all-bg-go 0.3.x moved here (per user: keep `/cycle` separate, don't integrate into all-bg-go).
 - **all-bg-go → 0.4.0** — revert to reactive-only (prior-turn fan-out). The self-enumerate mode added in 0.3.x moved to the new `/cycle` plugin. all-bg-go = fan out exactly what the prior turn offered; `/cycle` = self-generating repeatable loop. "Do not invent branches" guardrail restored (points at `/cycle` when there's no prior-turn list).
 - **commons → 0.9.6** — g23 split `/all-bg-go` (reactive fan-out) from new `/cycle` (autonomous loop) in the slash-command catalog.

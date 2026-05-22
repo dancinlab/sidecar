@@ -4,12 +4,13 @@ argument-hint: "[branch-label, ...]"
 allowed-tools: Agent, Bash, Read
 ---
 
-Engage the `all-bg-go` skill: look at the immediately-preceding assistant turn, enumerate every distinct branch / option / direction it proposed to the user, then in ONE message:
+Engage the `all-bg-go` skill. Enumerate branches, then in ONE message print a plan table + fan out:
 
-1. Print a compact plan table — `| # | label | subagent_type | iso | goal |` — so the parallel plan is visible.
-2. Issue N `Agent` tool calls right after the table — each `run_in_background: true`, `isolation: "worktree"` if it edits code, and a fully self-contained prompt.
+1. **Enumerate** — prior-turn mode: every distinct branch / option / direction the immediately-preceding assistant turn proposed. Self-enumerate mode (prior turn had no branches): derive the next viable work items from the current context yourself (roadmap/todo entries · independent sub-tasks of the active goal · obvious "what's next" set) — keep disjoint, note in one line that you self-enumerated.
+2. Print a compact plan table — `| # | label | subagent_type | iso | goal |` — so the parallel plan is visible.
+3. Issue N `Agent` tool calls right after the table — each `run_in_background: true`, `isolation: "worktree"` if it edits code, and a fully self-contained prompt.
 
-If `$ARGUMENTS` is non-empty, restrict the fan-out to the branches matching those labels; otherwise fan out everything. Follow the guardrails in SKILL.md (no destructive fan-out, no invented branches, cap >8 with confirm, no nesting).
+If `$ARGUMENTS` is non-empty, restrict the fan-out to the branches matching those labels; otherwise fan out everything. Follow the guardrails in SKILL.md (no destructive fan-out; self-enumerate only when next work is genuinely inferable; cap >8 with confirm; no nesting).
 
 End the message with this exact shape:
 

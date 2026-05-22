@@ -1,0 +1,6 @@
+A scientific schematic teaser image for an arXiv paper on superconductivity validation.
+Centered: a glowing green padlock icon labeled "absorbed=true" with a clean rectangular gate frame around it.
+Behind the lock: two complementary blue-violet curves — one labeled "BCS Universal Ratio = 3.5276" (parameter-free theory, dashed), the other labeled "Niobium NIS Tunneling Consensus = 3.517 ± 0.023" (measurement, solid red error bars).
+Below: subtle horizontal text "0.309% < 5% threshold".
+Style: minimalist scientific poster, white background, accent colors emerald green and deep blue, technical but elegant, NO text errors, NO formulas as raster text (use simple labels).
+1024x1024 square format. High contrast print-quality vector-like rendering.

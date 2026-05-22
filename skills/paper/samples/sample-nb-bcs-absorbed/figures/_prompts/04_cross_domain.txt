@@ -1,0 +1,7 @@
+A side-by-side comparison illustration showing two scientific instruments connected by a common validation pattern.
+Left panel: a NREL pyranometer (cylindrical dome-shaped solar instrument) on a tripod under a bright sun with light rays, labeled "Solar GHI · Energy Domain".
+Right panel: an abstract niobium crystal lattice with a tunneling junction probe attached to it (small needle touching a metallic sample), labeled "Nb Tunneling · RTSC Domain".
+Connecting them across the middle: a horizontal flow with three boxes labeled "Model Side", "Threshold (5%)", "Measured Oracle", showing both panels feed into the same template.
+A bottom banner reads "absorbed=true" in subtle green text.
+Style: editorial scientific illustration, white background, paired symmetry between left/right panels, soft realistic shading, print-quality.
+1792x1024 landscape format. Clean simple labels, NO text errors.

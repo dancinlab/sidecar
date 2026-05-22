@@ -1,0 +1,9 @@
+A horizontal block diagram showing four stacked tiers of a validation pipeline for superconductor claims.
+From left to right, four labeled rectangular blocks connected by arrows:
+1) "Tier 1 — Computational Synthesis" (blue) — BCS / McMillan formulas, parameter-free predictions
+2) "Tier 2 — Synthesis Recipe Record" (teal) — typed JSON with replication count
+3) "Tier 3 — Measurement Ingest" (orange) — external instrument data
+4) "Tier 4 — Falsifier Dispatch" (purple) — produces verdict, but absorbed always false
+Then a SEPARATE outlined block labeled "Attestation Gate" (gold/yellow) that takes inputs from all four tiers and produces "absorbed=true" only when measurement-oracle parity passes.
+Style: clean academic flowchart, white background, distinct color blocks with subtle gradients, arrows clear, labels readable in print, NO text errors.
+1792x1024 landscape format.

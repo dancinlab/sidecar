@@ -80,6 +80,7 @@ sidecar/
 | [`easy`](skills/easy/) | skill + command | 0.1.0 | Friendly response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII diagram · compare). Triggered by natural language ("친근하게" · "easy mode" · multilingual equivalents) or `/easy`. 5 language samples (en · ko · ja · zh · ru). |
 | [`research`](skills/research/) | skill + commands | 0.1.0 | Research-fetch tools — `/research:arxiv <query\|id>` searches the official arXiv API (title · authors · abstract · pdf), `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Pure Python stdlib — no pip deps, no API keys, no binaries. |
 | [`gh-stack`](skills/gh-stack/) | skill | 0.1.0 | Stacked-PR workflow — proposes `gh stack` (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes sidecar's <200-lines-per-layer · 1-concern governance. Status in [`gh-stack.md`](gh-stack.md). |
+| [`paper`](skills/paper/) | skill + command | 0.1.0 | `/paper <args>` — arxiv-style LaTeX paper scaffolder. Verbs: `new <slug>` (scaffold the minimal `template/` skeleton at `./<slug>/` — single-column 11pt arxiv-style main.tex + references.bib + Makefile + README + figures/_prompts/), `sample <slug>` (copy the bundled demiurge `sample-nb-bcs-absorbed/` verbatim — ~14-page Nb BCS universal-gap-ratio attestation reference exhibit), `fig <size> <prompt> <out>` (fal.ai gpt-image-2 queue+poll via `_tools/fal_gen.sh`, key via `secret get fal.api_key`), `compile [dir]` (pdflatex × 3 + bibtex), `list`, `help`. |
 
 ## Governance
 

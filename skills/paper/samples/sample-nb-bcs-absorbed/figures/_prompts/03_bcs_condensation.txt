@@ -1,0 +1,7 @@
+Abstract scientific illustration of BCS Cooper-pair condensation in a niobium superconductor.
+Top half: two electrons spiraling toward each other in opposite directions, exchanging a wavy phonon (lattice vibration shown as ripples through small atom-spheres arranged in body-centered-cubic pattern).
+Bottom half: an energy diagram showing the superconducting gap 2·Delta — two parabolic bands separated by a clear vertical gap labeled "2Δ" with arrows pointing both up and down.
+Right margin: a small temperature-vs-energy axis showing the critical temperature Tc.
+Color palette: cool blues for electron paths, warm orange for phonon, gold-green band for the gap region.
+Style: textbook physics illustration, clean lines, white background, professional, sized for a paper figure.
+1024x1024 square format. NO text errors, clean simple labels only.

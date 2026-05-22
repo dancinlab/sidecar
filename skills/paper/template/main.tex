@@ -1,0 +1,114 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- arxiv-style preamble ----------
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  citecolor=blue!50!black,
+  urlcolor=blue!50!black
+}
+
+\title{
+  \textbf{TITLE HERE}\\[4pt]
+  \large SUBTITLE OR FRAMING
+}
+
+\author{
+  AUTHOR NAME\\
+  \normalsize\textit{affiliation}\\[2pt]
+  \normalsize\href{https://example.org}{\texttt{contact}}
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+% =========================================================================
+\begin{abstract}
+One-paragraph abstract. State the question, the method, the headline
+result with the smallest numeric quantity that makes it falsifiable,
+and one sentence on scope / what is \emph{not} claimed.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Motivation. What the field believes. Why the question is interesting
+now. What the gap is. \cite{placeholder2024}
+
+\medskip
+\noindent\textbf{Contributions.}
+\begin{enumerate}\itemsep0.3em
+\item First contribution.
+\item Second contribution.
+\item Third contribution.
+\end{enumerate}
+
+\section{Background}
+\label{sec:bg}
+
+Just enough context to read the rest of the paper. Cite primary
+sources, not secondary surveys, where possible.
+
+\section{Method}
+\label{sec:method}
+
+What you did, in enough detail that a competent reader could
+re-implement. Include the exact pre-registered thresholds and
+parameter ranges --- nothing chosen after seeing the results.
+
+\section{Results}
+\label{sec:results}
+
+Headline result. Tables and figures should be self-contained ---
+captions carry the punchline, the body text carries the
+interpretation.
+
+% Example figure include — uncomment and drop a real PDF in figures/.
+% \begin{figure}[h]
+% \centering
+% \includegraphics[width=0.9\linewidth]{figures/fig01.pdf}
+% \caption{Caption with the punchline first, units explicit, error
+% bars defined.}
+% \label{fig:headline}
+% \end{figure}
+
+\section{Limitations and honest caveats}
+\label{sec:limits}
+
+Enumerate what would invalidate the result and what is out of scope.
+Each caveat should be specific enough that a reader can independently
+judge whether it applies to their case.
+
+\section{Discussion and outlook}
+\label{sec:discussion}
+
+What this changes. What stays the same. The single most important
+follow-up experiment.
+
+% =========================================================================
+\section*{Reproducibility}
+\addcontentsline{toc}{section}{Reproducibility}
+
+Code: \url{https://example.org/repo}. Data: cite the dataset entry in
+\texttt{references.bib}. Build: \texttt{make} (pdflatex × 3 + bibtex).
+
+% =========================================================================
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

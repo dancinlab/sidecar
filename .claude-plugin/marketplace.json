@@ -89,8 +89,8 @@
     {
       "name": "secret",
       "source": "./skills/secret",
-      "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret). Verbs: get · set · delete · list · service. ⚠ /secret get exposes the value in conversation context; prefer inline bash $(secret get <k>) for tool-invocation patterns. NL trigger via skill ('secret get', '키체인', '토큰 저장', 'credential 가져와').",
-      "version": "0.1.0"
+      "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.3.0). Verbs: get · set · rotate · check · delete · list · service. High-value protection on set (BIP39 mnemonic wordlist-validated · xprv/WIF/64-hex auto-detect → refuse without --allow-mnemonic + stdin/tty). rotate emits sentinel only.",
+      "version": "0.2.0"
     },
     {
       "name": "kick",

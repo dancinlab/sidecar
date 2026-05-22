@@ -20,12 +20,18 @@ allowed-tools: Bash
 ## Verbs (pass-through to `secret`)
 
 ```
-/secret get <key>             print the value (stdout)
-/secret set <key> [value]     store (hidden prompt if value omitted)
-/secret delete <key>          remove
-/secret list                  list keys in $SECRET_SERVICE
-/secret service               print active service name
+/secret get <key>                            print the value (stdout) ⚠
+/secret set [--allow-mnemonic] <key> [value] store (hidden prompt if value omitted)
+/secret rotate <key> [--bytes N|--hex N]     generate random + replace (value NEVER printed)
+/secret check <key>                          exit 0 if exists, 1 otherwise
+/secret delete <key>                         remove
+/secret list                                 list keys in $SECRET_SERVICE
+/secret service                              print active service name
 ```
+
+**rotate** / **check** / **list** / **delete** / **service** = safe (no value returned). **set** with hidden prompt = safe (value entered, not displayed). **get** = ⚠ value flows to conversation.
+
+**High-value protection** (`set`): BIP39 mnemonic (12/15/18/21/24 words, validated against bundled wordlist) · xprv/xpub/yprv/ypub/zprv/zpub · WIF · 64-hex privkey → default REFUSE. Override = `--allow-mnemonic` + stdin/tty only (argv refused — `ps aux` leak).
 
 ## ⚠ Security: prefer inline `$(secret get ...)` for tool-use
 
@@ -50,5 +56,4 @@ SECRET_SERVICE=ci-bot /secret set deploy_key
 ## Related
 
 - `dancinlab/secret` — the underlying CLI (public, MIT, single bash script).
-- `dancinlab/self-secret` — older file-based personal credential CLI (now PRIVATE, separate concept).
 - For cross-platform (non-mac), use `op` (1Password CLI) or `bw` (Bitwarden CLI) directly.

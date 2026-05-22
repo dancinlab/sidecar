@@ -5,12 +5,18 @@
 ## Verbs
 
 ```
-/secret get <key>             print the value (stdout)
-/secret set <key> [value]     store (hidden prompt if value omitted)
-/secret delete <key>          remove
-/secret list                  list keys in $SECRET_SERVICE
-/secret service               print active service name
+/secret get <key>                            print the value (stdout) ⚠
+/secret set [--allow-mnemonic] <key> [value] store (hidden prompt if value omitted)
+/secret rotate <key> [--bytes N|--hex N]     generate random + replace (value NEVER printed)
+/secret check <key>                          exit 0 if exists, 1 otherwise
+/secret delete <key>                         remove
+/secret list                                 list keys in $SECRET_SERVICE
+/secret service                              print active service name
 ```
+
+**High-value protection** (on `set`): BIP39 mnemonic (12/15/18/21/24 words, wordlist-validated) · xprv/xpub/yprv/ypub/zprv/zpub · WIF · 64-hex privkey → default REFUSE. Override = `--allow-mnemonic` + stdin/tty only (argv refused — `ps aux` leak).
+
+**Rotate** emits sentinel only — value read separately via `secret get <key>`.
 
 ## ⚠ Security
 

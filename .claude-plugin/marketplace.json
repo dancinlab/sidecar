@@ -47,7 +47,13 @@
     {
       "name": "git-guard",
       "source": "./hooks/git-guard",
-      "description": "PreToolUse(Bash) deny for force-push \u00b7 force-with-lease \u00b7 refspec-force \u00b7 git {commit,merge,rebase} --no-verify. Opt out: SIDECAR_NO_GIT_GUARD=1.",
+      "description": "PreToolUse(Bash) deny for force-type git push operations only \u2014 `git push --force` / `-f` \u00b7 `git push --force-with-lease` \u00b7 `git push <remote> +<refspec>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked (left to user discipline). Opt out: SIDECAR_NO_GIT_GUARD=1.",
+      "version": "0.2.0"
+    },
+    {
+      "name": "sidecar-lint",
+      "source": "./hooks/sidecar-lint",
+      "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit. Opt out: SIDECAR_NO_LINT=1.",
       "version": "0.1.0"
     },
     {

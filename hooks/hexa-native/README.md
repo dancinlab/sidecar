@@ -1,22 +1,24 @@
 # hexa-native
 
-Hard-deny `.py` / `.sh` writes inside any project rooted at a directory containing a `project.hexa` marker.
+Hard-deny `.py` / `.sh` writes inside any project rooted at a directory containing a `project.tape` marker.
 
 ## What it does
 
-`PreToolUse(Write | Edit | NotebookEdit)` — when the AI tries to write to a `.py` or `.sh` file whose path lies inside a project whose root contains `project.hexa`, the tool call is **denied** with a fixed message redirecting the operator to `.hexa`.
+`PreToolUse(Write | Edit | NotebookEdit)` — when the AI tries to write to a `.py` or `.sh` file whose path lies inside a project whose root contains `project.tape`, the tool call is **denied** with a fixed message redirecting the operator to `.hexa`.
 
-Non-hexa-native projects (no `project.hexa` at any ancestor) are unaffected — write `.py` / `.sh` freely there.
+Non-hexa-native projects (no `project.tape` at any ancestor) are unaffected — write `.py` / `.sh` freely there.
 
 ## Scope
 
-The hook only fires when **both** are true:
+The hook only fires when **all** are true:
 
 1. `tool_name ∈ {Write, Edit, NotebookEdit}`
 2. The target path ends in `.py` or `.sh`
-3. Walking up the target path's ancestors finds a `project.hexa` file before reaching `/` or `$HOME`
+3. Walking up the target path's ancestors finds a `project.tape` file before reaching `/` or `$HOME`
 
 If any of these is false, the call passes through.
+
+**Note**: `project.tape` is sidecar's canonical project identity marker (added by `sidecar init`). So the enforcement automatically applies to every sidecar-managed project — including sidecar itself and its sibling plugins / CLIs. If a sidecar-managed project legitimately needs to keep its existing `.py` / `.sh` tooling editable via AI, edit those files outside of Claude Code Write/Edit (shell tools), or uninstall this plugin.
 
 ## No opt-out — by design
 
@@ -25,10 +27,11 @@ There is **no** escape hatch:
 - ❌ No env-var bypass (no `BYPASS_HEXA_LANG=1`, no `NO_HEXA_NATIVE=1`, etc.)
 - ❌ No `~/.claude/sidecar/disabled.json` honoring for this plugin
 - ❌ No per-project exception list
+- ❌ No self-exclusion for this plugin's own files
 
 If you need a way out, **uninstall the plugin**. The point of this hook is that there's nothing else to disable.
 
-Rationale: `.py` and `.sh` are already supported as ai-native English in other environments. Projects marked `project.hexa` opt in to hexa-native — the policy is the project, not a config switch.
+Rationale: `.py` and `.sh` are already supported as ai-native English in other environments. Projects marked `project.tape` opt in to sidecar-managed hexa-native — the policy is the project, not a config switch.
 
 ## Files
 
@@ -45,7 +48,7 @@ hexa-native/
 ## Example block
 
 ```
-hexa-native: this project (hexa-lang) is hexa-native — `project.hexa` marker found at the project root.
+hexa-native: this project (hexa-lang) is hexa-native — `project.tape` marker found at the project root.
   Refusing to write `tools/lint.py` (.py).
   `.py` / `.sh` are already supported as ai-native (English) in other environments — this project intentionally only accepts `.hexa` source.
   Write your logic in `.hexa` instead. There is no env-var / flag override by design.

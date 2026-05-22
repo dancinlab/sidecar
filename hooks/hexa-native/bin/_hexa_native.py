@@ -2,7 +2,7 @@
 # hexa-native — PreToolUse(Write|Edit|NotebookEdit) hard block.
 #
 # If the target file path's enclosing project (any ancestor dir containing
-# `project.hexa`) exists AND the target ends in `.py` or `.sh`, deny the
+# `project.tape`) exists AND the target ends in `.py` or `.sh`, deny the
 # write with a fixed message redirecting the operator to `.hexa`.
 #
 # DESIGN NOTE — explicitly no opt-out: no env-var bypass (e.g. no
@@ -16,7 +16,7 @@ import os
 import sys
 
 EVENT = "PreToolUse"
-MARKER = "project.hexa"
+MARKER = "project.tape"
 TARGETED_EXTS = (".py", ".sh")
 TARGETED_TOOLS = ("Write", "Edit", "NotebookEdit")
 
@@ -81,7 +81,7 @@ def main():
     rel = os.path.relpath(target, root)
     reason = (
         f"hexa-native: this project ({os.path.basename(root)}) is hexa-native "
-        f"— `project.hexa` marker found at the project root.\n"
+        f"— `project.tape` marker found at the project root.\n"
         f"  Refusing to write `{rel}` (.{ext}).\n"
         f"  `.py` / `.sh` are already supported as ai-native (English) "
         f"in other environments — this project intentionally only accepts "

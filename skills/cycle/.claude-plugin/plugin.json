@@ -1,0 +1,9 @@
+{
+  "name": "cycle",
+  "description": "Autonomous work-loop driver — /cycle runs next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. Repeat /cycle to march through a goal in parallel batches. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "cycle", "loop", "parallel", "fan-out", "autonomous"]
+}

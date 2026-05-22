@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g24` form, no tool/usage \u2014 Sonnet bench v4 winner at 33/36).",
-      "version": "0.9.5"
+      "version": "0.9.6"
     },
     {
       "name": "prefs",
@@ -59,8 +59,14 @@
     {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
-      "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. TWO modes: prior-turn (fan out branches the previous turn offered) + self-enumerate (no prior branches \u2192 derive next viable work items itself, then fan out). Repeatable next-list \u2192 fan-out \u2192 loop driver. Skill (natural language) + /all-bg-go command.",
-      "version": "0.3.0"
+      "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command.",
+      "version": "0.4.0"
+    },
+    {
+      "name": "cycle",
+      "source": "./skills/cycle",
+      "description": "Autonomous work-loop driver — /cycle runs next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. Repeat /cycle to march through a goal in parallel batches. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
+      "version": "0.1.0"
     },
     {
       "name": "pool",

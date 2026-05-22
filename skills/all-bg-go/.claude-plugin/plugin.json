@@ -1,7 +1,7 @@
 {
   "name": "all-bg-go",
-  "description": "Parallel fan-out trigger — user says \"all bg go\" (or equivalent) → print a plan table (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. TWO modes: prior-turn (fan out branches the previous turn offered) + self-enumerate (no prior branches → derive next viable work items itself, then fan out). Makes `all bg go` a repeatable next-list → fan-out → loop driver.",
-  "version": "0.3.0",
+  "description": "Parallel fan-out trigger — user says \"all bg go\" (or equivalent) → print a plan table (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop (enumerate next work → plan → fan-out → loop), use `/cycle` instead.",
+  "version": "0.4.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

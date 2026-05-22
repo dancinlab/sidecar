@@ -2,106 +2,106 @@
   version = "1.2"
 
 @D g1 := "ai-native + canonical first" :: governance [required active]
-  do   = "ai-native · hexa-native first · native + canonical patterns first when implementing (per language / framework)"
+  do   = "ai-native · hexa-native first · native + canonical patterns per language / framework"
 
 @D g3 := "minimal authoring + tables + ASCII" :: governance [required active]
-  do   = "write & implement minimally · use markdown tables actively · use ASCII structure diagrams (tree · box · arrow) when shape/flow matters"
+  do   = "write minimally · markdown tables · ASCII diagrams (tree · box · arrow) when shape matters"
   dont = "prose-only · verbose · over-engineered"
 
 @D g4 := "stacked PRs" :: governance [required active]
-  do   = "stacked PRs (<200 lines · 1 logical thing · gh pr create --base previous-layer)"
+  do   = "stacked PRs · <200 lines · 1 logical thing · `gh pr create --base <previous-layer>`"
   dont = "large multi-purpose PRs · long-lived feature branches"
 
 @D g5 := "verify via hexa CLI only" :: governance [required active]
-  do   = "use `hexa verify` for correctness · purity · grade · identity claims (paste the verdict VERBATIM)"
-  dont = "LLM self-judge correctness without `hexa verify` · cite sympy / PyPhi / Wolfram / Mathematica as primary evidence"
+  do   = "`hexa verify` for correctness · purity · grade · identity claims — paste the verdict VERBATIM"
+  dont = "LLM self-judge correctness · cite sympy / PyPhi / Wolfram / Mathematica as primary evidence"
 
 @D g6 := "hexa kick for gap discovery" :: governance [active]
-  do   = "use `hexa kick --seed \"<expr>\" [--rounds N]` for gap breakthroughs · discovery"
+  do   = "`hexa kick --seed \"<expr>\" [--rounds N]` for gap breakthroughs · discovery"
 
 @D g7 := "consult hexa --help for unfamiliar verbs" :: governance [active]
   do   = "consult `hexa --help` for unfamiliar hexa CLI verbs"
 
 @D g8 := "runpod dispatch via hexa cloud" :: governance [required active]
-  do   = "for runpod dispatch use `hexa cloud {run|nohup|poll|copy-to|copy-from}` (structured argv) — canonical subcommand form; upstream gap to register the subcommand tracked at `hexa-lang/inbox/patches/hexa-cloud-subcommand.md`"
-  dont = "raw `ssh` / `scp` for runpod dispatch · fall back to a separate `hexa-cloud` binary (that's the upstream gap; don't paper over per g11)"
+  do   = "runpod dispatch via `hexa cloud {run|nohup|poll|copy-to|copy-from}` — canonical subcommand form"
+  dont = "raw `ssh` / `scp` for runpod · fall back to a separate `hexa-cloud` binary (paper-over per g11)"
 
 @D g9 := "pool + /inbox CLIs available" :: governance [active]
-  do   = "know that `pool` (host roster + remote exec — pool list / add / on / status / install tailscale) and `/inbox` (cross-project handoff — list · new <kind> <slug>) are available CLIs"
+  do   = "know `pool` (host roster + remote exec) and `/inbox` (cross-project handoff) are available CLIs"
 
 @D g10 := "Monitor tool for streaming" :: governance [active]
-  do   = "use Claude Code's `Monitor` tool for streaming events from a background process (per-line stdout = notification)"
+  do   = "use Claude Code's `Monitor` tool to stream background-process events (per-line stdout)"
   dont = "`tail -f` / `sleep`-poll loops for background-event streaming"
 
 @D g11 := "no gap workarounds — fix at source" :: governance [required active]
-  do   = "file hexa-lang upstream gaps as `<hexa-lang-repo>/inbox/patches/<slug>.md` immediately on discovery"
-  dont = "implement workarounds for known gaps (file an upstream inbox patch instead — fix at source, never paper over)"
+  do   = "file hexa-lang upstream gaps as `<hexa-lang>/inbox/patches/<slug>.md` on discovery"
+  dont = "implement workarounds for known gaps — file an upstream inbox patch, fix at source"
 
 @D g12 := "fan out parallel pods" :: governance [active]
   do   = "fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint)"
 
-@D g13 := "portable paths only — shipped code runs on many users' machines" :: governance [required active]
-  do   = "resolve paths at runtime: `$HOME` / `${HOME}` · plugin scripts use `${CLAUDE_PLUGIN_ROOT}` (install dir) + `$CLAUDE_PLUGIN_DATA` (per-plugin state) · PATH-resolved binaries · relative / `<repo-name>/<relpath>` notation — your local layout is NOT the installer's"
-  dont = "hardcode absolute paths anywhere shipped (`/Users/<you>/…` · `/home/<you>/…` · machine-specific dirs) — breaks on every other install · assume your username / dir tree exists on their box"
+@D g13 := "portable paths only" :: governance [required active]
+  do   = "resolve paths at runtime: `$HOME` · `${CLAUDE_PLUGIN_ROOT}` · `$CLAUDE_PLUGIN_DATA` · PATH binaries"
+  dont = "hardcode absolute paths in shipped code (`/Users/<you>/…` · `/home/<you>/…` · machine dirs)"
 
 @D g14 := "5-count emoji for major events" :: governance [active]
-  do   = "mark major events with 5-count emoji (🛸*5 transcend / ⭐️*5 win / 🔥*5 breakthrough) — never on routine OK"
+  do   = "mark major events with 5-count emoji (🛸 transcend · ⭐️ win · 🔥 breakthrough) — never routine"
 
 @D g15 := "current-state docs · history in dedicated surfaces" :: governance [required active]
-  do   = "write docs in completed-form (describe current state) — history goes in `CHANGELOG.md` (chronological) / `git log` (full audit trail)"
-  dont = "mix migration history into living docs (no inline `replaces X` / `migrated from Y` / `archived YYYY-MM-DD`)"
+  do   = "write docs in completed-form (current state) — history → `CHANGELOG.md` / `git log`"
+  dont = "mix migration history into living docs — no inline `replaces X` / `migrated from Y`"
 
 @D g16 := "AGENTS.tape dormant · don't touch" :: governance [required active]
-  dont = "touch AGENTS.tape (kept dormant carry — user-request override only)"
+  dont = "touch AGENTS.tape (dormant carry — user-request override only)"
 
 @D g17 := "project.tape user-request only" :: governance [required active]
-  dont = "touch project.tape unprompted (active project SSOT — read freely, but modify only on explicit user request)"
+  dont = "touch project.tape unprompted — active SSOT · read freely, modify on explicit request only"
 
 @D g18 := "bypass — auto-execute, don't punt" :: governance [required active]
-  dont = "punt to user on clearly-OK agent-executable work (catalog: `next user action:` blocks · `Should I proceed?` · `Want me to check?` deferrals · option-trees with obvious default · over-clarification · defer-by-waiting · excessive recap) — self-check: interactive human input · unauthorized destructive · external visible · explicit user-review request → if all NO, just execute"
+  dont = "punt clearly-OK agent work — if not (human-input · destructive · external · review-asked), execute"
 
 @D g19 := "project.tape — granular B form" :: governance [required active]
-  do   = "when editing any `<project-root>/project.tape` (or commons-style multi-rule `.tape` carrier), use granular @D blocks — one rule per entry · single concept · do/dont only · no `tool` / `usage` keys on multi-rule carriers (the v4 Sonnet bench showed they net-negative); single-rule isolated blocks like `@D ship` MAY use `tool` per tape v1.4 spec"
-  dont = "monolithic `@D := \"<name>\" :: governance` block mashing many concepts into one do/dont string — that exceeds v1.2's 500-char/entry cap and dilutes LLM attention (v4 bench: granular 33/36 vs single-block 31/36)"
+  do   = "edit project.tape / multi-rule `.tape` as granular @D blocks — one rule each · do/dont only"
+  dont = "monolithic `@D` block mashing many concepts into one do/dont string"
 
 @D g20 := "no hardcoding · implement generically" :: governance [required active]
-  do   = "implement once, parameterize over instances · code in one canonical home (single stdlib · single dispatcher) · manifest-driven extension (new instance = manifest only, no code change) · universal generic path"
-  dont = "hard-code per-instance / per-domain / per-tenant branches · duplicate implementation across topical folders · per-instance Producer / Dispatcher / Handler class family · branch on instance name in the generic layer"
+  do   = "implement once · parameterize over instances · one canonical home · manifest-driven extension"
+  dont = "hard-code per-instance branches · duplicate implementation across topical folders"
 
-@D g21 := "no workaround / temp-fix as user choice — go straight to the proper fix" :: governance [required active]
-  do   = "when the proper fix is identifiable, just implement it (the proper fix is THE action, not one option among many)"
-  dont = "offer the user a menu like `quick patch vs proper refactor vs workaround` when the proper path is clear · present workaround / temp-fix / band-aid as alternatives to be picked between"
+@D g21 := "no workaround / temp-fix as user choice" :: governance [required active]
+  do   = "when the proper fix is identifiable, just implement it — the proper fix IS the action"
+  dont = "offer a `quick patch vs proper vs workaround` menu when the proper path is clear"
 
-@D g22 := "version discipline — bump SemVer + lockstep all version surfaces" :: governance [required active]
-  do   = "any user-visible behavior change → bump SemVer (patch = fix / new entry · minor = new feature / format · major = breaking) + update ALL version-bearing surfaces in the SAME commit (manifest · README plugin row · CHANGELOG · marketplace · cache · etc.) + ship per project's ship cycle"
-  dont = "ship behavior change without a version bump · update some version surfaces but skip others (drift between files) · skip the CHANGELOG entry"
+@D g22 := "version discipline — bump SemVer + lockstep surfaces" :: governance [required active]
+  do   = "user-visible change → bump SemVer + update ALL version surfaces in the same commit + CHANGELOG"
+  dont = "ship a behavior change without a version bump · drift between surfaces · skip the CHANGELOG"
 
 @D g23 := "sidecar slash commands — use when applicable" :: governance [active]
-  do   = "use sidecar slash commands when the situation fits — discovery: `/brainstorm` (depletion ideation) · `/gap` (42-lens audit) · `/kick` (hexa kick wrapper) · `/verify` (hexa verify wrapper) · `/hexa-help` (hexa --help) · workflow: `/inbox` (cross-project handoff) · `/all-bg-go` (reactive fan-out of prior-turn branches) · `/cycle` (autonomous loop: self-enumerate next work → plan → fan-out → loop) · `/domain [task]` (UPPERCASE snapshot + checkbox-task log · auto-scaffolds w/ project-name default) · `/inject` (mid-session sidecar refresh) · `/ship` (atomic commit + push + sidecar-sync tail) · `/prefs` (language settings) · CLI: `/pool` (host roster + remote exec) · `/cloud` (hexa cloud runpod) · `/secret` (macOS Keychain credentials — `secret` CLI wrapper) · style: `/easy` (friendly response) · research: `/research:arxiv` · `/research:yt`"
+  do   = "use sidecar slash commands when they fit: /brainstorm /gap /kick /verify /hexa-help /inbox /all-bg-go /cycle /domain /inject /ship /prefs /pool /cloud /secret /easy /research"
 
-@D g24 := "research/experiment — explore all viable paths in parallel, not pick-one" :: governance [active]
-  do   = "in research / experiment / breakthrough work, when multiple disjoint candidate paths surface (different methods · datasets · approaches), fan out ALL viable ones in parallel (`all-bg-go` · parallel pods · `hexa cloud` fanout) and let evidence converge — that's the default for research domains"
-  dont = "serialize independent research paths · present a pick-one menu when the paths are disjoint + parallelizable · sink hours into one path unilaterally while equally-viable paths sit idle (only gate the genuinely huge-cost path for explicit confirm)"
+@D g24 := "research — explore all viable paths in parallel" :: governance [active]
+  do   = "in research / experiment, fan out ALL disjoint viable paths in parallel — let evidence converge"
+  dont = "serialize independent research paths · pick-one menu when paths are disjoint + parallelizable"
 
-@D g25 := "real-limits-first — anchor ceilings to real math/physics bounds" :: governance [required active]
-  do   = "anchor any ceiling / limit claim to a REAL mathematical or physical bound (Shannon · c · ℏ · Carnot · type-soundness · NP-hardness · secp256k1 · sha256) — the actual limit, not a convenience number; full policy = `LATTICE_POLICY.md` (sidecar/hooks/commons/)"
-  dont = "use lattice n=6 / any lattice-fit as the ceiling for external-system claims · invent artificial ceilings · apply lattice derivation to external entities (vendors · labs · benchmarks)"
+@D g25 := "real-limits-first — anchor ceilings to real bounds" :: governance [required active]
+  do   = "anchor any ceiling / limit claim to a REAL math / physical bound — see `LATTICE_POLICY.md`"
+  dont = "lattice n=6 as a ceiling for external systems · invent artificial ceilings"
 
 @D g26 := "lattice-as-tool, not constraint" :: governance [required active]
-  do   = "treat the n=6 lattice as an analytical / organizing tool — use it where it naturally fits (hexa-native specs · internal structure); full cross-project policy = `LATTICE_POLICY.md` (sidecar/hooks/commons/, the SSOT)"
-  dont = "treat the lattice as a hard constraint or a derivation rule · force-fit lattice claims onto external entities (TSMC · ASML · NIST · CERN · NASA · published benchmarks) — cite their own invariants instead"
+  do   = "treat the n=6 lattice as an analytical tool — use where it fits · see `LATTICE_POLICY.md`"
+  dont = "treat the lattice as a hard constraint · force-fit it onto external entities"
 
 @D g27 := "ship cycle — commit + push + reinstall local copy" :: governance [required active]
-  do   = "ship as one atomic op: commit (explicit paths · credential scan) → push origin/<branch> → reinstall the local copy so it matches HEAD (`hx install <name>` for hx-packaged repos · project-specific install otherwise) — especially after native / launchd / daemon / compiled-source changes"
-  dont = "build-and-stop (leave a stale install / `.app` / daemon running) · defer the reinstall · `git add -A` / `-u` instead of explicit paths · skip the credential scan (rpa_ · sk-[A-Za-z0-9]{20} · hf_[A-Za-z0-9]{30} · AKIA)"
+  do   = "ship atomically: commit (explicit paths · cred scan) → push → reinstall the local copy to HEAD"
+  dont = "build-and-stop with a stale install · defer reinstall · `git add -A`/`-u` · skip the cred scan"
 
-@D g28 := "credentials — never expose verbatim · `secret` CLI is the only channel" :: governance [required active]
-  do   = "fetch credentials only via `secret get <key>` — use inline `$(secret get <k>)` for env-var / stdin / tty consume (process-lifetime ephemeral, no file dump)"
-  dont = "print / echo / log / commit / paste a credential value anywhere (chat · doc · log · state JSON · commit msg · scrollback · shell history · clipboard · env-var dump · `ps aux`) · pass creds in subprocess argv (`--token $V` → process-listing leak) · Read / cat / head / tail credential files directly"
+@D g28 := "credentials — never expose verbatim" :: governance [required active]
+  do   = "fetch credentials only via `secret get <key>` — inline `$(secret get <k>)`, process-ephemeral"
+  dont = "print / log / commit / paste a credential anywhere · pass creds in subprocess argv · cat cred files"
 
 @D g29 := "CHANGELOG.md at repo root" :: governance [required active]
-  do   = "create + maintain `CHANGELOG.md` at every repo's root as the chronological history surface — pairs with g15 (current-state living docs · history off the prose) and g22 (every version bump adds a CHANGELOG entry in the same commit)"
+  do   = "create + maintain `CHANGELOG.md` at every repo root as the chronological history surface"
 
 @D g30 := "no self-authored bypass — guards ship without an off switch" :: governance [required active]
-  do   = "if a guard / hook / lint / rule mis-fires, fix or remove the guard itself"
-  dont = "add an opt-out / bypass (env var · config flag · skip-list) to a guard or rule you authored"
+  do   = "if a guard / hook / lint mis-fires, fix or remove the guard itself"
+  dont = "add an opt-out / bypass (env var · flag · skip-list) to a guard or rule you authored"

@@ -1,7 +1,7 @@
 {
   "name": "pool-route",
-  "description": "PreToolUse(Bash) suggestion hook, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`) — when a command is host-specific (macOS-only: swift/xcodebuild/xcrun · GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. NO opt-out by design — no env var, no config file, no exception list.",
-  "version": "0.3.0",
+  "description": "PreToolUse(Bash) pool auto-router, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When pool routing is armed (`pool.json` has ≥1 roster host and a workdir) and a Bash command matches the heavy classifier (make · cargo · npm · gradle · pytest · go build · swift build · docker build · nvidia-smi · train · …) or a root-needing command, the command is rewritten via the hook `updatedInput` field to run on a pool host over ssh (`ssh <host> 'cd <workdir> && <cmd>'`) — transparent dispatch, not a suggestion. OS-capability filter (macOS-only / Linux-only commands restricted to matching-platform hosts) + round-robin load balance; `autosync` rsyncs the project to the host first, else a preflight `test -d` confirms the remote workdir. Not armed / no classifier match / no eligible host → the command passes through untouched. NO opt-out by design — no env var, no config file, no exception list.",
+  "version": "0.4.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

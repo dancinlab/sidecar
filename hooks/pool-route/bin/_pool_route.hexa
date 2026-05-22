@@ -1,13 +1,20 @@
-// _pool_route.hexa — PreToolUse(Bash) suggest `pool on <host>` for
-// host-specific commands. Non-blocking — only emits additionalContext.
+// _pool_route.hexa — PreToolUse(Bash) pool auto-router.
 //
-// Patterns:
-//   swift / xcodebuild / xcrun / pod install  ->  pool on mini   (macOS)
-//   nvidia-smi / nvcc                         ->  pool on ubu-1 | ubu-2
+// When pool routing is ARMED (pool.json has >=1 roster host AND a workdir)
+// and a Bash command matches the heavy classifier, rewrite the command via
+// the hook `updatedInput` field so it runs on a pool host over ssh:
+//     ssh <host> 'cd <workdir> && <cmd>'
 //
-// Skip when the command already contains `pool on`.
-// NO opt-out by design — no env var, no config file, no exception
-// list. A guard you can switch off is a guard you will switch off.
+// Host selection: a command that needs a specific OS (macOS-only /
+// Linux-only) is restricted to hosts tagged with that platform; among the
+// eligible hosts a round-robin counter spreads load. No eligible host ->
+// runs local. autosync -> rsync the project to the host first; else a
+// preflight `test -d` confirms the workdir exists before routing.
+//
+// Ported from wilson-pool _route.py (sidecar commit ca62ff4, 0.10.2).
+// NO opt-out by design — no env var, no config file, no exception list.
+
+let MARK = "__SIDECAR_POOL__"
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -17,7 +24,8 @@ fn _allow() {
     exit(0)
 }
 
-fn _json_escape(s: string) -> string {
+// JSON-escape a string and wrap it in double quotes.
+fn _json_str(s: string) -> string {
     let n = len(s)
     let mut i = 0
     let mut parts = []
@@ -38,12 +46,6 @@ fn _json_escape(s: string) -> string {
     }
     parts.push("\"")
     return parts.join("")
-}
-
-fn _suggest(text: string) {
-    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
-    println(payload)
-    exit(0)
 }
 
 fn _is_word_char(c: string) -> bool {
@@ -107,33 +109,323 @@ fn _has_adjacent(toks: array, a: string, b: string) -> bool {
     return false
 }
 
+fn _any_word(cmd: string, words: array) -> bool {
+    let mut i = 0
+    while i < len(words) {
+        if _has_word(cmd, words[i]) { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn _any_contains(cmd: string, subs: array) -> bool {
+    let mut i = 0
+    while i < len(subs) {
+        if cmd.contains(subs[i]) { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// pairs is a flat array [a0,b0, a1,b1, ...]
+fn _any_adjacent(toks: array, pairs: array) -> bool {
+    let mut i = 0
+    while i + 1 < len(pairs) {
+        if _has_adjacent(toks, pairs[i], pairs[i + 1]) { return true }
+        i = i + 2
+    }
+    return false
+}
+
+// shell single-quote: wrap in '...', embedded ' becomes '\''
+fn _shq(s: string) -> string {
+    return "'" + s.split("'").join("'\\''") + "'"
+}
+
+// quote a workdir for a remote `cd`, keep a leading ~ unquoted so the
+// remote shell expands it to that host's own home.
+fn _cd_target(wd: string) -> string {
+    if wd == "~" { return "~" }
+    if wd.starts_with("~/") {
+        return "~/" + _shq(wd.substring(2, len(wd)))
+    }
+    return _shq(wd)
+}
+
+// `tailscale ssh` opens a non-login shell — force a login shell so the
+// remote PATH (Homebrew etc.) is sourced. Harmless for plain ssh too.
+fn _login_wrap(remote: string) -> string {
+    return "bash -lc " + _shq(remote)
+}
+
+// run a probe command, return only its exit code (255 = ssh/transport).
+fn _exec_rc(cmd: string) -> int {
+    let r = exec_with_status(cmd)
+    return r[1]
+}
+
+// read an environment variable — "" when unset.
+fn _env(name: string) -> string {
+    let r = exec_with_status("printenv " + name)
+    if r[1] != 0 { return "" }
+    return r[0].trim()
+}
+
+// emit the updatedInput rewrite — rebuild tool_input with command swapped.
+fn _emit(ti: map, new_cmd: string, note: string) {
+    let ks = keys(ti)
+    let mut parts = []
+    let mut i = 0
+    while i < len(ks) {
+        let k = ks[i]
+        if k == "command" {
+            parts.push(_json_str(k) + ":" + _json_str(new_cmd))
+        } else {
+            parts.push(_json_str(k) + ":" + json_stringify(ti[k]))
+        }
+        i = i + 1
+    }
+    let updated = "{" + parts.join(",") + "}"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    println(out)
+    exit(0)
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
     try { payload = json_parse(raw) } catch e { _allow() }
-
     if type_of(payload) != "map" { _allow() }
+
+    // Bash tool only — Read/Write/Edit operate on the local fs.
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
     if !has_key(payload, "tool_input") { _allow() }
     let ti = payload["tool_input"]
     if type_of(ti) != "map" { _allow() }
     if !has_key(ti, "command") { _allow() }
-    let cmd = ti["command"]
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
     if cmd == "" { _allow() }
+
+    // skip — already routed / heredoc / background / already ssh
+    if cmd.contains(MARK) { _allow() }
+    if cmd.contains("<<") { _allow() }
+    if cmd.ends_with("&") { _allow() }
+    if cmd.starts_with("ssh ") { _allow() }
+
+    let home = _env("HOME")
+
+    // locate pool.json — written by the `pool` skill plugin; search the
+    // known data dirs (concept-separation split the routing hook from the
+    // pool CLI, so they no longer share one CLAUDE_PLUGIN_DATA).
+    let mut cands = []
+    let cpd = _env("CLAUDE_PLUGIN_DATA")
+    if cpd != "" { cands.push(cpd) }
+    cands.push(home + "/.claude/plugins/data/pool-sidecar")
+    cands.push(home + "/.claude/plugins/data/wilson-pool-sidecar")
+    cands.push(home + "/.claude/plugin-data/wilson-pool")
+
+    let mut dd = ""
+    let mut cfg = json_parse("{}")
+    let mut ci = 0
+    while ci < len(cands) {
+        let p = cands[ci] + "/pool.json"
+        try {
+            let txt = read_file(p)
+            let parsed = json_parse(txt)
+            if type_of(parsed) == "map" {
+                cfg = parsed
+                dd = cands[ci]
+            }
+        } catch e { }
+        if dd != "" { ci = len(cands) } else { ci = ci + 1 }
+    }
+    if dd == "" { _allow() }
+
+    // ARM check — roster (parallel arrays) + a workdir must both be set.
+    if !has_key(cfg, "hosts") { _allow() }
+    let hosts = cfg["hosts"]
+    if type_of(hosts) != "array" { _allow() }
+
+    let mut h_name = []
+    let mut h_plat = []
+    let mut h_wd = []
+    let mut h_tx = []
+    let mut h_sudo = []
+    let mut hi = 0
+    while hi < len(hosts) {
+        let h = hosts[hi]
+        if type_of(h) == "map" {
+            if has_key(h, "host") {
+                let hn = h["host"]
+                if type_of(hn) == "string" && hn != "" {
+                    h_name.push(hn)
+                    let mut pl = "linux"
+                    if has_key(h, "platform") { if type_of(h["platform"]) == "string" { pl = h["platform"] } }
+                    h_plat.push(pl)
+                    let mut wd = ""
+                    if has_key(h, "workdir") { if type_of(h["workdir"]) == "string" { wd = h["workdir"] } }
+                    h_wd.push(wd)
+                    let mut tx = ""
+                    if has_key(h, "transport") { if type_of(h["transport"]) == "string" { tx = h["transport"] } }
+                    h_tx.push(tx)
+                    let mut su = false
+                    if has_key(h, "sudo") { if type_of(h["sudo"]) == "bool" { su = h["sudo"] } }
+                    h_sudo.push(su)
+                }
+            }
+        }
+        hi = hi + 1
+    }
+    if len(h_name) == 0 { _allow() }
+
+    let mut workdir = ""
+    if has_key(cfg, "workdir") { if type_of(cfg["workdir"]) == "string" { workdir = cfg["workdir"] } }
+    if workdir == "" { _allow() }
 
     let toks = _tokens(cmd)
 
-    // already routed — skip
-    if _has_adjacent(toks, "pool", "on") { _allow() }
+    // heavy classifier — build / test / package / train commands
+    let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train"]
+    let heavy_pairs = ["go", "test", "go", "build", "swift", "build", "swift", "test", "docker", "build"]
+    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs)
 
-    let macos = _has_word(cmd, "swift") || _has_word(cmd, "xcodebuild") || _has_word(cmd, "xcrun") || _has_adjacent(toks, "pod", "install")
-    if macos {
-        _suggest("pool-route: macOS-only command detected. Consider dispatching on the appropriate host: `pool on mini -- <cmd>`. Roster: `pool list`.")
+    // root-needing commands — always routable, and `sudo`-prefixed on a
+    // host tagged sudo:true.
+    let sudo_words = ["apt", "apt-get", "dpkg", "dpkg-deb", "add-apt-repository", "yum", "dnf", "rpm", "pacman", "systemctl", "ldconfig", "setcap", "update-alternatives"]
+    let needs_sudo = _any_word(cmd, sudo_words)
+
+    if !heavy && !needs_sudo { _allow() }
+
+    // capability filter — restrict to a platform when the command demands one
+    let macos_words = ["xcodebuild", "xcrun", "xcode-select", "codesign", "notarytool", "stapler", "pkgbuild", "productbuild", "hdiutil", "lipo", "otool", "install_name_tool", "vtool", "swiftc", "sw_vers", "osascript", "launchctl", "diskutil", "caffeinate", "sips", "plutil"]
+    let macos_pairs = ["swift", "build", "swift", "test", "swift", "run", "swift", "package"]
+    let macos_subs = ["apple-darwin", "apple-macos", "apple-ios", "Mach-O", ".dylib", ".dmg"]
+    let is_macos = _any_word(cmd, macos_words) || _any_adjacent(toks, macos_pairs) || _any_contains(cmd, macos_subs)
+
+    let linux_words = ["apt", "apt-get", "dpkg", "dpkg-deb", "add-apt-repository", "yum", "dnf", "rpm", "pacman", "systemctl", "journalctl", "ldconfig", "setcap", "update-alternatives"]
+    let linux_subs = ["linux-gnu", "linux-musl", ".deb", ".rpm"]
+    let is_linux = _any_word(cmd, linux_words) || _any_contains(cmd, linux_subs)
+
+    let mut why = "load-balanced"
+    let mut elig = []
+    let mut ei = 0
+    if is_macos {
+        why = "macOS-only command"
+        while ei < len(h_name) {
+            if h_plat[ei] == "macos" { elig.push(ei) }
+            ei = ei + 1
+        }
+    } else if is_linux {
+        why = "Linux-only command"
+        while ei < len(h_name) {
+            if h_plat[ei] == "linux" { elig.push(ei) }
+            ei = ei + 1
+        }
+    } else {
+        while ei < len(h_name) {
+            elig.push(ei)
+            ei = ei + 1
+        }
+    }
+    if len(elig) == 0 { _allow() }
+
+    // round-robin across the eligible hosts
+    let rr_path = dd + "/.rr"
+    let mut n = 0
+    try {
+        let rr = read_file(rr_path).trim()
+        if rr != "" { n = to_int(rr) }
+    } catch e { n = 0 }
+    if n < 0 { n = 0 }
+    let pick = elig[n % len(elig)]
+    try { write_file(rr_path, to_string((n + 1) % 1000000)) } catch e { }
+
+    let host = h_name[pick]
+
+    // auto-sudo — a sudo:true host gets a root-needing command prefixed
+    let mut rcmd = cmd
+    let mut sudo_note = ""
+    if h_sudo[pick] && needs_sudo && !rcmd.starts_with("sudo ") {
+        rcmd = "sudo " + rcmd
+        sudo_note = ", sudo-prefixed"
     }
 
-    let gpu = _has_word(cmd, "nvidia-smi") || _has_word(cmd, "nvcc")
-    if gpu {
-        _suggest("pool-route: GPU/CUDA command detected. Consider dispatching on the appropriate host: `pool on ubu-1` or `ubu-2 -- <cmd>`. Roster: `pool list`.")
+    // resolve the remote workdir — per-host > global > auto (mirror cwd)
+    let mut wd_remote = h_wd[pick]
+    if wd_remote == "" { wd_remote = workdir }
+    if wd_remote.to_lower() == "auto" {
+        let mut cwd = ""
+        if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd = payload["cwd"] } }
+        if cwd == "" { cwd = exec_with_status("pwd")[0].trim() }
+        if cwd == home {
+            wd_remote = "~"
+        } else if cwd.starts_with(home + "/") {
+            wd_remote = "~/" + cwd.substring(len(home) + 1, len(cwd))
+        } else {
+            let mut fb = ""
+            if has_key(cfg, "workdir_fallback") { if type_of(cfg["workdir_fallback"]) == "string" { fb = cfg["workdir_fallback"] } }
+            if fb == "" { _allow() }
+            wd_remote = fb
+        }
+    }
+    if wd_remote == "" { _allow() }
+    let wd_sh = _cd_target(wd_remote)
+    let remote = "cd " + wd_sh + " && " + rcmd
+
+    // transport — per-host > global > auto (tailscale if a local daemon is up)
+    let mut tx = h_tx[pick]
+    if tx == "" {
+        if has_key(cfg, "transport") { if type_of(cfg["transport"]) == "string" { tx = cfg["transport"] } }
+    }
+    if tx == "" { tx = "auto" }
+    if tx == "auto" {
+        tx = "ssh"
+        if _exec_rc("command -v tailscale >/dev/null 2>&1") == 0 {
+            if _exec_rc("tailscale status --peers=false >/dev/null 2>&1") == 0 { tx = "tailscale" }
+        }
     }
 
-    _allow()
+    // autosync vs preflight
+    let mut autosync = ""
+    if has_key(cfg, "autosync") {
+        let a = cfg["autosync"]
+        if type_of(a) == "bool" { if a { autosync = "on" } }
+        else if type_of(a) == "string" { autosync = a }
+    }
+
+    let mut new_cmd = ""
+    let mut note = ""
+    if autosync != "" {
+        // incremental rsync of the local project, then the routed command.
+        // autosync stays on plain ssh + rsync (rsync-over-tailscale untested).
+        let mut cwd2 = ""
+        if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd2 = payload["cwd"] } }
+        if cwd2 == "" { cwd2 = exec_with_status("pwd")[0].trim() }
+        let mut del = ""
+        if autosync == "mirror" { del = " --delete" }
+        new_cmd = "ssh " + _shq(host) + " " + _shq("mkdir -p " + wd_sh) + " && rsync -az --force" + del + " " + _shq(cwd2) + "/ " + _shq(host) + ":" + wd_sh + "/ && ssh " + _shq(host) + " " + _shq(remote) + "  # " + MARK
+        note = "pool-route: routed to " + host + " — auto-synced (rsync) -> " + host + ":" + wd_remote
+    } else {
+        // preflight — never route to a host missing the workdir. rc 255 is
+        // an ssh transport failure (host asleep / network blip), NOT a
+        // missing workdir: skip this once rather than run remotely blind.
+        let mut probe = ""
+        if tx == "tailscale" {
+            probe = "tailscale ssh " + _shq(host) + " " + _shq("test -d " + wd_sh)
+        } else {
+            probe = "ssh -o BatchMode=yes -o ConnectTimeout=6 " + _shq(host) + " " + _shq("test -d " + wd_sh)
+        }
+        let rc = _exec_rc(probe)
+        if rc != 0 { _allow() }
+        let sshc = "ssh"
+        if tx == "tailscale" { let sshc2 = "tailscale ssh"; new_cmd = sshc2 + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
+        else { new_cmd = sshc + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
+        note = "pool-route: routed to " + host + ":" + wd_remote + " via " + tx + " (workdir is user-synced)"
+    }
+
+    note = note + " (" + why + sudo_note + "; " + to_string(len(h_name)) + "-host roster)."
+    _emit(ti, new_cmd, note)
 }

@@ -4,4 +4,4 @@ Sidecar's live design rules: [`project.tape`](project.tape) — the `@D s1..s5` 
 
 Cross-project rules: [`hooks/commons/commons.tape`](hooks/commons/commons.tape) — `@D g1..g29`.
 
-Decision audit trail (one decision per gate, never batched): [`design.log.md`](design.log.md).
+Decision audit trail (one decision per gate, never batched): [`DESIGN.log.md`](DESIGN.log.md).

@@ -68,4 +68,4 @@ Same logical shape · missing only server-side stack metadata (no UI map · no `
 
 ## Status + activation
 
-CLI reference + manual fallback: [`gh-stack.md`](../../gh-stack.md). Per-org enablement state + activation history: [`gh-stack.log.md`](../../gh-stack.log.md).
+CLI reference + manual fallback: [`GH-STACK.md`](../../GH-STACK.md). Per-org enablement state + activation history: [`GH-STACK.log.md`](../../GH-STACK.log.md).

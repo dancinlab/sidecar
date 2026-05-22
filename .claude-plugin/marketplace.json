@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g27` form, no tool/usage \u2014 Sonnet bench v4 winner at 33/36). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.10"
+      "version": "0.9.11"
     },
     {
       "name": "prefs",
@@ -114,6 +114,12 @@
       "name": "inject",
       "source": "./skills/inject",
       "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "ship",
+      "source": "./skills/ship",
+      "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. NL trigger via skill (ship · 배포 · 출시).",
       "version": "0.1.0"
     },
     {

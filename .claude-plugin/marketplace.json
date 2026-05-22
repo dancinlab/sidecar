@@ -101,8 +101,8 @@
     {
       "name": "secret",
       "source": "./skills/secret",
-      "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.3.0). Verbs: get · set · rotate · check · delete · list · service. High-value protection on set (BIP39 mnemonic wordlist-validated · xprv/WIF/64-hex auto-detect → refuse without --allow-mnemonic + stdin/tty). rotate emits sentinel only.",
-      "version": "0.2.0"
+      "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync). Verbs: get · set · rotate · check · delete · list · service · init [icloud|github <url>] · backup [enable <url>|disable|status] · sync · migrate. Two independent sync channels (iCloud Drive primary + optional private GitHub mirror) push the same encrypted blob — master password is the only decryption secret. Auto-push ON by default once `backup enable` runs (opt out via SECRET_BACKUP_AUTO=0). High-value protection on set (BIP39 wordlist-validated · xprv/WIF/64-hex auto-detect → refuse without --allow-mnemonic + stdin/tty). rotate emits sentinel only.",
+      "version": "0.3.0"
     },
     {
       "name": "kick",

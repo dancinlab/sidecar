@@ -77,3 +77,7 @@
 
 @D g23 := "sidecar slash commands — use when applicable" :: governance [active]
   do   = "use sidecar slash commands when the situation fits — discovery: `/brainstorm` (depletion ideation) · `/gap` (42-lens audit) · `/kick` (hexa kick wrapper) · `/verify` (hexa verify wrapper) · `/hexa-help` (hexa --help) · workflow: `/inbox` (cross-project handoff) · `/all-bg-go` (parallel fan-out) · `/domain [task]` (UPPERCASE snapshot + checkbox-task log · auto-scaffolds w/ project-name default) · `/inject` (mid-session sidecar refresh) · `/prefs` (language settings) · CLI: `/pool` (host roster + remote exec) · `/cloud` (hexa cloud runpod) · style: `/easy` (friendly response) · research: `/research:arxiv` · `/research:yt`"
+
+@D g24 := "research/experiment — explore all viable paths in parallel, not pick-one" :: governance [active]
+  do   = "in research / experiment / breakthrough work, when multiple disjoint candidate paths surface (different methods · datasets · approaches), fan out ALL viable ones in parallel (`all-bg-go` · parallel pods · `hexa cloud` fanout) and let evidence converge — that's the default for research domains"
+  dont = "serialize independent research paths · present a pick-one menu when the paths are disjoint + parallelizable · sink hours into one path unilaterally while equally-viable paths sit idle (only gate the genuinely huge-cost path for explicit confirm)"

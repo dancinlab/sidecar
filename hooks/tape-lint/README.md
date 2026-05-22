@@ -29,17 +29,9 @@ Legacy violations stay readable + editable around them. Forward-only cleanup, no
 | PreToolUse | Edit | `file_path` (must end in `.tape`), `old_string`, `new_string`, `replace_all` — applied against on-disk content to compute the proposed result |
 | PreToolUse | Write | `file_path` (must end in `.tape`), `content` — used as the proposed result directly |
 
-## Opt out
+## No opt-out
 
-```sh
-SIDECAR_NO_TAPE_LINT=1
-```
-
-Or via the sidecar disable surface:
-
-```sh
-echo '{"disabled":["tape-lint"]}' > ~/.claude/sidecar/disabled.json
-```
+There is none — no env var, no config file, no exception list. A guard you can switch off is a guard you will switch off. The checks are diff-aware (pre-existing violations are grandfathered), so they only block genuinely new violations — fix the finding rather than routing around it. If `tape-lint` is wrong for your workflow, uninstall the plugin.
 
 ## Runtime
 

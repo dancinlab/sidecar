@@ -6,18 +6,12 @@
 // manifest, stop parallel fan-out.
 //
 // Non-blocking: emits PostToolUse additionalContext, never denies.
-// Opt out: SIDECAR_NO_LIMIT_GUARD=1
-//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["limit-guard",...]}
+// NO opt-out by design — no env var, no config file, no exception
+// list. A bypass switch would just be auto-flipped to silence the
+// guard, defeating its purpose.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
-}
-
-fn _read_file_safe(path: string) -> string {
-    let mut out = ""
-    try { out = to_string(read_file(path)) }
-    catch e { out = "" }
-    return out
 }
 
 fn _allow() {
@@ -51,32 +45,7 @@ fn _contains(hay: string, needle: string) -> bool {
     return hay.index_of(needle) >= 0
 }
 
-fn _disabled() -> bool {
-    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
-    let raw = _read_file_safe(path)
-    if raw == "" { return false }
-    let mut hit = false
-    try {
-        let m = json_parse(raw)
-        if type_of(m) == "map" && has_key(m, "disabled") {
-            let arr = m["disabled"]
-            if type_of(arr) == "array" {
-                let n = len(arr)
-                let mut i = 0
-                while i < n {
-                    if arr[i] == "limit-guard" { hit = true }
-                    i = i + 1
-                }
-            }
-        }
-    } catch e { hit = false }
-    return hit
-}
-
 fn main() {
-    if _disabled() { _allow() }
-    if env_var("SIDECAR_NO_LIMIT_GUARD") == "1" { _allow() }
-
     let raw = _read_stdin()
 
     let hit = _contains(raw, "hit your session limit")
@@ -85,7 +54,7 @@ fn main() {
         || (_contains(raw, "usage limit") && _contains(raw, "resets"))
     if !hit { _allow() }
 
-    let ctx = "SESSION-LIMIT SIGNAL detected in a tool result -- a usage/session limit was hit (a subagent likely stopped mid-work). Before anything else:\n\n1. REPORT how far you got: per work item, state what is COMMITTED (list commit SHAs) vs UNCOMMITTED, and exactly where work stopped.\n2. COMMIT + PUSH uncommitted work now -- stage explicit paths; a limit hit mid-edit loses uncommitted work.\n3. Write .claude/RESUME.md -- a resume manifest: done items, remaining items, the limit reset time if visible, and the next concrete step.\n4. STOP remaining parallel fan-out -- do not spawn more background agents; switch to sequential foreground work, one committed increment at a time.\n\nWhy: parallel subagent fan-outs burn quota fast -- when the limit hits, N agents fail at once and uncommitted work is lost. Sequential + commit-per-unit caps the loss at one unit. Opt out: SIDECAR_NO_LIMIT_GUARD=1"
+    let ctx = "SESSION-LIMIT SIGNAL detected in a tool result -- a usage/session limit was hit (a subagent likely stopped mid-work). Before anything else:\n\n1. REPORT how far you got: per work item, state what is COMMITTED (list commit SHAs) vs UNCOMMITTED, and exactly where work stopped.\n2. COMMIT + PUSH uncommitted work now -- stage explicit paths; a limit hit mid-edit loses uncommitted work.\n3. Write .claude/RESUME.md -- a resume manifest: done items, remaining items, the limit reset time if visible, and the next concrete step.\n4. STOP remaining parallel fan-out -- do not spawn more background agents; switch to sequential foreground work, one committed increment at a time.\n\nWhy: parallel subagent fan-outs burn quota fast -- when the limit hits, N agents fail at once and uncommitted work is lost. Sequential + commit-per-unit caps the loss at one unit."
 
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(ctx) + "}}"
     println(payload)

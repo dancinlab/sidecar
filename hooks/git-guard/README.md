@@ -14,14 +14,6 @@ PreToolUse(Bash) guard that denies force-type git push operations.
 
 Each blocked pattern rewrites history on a shared remote — almost always the wrong remedy. The right path is to resolve the conflict at the source, not overwrite. Hook-bypass (`--no-verify`) is intentionally NOT blocked here; it's a developer-local discipline call rather than something to enforce mechanically.
 
-## Opt out
+## No opt-out
 
-```bash
-SIDECAR_NO_GIT_GUARD=1 git push --force origin my-branch     # logged in the deny payload
-```
-
-Or disable per project via the sidecar control surface:
-
-```bash
-echo '{"disabled":["git-guard"]}' > ~/.claude/sidecar/disabled.json
-```
+There is none — no env var, no config file, no exception list. A guard you can switch off is a guard you will switch off. If a force-push is genuinely required, run it outside Claude Code; if `git-guard` is wrong for your workflow, uninstall the plugin rather than routing around it.

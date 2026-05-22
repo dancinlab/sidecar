@@ -15,14 +15,6 @@ Description drift between `marketplace.json` and `plugin.json` is intentionally 
 
 Lines under `hooks/sidecar-lint/` and `CHANGELOG.md` are skipped in the staged-diff checks. `hooks/sidecar-lint/` because the plugin's own documentation of the patterns would trip itself; `CHANGELOG.md` because it IS the legitimate history surface per commons `@D g15` and is allowed to use historical language.
 
-## Opt out
+## No opt-out
 
-```sh
-SIDECAR_NO_LINT=1 git commit -m "..."
-```
-
-Or via the sidecar disable surface:
-
-```sh
-echo '{"disabled":["sidecar-lint"]}' > ~/.claude/sidecar/disabled.json
-```
+There is none — no env var, no config file, no exception list. A guard you can switch off is a guard you will switch off. The findings are non-blocking already; if `sidecar-lint` is wrong for your workflow, uninstall the plugin rather than routing around it.

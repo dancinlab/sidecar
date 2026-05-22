@@ -5,18 +5,12 @@
 //   git push --force-with-lease
 //   git push <remote> +<refspec>   (refspec-level force)
 //
-// Opt out: SIDECAR_NO_GIT_GUARD=1
-//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["git-guard",...]}
+// NO opt-out by design — no env var, no config file, no exception
+// list. A guard you can switch off is a guard you will switch off;
+// a mis-firing guard is fixed at the guard.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
-}
-
-fn _read_file_safe(path: string) -> string {
-    let mut out = ""
-    try { out = to_string(read_file(path)) }
-    catch e { out = "" }
-    return out
 }
 
 fn _allow() {
@@ -52,28 +46,6 @@ fn _deny(reason: string) {
     exit(0)
 }
 
-fn _disabled() -> bool {
-    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
-    let raw = _read_file_safe(path)
-    if raw == "" { return false }
-    let mut hit = false
-    try {
-        let m = json_parse(raw)
-        if type_of(m) == "map" && has_key(m, "disabled") {
-            let arr = m["disabled"]
-            if type_of(arr) == "array" {
-                let n = len(arr)
-                let mut i = 0
-                while i < n {
-                    if arr[i] == "git-guard" { hit = true }
-                    i = i + 1
-                }
-            }
-        }
-    } catch e { hit = false }
-    return hit
-}
-
 fn _starts_with(s: string, prefix: string) -> bool {
     if len(prefix) > len(s) { return false }
     return s.substring(0, len(prefix)) == prefix
@@ -99,9 +71,6 @@ fn _tokens(s: string) -> array {
 }
 
 fn main() {
-    if _disabled() { _allow() }
-    if env_var("SIDECAR_NO_GIT_GUARD") == "1" { _allow() }
-
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
     try { payload = json_parse(raw) } catch e { _allow() }
@@ -158,5 +127,5 @@ fn main() {
 
     let mut snippet = cmd
     if len(cmd) > 180 { snippet = cmd.substring(0, 177) + "..." }
-    _deny("GIT_GUARD_BLOCK { pattern: " + label + ", command: " + snippet + ", action: this operation rewrites or bypasses safety. To override, set SIDECAR_NO_GIT_GUARD=1 }")
+    _deny("GIT_GUARD_BLOCK { pattern: " + label + ", command: " + snippet + ", action: blocked — this operation rewrites or bypasses safety. No override; if a force-push is genuinely required, do it outside Claude Code. }")
 }

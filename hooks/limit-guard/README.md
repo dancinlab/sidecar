@@ -21,7 +21,6 @@ Parallel subagent fan-outs burn quota fast. When the limit hits, N agents fail a
 
 `bin/_limit_guard.hexa`, invoked via `hexa run` from `hooks/hooks.json`. No Python, no shell shim.
 
-## Opt out
+## No opt-out
 
-- `SIDECAR_NO_LIMIT_GUARD=1`
-- `~/.claude/sidecar/disabled.json` → `{"disabled":["limit-guard"]}`
+There is none — no env var, no config file, no exception list. A bypass switch would just be auto-flipped to silence the guard, defeating its purpose. The injected directive is non-blocking guidance; if `limit-guard` is wrong for your workflow, uninstall the plugin.

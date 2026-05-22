@@ -6,18 +6,11 @@
 //   nvidia-smi / nvcc                         ->  pool on ubu-1 | ubu-2
 //
 // Skip when the command already contains `pool on`.
-// Opt out: SIDECAR_NO_POOL_ROUTE=1
-//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["pool-route",...]}
+// NO opt-out by design — no env var, no config file, no exception
+// list. A guard you can switch off is a guard you will switch off.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
-}
-
-fn _read_file_safe(path: string) -> string {
-    let mut out = ""
-    try { out = to_string(read_file(path)) }
-    catch e { out = "" }
-    return out
 }
 
 fn _allow() {
@@ -51,28 +44,6 @@ fn _suggest(text: string) {
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
     println(payload)
     exit(0)
-}
-
-fn _disabled() -> bool {
-    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
-    let raw = _read_file_safe(path)
-    if raw == "" { return false }
-    let mut hit = false
-    try {
-        let m = json_parse(raw)
-        if type_of(m) == "map" && has_key(m, "disabled") {
-            let arr = m["disabled"]
-            if type_of(arr) == "array" {
-                let n = len(arr)
-                let mut i = 0
-                while i < n {
-                    if arr[i] == "pool-route" { hit = true }
-                    i = i + 1
-                }
-            }
-        }
-    } catch e { hit = false }
-    return hit
 }
 
 fn _is_word_char(c: string) -> bool {
@@ -137,9 +108,6 @@ fn _has_adjacent(toks: array, a: string, b: string) -> bool {
 }
 
 fn main() {
-    if _disabled() { _allow() }
-    if env_var("SIDECAR_NO_POOL_ROUTE") == "1" { _allow() }
-
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
     try { payload = json_parse(raw) } catch e { _allow() }
@@ -159,12 +127,12 @@ fn main() {
 
     let macos = _has_word(cmd, "swift") || _has_word(cmd, "xcodebuild") || _has_word(cmd, "xcrun") || _has_adjacent(toks, "pod", "install")
     if macos {
-        _suggest("pool-route: macOS-only command detected. Consider dispatching on the appropriate host: `pool on mini -- <cmd>`. Roster: `pool list`. Opt out: SIDECAR_NO_POOL_ROUTE=1.")
+        _suggest("pool-route: macOS-only command detected. Consider dispatching on the appropriate host: `pool on mini -- <cmd>`. Roster: `pool list`.")
     }
 
     let gpu = _has_word(cmd, "nvidia-smi") || _has_word(cmd, "nvcc")
     if gpu {
-        _suggest("pool-route: GPU/CUDA command detected. Consider dispatching on the appropriate host: `pool on ubu-1` or `ubu-2 -- <cmd>`. Roster: `pool list`. Opt out: SIDECAR_NO_POOL_ROUTE=1.")
+        _suggest("pool-route: GPU/CUDA command detected. Consider dispatching on the appropriate host: `pool on ubu-1` or `ubu-2 -- <cmd>`. Roster: `pool list`.")
     }
 
     _allow()

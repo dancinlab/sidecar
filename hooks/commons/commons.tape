@@ -101,3 +101,7 @@
 
 @D g29 := "CHANGELOG.md at repo root" :: governance [required active]
   do   = "create + maintain `CHANGELOG.md` at every repo's root as the chronological history surface — pairs with g15 (current-state living docs · history off the prose) and g22 (every version bump adds a CHANGELOG entry in the same commit)"
+
+@D g30 := "no self-authored bypass — guards ship without an off switch" :: governance [required active]
+  do   = "if a guard / hook / lint / rule mis-fires, fix or remove the guard itself"
+  dont = "add an opt-out / bypass (env var · config flag · skip-list) to a guard or rule you authored"

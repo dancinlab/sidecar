@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g29` form, no tool/usage). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.14"
+      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g30` form, no tool/usage). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.15"
     },
     {
       "name": "prefs",
@@ -47,14 +47,14 @@
     {
       "name": "git-guard",
       "source": "./hooks/git-guard",
-      "description": "PreToolUse(Bash) deny for force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run`) \u2014 `git push --force` / `-f` \u00b7 `git push --force-with-lease` \u00b7 `git push <remote> +<refspec>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked (left to user discipline). Opt out: SIDECAR_NO_GIT_GUARD=1.",
-      "version": "0.3.0"
+      "description": "PreToolUse(Bash) deny for force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run`) \u2014 `git push --force` / `-f` \u00b7 `git push --force-with-lease` \u00b7 `git push <remote> +<refspec>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked (left to user discipline). NO opt-out by design.",
+      "version": "0.4.0"
     },
     {
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
-      "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit. Opt out: SIDECAR_NO_LINT=1.",
-      "version": "0.2.0"
+      "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit. NO opt-out by design.",
+      "version": "0.3.0"
     },
     {
       "name": "hexa-native",
@@ -65,20 +65,20 @@
     {
       "name": "tape-lint",
       "source": "./hooks/tape-lint",
-      "description": "PreToolUse(Edit|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` \u2014 no Python, no shell shim). Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule \u2014 `@D` blocks accept only `do` / `dont`; new `why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 `ex` \u00b7 ... refused. Fires on any `*.tape` path. (2) length cap \u2014 `do` / `dont` value > 100 chars refused (split overflow). commons.tape + project.tape only. (3) authoring-language \u2014 when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul \u00b7 CJK \u00b7 Hiragana \u00b7 Katakana) are refused. commons.tape + project.tape only. Opt out: SIDECAR_NO_TAPE_LINT=1.",
-      "version": "0.3.0"
+      "description": "PreToolUse(Edit|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` \u2014 no Python, no shell shim). Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule \u2014 `@D` blocks accept only `do` / `dont`; new `why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 `ex` \u00b7 ... refused. Fires on any `*.tape` path. (2) length cap \u2014 `do` / `dont` value > 100 chars refused (split overflow). commons.tape + project.tape only. (3) authoring-language \u2014 when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul \u00b7 CJK \u00b7 Hiragana \u00b7 Katakana) are refused. commons.tape + project.tape only. NO opt-out by design.",
+      "version": "0.4.0"
     },
     {
       "name": "pool-route",
       "source": "./hooks/pool-route",
-      "description": "PreToolUse(Bash) suggestion hook, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`) \u2014 when a command is host-specific (macOS-only: swift/xcodebuild/xcrun \u00b7 GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",
-      "version": "0.2.0"
+      "description": "PreToolUse(Bash) suggestion hook, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`) \u2014 when a command is host-specific (macOS-only: swift/xcodebuild/xcrun \u00b7 GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. NO opt-out by design.",
+      "version": "0.3.0"
     },
     {
       "name": "limit-guard",
       "source": "./hooks/limit-guard",
-      "description": "PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) \u2014 detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out and switch to sequential commit-per-unit work. Opt out: SIDECAR_NO_LIMIT_GUARD=1.",
-      "version": "0.1.0"
+      "description": "PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) \u2014 detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out and switch to sequential commit-per-unit work. NO opt-out by design.",
+      "version": "0.1.1"
     },
     {
       "name": "all-bg-go",

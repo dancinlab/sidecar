@@ -1,7 +1,7 @@
 {
   "name": "limit-guard",
-  "description": "PostToolUse(Task) hook — detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest (done · remaining · reset time · next step), stop parallel fan-out and switch to sequential commit-per-unit work. Implemented in hexa-lang (`_limit_guard.hexa` via `hexa run` — no Python, no shell shim). Opt out: SIDECAR_NO_LIMIT_GUARD=1.",
-  "version": "0.1.0",
+  "description": "PostToolUse(Task) hook — detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest (done · remaining · reset time · next step), stop parallel fan-out and switch to sequential commit-per-unit work. Implemented in hexa-lang (`_limit_guard.hexa` via `hexa run` — no Python, no shell shim). NO opt-out by design — no env var, no config file, no exception list.",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

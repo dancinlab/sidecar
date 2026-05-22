@@ -12,8 +12,8 @@
 //   4. hooks/*/bin/*.sh missing user-exec bit
 //
 // Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
-// Opt out: SIDECAR_NO_LINT=1
-//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["sidecar-lint",...]}
+// NO opt-out by design — no env var, no config file, no exception
+// list. A guard you can switch off is a guard you will switch off.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -59,27 +59,6 @@ fn _emit(text: string) {
     exit(0)
 }
 
-fn _disabled() -> bool {
-    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
-    let raw = _read_file_safe(path)
-    if raw == "" { return false }
-    let mut hit = false
-    try {
-        let m = json_parse(raw)
-        if type_of(m) == "map" && has_key(m, "disabled") {
-            let arr = m["disabled"]
-            if type_of(arr) == "array" {
-                let n = len(arr)
-                let mut i = 0
-                while i < n {
-                    if arr[i] == "sidecar-lint" { hit = true }
-                    i = i + 1
-                }
-            }
-        }
-    } catch e { hit = false }
-    return hit
-}
 
 fn _trim(s: string) -> string {
     let n = len(s)
@@ -305,8 +284,6 @@ fn _is_git_commit(cmd: string) -> bool {
 }
 
 fn main() {
-    if _disabled() { _allow() }
-    if env_var("SIDECAR_NO_LINT") == "1" { _allow() }
 
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -440,5 +417,5 @@ fn main() {
 
     if len(sections) == 0 { _allow() }
 
-    _emit("sidecar-lint findings (non-blocking — opt out: SIDECAR_NO_LINT=1):\n\n" + sections.join("\n\n"))
+    _emit("sidecar-lint findings (non-blocking):\n\n" + sections.join("\n\n"))
 }

@@ -9,8 +9,8 @@
 //     newly introducing non-Latin scripts (Hangul/CJK/Kana) are refused.
 //
 // Diff-aware on every check.
-// Opt out: SIDECAR_NO_TAPE_LINT=1
-//          ~/.claude/sidecar/disabled.json  ->  {"disabled":["tape-lint",...]}
+// NO opt-out by design — no env var, no config file, no exception
+// list. A guard you can switch off is a guard you will switch off.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -341,28 +341,6 @@ fn _prefs_code() -> string {
     return result
 }
 
-fn _disabled() -> bool {
-    let path = env_var("HOME") + "/.claude/sidecar/disabled.json"
-    let raw = _read_file_safe(path)
-    if raw == "" { return false }
-    let mut hit = false
-    try {
-        let m = json_parse(raw)
-        if type_of(m) == "map" && has_key(m, "disabled") {
-            let arr = m["disabled"]
-            if type_of(arr) == "array" {
-                let n = len(arr)
-                let mut i = 0
-                while i < n {
-                    if arr[i] == "tape-lint" { hit = true }
-                    i = i + 1
-                }
-            }
-        }
-    } catch e { hit = false }
-    return hit
-}
-
 // Returns [file_path, new_text] or [] if not applicable.
 fn _compute_proposed(payload: map) -> array {
     if type_of(payload) != "map" { return [] }
@@ -397,9 +375,6 @@ fn _compute_proposed(payload: map) -> array {
 }
 
 fn main() {
-    if _disabled() { _allow() }
-    if env_var("SIDECAR_NO_TAPE_LINT") == "1" { _allow() }
-
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
     try { payload = json_parse(raw) } catch e { _allow() }
@@ -525,5 +500,5 @@ fn main() {
         sections.push("authoring language (prefs.code = " + code_lang + " — non-Latin script on a new line):\n" + bullets.join("\n"))
     }
 
-    _deny("TAPE_LINT_BLOCK { file: " + base + ", rule: see findings, action: edit refused (pre-existing violations grandfathered, only newly-introduced or worsened items block). Findings:\n\n" + sections.join("\n\n") + "\n\nOverride: SIDECAR_NO_TAPE_LINT=1 }")
+    _deny("TAPE_LINT_BLOCK { file: " + base + ", rule: see findings, action: edit refused (pre-existing violations grandfathered, only newly-introduced or worsened items block). No override — fix the findings. Findings:\n\n" + sections.join("\n\n") + " }")
 }

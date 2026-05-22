@@ -1,16 +1,16 @@
 {
   "hooks": {
     "UserPromptSubmit": [
-      { "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/prefs.sh inject" } ] }
+      { "hooks": [ { "type": "command", "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_prefs.hexa inject" } ] }
     ],
     "SessionStart": [
-      { "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/prefs.sh inject" } ] }
+      { "hooks": [ { "type": "command", "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_prefs.hexa inject" } ] }
     ],
     "PreCompact": [
-      { "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/prefs.sh inject" } ] }
+      { "hooks": [ { "type": "command", "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_prefs.hexa inject" } ] }
     ],
     "PostCompact": [
-      { "hooks": [ { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/bin/prefs.sh inject" } ] }
+      { "hooks": [ { "type": "command", "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_prefs.hexa inject" } ] }
     ]
   }
 }

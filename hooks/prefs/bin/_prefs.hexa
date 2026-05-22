@@ -1,0 +1,136 @@
+// _prefs.hexa — user language preferences: code authoring · doc authoring
+// · response. Storage: $CLAUDE_PLUGIN_DATA/prefs.json (default
+// ~/.claude/plugins/data/prefs-sidecar/). Defaults: code=english,
+// docs=english, response=korean.
+//
+// Verbs:
+//   (show)                   show current values
+//   inject                   hook handler — emit additionalContext
+//   code|docs|response <lang> set the axis
+//
+// `inject` reads the firing event from the payload's `hook_event_name`
+// field and echoes it back verbatim — the harness rejects a mismatch.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+fn _prefs_dir() -> string {
+    let d = env_var("CLAUDE_PLUGIN_DATA")
+    if d != "" { return d }
+    return env_var("HOME") + "/.claude/plugins/data/prefs-sidecar"
+}
+
+fn _build(code: string, docs: string, response: string) -> string {
+    return "{\n  \"code\": \"" + code + "\",\n  \"docs\": \"" + docs + "\",\n  \"response\": \"" + response + "\"\n}\n"
+}
+
+fn main() {
+    let dir = _prefs_dir()
+    let _mk = exec_with_status("mkdir -p " + _shq(dir))
+    let file = dir + "/prefs.json"
+
+    let mut code = "english"
+    let mut docs = "english"
+    let mut response = "korean"
+    if file_exists(file) {
+        try {
+            let m = json_parse(_read_file_safe(file))
+            if type_of(m) == "map" {
+                if has_key(m, "code") { code = m["code"] }
+                if has_key(m, "docs") { docs = m["docs"] }
+                if has_key(m, "response") { response = m["response"] }
+            }
+        } catch e { }
+    } else {
+        write_file(file, _build(code, docs, response))
+    }
+
+    let args = argv()
+    let mut verb = "show"
+    if len(args) > 1 { verb = args[1] }
+
+    if verb == "inject" {
+        let raw = _read_stdin()
+        let mut payload = json_parse("{}")
+        try { payload = json_parse(raw) } catch e { exit(0) }
+        let mut ev = ""
+        if type_of(payload) == "map" { ev = _event_of(payload) }
+        if ev == "" { exit(0) }
+        let body = "# prefs\n- code authoring (.tape · .hexa · .py · .sh · .swift · ...): " + code + "\n- doc authoring (.md · README · CHANGELOG · ...): " + docs + "\n- response language to user: " + response + "\n"
+        println("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(ev) + ",\"additionalContext\":" + _json_escape(body) + "}}")
+        return
+    }
+
+    if verb == "show" {
+        print(_build(code, docs, response))
+        return
+    }
+
+    if verb == "code" || verb == "docs" || verb == "response" {
+        if len(args) < 3 {
+            eprintln("usage: prefs " + verb + " <lang>")
+            exit(1)
+        }
+        let lang = args[2]
+        if verb == "code" { code = lang }
+        if verb == "docs" { docs = lang }
+        if verb == "response" { response = lang }
+        write_file(file, _build(code, docs, response))
+        print(_build(code, docs, response))
+        return
+    }
+
+    eprintln("prefs: unknown verb '" + verb + "'")
+    eprintln("  valid: show | code <lang> | docs <lang> | response <lang>")
+    exit(1)
+}

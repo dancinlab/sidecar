@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/commons.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_commons.hexa"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/commons.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_commons.hexa"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/commons.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_commons.hexa"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/bin/commons.sh"
+            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_commons.hexa"
           }
         ]
       }

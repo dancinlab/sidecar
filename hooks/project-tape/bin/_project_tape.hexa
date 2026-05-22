@@ -1,0 +1,96 @@
+// _project_tape.hexa — PreCompact + PostCompact hook. Emits the current
+// project's `<cwd>/project.tape` as additionalContext so identity +
+// governance survive auto-compaction. No-op when project.tape is absent.
+//
+// The event name is read from the stdin payload's `hook_event_name` field
+// and echoed back verbatim — the harness rejects a mismatch.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// hexa `println` truncates a single call at 4096 bytes; emit in <4096
+// chunks via repeated `print` (chunks accumulate past the cap).
+fn _emit(s: string) {
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let mut e = i + 3000
+        if e > n { e = n }
+        print(s.substring(i, e))
+        i = e
+    }
+    print("\n")
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { exit(0) }
+    if type_of(payload) != "map" { exit(0) }
+
+    let event = _event_of(payload)
+    if event == "" { exit(0) }
+
+    let pwd = _trim(to_string(exec("pwd")))
+    let tape = pwd + "/project.tape"
+    if file_exists(tape) {
+        let body = _read_file_safe(tape)
+        _emit("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(body) + "}}")
+    } else {
+        _emit("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + "}}")
+    }
+}

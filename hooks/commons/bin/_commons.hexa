@@ -1,0 +1,77 @@
+// _commons.hexa — UserPromptSubmit + SessionStart + PreCompact + PostCompact
+// hook. Emits commons.tape as additionalContext.
+//
+// The event name is read from the stdin payload's `hook_event_name` field
+// (Claude Code sends it snake_case) and echoed back verbatim in
+// `hookSpecificOutput.hookEventName` — the harness rejects a mismatch.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// Read the firing event from the payload — snake_case `hook_event_name` is
+// the Claude Code input field; tolerate a camelCase variant too.
+// hexa `println` truncates a single call at 4096 bytes; emit in <4096
+// chunks via repeated `print` (chunks accumulate past the cap).
+fn _emit(s: string) {
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let mut e = i + 3000
+        if e > n { e = n }
+        print(s.substring(i, e))
+        i = e
+    }
+    print("\n")
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { exit(0) }
+    if type_of(payload) != "map" { exit(0) }
+
+    let event = _event_of(payload)
+    // No event name → cannot label the output safely; skip the injection.
+    if event == "" { exit(0) }
+
+    let root = env_var("CLAUDE_PLUGIN_ROOT")
+    let body = _read_file_safe(root + "/commons.tape")
+    _emit("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(body) + "}}")
+}

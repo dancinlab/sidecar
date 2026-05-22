@@ -4,4 +4,4 @@ argument-hint: "[show | code <lang> | docs <lang> | response <lang>]"
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/prefs.sh" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_prefs.hexa" $ARGUMENTS`

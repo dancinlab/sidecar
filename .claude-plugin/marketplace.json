@@ -12,13 +12,13 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g31` form, no tool/usage); UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.19"
+      "version": "0.9.20"
     },
     {
       "name": "prefs",
       "source": "./hooks/prefs",
       "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values; UserPromptSubmit re-injects every turn so the preference never fades. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "inbox",
@@ -42,7 +42,7 @@
       "name": "project-tape",
       "source": "./hooks/project-tape",
       "description": "PreCompact + PostCompact hook \u2014 re-injects <project-root>/project.tape as additionalContext so the project's identity + governance survive auto-compaction. No-op when project.tape is absent.",
-      "version": "0.1.0"
+      "version": "0.2.0"
     },
     {
       "name": "git-guard",

@@ -29,14 +29,14 @@
     {
       "name": "hexa-lsp",
       "source": "./hooks/hexa-lsp",
-      "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. Minimal: only `.hexa` claimed.",
-      "version": "0.1.0"
+      "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Minimal: only `.hexa` claimed.",
+      "version": "0.1.1"
     },
     {
       "name": "tape-lsp",
       "source": "./hooks/tape-lsp",
-      "description": "Wire `tape-lsp` (canonical .tape v1.2 LSP \u2014 diagnostics + hover) for `.tape` files. Requires `tape-lsp` on PATH (install via `hx install dancinlab/tape`).",
-      "version": "0.1.0"
+      "description": "Wire `tape-lsp` (canonical .tape v1.2 LSP \u2014 diagnostics + hover) for `.tape` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Requires `tape-lsp` on PATH (install via `hx install dancinlab/tape`).",
+      "version": "0.1.1"
     },
     {
       "name": "project-tape",

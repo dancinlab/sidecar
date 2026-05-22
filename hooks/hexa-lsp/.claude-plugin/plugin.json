@@ -1,10 +1,9 @@
 {
   "name": "hexa-lsp",
-  "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files in Claude Code. Minimal scope: only `.hexa` is claimed. If `hexa` is not on PATH, Claude Code surfaces the error in /plugin Errors.",
-  "version": "0.1.0",
+  "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files in Claude Code. Minimal scope: only `.hexa` is claimed. LSP config carried in plugin-root `.lsp.json` (the canonical Claude Code LSP filename — dot-prefixed; auto-discovered, no manifest field needed). Requires `hexa` on PATH; if absent, Claude Code surfaces the error in /plugin Errors.",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "lsp", "hexa"],
-  "lspServers": "./lsp.json"
+  "keywords": ["claude-code", "lsp", "hexa"]
 }

@@ -40,8 +40,9 @@
 @D g12 := "fan out parallel pods" :: governance [active]
   do   = "fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint)"
 
-@D g13 := "portable paths only" :: governance [required active]
-  dont = "hardcoded absolute paths (use `$HOME` · `${HOME}` · relative paths · `<repo-name>/<relpath>` notation)"
+@D g13 := "portable paths only — shipped code runs on many users' machines" :: governance [required active]
+  do   = "resolve paths at runtime: `$HOME` / `${HOME}` · plugin scripts use `${CLAUDE_PLUGIN_ROOT}` (install dir) + `$CLAUDE_PLUGIN_DATA` (per-plugin state) · PATH-resolved binaries · relative / `<repo-name>/<relpath>` notation — your local layout is NOT the installer's"
+  dont = "hardcode absolute paths anywhere shipped (`/Users/<you>/…` · `/home/<you>/…` · machine-specific dirs) — breaks on every other install · assume your username / dir tree exists on their box"
 
 @D g14 := "5-count emoji for major events" :: governance [active]
   do   = "mark major events with 5-count emoji (🛸*5 transcend / ⭐️*5 win / 🔥*5 breakthrough) — never on routine OK"

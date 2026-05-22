@@ -1,7 +1,7 @@
 {
   "name": "commons",
   "description": "SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape.",
-  "version": "0.9.9",
+  "version": "0.9.10",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

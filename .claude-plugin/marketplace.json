@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g28` form, no tool/usage). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.13"
+      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g29` form, no tool/usage). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.14"
     },
     {
       "name": "prefs",
@@ -54,6 +54,12 @@
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
       "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit. Opt out: SIDECAR_NO_LINT=1.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "hexa-native",
+      "source": "./hooks/hexa-native",
+      "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.py` / `.sh` writes inside any project rooted at a directory containing a `project.hexa` marker. Walks up parent dirs of the target file; if a `project.hexa` is found, the write is denied with a message redirecting to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). NO opt-out: no env var, no config file, no exception list \u2014 hard-coded by design. Targets only `.py` / `.sh`; other extensions pass through. Non-hexa-native projects (no `project.hexa` marker) are unaffected.",
       "version": "0.1.0"
     },
     {

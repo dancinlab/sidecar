@@ -98,3 +98,6 @@
 @D g28 := "credentials — never expose verbatim · `secret` CLI is the only channel" :: governance [required active]
   do   = "fetch credentials only via `secret get <key>` — use inline `$(secret get <k>)` for env-var / stdin / tty consume (process-lifetime ephemeral, no file dump)"
   dont = "print / echo / log / commit / paste a credential value anywhere (chat · doc · log · state JSON · commit msg · scrollback · shell history · clipboard · env-var dump · `ps aux`) · pass creds in subprocess argv (`--token $V` → process-listing leak) · Read / cat / head / tail credential files directly"
+
+@D g29 := "CHANGELOG.md at repo root" :: governance [required active]
+  do   = "create + maintain `CHANGELOG.md` at every repo's root as the chronological history surface — pairs with g15 (current-state living docs · history off the prose) and g22 (every version bump adds a CHANGELOG entry in the same commit)"

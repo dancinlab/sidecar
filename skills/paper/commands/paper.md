@@ -4,4 +4,4 @@ argument-hint: "<new <slug> | sample <slug> | fig <size> <prompt> <out.png> | co
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/paper.sh" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_paper.hexa" --root "$CLAUDE_PLUGIN_ROOT" $ARGUMENTS`

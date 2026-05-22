@@ -1,0 +1,238 @@
+// _imagine.hexa — generic AI image-generator dispatcher (imagine plugin).
+//
+// usage:
+//   hexa run _imagine.hexa --root <plugin-root> <prompt-file> <out.png> [-s size] [-b backend] [-m model]
+//   hexa run _imagine.hexa --root <plugin-root> list
+//   hexa run _imagine.hexa --root <plugin-root> help
+//
+// Backends live in <root>/_backends/<name>.hexa and receive a fixed argv:
+//   $1 prompt-file (abs) · $2 out.png (abs) · $3 canonical size token
+//   $4 model id ("" -> backend default)
+//
+// `--root` is supplied explicitly by the command (and by the sister
+// `paper` plugin) — $CLAUDE_PLUGIN_ROOT points at the *invoked* plugin
+// and stays put across a cross-plugin call, so trusting it would
+// resolve _backends/ to the wrong plugin's tree.
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _dirname(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return "." }
+    if i == 0 { return "/" }
+    return p.substring(0, i)
+}
+
+fn _basename(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return p }
+    return p.substring(i + 1, len(p))
+}
+
+fn _abspath(p: string, cwd: string) -> string {
+    if len(p) > 0 && p[0] == "/" { return p }
+    return cwd + "/" + p
+}
+
+fn _usage() {
+    println("imagine — generic AI image generator")
+    println("")
+    println("usage:")
+    println("  /imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]")
+    println("  /imagine list           # backends + size catalogue")
+    println("  /imagine help")
+    println("")
+    println("defaults:")
+    println("  size      = square_hd")
+    println("  backend   = fal")
+    println("  model     = backend default (fal: openai/gpt-image-2 · openai: gpt-image-1)")
+    println("")
+    println("sizes (canonical, fal-style; backends translate as needed):")
+    println("  square_hd      1024x1024  (default)")
+    println("  square         512x512")
+    println("  landscape_16_9 1792x1024")
+    println("  portrait_16_9  1024x1792")
+    println("")
+    println("backends:")
+    println("  fal     fal.ai queue+poll                 secret get fal.api_key")
+    println("  openai  api.openai.com /v1/images/...     secret get openai.api_key")
+    println("")
+    println("provenance:")
+    println("  Prompt is always read from a file (verbatim stays on disk).")
+    println("  Prompt is passed to the backend via a mktemp JSON payload, not argv,")
+    println("  so it does not leak to ps aux / shell history.")
+}
+
+fn _list_backends(backends_dir: string) {
+    println("[imagine] backends:")
+    let listing = to_string(exec("ls " + _shq(backends_dir) + " 2>/dev/null"))
+    let names = listing.split("\n")
+    let mut i = 0
+    while i < len(names) {
+        let f = _trim(names[i])
+        if len(f) > 5 && f.substring(len(f) - 5, len(f)) == ".hexa" {
+            let name = f.substring(0, len(f) - 5)
+            let mut desc = ""
+            try {
+                let body = to_string(read_file(backends_dir + "/" + f))
+                let line1 = body.split("\n")[0]
+                if line1.substring(0, 3) == "// " { desc = _trim(line1.substring(3, len(line1))) }
+                else { desc = _trim(line1) }
+            }
+            catch e { desc = "" }
+            println("  " + name + "  —  " + desc)
+        }
+        i = i + 1
+    }
+    println("")
+    println("[imagine] canonical sizes:")
+    println("  square_hd       1024x1024  (default)")
+    println("  square          512x512")
+    println("  landscape_16_9  1792x1024")
+    println("  portrait_16_9   1024x1792")
+}
+
+fn main() {
+    let raw = argv()
+
+    // ── pull out --root, collect the rest ──
+    let mut root = ""
+    let mut args = []
+    let mut i = 1
+    while i < len(raw) {
+        let a = raw[i]
+        if a == "--root" && i + 1 < len(raw) {
+            root = raw[i + 1]
+            i = i + 2
+            continue
+        }
+        args.push(a)
+        i = i + 1
+    }
+    if root == "" { root = env_var("CLAUDE_PLUGIN_ROOT") }
+    if root == "" {
+        eprintln("imagine: plugin root not resolved (no --root, no $CLAUDE_PLUGIN_ROOT)")
+        exit(2)
+    }
+    let backends_dir = root + "/_backends"
+
+    if len(args) == 0 {
+        _usage()
+        return
+    }
+    if args[0] == "list" {
+        _list_backends(backends_dir)
+        return
+    }
+    if args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
+        _usage()
+        return
+    }
+
+    // ── walk argv: two positionals + flags in any order ──
+    let mut size = "square_hd"
+    let mut backend = "fal"
+    let mut model = ""
+    let mut pos_prompt = ""
+    let mut pos_out = ""
+    let mut j = 0
+    while j < len(args) {
+        let a = args[j]
+        if (a == "-s" || a == "--size") && j + 1 < len(args) {
+            size = args[j + 1]
+            j = j + 2
+        } else if (a == "-b" || a == "--backend") && j + 1 < len(args) {
+            backend = args[j + 1]
+            j = j + 2
+        } else if (a == "-m" || a == "--model") && j + 1 < len(args) {
+            model = args[j + 1]
+            j = j + 2
+        } else if a == "-h" || a == "--help" {
+            _usage()
+            return
+        } else if len(a) > 0 && a[0] == "-" {
+            eprintln("imagine: unknown flag '" + a + "'")
+            exit(2)
+        } else {
+            if pos_prompt == "" { pos_prompt = a }
+            else if pos_out == "" { pos_out = a }
+            else {
+                eprintln("imagine: too many positional args (got '" + a + "' after <prompt> <out>)")
+                exit(2)
+            }
+            j = j + 1
+        }
+    }
+
+    if pos_prompt == "" || pos_out == "" {
+        eprintln("imagine: usage: <prompt-file> <out.png> [-s size] [-b backend] [-m model]")
+        exit(2)
+    }
+    if !file_exists(pos_prompt) {
+        eprintln("imagine: prompt file not found: " + pos_prompt)
+        exit(2)
+    }
+    if size != "square_hd" && size != "square" && size != "landscape_16_9" && size != "portrait_16_9" {
+        eprintln("imagine: unknown size '" + size
+            + "' (expected: square_hd | square | landscape_16_9 | portrait_16_9)")
+        exit(2)
+    }
+
+    let backend_script = backends_dir + "/" + backend + ".hexa"
+    if !file_exists(backend_script) {
+        eprintln("imagine: unknown backend '" + backend + "'")
+        eprintln("  available under " + backends_dir + " — run /imagine list")
+        exit(2)
+    }
+
+    let has_secret = exec_with_status("command -v secret >/dev/null 2>&1")
+    if has_secret[1] != 0 {
+        eprintln("imagine: `secret` CLI not on PATH (needed for backend API keys)")
+        eprintln("  install via: hx install secret  (or git clone https://github.com/dancinlab/secret)")
+        exit(1)
+    }
+
+    // ── normalize positionals to absolute, ensure the out dir exists ──
+    let cwd = _trim(to_string(exec("pwd")))
+    let prompt_abs = _abspath(pos_prompt, cwd)
+    let out_abs = _abspath(pos_out, cwd)
+    let _mk = exec("mkdir -p " + _shq(_dirname(out_abs)))
+
+    let cmd = "hexa run " + _shq(backend_script)
+        + " " + _shq(prompt_abs)
+        + " " + _shq(out_abs)
+        + " " + _shq(size)
+        + " " + _shq(model)
+        + " 2>&1"
+    let r = exec_with_status(cmd)
+    print(to_string(r[0]))
+    exit(r[1])
+}

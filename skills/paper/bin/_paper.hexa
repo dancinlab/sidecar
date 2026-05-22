@@ -1,0 +1,307 @@
+// _paper.hexa — arxiv-style LaTeX paper scaffolder (paper plugin).
+//
+// Verbs: new <slug> | sample <slug> | fig <size> <prompt> <out.png>
+//      | compile [dir] | list | help
+//
+//   new      copies template/ -> ./<slug>/
+//   sample   copies samples/sample-nb-bcs-absorbed/ verbatim -> ./<slug>/
+//   fig      delegates to the sister `imagine` plugin (fal.ai gpt-image-2)
+//   compile  runs pdflatex x 3 + bibtex in [dir] (default cwd)
+//   list     lists bundled samples
+//
+// usage: hexa run _paper.hexa --root <plugin-root> <verb> [args...]
+//
+// `--root` is supplied by the command; $CLAUDE_PLUGIN_ROOT is correct
+// for paper's own invocation, but is passed explicitly so the script
+// stays callable from any cwd.
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _dirname(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return "." }
+    if i == 0 { return "/" }
+    return p.substring(0, i)
+}
+
+fn _basename(p: string) -> string {
+    let mut q = p
+    if len(q) > 1 && q[len(q) - 1] == "/" { q = q.substring(0, len(q) - 1) }
+    let i = q.last_index_of("/")
+    if i < 0 { return q }
+    return q.substring(i + 1, len(q))
+}
+
+fn _dir_exists(path: string) -> bool {
+    let r = exec_with_status("test -d " + _shq(path))
+    return r[1] == 0
+}
+
+fn _path_exists(path: string) -> bool {
+    let r = exec_with_status("test -e " + _shq(path))
+    return r[1] == 0
+}
+
+fn _has_cmd(name: string) -> bool {
+    let r = exec_with_status("command -v " + _shq(name) + " >/dev/null 2>&1")
+    return r[1] == 0
+}
+
+// reject a <slug> that is not a simple name (slash / leading dot / empty)
+fn _bad_slug(slug: string) -> bool {
+    if slug == "" { return true }
+    if slug.index_of("/") >= 0 { return true }
+    if slug[0] == "." { return true }
+    return false
+}
+
+fn _usage() {
+    println("paper — arxiv-style LaTeX paper scaffolder")
+    println("")
+    println("usage:")
+    println("  /paper new <slug>                          scaffold ./<slug>/ from template")
+    println("  /paper sample <slug>                       copy bundled demiurge sample verbatim")
+    println("  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine)")
+    println("  /paper compile [dir]                       pdflatex x 3 + bibtex")
+    println("  /paper list                                list bundled samples")
+    println("  /paper help                                this message")
+    println("")
+    println("image_size: square_hd | landscape_16_9 | portrait_16_9 | square")
+    println("")
+    println("requirements:")
+    println("  new / sample : cp · cwd writable · slug not already a directory")
+    println("  fig          : sister `imagine` plugin installed + `secret` CLI + `fal.api_key`")
+    println("  compile      : pdflatex + bibtex (BasicTeX / TeX Live)")
+}
+
+// locate the sister imagine plugin's dispatcher (source or installed layout)
+fn _find_imagine(root: string) -> string {
+    let parent = _dirname(root)
+    let src = parent + "/imagine/bin/_imagine.hexa"
+    if _path_exists(src) { return src }
+    let grand = _dirname(parent)
+    let listing = to_string(exec("ls -d " + _shq(grand)
+        + "/imagine/*/bin/_imagine.hexa 2>/dev/null | sort -V | tail -1"))
+    let cand = _trim(listing)
+    if cand != "" && _path_exists(cand) { return cand }
+    return ""
+}
+
+fn _cmd_new(root: string, slug: string) {
+    if slug == "" {
+        eprintln("paper new: missing <slug>")
+        exit(2)
+    }
+    if _bad_slug(slug) {
+        eprintln("paper new: <slug> must be a simple name (no slashes / no leading dot)")
+        exit(2)
+    }
+    if _path_exists("./" + slug) {
+        eprintln("paper new: ./" + slug + " already exists — refusing to overwrite")
+        exit(2)
+    }
+    let template_dir = root + "/template"
+    if !_dir_exists(template_dir) {
+        eprintln("paper new: template/ missing at " + template_dir)
+        exit(1)
+    }
+    let cp = exec_with_status("cp -R " + _shq(template_dir) + " " + _shq("./" + slug))
+    if cp[1] != 0 {
+        eprintln("paper new: copy failed — " + _trim(to_string(cp[0])))
+        exit(1)
+    }
+    println("[paper] scaffolded ./" + slug + "/ from template")
+    println("        edit main.tex (title · author · sections), references.bib, then `make`")
+    print(to_string(exec("ls -1 " + _shq("./" + slug))))
+}
+
+fn _cmd_sample(root: string, slug0: string) {
+    let mut slug = slug0
+    if slug == "" { slug = "sample-nb-bcs-absorbed" }
+    if _bad_slug(slug) {
+        eprintln("paper sample: <slug> must be a simple name (no slashes / no leading dot)")
+        exit(2)
+    }
+    let src = root + "/samples/sample-nb-bcs-absorbed"
+    if !_dir_exists(src) {
+        eprintln("paper sample: bundled sample missing at " + src)
+        exit(1)
+    }
+    if _path_exists("./" + slug) {
+        eprintln("paper sample: ./" + slug + " already exists — refusing to overwrite")
+        exit(2)
+    }
+    let cp = exec_with_status("cp -R " + _shq(src) + " " + _shq("./" + slug))
+    if cp[1] != 0 {
+        eprintln("paper sample: copy failed — " + _trim(to_string(cp[0])))
+        exit(1)
+    }
+    println("[paper] copied bundled sample → ./" + slug + "/ (demiurge sample-nb-bcs-absorbed verbatim)")
+    print(to_string(exec("ls -1 " + _shq("./" + slug))))
+}
+
+fn _cmd_fig(root: string, args: array) {
+    if len(args) < 3 {
+        eprintln("paper fig: usage: /paper fig <image_size> <prompt_file> <out.png>")
+        exit(2)
+    }
+    let size = args[0]
+    let prompt = args[1]
+    let out = args[2]
+    let imagine_hexa = _find_imagine(root)
+    if imagine_hexa == "" {
+        eprintln("paper fig: sister `imagine` plugin not found")
+        eprintln("  install via: sidecar sync  (or /inject in Claude Code)")
+        eprintln("  imagine plugin provides the image-generation backend (fal.ai · openai)")
+        exit(1)
+    }
+    let imagine_root = _dirname(_dirname(imagine_hexa))
+    // paper-fig argv: <size> <prompt> <out>; imagine argv: <prompt> <out> -s <size>
+    let cmd = "hexa run " + _shq(imagine_hexa)
+        + " --root " + _shq(imagine_root)
+        + " " + _shq(prompt) + " " + _shq(out)
+        + " -s " + _shq(size)
+        + " 2>&1"
+    let r = exec_with_status(cmd)
+    print(to_string(r[0]))
+    exit(r[1])
+}
+
+fn _cmd_compile(args: array) {
+    let mut dir = "."
+    if len(args) >= 1 && _trim(args[0]) != "" { dir = args[0] }
+    if !_dir_exists(dir) {
+        eprintln("paper compile: " + dir + " is not a directory")
+        exit(2)
+    }
+    if !_path_exists(dir + "/main.tex") {
+        eprintln("paper compile: " + dir + "/main.tex not found")
+        exit(2)
+    }
+    if !_has_cmd("pdflatex") {
+        eprintln("paper compile: pdflatex not on PATH (install BasicTeX / TeX Live)")
+        exit(1)
+    }
+    if !_has_cmd("bibtex") {
+        eprintln("paper compile: bibtex not on PATH")
+        exit(1)
+    }
+    let pdf = "pdflatex -interaction=nonstopmode -halt-on-error main.tex"
+    let seq = "cd " + _shq(dir) + " && " + pdf
+        + " && (bibtex main || true)"
+        + " && " + pdf + " && " + pdf
+    let r = exec_with_status(seq + " 2>&1")
+    print(to_string(r[0]))
+    if r[1] != 0 {
+        eprintln("paper compile: pdflatex/bibtex failed (exit " + to_string(r[1]) + ")")
+        exit(r[1])
+    }
+    println("[paper] built " + dir + "/main.pdf")
+}
+
+fn _cmd_list(root: string) {
+    let samples_dir = root + "/samples"
+    if !_dir_exists(samples_dir) {
+        println("(no samples bundled)")
+        return
+    }
+    println("[paper] bundled samples (under " + samples_dir + "):")
+    let listing = to_string(exec("ls -1 " + _shq(samples_dir) + " 2>/dev/null"))
+    let names = listing.split("\n")
+    let mut i = 0
+    while i < len(names) {
+        let name = _trim(names[i])
+        if name != "" && _dir_exists(samples_dir + "/" + name) {
+            let mut first = ""
+            let readme = samples_dir + "/" + name + "/README.md"
+            if _path_exists(readme) {
+                try {
+                    let line1 = to_string(read_file(readme)).split("\n")[0]
+                    if line1.substring(0, 2) == "# " { first = _trim(line1.substring(2, len(line1))) }
+                    else { first = _trim(line1) }
+                }
+                catch e { first = "" }
+            }
+            println("  " + name + "\t" + first)
+        }
+        i = i + 1
+    }
+}
+
+fn main() {
+    let raw = argv()
+    let mut root = ""
+    let mut args = []
+    let mut i = 1
+    while i < len(raw) {
+        let a = raw[i]
+        if a == "--root" && i + 1 < len(raw) {
+            root = raw[i + 1]
+            i = i + 2
+            continue
+        }
+        args.push(a)
+        i = i + 1
+    }
+    if root == "" { root = env_var("CLAUDE_PLUGIN_ROOT") }
+    if root == "" {
+        eprintln("paper: plugin root not resolved (no --root, no $CLAUDE_PLUGIN_ROOT)")
+        exit(2)
+    }
+
+    let mut verb = "help"
+    if len(args) >= 1 { verb = args[0] }
+    let mut rest = []
+    let mut j = 1
+    while j < len(args) { rest.push(args[j]); j = j + 1 }
+
+    if verb == "new" {
+        let mut slug = ""
+        if len(rest) >= 1 { slug = rest[0] }
+        _cmd_new(root, slug)
+    } else if verb == "sample" {
+        let mut slug = ""
+        if len(rest) >= 1 { slug = rest[0] }
+        _cmd_sample(root, slug)
+    } else if verb == "fig" {
+        _cmd_fig(root, rest)
+    } else if verb == "compile" {
+        _cmd_compile(rest)
+    } else if verb == "list" {
+        _cmd_list(root)
+    } else if verb == "help" || verb == "-h" || verb == "--help" || verb == "" {
+        _usage()
+    } else {
+        eprintln("paper: unknown verb '" + verb + "'")
+        _usage()
+        exit(2)
+    }
+}

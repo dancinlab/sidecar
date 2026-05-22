@@ -1,0 +1,186 @@
+// fal.ai queue+poll backend — fal.api_key via `secret get`. Default model: openai/gpt-image-2.
+//
+// argv: <prompt_abs> <out_abs> <size_token> <model_id_or_empty>
+//
+// Canonical default = openai/gpt-image-2 (user-pinned — do not silently
+// downgrade to gpt-image-1 / dall-e-3 / flux / etc.). Override only via
+// an explicit `-m <model>` on the imagine command line. fal.ai accepts
+// the canonical size tokens directly.
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _basename(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return p }
+    return p.substring(i + 1, len(p))
+}
+
+// JSON string literal — wraps + escapes for an embedded payload value
+fn _json_quote(s: string) -> string {
+    let mut parts = []
+    parts.push("\"")
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// first "<key>": "<value>" string in a JSON blob ("" when absent)
+fn _json_field(json: string, key: string) -> string {
+    let needle = "\"" + key + "\""
+    let a = json.index_of(needle)
+    if a < 0 { return "" }
+    let n = len(json)
+    let mut i = a + len(needle)
+    while i < n {
+        let c = json[i]
+        if c == " " || c == "\t" || c == "\r" || c == "\n" || c == ":" { i = i + 1 }
+        else { break }
+    }
+    if i >= n || json[i] != "\"" { return "" }
+    i = i + 1
+    let start = i
+    while i < n {
+        let c = json[i]
+        if c == "\\" { i = i + 2; continue }
+        if c == "\"" { return json.substring(start, i) }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _file_size(path: string) -> string {
+    let s = _trim(to_string(exec("stat -f %z " + _shq(path) + " 2>/dev/null"
+        + " || stat -c %s " + _shq(path) + " 2>/dev/null || echo 0")))
+    if s == "" { return "0" }
+    return s
+}
+
+fn main() {
+    let a = argv()
+    if len(a) < 4 {
+        eprintln("[fal] internal: argv <prompt_abs> <out_abs> <size> [model]")
+        exit(2)
+    }
+    let prompt_file = a[1]
+    let out_png = a[2]
+    let size = a[3]
+    let default_model = "openai/gpt-image-2"
+    let mut model = default_model
+    if len(a) > 4 && _trim(a[4]) != "" { model = a[4] }
+
+    let key = _trim(to_string(exec("secret get fal.api_key")))
+    if key == "" {
+        eprintln("[fal] secret get fal.api_key returned empty — set with: secret set fal.api_key")
+        exit(1)
+    }
+
+    let prompt_text = to_string(read_file(prompt_file))
+    let payload = "{\"prompt\":" + _json_quote(prompt_text)
+        + ",\"image_size\":" + _json_quote(size)
+        + ",\"num_images\":1,\"output_format\":\"png\",\"quality\":\"high\"}"
+    let payload_file = _trim(to_string(exec("mktemp")))
+    write_file(payload_file, payload)
+
+    let auth = "Authorization: Key " + key
+    let endpoint = "https://queue.fal.run/" + model
+    let submit = exec_with_status("curl -sS --max-time 60 -X POST " + _shq(endpoint)
+        + " -H " + _shq(auth)
+        + " -H 'Content-Type: application/json'"
+        + " --data-binary @" + _shq(payload_file))
+    let _rm = exec("rm -f " + _shq(payload_file))
+    if submit[1] != 0 {
+        eprintln("[fal] submit failed — curl exit " + to_string(submit[1]))
+        exit(1)
+    }
+    let resp = to_string(submit[0])
+    let rid = _json_field(resp, "request_id")
+    let status_url = _json_field(resp, "status_url")
+    let result_url = _json_field(resp, "response_url")
+    if rid == "" || status_url == "" || result_url == "" {
+        eprintln("[fal] submit failed: " + resp)
+        exit(1)
+    }
+    eprintln("[fal] queued " + _basename(out_png) + " model=" + model
+        + " size=" + size + " request_id=" + rid)
+
+    let mut done = false
+    let mut k = 0
+    while k < 80 && !done {
+        let st = exec_with_status("curl -sS --max-time 30 " + _shq(status_url)
+            + " -H " + _shq(auth))
+        let status_json = to_string(st[0])
+        let status = _json_field(status_json, "status")
+        if status == "COMPLETED" {
+            done = true
+        } else if status == "FAILED" || status == "ERROR" {
+            eprintln("[fal] " + _basename(out_png) + " FAILED status=" + status
+                + " json=" + status_json)
+            exit(2)
+        } else {
+            let _s = exec("sleep 3")
+        }
+        k = k + 1
+    }
+    if !done {
+        eprintln("[fal] " + _basename(out_png) + " timed out after 80 polls")
+        exit(2)
+    }
+
+    let res = exec_with_status("curl -sS --max-time 30 " + _shq(result_url)
+        + " -H " + _shq(auth))
+    let result = to_string(res[0])
+    let url = _json_field(result, "url")
+    if url == "" {
+        eprintln("[fal] no image URL in result: " + result)
+        exit(3)
+    }
+    let dl = exec_with_status("curl -sSL --max-time 60 " + _shq(url) + " -o " + _shq(out_png))
+    if dl[1] != 0 {
+        eprintln("[fal] image download failed — curl exit " + to_string(dl[1]))
+        exit(3)
+    }
+    println("[fal] wrote " + out_png + " (" + _file_size(out_png) + " bytes)")
+}

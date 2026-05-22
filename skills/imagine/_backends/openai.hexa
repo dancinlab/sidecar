@@ -1,0 +1,171 @@
+// OpenAI sync /v1/images/generations backend — openai.api_key via `secret get`. Default model: gpt-image-1.
+//
+// argv: <prompt_abs> <out_abs> <size_token> <model_id_or_empty>
+//
+// The response carries either { data: [ { url } ] } (dall-e-3) or
+// { data: [ { b64_json } ] } (gpt-image-1 default) — b64 is decoded
+// with `openssl base64 -d` so no Python / extra dependency is needed.
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _basename(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return p }
+    return p.substring(i + 1, len(p))
+}
+
+fn _json_quote(s: string) -> string {
+    let mut parts = []
+    parts.push("\"")
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// first "<key>": "<value>" string in a JSON blob ("" when absent)
+fn _json_field(json: string, key: string) -> string {
+    let needle = "\"" + key + "\""
+    let a = json.index_of(needle)
+    if a < 0 { return "" }
+    let n = len(json)
+    let mut i = a + len(needle)
+    while i < n {
+        let c = json[i]
+        if c == " " || c == "\t" || c == "\r" || c == "\n" || c == ":" { i = i + 1 }
+        else { break }
+    }
+    if i >= n || json[i] != "\"" { return "" }
+    i = i + 1
+    let start = i
+    while i < n {
+        let c = json[i]
+        if c == "\\" { i = i + 2; continue }
+        if c == "\"" { return json.substring(start, i) }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _file_size(path: string) -> string {
+    let s = _trim(to_string(exec("stat -f %z " + _shq(path) + " 2>/dev/null"
+        + " || stat -c %s " + _shq(path) + " 2>/dev/null || echo 0")))
+    if s == "" { return "0" }
+    return s
+}
+
+fn main() {
+    let a = argv()
+    if len(a) < 4 {
+        eprintln("[openai] internal: argv <prompt_abs> <out_abs> <size> [model]")
+        exit(2)
+    }
+    let prompt_file = a[1]
+    let out_png = a[2]
+    let size = a[3]
+    let mut model = "gpt-image-1"
+    if len(a) > 4 && _trim(a[4]) != "" { model = a[4] }
+
+    // canonical size token -> OpenAI pixel form
+    let mut pix = ""
+    if size == "square_hd" || size == "square" { pix = "1024x1024" }
+    else if size == "landscape_16_9" { pix = "1536x1024" }
+    else if size == "portrait_16_9" { pix = "1024x1536" }
+    else {
+        eprintln("[openai] internal: unknown size '" + size + "'")
+        exit(2)
+    }
+
+    let key = _trim(to_string(exec("secret get openai.api_key")))
+    if key == "" {
+        eprintln("[openai] secret get openai.api_key returned empty — set with: secret set openai.api_key")
+        exit(1)
+    }
+
+    let prompt_text = to_string(read_file(prompt_file))
+    let payload = "{\"model\":" + _json_quote(model)
+        + ",\"prompt\":" + _json_quote(prompt_text)
+        + ",\"size\":" + _json_quote(pix)
+        + ",\"n\":1}"
+    let payload_file = _trim(to_string(exec("mktemp")))
+    write_file(payload_file, payload)
+
+    eprintln("[openai] submit model=" + model + " size=" + pix + " → " + _basename(out_png))
+    let res = exec_with_status("curl -sS --max-time 120 -X POST"
+        + " 'https://api.openai.com/v1/images/generations'"
+        + " -H " + _shq("Authorization: Bearer " + key)
+        + " -H 'Content-Type: application/json'"
+        + " --data-binary @" + _shq(payload_file))
+    let _rm = exec("rm -f " + _shq(payload_file))
+    if res[1] != 0 {
+        eprintln("[openai] request failed — curl exit " + to_string(res[1]))
+        exit(1)
+    }
+    let resp = to_string(res[0])
+    let b64 = _json_field(resp, "b64_json")
+    let url = _json_field(resp, "url")
+
+    if b64 != "" {
+        let b64_file = _trim(to_string(exec("mktemp")))
+        write_file(b64_file, b64)
+        let dec = exec_with_status("openssl base64 -d -A -in " + _shq(b64_file)
+            + " -out " + _shq(out_png))
+        let _rm2 = exec("rm -f " + _shq(b64_file))
+        if dec[1] != 0 {
+            eprintln("[openai] base64 decode failed — openssl exit " + to_string(dec[1]))
+            exit(3)
+        }
+    } else if url != "" {
+        let dl = exec_with_status("curl -sSL --max-time 60 " + _shq(url) + " -o " + _shq(out_png))
+        if dl[1] != 0 {
+            eprintln("[openai] image download failed — curl exit " + to_string(dl[1]))
+            exit(3)
+        }
+    } else {
+        eprintln("[openai] no image data in response: " + resp)
+        exit(3)
+    }
+    println("[openai] wrote " + out_png + " (" + _file_size(out_png) + " bytes)")
+}

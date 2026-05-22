@@ -1,0 +1,454 @@
+// _yt.hexa — YouTube caption-transcript extractor (research plugin).
+//
+// curl POSTs the InnerTube `player` API with the ANDROID client — the
+// watch-page baseUrl path serves empty timedtext, but the ANDROID
+// client's caption-track baseUrls still serve content. The player
+// response is JSON (json_parse); the chosen caption track is fetched
+// forced to fmt=json3 and flattened one line per cue (XML fallback if
+// the endpoint ignores the format). Fragility note: the only YouTube-
+// internal coupling is the ANDROID client name/version below — bump
+// ANDROID_VERSION if YouTube starts rejecting it.
+//
+// usage: hexa run _yt.hexa <youtube-url-or-id> [lang]
+
+import "stdlib/regex.hexa"
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+// codepoint -> UTF-8 byte sequence
+fn _utf8(cp: int) -> string {
+    if cp < 128 { return chr(cp) }
+    if cp < 2048 {
+        return chr(192 | (cp >> 6)) + chr(128 | (cp & 63))
+    }
+    if cp < 65536 {
+        return chr(224 | (cp >> 12)) + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
+    }
+    return chr(240 | (cp >> 18)) + chr(128 | ((cp >> 12) & 63))
+        + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
+}
+
+fn _hexval(c: string) -> int {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return k - 48 }
+    if k >= 97 && k <= 102 { return k - 87 }
+    if k >= 65 && k <= 70 { return k - 55 }
+    return -1
+}
+
+fn _parse_int(s: string, base: int) -> int {
+    let n = len(s)
+    if n == 0 { return -1 }
+    let mut v = 0
+    let mut i = 0
+    while i < n {
+        let d = _hexval(s[i])
+        if d < 0 || d >= base { return -1 }
+        v = v * base + d
+        i = i + 1
+    }
+    return v
+}
+
+fn _entity(ent: string) -> string {
+    if ent == "amp" { return "&" }
+    if ent == "lt" { return "<" }
+    if ent == "gt" { return ">" }
+    if ent == "quot" { return "\"" }
+    if ent == "apos" { return "'" }
+    if ent == "nbsp" { return " " }
+    if len(ent) >= 2 && ent[0] == "#" {
+        let mut cp = -1
+        if ent[1] == "x" || ent[1] == "X" {
+            cp = _parse_int(ent.substring(2, len(ent)), 16)
+        } else {
+            cp = _parse_int(ent.substring(1, len(ent)), 10)
+        }
+        if cp > 0 { return _utf8(cp) }
+    }
+    return ""
+}
+
+// decode XML/HTML entities (timedtext XML path — mirrors html.unescape)
+fn _unescape(s: string) -> string {
+    if s.index_of("&") < 0 { return s }
+    let n = len(s)
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c != "&" {
+            out.push(c)
+            i = i + 1
+            continue
+        }
+        let mut semi = -1
+        let mut j = i + 1
+        let lim = i + 12
+        while j < n && j < lim {
+            if s[j] == ";" { semi = j; break }
+            j = j + 1
+        }
+        if semi < 0 {
+            out.push(c)
+            i = i + 1
+            continue
+        }
+        let rep = _entity(s.substring(i + 1, semi))
+        if rep == "" {
+            out.push(c)
+            i = i + 1
+            continue
+        }
+        out.push(rep)
+        i = semi + 1
+    }
+    return out.join("")
+}
+
+fn _replace_all(s: string, old: string, sub: string) -> string {
+    if old == "" { return s }
+    let mut out = ""
+    let mut rest = s
+    let mut guard = 0
+    while guard < 1000000 {
+        let a = rest.index_of(old)
+        if a < 0 { break }
+        out = out + rest.substring(0, a) + sub
+        rest = rest.substring(a + len(old), len(rest))
+        guard = guard + 1
+    }
+    return out + rest
+}
+
+// drop every <...> tag, keep the text between
+fn _strip_tags(s: string) -> string {
+    let n = len(s)
+    let mut out = []
+    let mut i = 0
+    let mut intag = false
+    while i < n {
+        let c = s[i]
+        if c == "<" { intag = true }
+        else if c == ">" { intag = false }
+        else if !intag { out.push(c) }
+        i = i + 1
+    }
+    return out.join("")
+}
+
+// the canonical 11-char YouTube id class, matched whole
+fn _id11() -> string {
+    let mut p = ""
+    let mut k = 0
+    while k < 11 {
+        p = p + "[A-Za-z0-9_-]"
+        k = k + 1
+    }
+    return p
+}
+
+// accept a bare 11-char id or any common YouTube URL form
+fn _video_id(s0: string) -> string {
+    let s = _trim(s0)
+    let pat = _id11()
+    if regex_match(pat, s) { return s }
+    let markers = ["v=", "/shorts/", "youtu.be/", "/embed/", "/live/"]
+    let mut mi = 0
+    while mi < len(markers) {
+        let m = markers[mi]
+        let a = s.index_of(m)
+        if a >= 0 {
+            let start = a + len(m)
+            if start + 11 <= len(s) {
+                let cand = s.substring(start, start + 11)
+                if regex_match(pat, cand) { return cand }
+            }
+        }
+        mi = mi + 1
+    }
+    return ""
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+// strip an existing &fmt=... segment, then force fmt=json3
+fn _force_json3(url: string) -> string {
+    let a = url.index_of("&fmt=")
+    if a < 0 { return url + "&fmt=json3" }
+    let head = url.substring(0, a)
+    let tail = url.substring(a + 5, len(url))
+    let amp = tail.index_of("&")
+    let mut keep = head
+    if amp >= 0 { keep = head + tail.substring(amp, len(tail)) }
+    return keep + "&fmt=json3"
+}
+
+// json3 caption format — events[].segs[].utf8, one line per non-empty cue
+fn _parse_json3(raw: string) -> array {
+    let mut out = []
+    let mut d = json_parse("{}")
+    let mut ok = true
+    try { d = json_parse(raw) }
+    catch e { ok = false }
+    if !ok { return out }
+    if !has_key(d, "events") { return out }
+    let events = d["events"]
+    let mut i = 0
+    while i < len(events) {
+        let ev = events[i]
+        if has_key(ev, "segs") {
+            let segs = ev["segs"]
+            let mut line = ""
+            let mut s = 0
+            while s < len(segs) {
+                let sg = segs[s]
+                if has_key(sg, "utf8") { line = line + to_string(sg["utf8"]) }
+                s = s + 1
+            }
+            line = _trim(line)
+            if line != "" { out.push(line) }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// timedtext XML fallback (srv3 <p> or legacy <text>); drop ASR rolling
+// repeats by skipping a line identical to the previous one
+fn _parse_xml(raw: string) -> array {
+    let mut marked = _replace_all(raw, "</p>", "\n")
+    marked = _replace_all(marked, "</text>", "\n")
+    let lines = _unescape(_strip_tags(marked)).split("\n")
+    let mut out = []
+    let mut prev = ""
+    let mut i = 0
+    while i < len(lines) {
+        let line = _trim(lines[i])
+        if line != "" && line != prev {
+            out.push(line)
+            prev = line
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn main() {
+    let android_version = "20.10.38"
+    let ua = "com.google.android.youtube/" + android_version + " (Linux; U; Android 14)"
+
+    let raw_argv = argv()
+    let mut args = []
+    let mut i = 1
+    while i < len(raw_argv) {
+        let a = _trim(raw_argv[i])
+        if a != "" { args.push(a) }
+        i = i + 1
+    }
+    if len(args) == 0 {
+        println("research/yt: usage: /research:yt <youtube-url-or-id> [lang]")
+        return
+    }
+    let vid = _video_id(args[0])
+    if vid == "" {
+        println("research/yt: could not parse a video id from '" + args[0] + "'")
+        return
+    }
+    let mut lang = ""
+    if len(args) > 1 { lang = args[1] }
+
+    // ── InnerTube player request (ANDROID client) ──
+    let body = "{\"videoId\":\"" + vid + "\",\"context\":{\"client\":{"
+        + "\"clientName\":\"ANDROID\",\"clientVersion\":\"" + android_version + "\","
+        + "\"androidSdkVersion\":34,\"hl\":\"en\"}}}"
+    let tmp = _trim(to_string(exec("mktemp")))
+    write_file(tmp, body)
+    let post = "curl -sS --max-time 25 -X POST 'https://www.youtube.com/youtubei/v1/player'"
+        + " -H 'Content-Type: application/json'"
+        + " -H " + _shq("User-Agent: " + ua)
+        + " --data-binary @" + _shq(tmp)
+    let pr_res = exec_with_status(post)
+    let _rm = exec("rm -f " + _shq(tmp))
+    if pr_res[1] != 0 {
+        println("research/yt: network error — curl exit " + to_string(pr_res[1]))
+        return
+    }
+
+    let mut pr = json_parse("{}")
+    let mut pr_ok = true
+    try { pr = json_parse(to_string(pr_res[0])) }
+    catch e { pr_ok = false }
+    if !pr_ok {
+        println("research/yt: failed to parse the player response")
+        return
+    }
+
+    // playability gate
+    if has_key(pr, "playabilityStatus") {
+        let ps = pr["playabilityStatus"]
+        if has_key(ps, "status") && to_string(ps["status"]) != "OK" {
+            let mut why = to_string(ps["status"])
+            if has_key(ps, "reason") { why = to_string(ps["reason"]) }
+            println("research/yt: video not playable: " + why)
+            return
+        }
+    }
+
+    // captions.playerCaptionsTracklistRenderer.captionTracks
+    let mut tracks = []
+    let mut have_tracks = false
+    if has_key(pr, "captions") {
+        let caps = pr["captions"]
+        if has_key(caps, "playerCaptionsTracklistRenderer") {
+            let tl = caps["playerCaptionsTracklistRenderer"]
+            if has_key(tl, "captionTracks") {
+                tracks = tl["captionTracks"]
+                have_tracks = true
+            }
+        }
+    }
+    if !have_tracks || len(tracks) == 0 {
+        println("research/yt: this video has no caption tracks")
+        return
+    }
+
+    // ── pick a track ──
+    // explicit lang code first; else human-authored English, then any
+    // English, then whatever is first.
+    let mut chosen = -1
+    if lang != "" {
+        let want = lang.to_lower()
+        let mut t = 0
+        while t < len(tracks) && chosen < 0 {
+            let tr = tracks[t]
+            if has_key(tr, "languageCode") && to_string(tr["languageCode"]).to_lower() == want {
+                chosen = t
+            }
+            t = t + 1
+        }
+    }
+    if chosen < 0 {
+        let mut pass = 0
+        while pass < 2 && chosen < 0 {
+            let asr_ok = pass == 1
+            let mut t = 0
+            while t < len(tracks) && chosen < 0 {
+                let tr = tracks[t]
+                let mut code = ""
+                if has_key(tr, "languageCode") { code = to_string(tr["languageCode"]) }
+                let is_asr = has_key(tr, "kind") && to_string(tr["kind"]) == "asr"
+                if _starts_with(code, "en") && (asr_ok || !is_asr) { chosen = t }
+                t = t + 1
+            }
+            pass = pass + 1
+        }
+    }
+    if chosen < 0 { chosen = 0 }
+    let track = tracks[chosen]
+    if !has_key(track, "baseUrl") {
+        println("research/yt: the chosen caption track has no baseUrl")
+        return
+    }
+
+    // ── fetch + flatten the transcript ──
+    let url = _force_json3(to_string(track["baseUrl"]))
+    let cap = exec_with_status("curl -sSL --max-time 25 -H " + _shq("User-Agent: " + ua)
+        + " " + _shq(url))
+    if cap[1] != 0 {
+        println("research/yt: network error fetching captions — curl exit " + to_string(cap[1]))
+        return
+    }
+    let cap_raw = _trim(to_string(cap[0]))
+    let mut lines = []
+    if _starts_with(cap_raw, "{") { lines = _parse_json3(cap_raw) }
+    else if _starts_with(cap_raw, "<") { lines = _parse_xml(cap_raw) }
+
+    // ── header ──
+    let mut codes = []
+    let mut t = 0
+    while t < len(tracks) {
+        let tr = tracks[t]
+        if has_key(tr, "languageCode") {
+            let c = to_string(tr["languageCode"])
+            let mut seen = false
+            let mut k = 0
+            while k < len(codes) {
+                if codes[k] == c { seen = true }
+                k = k + 1
+            }
+            if !seen { codes.push(c) }
+        }
+        t = t + 1
+    }
+    // simple ascending sort
+    let mut si = 0
+    while si < len(codes) {
+        let mut sj = si + 1
+        while sj < len(codes) {
+            if codes[sj] < codes[si] {
+                let tmp2 = codes[si]
+                codes[si] = codes[sj]
+                codes[sj] = tmp2
+            }
+            sj = sj + 1
+        }
+        si = si + 1
+    }
+    let mut avail = ""
+    let mut ci = 0
+    while ci < len(codes) {
+        if ci > 0 { avail = avail + ", " }
+        avail = avail + codes[ci]
+        ci = ci + 1
+    }
+    let mut tc = "?"
+    if has_key(track, "languageCode") { tc = to_string(track["languageCode"]) }
+    let mut kindlabel = "manual"
+    if has_key(track, "kind") && to_string(track["kind"]) == "asr" { kindlabel = "auto" }
+
+    println("# YouTube transcript — " + vid)
+    println("# track: " + tc + " (" + kindlabel + ")  ·  available: " + avail)
+    println("# https://www.youtube.com/watch?v=" + vid)
+    println("")
+    if len(lines) == 0 {
+        println("(the transcript track was empty)")
+        return
+    }
+    let mut li = 0
+    while li < len(lines) {
+        println(lines[li])
+        li = li + 1
+    }
+}

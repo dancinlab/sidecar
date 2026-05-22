@@ -4,4 +4,4 @@ argument-hint: "<prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | l
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/imagine.sh" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_imagine.hexa" --root "$CLAUDE_PLUGIN_ROOT" $ARGUMENTS`

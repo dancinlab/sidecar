@@ -1,7 +1,7 @@
 ---
-description: Extract a YouTube video's caption transcript (manual or auto-generated, any available language). Pass a video URL or 11-char id, optionally a language code. Pure stdlib — no deps, no API key.
+description: Extract a YouTube video's caption transcript (manual or auto-generated, any available language). Pass a video URL or 11-char id, optionally a language code. No API key needed.
 argument-hint: "<youtube-url-or-id> [lang]"
 allowed-tools: Bash
 ---
 
-!`sh "$CLAUDE_PLUGIN_ROOT/bin/yt.sh" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_yt.hexa" $ARGUMENTS`

@@ -1,0 +1,412 @@
+// _arxiv.hexa — arXiv search / fetch (research plugin).
+//
+// `curl -L` follows export.arxiv.org's redirect to the official arXiv
+// API and returns an Atom XML feed; the feed is scanned tag-by-tag, so
+// no XML stdlib is needed. A query shaped like an arXiv id (optional
+// `arxiv:` prefix · `NNNN.NNNN[N]` · optional `vN` suffix) becomes an
+// id_list lookup; anything else is a free-text relevance search.
+//
+// usage: hexa run _arxiv.hexa <query | arxiv-id> [--n N]
+
+import "stdlib/regex.hexa"
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+// single-quote wrap for safe shell interpolation
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _all_digits(s: string) -> bool {
+    let n = len(s)
+    if n == 0 { return false }
+    let mut i = 0
+    while i < n {
+        let k = char_code(s[i], 0)
+        if k < 48 || k > 57 { return false }
+        i = i + 1
+    }
+    return true
+}
+
+// codepoint -> UTF-8 byte sequence
+fn _utf8(cp: int) -> string {
+    if cp < 128 { return chr(cp) }
+    if cp < 2048 {
+        return chr(192 | (cp >> 6)) + chr(128 | (cp & 63))
+    }
+    if cp < 65536 {
+        return chr(224 | (cp >> 12)) + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
+    }
+    return chr(240 | (cp >> 18)) + chr(128 | ((cp >> 12) & 63))
+        + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
+}
+
+fn _hexval(c: string) -> int {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return k - 48 }
+    if k >= 97 && k <= 102 { return k - 87 }
+    if k >= 65 && k <= 70 { return k - 55 }
+    return -1
+}
+
+fn _parse_int(s: string, base: int) -> int {
+    let n = len(s)
+    if n == 0 { return -1 }
+    let mut v = 0
+    let mut i = 0
+    while i < n {
+        let d = _hexval(s[i])
+        if d < 0 || d >= base { return -1 }
+        v = v * base + d
+        i = i + 1
+    }
+    return v
+}
+
+// resolve one XML/HTML entity body (text between `&` and `;`) — "" = unknown
+fn _entity(ent: string) -> string {
+    if ent == "amp" { return "&" }
+    if ent == "lt" { return "<" }
+    if ent == "gt" { return ">" }
+    if ent == "quot" { return "\"" }
+    if ent == "apos" { return "'" }
+    if ent == "nbsp" { return " " }
+    if len(ent) >= 2 && ent[0] == "#" {
+        let mut cp = -1
+        if ent[1] == "x" || ent[1] == "X" {
+            cp = _parse_int(ent.substring(2, len(ent)), 16)
+        } else {
+            cp = _parse_int(ent.substring(1, len(ent)), 10)
+        }
+        if cp > 0 { return _utf8(cp) }
+    }
+    return ""
+}
+
+// decode XML/HTML entities — xml.etree did this implicitly in the .py
+fn _unescape(s: string) -> string {
+    if s.index_of("&") < 0 { return s }
+    let n = len(s)
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c != "&" {
+            out.push(c)
+            i = i + 1
+            continue
+        }
+        let mut semi = -1
+        let mut j = i + 1
+        let lim = i + 12
+        while j < n && j < lim {
+            if s[j] == ";" { semi = j; break }
+            j = j + 1
+        }
+        if semi < 0 {
+            out.push(c)
+            i = i + 1
+            continue
+        }
+        let rep = _entity(s.substring(i + 1, semi))
+        if rep == "" {
+            out.push(c)
+            i = i + 1
+            continue
+        }
+        out.push(rep)
+        i = semi + 1
+    }
+    return out.join("")
+}
+
+// unescape entities, then collapse whitespace runs to a single space + trim
+fn _clean(s0: string) -> string {
+    let s = _unescape(s0)
+    let n = len(s)
+    let mut out = []
+    let mut i = 0
+    let mut pending = false
+    let mut started = false
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\r" || c == "\n" {
+            if started { pending = true }
+        } else {
+            if pending { out.push(" ") }
+            pending = false
+            started = true
+            out.push(c)
+        }
+        i = i + 1
+    }
+    return out.join("")
+}
+
+fn _join(arr: array, sep: string) -> string {
+    let mut out = ""
+    let mut i = 0
+    while i < len(arr) {
+        if i > 0 { out = out + sep }
+        out = out + arr[i]
+        i = i + 1
+    }
+    return out
+}
+
+// text between <tag> and </tag>, or "" when absent
+fn _tag_text(block: string, tag: string) -> string {
+    let open = "<" + tag + ">"
+    let close = "</" + tag + ">"
+    let a = block.index_of(open)
+    if a < 0 { return "" }
+    let rest = block.substring(a + len(open), len(block))
+    let b = rest.index_of(close)
+    if b < 0 { return "" }
+    return rest.substring(0, b)
+}
+
+// every text between repeated <tag>..</tag> pairs
+fn _all_tag_text(block: string, tag: string) -> array {
+    let open = "<" + tag + ">"
+    let close = "</" + tag + ">"
+    let mut out = []
+    let mut from = 0
+    let n = len(block)
+    let mut guard = 0
+    while guard < 500 {
+        let rest = block.substring(from, n)
+        let a = rest.index_of(open)
+        if a < 0 { break }
+        let after = a + len(open)
+        let rest2 = rest.substring(after, len(rest))
+        let b = rest2.index_of(close)
+        if b < 0 { break }
+        out.push(rest2.substring(0, b))
+        from = from + after + b + len(close)
+        guard = guard + 1
+    }
+    return out
+}
+
+// value of an attr="..." pair within a tag span
+fn _attr(span: string, name: string) -> string {
+    let key = name + "=\""
+    let a = span.index_of(key)
+    if a < 0 { return "" }
+    let rest = span.substring(a + len(key), len(span))
+    let b = rest.index_of("\"")
+    if b < 0 { return "" }
+    return rest.substring(0, b)
+}
+
+// split the feed into <entry>..</entry> blocks
+fn _entries(xml: string) -> array {
+    let mut out = []
+    let mut from = 0
+    let n = len(xml)
+    let mut guard = 0
+    while guard < 100 {
+        let rest = xml.substring(from, n)
+        let a = rest.index_of("<entry>")
+        if a < 0 { break }
+        let after = a + 7
+        let rest2 = rest.substring(after, len(rest))
+        let b = rest2.index_of("</entry>")
+        if b < 0 { break }
+        out.push(rest2.substring(0, b))
+        from = from + after + b + 8
+        guard = guard + 1
+    }
+    return out
+}
+
+// every <category term="..."> in an entry (skips <arxiv:primary_category>)
+fn _categories(entry: string) -> array {
+    let mut out = []
+    let mut from = 0
+    let n = len(entry)
+    let mut guard = 0
+    while guard < 50 {
+        let rest = entry.substring(from, n)
+        let a = rest.index_of("<category ")
+        if a < 0 { break }
+        let rest2 = rest.substring(a, len(rest))
+        let gt = rest2.index_of(">")
+        let mut span = rest2
+        if gt >= 0 { span = rest2.substring(0, gt) }
+        let term = _attr(span, "term")
+        if term != "" { out.push(term) }
+        from = from + a + 10
+        guard = guard + 1
+    }
+    return out
+}
+
+// href of the <link ... title="pdf"> tag, or ""
+fn _pdf_link(entry: string) -> string {
+    let t = entry.index_of("title=\"pdf\"")
+    if t < 0 { return "" }
+    let before = entry.substring(0, t)
+    let lk = before.last_index_of("<link")
+    if lk < 0 { return "" }
+    let rest = entry.substring(lk, len(entry))
+    let gt = rest.index_of(">")
+    let mut span = rest
+    if gt >= 0 { span = rest.substring(0, gt) }
+    return _attr(span, "href")
+}
+
+fn _print_entry(idx: int, entry: string) {
+    let title = _clean(_tag_text(entry, "title"))
+    let summary = _clean(_tag_text(entry, "summary"))
+    let pub_raw = _tag_text(entry, "published")
+    let mut published = ""
+    if len(pub_raw) >= 10 { published = pub_raw.substring(0, 10) }
+    else { published = pub_raw }
+    let id_raw = _tag_text(entry, "id")
+    let slash = id_raw.last_index_of("/")
+    let mut aid = id_raw
+    if slash >= 0 { aid = id_raw.substring(slash + 1, len(id_raw)) }
+
+    let mut authors = []
+    let raw_authors = _all_tag_text(entry, "name")
+    let mut ai = 0
+    while ai < len(raw_authors) {
+        authors.push(_clean(raw_authors[ai]))
+        ai = ai + 1
+    }
+    if len(authors) > 12 {
+        let extra = len(authors) - 12
+        let mut trimmed = []
+        let mut k = 0
+        while k < 12 { trimmed.push(authors[k]); k = k + 1 }
+        trimmed.push("… (+" + to_string(extra) + " more)")
+        authors = trimmed
+    }
+
+    let cats = _categories(entry)
+    let pdf = _pdf_link(entry)
+
+    let mut t = title
+    if t == "" { t = "(untitled)" }
+    let mut p = published
+    if p == "" { p = "?" }
+    let mut cj = _join(cats, ", ")
+    if cj == "" { cj = "?" }
+    let mut aj = _join(authors, ", ")
+    if aj == "" { aj = "?" }
+    let mut sm = summary
+    if sm == "" { sm = "(none)" }
+
+    println("## [" + to_string(idx) + "] " + t)
+    println("   id: " + aid + " · " + p + " · " + cj)
+    println("   authors: " + aj)
+    if pdf != "" { println("   pdf: " + pdf) }
+    println("   abstract: " + sm)
+}
+
+fn main() {
+    let raw = argv()
+    let mut args = []
+    let mut i = 1
+    while i < len(raw) {
+        let a = _trim(raw[i])
+        if a != "" { args.push(a) }
+        i = i + 1
+    }
+
+    let mut n = 5
+    let mut terms = []
+    let mut j = 0
+    while j < len(args) {
+        let a = args[j]
+        if (a == "--n" || a == "-n") && j + 1 < len(args) {
+            let v = args[j + 1]
+            if _all_digits(v) {
+                let mut k = to_int(v)
+                if k < 1 { k = 1 }
+                if k > 30 { k = 30 }
+                n = k
+            }
+            j = j + 2
+        } else {
+            terms.push(a)
+            j = j + 1
+        }
+    }
+
+    if len(terms) == 0 {
+        println("research/arxiv: usage: /research:arxiv <query | arxiv-id> [--n N]")
+        return
+    }
+    let q = _trim(_join(terms, " "))
+    if q == "" {
+        println("research/arxiv: empty query")
+        return
+    }
+
+    // arxiv-id?  strip an optional case-insensitive `arxiv:` prefix, then
+    // the remainder must be the whole id shape.
+    let mut idcand = q
+    if len(q) >= 6 && q.substring(0, 6).to_lower() == "arxiv:" {
+        idcand = q.substring(6, len(q))
+    }
+    let is_id = regex_match("[0-9][0-9][0-9][0-9]\\.[0-9][0-9][0-9][0-9][0-9]?(v[0-9]+)?", idcand)
+
+    let api = "https://export.arxiv.org/api/query"
+    let mut cmd = "curl -sSL --max-time 25 -A 'sidecar research plugin' -G " + _shq(api)
+    if is_id {
+        cmd = cmd + " --data " + _shq("id_list=" + idcand)
+            + " --data " + _shq("max_results=" + to_string(n))
+    } else {
+        cmd = cmd + " --data-urlencode " + _shq("search_query=all:" + q)
+            + " --data 'start=0'"
+            + " --data " + _shq("max_results=" + to_string(n))
+            + " --data 'sortBy=relevance'"
+    }
+
+    let r = exec_with_status(cmd)
+    if r[1] != 0 {
+        println("research/arxiv: network error — curl exit " + to_string(r[1]))
+        return
+    }
+    let body = to_string(r[0])
+    let entries = _entries(body)
+    if len(entries) == 0 {
+        println("research/arxiv: no results")
+        return
+    }
+    println("# arXiv — " + to_string(len(entries)) + " result(s)")
+    let mut e = 0
+    while e < len(entries) {
+        println("")
+        _print_entry(e + 1, entries[e])
+        e = e + 1
+    }
+}

@@ -174,7 +174,7 @@
       "name": "research",
       "source": "./skills/research",
       "description": "Research-fetch tools \u2014 `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title \u00b7 authors \u00b7 abstract \u00b7 pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`_arxiv.hexa` / `_yt.hexa`, invoked via `hexa run`); HTTP via curl, no API key.",
-      "version": "0.1.1"
+      "version": "0.2.0"
     },
     {
       "name": "gh-stack",
@@ -186,13 +186,13 @@
       "name": "paper",
       "source": "./skills/paper",
       "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/, ships with a working matplotlib figure example + `make figures` target) \u00b7 sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 list (bundled samples) \u00b7 help. Template is a minimal arxiv-style single-column 11pt skeleton (main.tex + references.bib + Makefile + README.md + figures/_scripts/fig01_example.py + figures/fig01_example.pdf + figures/_prompts/) \u2014 compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin (also in sidecar marketplace).",
-      "version": "0.3.2"
+      "version": "0.4.0"
     },
     {
       "name": "imagine",
       "source": "./skills/imagine",
       "description": "/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model] \u2014 generic AI image generator. Two backends out of the box: `fal` (queue+poll fal.ai, default \u2014 `secret get fal.api_key`, model = openai/gpt-image-2 firm-pinned default) and `openai` (sync /v1/images/generations \u2014 `secret get openai.api_key`, model = gpt-image-1). Canonical fal-style size tokens (`square_hd` / `landscape_16_9` / `portrait_16_9` / `square`) translate per-backend. Prompt always read from a file (provenance), payload JSON via mktemp (prompt never on argv). Backend pluggable \u2014 drop a new `_backends/<name>.hexa` to add one.",
-      "version": "0.1.1"
+      "version": "0.2.0"
     }
   ]
 }

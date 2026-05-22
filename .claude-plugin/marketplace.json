@@ -57,6 +57,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "tape-lint",
+      "source": "./hooks/tape-lint",
+      "description": "PreToolUse(Edit|Write) deny for `.tape` edits that introduce `@D` governance blocks with fields other than `do` / `dont`. Diff-aware \u2014 pre-existing violations are grandfathered, only newly-introduced fields (`why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 ...) are refused. Per-project enforcement: triggers on any `*.tape` path. Opt out: SIDECAR_NO_TAPE_LINT=1.",
+      "version": "0.1.0"
+    },
+    {
       "name": "pool-route",
       "source": "./hooks/pool-route",
       "description": "PreToolUse(Bash) suggestion hook \u2014 when a command is host-specific (macOS-only: swift/xcodebuild/xcrun \u00b7 GPU/CUDA: nvidia-smi/nvcc), inject an additionalContext suggesting the appropriate `pool on <host>` dispatch. Non-blocking. Opt out: SIDECAR_NO_POOL_ROUTE=1.",

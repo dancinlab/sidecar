@@ -1,0 +1,9 @@
+{
+  "name": "tape-lint",
+  "description": "PreToolUse(Edit|Write) deny for `.tape` edits that introduce `@D` governance blocks with fields other than `do` / `dont`. Diff-aware — pre-existing violations are grandfathered, only newly-introduced fields (`why` · `tool` · `note` · `ref` · ...) are refused. Per-project enforcement: triggers on any `*.tape` path. Opt out: SIDECAR_NO_TAPE_LINT=1.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "lint", "tape", "governance"]
+}

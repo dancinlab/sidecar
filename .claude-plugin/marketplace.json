@@ -65,8 +65,8 @@
     {
       "name": "tape-lint",
       "source": "./hooks/tape-lint",
-      "description": "PreToolUse(Edit|Write) deny for `.tape` edits that introduce `@D` governance blocks with fields other than `do` / `dont`. Diff-aware \u2014 pre-existing violations are grandfathered, only newly-introduced fields (`why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 ...) are refused. Per-project enforcement: triggers on any `*.tape` path. Opt out: SIDECAR_NO_TAPE_LINT=1.",
-      "version": "0.1.0"
+      "description": "PreToolUse(Edit|Write) deny for `.tape` edits. Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule \u2014 `@D` blocks accept only `do` / `dont`; new `why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 `ex` \u00b7 ... refused. Fires on any `*.tape` path. (2) length cap \u2014 `do` / `dont` value > 100 chars refused (split overflow). commons.tape + project.tape only. (3) authoring-language \u2014 when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul \u00b7 CJK \u00b7 Hiragana \u00b7 Katakana) are refused. commons.tape + project.tape only. Opt out: SIDECAR_NO_TAPE_LINT=1.",
+      "version": "0.2.0"
     },
     {
       "name": "pool-route",

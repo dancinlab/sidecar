@@ -8,8 +8,9 @@
 // Host selection: a command that needs a specific OS (macOS-only /
 // Linux-only) is restricted to hosts tagged with that platform; among the
 // eligible hosts a round-robin counter spreads load. No eligible host ->
-// runs local. autosync -> rsync the project to the host first; else a
-// preflight `test -d` confirms the workdir exists before routing.
+// runs local. A preflight `test -d` confirms the workdir exists on the
+// host before routing — pool-route does NOT sync it; the project workdir
+// is kept on pool hosts by the user.
 //
 // Roster source of truth: the `pool` CLI's `~/.pool/pool.json`.
 // NO opt-out by design — no env var, no config file, no exception list.
@@ -360,39 +361,30 @@ fn main() {
         }
     }
 
-    // autosync — pool.json is roster-only; default on so routing is
-    // self-sufficient (rsync creates + freshens the remote workdir).
-    let autosync = "on"
-
+    // No autosync. pool-route routes the command via ssh only — the
+    // project workdir is kept on pool hosts by the user. The former
+    // `rsync -az --force` of the entire cwd before every routed command
+    // produced a CPU storm (large trees x many heavy commands x sessions),
+    // so the autosync/rsync feature is removed. A preflight probe skips
+    // routing when the workdir is absent so a non-synced host never runs
+    // a routed command blind.
     let mut new_cmd = ""
     let mut note = ""
-    if autosync != "" {
-        // incremental rsync of the local project, then the routed command.
-        // autosync stays on plain ssh + rsync (rsync-over-tailscale untested).
-        let mut cwd2 = ""
-        if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd2 = payload["cwd"] } }
-        if cwd2 == "" { cwd2 = exec_with_status("pwd")[0].trim() }
-        let mut del = ""
-        if autosync == "mirror" { del = " --delete" }
-        new_cmd = "ssh " + _shq(host) + " " + _shq("mkdir -p " + wd_sh) + " && rsync -az --force" + del + " " + _shq(cwd2) + "/ " + _shq(host) + ":" + wd_sh + "/ && ssh " + _shq(host) + " " + _shq(remote) + "  # " + MARK
-        note = "pool-route: routed to " + host + " — auto-synced (rsync) -> " + host + ":" + wd_remote
+    // preflight — never route to a host missing the workdir. rc != 0 is a
+    // missing workdir OR an ssh transport failure (host asleep / network
+    // blip): skip routing this once and run local rather than route blind.
+    let mut probe = ""
+    if tx == "tailscale" {
+        probe = "tailscale ssh " + _shq(host) + " " + _shq("test -d " + wd_sh)
     } else {
-        // preflight — never route to a host missing the workdir. rc 255 is
-        // an ssh transport failure (host asleep / network blip), NOT a
-        // missing workdir: skip this once rather than run remotely blind.
-        let mut probe = ""
-        if tx == "tailscale" {
-            probe = "tailscale ssh " + _shq(host) + " " + _shq("test -d " + wd_sh)
-        } else {
-            probe = "ssh -o BatchMode=yes -o ConnectTimeout=6 " + _shq(host) + " " + _shq("test -d " + wd_sh)
-        }
-        let rc = _exec_rc(probe)
-        if rc != 0 { _allow() }
-        let sshc = "ssh"
-        if tx == "tailscale" { let sshc2 = "tailscale ssh"; new_cmd = sshc2 + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
-        else { new_cmd = sshc + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
-        note = "pool-route: routed to " + host + ":" + wd_remote + " via " + tx + " (workdir is user-synced)"
+        probe = "ssh -o BatchMode=yes -o ConnectTimeout=6 " + _shq(host) + " " + _shq("test -d " + wd_sh)
     }
+    let rc = _exec_rc(probe)
+    if rc != 0 { _allow() }
+    let sshc = "ssh"
+    if tx == "tailscale" { let sshc2 = "tailscale ssh"; new_cmd = sshc2 + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
+    else { new_cmd = sshc + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
+    note = "pool-route: routed to " + host + ":" + wd_remote + " via " + tx + " (workdir is user-synced)"
 
     note = note + " (" + why + sudo_note + "; " + to_string(len(h_name)) + "-host roster)."
     _emit(ti, new_cmd, note)

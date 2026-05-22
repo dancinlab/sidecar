@@ -71,8 +71,8 @@
     {
       "name": "pool-route",
       "source": "./hooks/pool-route",
-      "description": "PreToolUse(Bash) pool auto-router, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier (make \u00b7 cargo \u00b7 npm \u00b7 gradle \u00b7 pytest \u00b7 go build \u00b7 swift build \u00b7 docker build \u00b7 nvidia-smi \u00b7 train \u00b7 \u2026) or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh (`ssh <host> 'cd <workdir> && <cmd>'`) \u2014 transparent dispatch, not a suggestion. OS-capability filter + round-robin load balance; autosync rsyncs the project to the host first. No roster / no match / no eligible host \u2192 passes through untouched. NO opt-out by design.",
-      "version": "0.4.1"
+      "description": "PreToolUse(Bash) pool auto-router, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier (make \u00b7 cargo \u00b7 npm \u00b7 gradle \u00b7 pytest \u00b7 go build \u00b7 swift build \u00b7 docker build \u00b7 nvidia-smi \u00b7 train \u00b7 \u2026) or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh (`ssh <host> 'cd <workdir> && <cmd>'`) \u2014 transparent dispatch, not a suggestion. OS-capability filter + round-robin load balance; a preflight ssh test -d skips hosts lacking the workdir (project kept on pool hosts by the user, not synced by pool-route). No roster / no match / no eligible host \u2192 passes through untouched. NO opt-out by design.",
+      "version": "0.5.0"
     },
     {
       "name": "limit-guard",

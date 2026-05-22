@@ -19,7 +19,18 @@ make distclean  # also remove PDF
 
 ## Figures
 
-Drop figure sources under `figures/`:
+The template ships with one working matplotlib example so `make` produces
+a paper that compiles end-to-end out of the box:
+
+- `figures/_scripts/fig01_example.py` — matplotlib bar chart (3 placeholder
+  data points). Replace the `DATA` rows + y-axis label + caption with your
+  result, then `make figures` to regenerate the PDF.
+- `figures/fig01_example.pdf` — the rendered output, included by `main.tex`.
+
+Add `fig02`, `fig03`, ... by copying the `_scripts/fig01_example.py` pattern;
+the Makefile picks up `figures/_scripts/*.py` automatically.
+
+Drop other figure sources under `figures/`:
 
 - vector: `.pdf` / `.eps` (preferred for plots)
 - raster: `.png` (cover / teaser / AI-generated schematics only)
@@ -34,6 +45,10 @@ Generate a fal.ai cover via the sidecar plugin:
 ```bash
 /paper fig square_hd figures/_prompts/cover.txt figures/cover.png
 ```
+
+For a richer reference paper with multiple figures, tables, and 18 real
+bibtex entries, see `/paper sample <slug>` (copies the bundled
+`sample-nb-bcs-absorbed` verbatim).
 
 ## Honest stance
 

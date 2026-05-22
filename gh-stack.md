@@ -1,23 +1,8 @@
 # gh-stack reference
 
-Personal note — stacked PR workflow with GitHub's `gh stack` CLI (private preview as of 2026-05).
+Stacked-PR workflow with GitHub's `gh stack` CLI.
 
-## Status (2026-05-21)
-
-| Layer | State |
-|---|---|
-| `gh` CLI | ✅ 2.92.0 |
-| `gh stack` extension | ✅ installed (`gh extension install github/gh-stack`) |
-| `gh-stack` agent skill | ✅ `~/.claude/skills/gh-stack/` (Claude Code recognizes stack tasks) |
-| Repo enablement | ⏳ waitlist · https://gh.io/stacksbeta |
-| Server-side stack tracking (UI map · cascade rebase · merge-multi) | ❌ blocked until enablement |
-
-## Activation steps when waitlist clears
-
-1. Receive enable email for org `dancinlab` (or per-repo).
-2. Confirm via `gh stack submit` on a test layer — should attach to a Stack on the PR page (otherwise treated as plain PR chain).
-3. Update this doc → mark "Repo enablement" ✅.
-4. Switch from manual `gh pr create --base previous-layer` to `gh stack` commands.
+Enablement state + activation history: [`gh-stack.log.md`](gh-stack.log.md).
 
 ## CLI command map
 

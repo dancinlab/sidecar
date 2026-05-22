@@ -10,4 +10,4 @@ No slash command — `gh stack ...` and `gh pr create ...` are the literal mecha
 
 ## Status
 
-Per-org enablement tracked in [`gh-stack.md`](../../gh-stack.md) at the sidecar repo root.
+CLI reference + manual fallback: [`gh-stack.md`](../../gh-stack.md). Per-org enablement state + activation history: [`gh-stack.log.md`](../../gh-stack.log.md).

@@ -68,4 +68,4 @@ Same logical shape · missing only server-side stack metadata (no UI map · no `
 
 ## Status + activation
 
-See [`gh-stack.md`](../../gh-stack.md) in the sidecar repo root — tracks current enablement state for the user's org and the activation steps for when the waitlist clears.
+CLI reference + manual fallback: [`gh-stack.md`](../../gh-stack.md). Per-org enablement state + activation history: [`gh-stack.log.md`](../../gh-stack.log.md).

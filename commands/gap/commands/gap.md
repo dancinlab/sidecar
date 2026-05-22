@@ -113,7 +113,7 @@ Merge the subagent findings into one **gap report**:
 - each bullet: `lens — the gap (one line) — suggested fix (one line)`
 - end with a **priority shortlist**: the top 3 gaps by impact, ordered
 - if this is decision-bearing work, flag any gap that contradicts a logged
-  `Decision N` block in design.md
+  `Decision N` block in design.log.md
 
 `/gap` only surfaces and prioritises — it does **not** fix anything. The user
 drives what gets fixed next.

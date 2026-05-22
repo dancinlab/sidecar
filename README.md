@@ -46,7 +46,8 @@ sidecar/
 ├── commands/                 # /slash-command invoked plugins
 ├── skills/                   # Skill tool invocable plugins
 ├── project.tape              # sidecar's identity + governance (also linked as CLAUDE.md)
-├── design.md                 # decision-log (one decision per gate)
+├── design.md                 # current design rules pointer (live spec)
+├── design.log.md             # decision audit trail (one decision per gate)
 ├── CHANGELOG.md              # chronological ship log
 └── .claude-plugin/marketplace.json
 ```
@@ -88,13 +89,14 @@ sidecar/
 
 ## Governance
 
-Sidecar's own identity + governance lives in [`project.tape`](project.tape) (also reachable via `CLAUDE.md`). Cross-project `do` / `dont` rules ride inside the `commons` hook plugin and auto-inject at SessionStart + PreCompact + PostCompact. Local sidecar decisions (concept separation, ship cycle, evidence-before-ship, cross-project carrier) are recorded in [`design.md`](design.md) as numbered decisions.
+Sidecar's own identity + governance lives in [`project.tape`](project.tape) (also reachable via `CLAUDE.md`). Cross-project `do` / `dont` rules ride inside the `commons` hook plugin and auto-inject at SessionStart + PreCompact + PostCompact. Local sidecar decisions (concept separation, ship cycle, evidence-before-ship, cross-project carrier) are recorded in [`design.log.md`](design.log.md) as numbered decisions; [`design.md`](design.md) is the live-rules pointer.
 
 ## Reference
 
 - [`project.tape`](project.tape) — sidecar's identity + governance (linked as `CLAUDE.md`).
+- [`design.md`](design.md) / [`design.log.md`](design.log.md) — live design-rules pointer + decision audit trail.
 - [`CHANGELOG.md`](CHANGELOG.md) — chronological log of notable changes (one entry per ship batch).
-- [`gh-stack.md`](gh-stack.md) — stacked PR workflow notes (private preview status + manual fallback).
+- [`gh-stack.md`](gh-stack.md) / [`gh-stack.log.md`](gh-stack.log.md) — stacked PR workflow reference + enablement history.
 
 ## License
 

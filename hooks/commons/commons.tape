@@ -89,3 +89,7 @@
 @D g26 := "lattice-as-tool, not constraint" :: governance [required active]
   do   = "treat the n=6 lattice as an analytical / organizing tool — use it where it naturally fits (hexa-native specs · internal structure); full cross-project policy = `LATTICE_POLICY.md` (sidecar/hooks/commons/, the SSOT)"
   dont = "treat the lattice as a hard constraint or a derivation rule · force-fit lattice claims onto external entities (TSMC · ASML · NIST · CERN · NASA · published benchmarks) — cite their own invariants instead"
+
+@D g27 := "ship cycle — commit + push + reinstall local copy" :: governance [required active]
+  do   = "ship as one atomic op: commit (explicit paths · credential scan) → push origin/<branch> → reinstall the local copy so it matches HEAD (`hx install <name>` for hx-packaged repos · project-specific install otherwise) — especially after native / launchd / daemon / compiled-source changes"
+  dont = "build-and-stop (leave a stale install / `.app` / daemon running) · defer the reinstall · `git add -A` / `-u` instead of explicit paths · skip the credential scan (rpa_ · sk-[A-Za-z0-9]{20} · hf_[A-Za-z0-9]{30} · AKIA)"

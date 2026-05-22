@@ -55,7 +55,7 @@ sidecar/
 
 | Name | Kind | Version | Summary |
 |---|---|---|---|
-| [`commons`](hooks/commons/) | hook | 0.9.8 | SessionStart + PreCompact + PostCompact hook — injects a cross-project `do` / `dont` layer (from `commons.tape`, granular `@D g1..g26`) above the per-project context. PostCompact re-injects after the `※ recap` so the layer survives auto-compaction. Carries [`LATTICE_POLICY.md`](hooks/commons/LATTICE_POLICY.md) (real-limits-first SSOT). |
+| [`commons`](hooks/commons/) | hook | 0.9.9 | SessionStart + PreCompact + PostCompact hook — injects a cross-project `do` / `dont` layer (from `commons.tape`, granular `@D g1..g27`) above the per-project context. PostCompact re-injects after the `※ recap` so the layer survives auto-compaction. Carries [`LATTICE_POLICY.md`](hooks/commons/LATTICE_POLICY.md) (real-limits-first SSOT). |
 | [`prefs`](hooks/prefs/) | hook + command | 0.1.0 | User language preferences — 3 axes (`code` authoring · `docs` authoring · `response` to user). SessionStart + PreCompact + PostCompact hook auto-injects. `/prefs show` · `/prefs code <lang>` · `/prefs docs <lang>` · `/prefs response <lang>`. Defaults: code=english, docs=english, response=korean. SSOT for language prefs (commons g2 removed in 0.9.0). |
 | [`project-tape`](hooks/project-tape/) | hook | 0.1.0 | PreCompact + PostCompact hook — re-injects `<project-root>/project.tape` as `additionalContext` so the project's identity + governance survive auto-compaction. No-op when `project.tape` is absent. |
 | [`git-guard`](hooks/git-guard/) | hook | 0.1.0 | PreToolUse(Bash) deny — blocks `git push --force(-with-lease)` · refspec-force · `git {commit,merge,rebase} --no-verify`. Opt out via `SIDECAR_NO_GIT_GUARD=1`. |

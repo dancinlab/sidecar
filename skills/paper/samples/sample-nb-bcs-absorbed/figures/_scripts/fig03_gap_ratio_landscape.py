@@ -2,6 +2,7 @@
 # Figure 3: 2Δ/kBTc across SC families. Shows Nb is the ONLY one within
 # the 5% BCS-universal gate. Strong-coupling renormalizes UP, d-wave is
 # fundamentally different.
+import pathlib
 import math
 import matplotlib.pyplot as plt
 
@@ -81,7 +82,7 @@ ax.legend(handles=[
 
 ax.grid(axis="y", linestyle=":", linewidth=0.5, alpha=0.5)
 plt.tight_layout()
-out = "/Users/ghost/core/demiurge/PAPERS/sample-nb-bcs-absorbed/figures/fig03_gap_ratio_landscape.pdf"
+out = str(pathlib.Path(__file__).resolve().parent.parent / "fig03_gap_ratio_landscape.pdf")
 plt.savefig(out, bbox_inches="tight", pad_inches=0.05)
 print(f"[fig03] wrote {out}")
 print(f"  Nb measurement: {DATA[i_nb][1]} ± {DATA[i_nb][2]} → BCS rel-err = "

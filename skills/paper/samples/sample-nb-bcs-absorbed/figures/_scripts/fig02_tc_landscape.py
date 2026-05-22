@@ -2,6 +2,7 @@
 # Figure 2: Tc predicted (McMillan/Allen-Dynes) vs measured across SC families.
 # Shows where BCS-class formulas work (Nb) and fail (MgB2 two-gap, Nb3Sn strong-coupling).
 # Demonstrates why "Tc parity" alone is NOT the right metric — motivates the universal-ratio.
+import pathlib
 import math
 import matplotlib.pyplot as plt
 import numpy as np
@@ -79,7 +80,7 @@ ax.annotate("BCS N/A\n($d$-wave)",
             arrowprops=dict(arrowstyle="->", color="#c62828", lw=0.6))
 
 plt.tight_layout()
-out = "/Users/ghost/core/demiurge/PAPERS/sample-nb-bcs-absorbed/figures/fig02_tc_landscape.pdf"
+out = str(pathlib.Path(__file__).resolve().parent.parent / "fig02_tc_landscape.pdf")
 plt.savefig(out, bbox_inches="tight", pad_inches=0.05)
 print(f"[fig02] wrote {out}")
 print("  family Tc-AD vs measured deltas:")

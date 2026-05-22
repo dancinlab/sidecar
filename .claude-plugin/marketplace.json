@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g30` form, no tool/usage). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.15"
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g30` form, no tool/usage); UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.16"
     },
     {
       "name": "prefs",
@@ -186,7 +186,7 @@
       "name": "paper",
       "source": "./skills/paper",
       "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/, ships with a working matplotlib figure example + `make figures` target) \u00b7 sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 list (bundled samples) \u00b7 help. Template is a minimal arxiv-style single-column 11pt skeleton (main.tex + references.bib + Makefile + README.md + figures/_scripts/fig01_example.py + figures/fig01_example.pdf + figures/_prompts/) \u2014 compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin (also in sidecar marketplace).",
-      "version": "0.3.0"
+      "version": "0.3.1"
     },
     {
       "name": "imagine",

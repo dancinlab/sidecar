@@ -1,7 +1,8 @@
 #!/bin/sh
-# SessionStart + PreCompact + PostCompact hook — emit commons.tape as
+# UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — emit commons.tape as
 # additionalContext. Event name is read from the stdin payload so each
-# fire reports the actual event (SessionStart on session bootstrap,
+# fire reports the actual event (UserPromptSubmit every user turn,
+# SessionStart on session bootstrap,
 # PreCompact before compaction, PostCompact after the recap to re-inject
 # fresh into the post-compaction context).
 TAPE="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}/commons.tape"

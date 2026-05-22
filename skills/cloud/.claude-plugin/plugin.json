@@ -1,6 +1,6 @@
 {
   "name": "cloud",
-  "description": "/cloud <args> — wraps `hexa cloud` (runpod dispatch · canonical subcommand form, structured argv — never raw ssh/scp per commons g8). Subverbs: run · nohup · poll · copy-to · copy-from. Upstream gap (subcommand not yet registered — currently lives in a separate `hexa-cloud` binary) tracked at hexa-lang/inbox/patches/hexa-cloud-subcommand.md. NL trigger via skill ('runpod dispatch', 'GPU pod 에 돌려', 'pod 결과 가져와'). Pairs with commons g8 + g12.",
+  "description": "/cloud <args> — wraps `hexa cloud` (runpod dispatch · canonical subcommand form, structured argv — never raw ssh/scp per commons g8). Subverbs: run · nohup · poll · copy-to · copy-from. NL trigger via skill ('runpod dispatch', 'GPU pod 에 돌려', 'pod 결과 가져와'). Pairs with commons g8 + g12.",
   "version": "0.1.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",

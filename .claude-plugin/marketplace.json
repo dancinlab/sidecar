@@ -11,13 +11,13 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g28` form, no tool/usage \u2014 Sonnet bench v4 winner at 33/36). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "description": "SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g28` form, no tool/usage). Carries LATTICE_POLICY.md (real-limits-first SSOT).",
       "version": "0.9.13"
     },
     {
       "name": "prefs",
       "source": "./hooks/prefs",
-      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language prefs (commons g2 removed in 0.9.0 \u2014 this plugin owns it).",
+      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
       "version": "0.1.0"
     },
     {
@@ -77,7 +77,7 @@
     {
       "name": "cloud",
       "source": "./skills/cloud",
-      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw ssh/scp per commons g8). Subverbs: run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. Upstream gap tracked at hexa-lang/inbox/patches/hexa-cloud-subcommand.md. NL trigger via skill. Pairs with commons g8 + g12.",
+      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw ssh/scp per commons g8). Subverbs: run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. NL trigger via skill. Pairs with commons g8 + g12.",
       "version": "0.1.0"
     },
     {
@@ -161,8 +161,8 @@
     {
       "name": "paper",
       "source": "./skills/paper",
-      "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/) \u00b7 sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed/ verbatim \u2014 ~14-page Nb BCS universal-gap-ratio attestation reference exhibit) \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin \u2192 fal.ai openai/gpt-image-2) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 list \u00b7 help. `fig` requires the sister `imagine` plugin (sidecar marketplace).",
-      "version": "0.2.0"
+      "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/, ships with a working matplotlib figure example + `make figures` target) \u00b7 sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 list (bundled samples) \u00b7 help. Template is a minimal arxiv-style single-column 11pt skeleton (main.tex + references.bib + Makefile + README.md + figures/_scripts/fig01_example.py + figures/fig01_example.pdf + figures/_prompts/) \u2014 compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin (also in sidecar marketplace).",
+      "version": "0.3.0"
     },
     {
       "name": "imagine",

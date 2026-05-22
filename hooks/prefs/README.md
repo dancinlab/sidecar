@@ -47,4 +47,4 @@ SessionStart + PreCompact + PostCompact hook emits current values as `additional
 
 ## SSOT
 
-Language preferences live here. `commons.tape`'s old `@D g2` (english artifacts · korean response) was removed in commons 0.9.0 — defer to this plugin. If the prefs plugin is uninstalled, language defaults to its built-in (english/english/korean) only when this plugin is loaded; without it, no language rule fires (other commons rules still apply).
+Language preferences live here — `commons.tape` defers to this plugin for the language axes. If this plugin is uninstalled, no language rule fires; other commons rules still apply.

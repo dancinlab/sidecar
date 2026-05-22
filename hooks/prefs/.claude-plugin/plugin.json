@@ -1,6 +1,6 @@
 {
   "name": "prefs",
-  "description": "User language preferences — 3 axes (code authoring · doc authoring · response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values as additionalContext. /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences (commons.tape's old g2 language rule removed in 0.9.0 — this plugin owns it).",
+  "description": "User language preferences — 3 axes (code authoring · doc authoring · response language to user). SessionStart + PreCompact + PostCompact hook auto-injects current values as additionalContext. /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
   "version": "0.1.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",

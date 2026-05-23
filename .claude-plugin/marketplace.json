@@ -135,6 +135,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "end",
+      "source": "./skills/end",
+      "description": "Session closure safety check \u2014 /end prints a single-shot dashboard of dangling residue in the current repo (uncommitted \u00b7 unpushed \u00b7 stash \u00b7 open PRs by `@me` \u00b7 marketplace.json \u2194 plugin.json version drift) with per-item \u2713/\u26a0/\u25cb marks + recommended actions, and a closing \u2705 `100% closure \u2014 safe to end` verdict when every line is green. Read-only \u2014 no commit / push / stash drop. Pairs with /ship (the actor) \u2014 /end is the verifier. Triggers: /end \u00b7 \ub05d \u00b7 \ub9c8\ubb34\ub9ac \u00b7 \uc885\ub8cc \u00b7 \ud074\ub85c\uc800 \u00b7 close out \u00b7 wrap up \u00b7 100% closure.",
+      "version": "0.1.0"
+    },
+    {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command.",

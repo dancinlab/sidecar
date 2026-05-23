@@ -1,0 +1,9 @@
+{
+  "name": "end",
+  "description": "Session closure safety check — /end prints a single-shot dashboard of dangling-residue items in the current repo: uncommitted (`git status -s`), unpushed commits ahead of upstream, stash entries, open PRs authored by `@me` (gh), and marketplace.json ↔ plugin.json version drift (commons @D g22, sidecar pattern). Each item gets ✓/⚠/○ + a recommended action; closing verdict is ✅ `100% closure — safe to end` when every check is green, else ⚠ `residue detected`. Read-only; no side effects (no commit / no push / no stash drop). Pairs with /ship (which clears the uncommitted + unpushed lines) — /end is the verifier, /ship is the actor. Plugin command (markdown only, no script). Triggers: /end · 끝 · 마무리 · 종료 · 클로저 · close out · wrap up · 100% closure.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "end", "closure", "session", "dashboard", "verify"]
+}

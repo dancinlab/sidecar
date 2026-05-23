@@ -140,3 +140,7 @@
 @D g39 := "project-state docs via /domain" :: governance [required active]
   do   = "project tasks/decisions → `/domain <task>` (logs <NAME>.md spec + <NAME>.log.md history)"
   dont = "scatter project state across ad-hoc TODO.md / PLAN.md / notes/*.md — use /domain"
+
+@D g40 := "multi-axis gap sweep via /gap (sister of /kick)" :: governance [active]
+  do   = "stuck on a problem → `/gap` (42-lens 8-family sweep) or `/kick <seed>` (g6 · discovery)"
+  dont = "brute-force a stuck problem without lensing — multi-axis catalog ready in /gap"

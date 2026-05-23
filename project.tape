@@ -6,7 +6,7 @@
   brief    = "Side-mounts onto Claude Code · carries the cross-project do/dont layer in hooks/commons/"
   parent   = "dancinlab"
   ssot     = "github.com/dancinlab/sidecar (`hx install sidecar`)"
-  siblings = "hexa-lang"
+  siblings = "hexa-lang · pool · secret"
 
 @D s1 := "concept separation" :: governance [required active]
   do   = "1 plugin = exactly 1 of {hook · command · skill} · top-level dir matches the concept"

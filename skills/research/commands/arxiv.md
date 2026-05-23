@@ -4,4 +4,4 @@ argument-hint: "<query | arxiv-id> [--n N]"
 allowed-tools: Bash
 ---
 
-!`H="$(command -v _arxiv.hexa)"; hexa run "$H" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_arxiv.hexa" $ARGUMENTS`

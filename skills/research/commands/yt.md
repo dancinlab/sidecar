@@ -4,4 +4,4 @@ argument-hint: "<youtube-url-or-id> [lang]"
 allowed-tools: Bash
 ---
 
-!`H="$(command -v _yt.hexa)"; hexa run "$H" $ARGUMENTS`
+!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_yt.hexa" $ARGUMENTS`

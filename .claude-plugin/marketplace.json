@@ -240,7 +240,7 @@
       "name": "research",
       "source": "./skills/research",
       "description": "Research-fetch tools \u2014 `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title \u00b7 authors \u00b7 abstract \u00b7 pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`_arxiv.hexa` / `_yt.hexa`, invoked via `hexa run`); HTTP via curl, no API key.",
-      "version": "0.2.1"
+      "version": "0.2.2"
     },
     {
       "name": "gh-stack",

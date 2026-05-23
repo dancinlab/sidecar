@@ -7,8 +7,8 @@
 // id_list lookup; anything else is a free-text relevance search.
 //
 // usage: hexa run _arxiv.hexa <query | arxiv-id> [--n N]
-
-import "stdlib/regex.hexa"
+//
+// `regex_match` is a hexa builtin — no stdlib import needed.
 
 fn _trim(s: string) -> string {
     let n = len(s)

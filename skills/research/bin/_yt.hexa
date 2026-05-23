@@ -10,8 +10,8 @@
 // ANDROID_VERSION if YouTube starts rejecting it.
 //
 // usage: hexa run _yt.hexa <youtube-url-or-id> [lang]
-
-import "stdlib/regex.hexa"
+//
+// `regex_match` is a hexa builtin — no stdlib import needed.
 
 fn _trim(s: string) -> string {
     let n = len(s)

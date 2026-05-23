@@ -132,3 +132,7 @@
 
 @D g37 := "plist — user-request only" :: governance [required active]
   dont = "create `.plist` (LaunchAgents · LaunchDaemons · Info.plist) unprompted — explicit request only"
+
+@D g38 := "autonomous work-loop via /cycle" :: governance [required active]
+  do   = "multi-round goal → `/cycle` (self-enumerate → parallel-plan → fan-out → loop)"
+  dont = "serialize multi-round work · manual orchestration when `/cycle` fits the loop pattern"

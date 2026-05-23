@@ -1,4 +1,10 @@
+---
+status: resolved
+---
 # sidecar inbox/notes: worktree disk fill-up · 자동 prune 후보
+
+## 해결 (2026-05-24)
+✅ `hooks/worktree-gc/` 0.1.0 — SessionStart hook 으로 land (idea A+B+C 통합 형태). threshold-gated (linked-count >= 3 OR avail < 20 GiB), merged-branch / origin-gone candidate 만 prune, open-PR worktree 는 skip. NO opt-out.
 
 - **filed**: 2026-05-24 (anima session, PURE /cycle-full turn-2 round)
 - **source-repo**: dancinlab/anima

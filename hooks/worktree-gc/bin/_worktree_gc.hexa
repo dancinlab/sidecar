@@ -1,0 +1,216 @@
+// _worktree_gc.hexa — SessionStart hook that prunes merged-but-undeleted
+// LINKED git worktrees in the cwd repo.
+//
+// Threshold gate: only scans when linked-worktree count >= 3 OR disk avail
+// < 20 GiB. Above gate, fetches `gh pr list --state merged --limit 200` and
+// prunes any linked worktree whose branch is in that merged set OR whose
+// `origin/<branch>` is gone. Open-PR worktrees are NEVER touched.
+//
+// Empty / no candidates / below threshold → silent. gh unavailable → emits
+// a short note and exits 0. Always exit 0 (non-blocking).
+//
+// No opt-out by design.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+fn _emit(event: string, body: string) {
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(body) + "}}"
+    println(out)
+}
+
+// disk avail in GiB at the given path; -1 on failure.
+fn _avail_gib(path: string) -> int {
+    let r = exec_with_status("df -k " + path + " 2>/dev/null | tail -1 | awk '{print $4}'")
+    if r[1] != 0 { return -1 }
+    let s = r[0].trim()
+    if s == "" { return -1 }
+    let mut kib = 0
+    try { kib = to_int(s) } catch e { return -1 }
+    return kib / (1024 * 1024)
+}
+
+// list of {path, branch} maps for LINKED worktrees only (skips main).
+fn _linked_worktrees(repo: string) -> array {
+    let r = exec_with_status("cd " + repo + " && git worktree list --porcelain 2>/dev/null")
+    if r[1] != 0 { return [] }
+    let blocks = r[0].split("\n\n")
+    let mut out = []
+    let mut idx = 0
+    while idx < len(blocks) {
+        if idx == 0 {
+            // first block is the main worktree itself — skip
+            idx = idx + 1
+            continue
+        }
+        let block = blocks[idx]
+        let lines = block.split("\n")
+        let mut path = ""
+        let mut branch = ""
+        let mut j = 0
+        while j < len(lines) {
+            let line = lines[j]
+            if line.starts_with("worktree ") { path = line.substring(9, len(line)).trim() }
+            else if line.starts_with("branch refs/heads/") { branch = line.substring(18, len(line)).trim() }
+            j = j + 1
+        }
+        if path != "" && branch != "" {
+            let mut m = json_parse("{}")
+            m["path"] = path
+            m["branch"] = branch
+            out.push(m)
+        }
+        idx = idx + 1
+    }
+    return out
+}
+
+// branch names merged via PR. Empty on failure (gh unavail / no auth / etc).
+fn _merged_branches(repo: string) -> array {
+    let r = exec_with_status("cd " + repo + " && gh pr list --state merged --limit 200 --json headRefName --jq '.[].headRefName' 2>/dev/null")
+    if r[1] != 0 { return [] }
+    let s = r[0].trim()
+    if s == "" { return [] }
+    return s.split("\n")
+}
+
+fn _in_array(needle: string, hay: array) -> bool {
+    let mut i = 0
+    while i < len(hay) {
+        if hay[i] == needle { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn _has_origin_branch(repo: string, branch: string) -> bool {
+    let r = exec_with_status("cd " + repo + " && git rev-parse --verify origin/" + branch + " 2>/dev/null")
+    return r[1] == 0
+}
+
+// disk usage of a path in MiB (rough; for human-readable reporting only).
+fn _du_mib(path: string) -> int {
+    let r = exec_with_status("du -sk " + path + " 2>/dev/null | awk '{print $1}'")
+    if r[1] != 0 { return 0 }
+    let s = r[0].trim()
+    if s == "" { return 0 }
+    let mut kib = 0
+    try { kib = to_int(s) } catch e { return 0 }
+    return kib / 1024
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    let event = _event_of(payload)
+    if event == "" { _allow() }
+
+    let mut cwd = ""
+    if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd = payload["cwd"] } }
+    if cwd == "" { cwd = exec_with_status("pwd")[0].trim() }
+    if cwd == "" { _allow() }
+
+    // must be a git work tree
+    let isr = exec_with_status("cd " + cwd + " && git rev-parse --is-inside-work-tree 2>/dev/null")
+    if isr[1] != 0 { _allow() }
+
+    let linked = _linked_worktrees(cwd)
+    let avail = _avail_gib(cwd)
+
+    // threshold gate — keep the common case silent
+    let above = len(linked) >= 3 || (avail >= 0 && avail < 20)
+    if !above { _allow() }
+
+    // fetch merged-branch set
+    let merged = _merged_branches(cwd)
+    if len(merged) == 0 {
+        _emit(event, "# worktree-gc: " + to_string(len(linked)) + " linked worktree(s) but gh returned no merged PRs (or unavailable) — no action\n")
+        exit(0)
+    }
+
+    // identify + prune candidates
+    let mut pruned = []
+    let mut total_mib = 0
+    let mut i = 0
+    while i < len(linked) {
+        let w = linked[i]
+        let branch = w["branch"]
+        let path = w["path"]
+        let merged_hit = _in_array(branch, merged)
+        let origin_gone = !_has_origin_branch(cwd, branch)
+        if merged_hit || origin_gone {
+            let mib = _du_mib(path)
+            let mut reason = "merged"
+            if !merged_hit && origin_gone { reason = "origin-gone" }
+            let rmr = exec_with_status("cd " + cwd + " && git worktree remove --force " + path + " 2>&1")
+            if rmr[1] == 0 {
+                let _brd = exec_with_status("cd " + cwd + " && git branch -D " + branch + " 2>&1")
+                let mut entry = json_parse("{}")
+                entry["path"] = path
+                entry["branch"] = branch
+                entry["mib"] = mib
+                entry["reason"] = reason
+                pruned.push(entry)
+                total_mib = total_mib + mib
+            }
+        }
+        i = i + 1
+    }
+
+    if len(pruned) == 0 { _allow() }
+
+    // human-readable GiB (1 decimal, rough)
+    let gib_whole = total_mib / 1024
+    let gib_frac = (total_mib % 1024) * 10 / 1024
+    let gib_str = to_string(gib_whole) + "." + to_string(gib_frac) + " GiB"
+
+    let mut lines = []
+    lines.push("# worktree-gc: pruned " + to_string(len(pruned)) + " (" + gib_str + " reclaimed)")
+    let mut j = 0
+    while j < len(pruned) && j < 10 {
+        let e = pruned[j]
+        lines.push("- " + e["branch"] + " (" + e["reason"] + ", " + to_string(e["mib"]) + " MiB) at " + e["path"])
+        j = j + 1
+    }
+    if len(pruned) > 10 { lines.push("- ... +" + to_string(len(pruned) - 10) + " more") }
+    let body = lines.join("\n") + "\n"
+    _emit(event, body)
+    exit(0)
+}

@@ -265,6 +265,12 @@
       "source": "./hooks/output-trim",
       "description": "PreToolUse(Bash) stdout trimmer — when a simple single Bash command would emit >8000 chars, transparently rewrite via `updatedInput` to pipe stdout through a minimal hexa-native kernel: consecutive-line dedup ([×N] counter) + per-line truncation to 200 chars. Small outputs <8000 chars pass verbatim. Skipped on any shell metacharacter so compound pipelines / redirects / heredocs / background jobs / command substitutions and other PreToolUse(Bash) rewrite hooks compose without conflict. Exit code preserved via `set -o pipefail`. Kernel chosen by benchmark on 120 real Bash-stdout samples ≥8000 chars — Pareto-dominates the TF-IDF salience + MinHash near-dup paragraph dedup approach of the original `wilson-output-trim`. NO opt-out by design.",
       "version": "0.1.2"
+    },
+    {
+      "name": "worktree-gc",
+      "source": "./hooks/worktree-gc",
+      "description": "SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_worktree_gc.hexa`, invoked via `hexa run`). Threshold gate (linked-count >= 3 OR disk avail < 20 GiB) keeps the common case (1-2 worktrees, ample disk) silent. Above threshold, fetches `gh pr list --state merged --limit 200` and prunes any linked worktree whose branch is in that merged set OR whose `origin/<branch>` ref is gone (force-removes the worktree directory and deletes the local branch). Open-PR worktrees are NEVER touched. gh unavailable / no merged PRs → short note + no action. Always exits 0 (non-blocking). NO opt-out by design.",
+      "version": "0.1.0"
     }
   ]
 }

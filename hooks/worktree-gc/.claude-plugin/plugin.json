@@ -1,0 +1,9 @@
+{
+  "name": "worktree-gc",
+  "description": "SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_worktree_gc.hexa`, invoked via `hexa run`). Threshold gate (linked-count >= 3 OR disk avail < 20 GiB) means the common case (1-2 worktrees, ample disk) stays silent. Above threshold, fetches `gh pr list --state merged --limit 200` and prunes any linked worktree whose branch is in that merged set OR whose `origin/<branch>` ref is gone (force-removes the worktree directory and deletes the local branch). Open-PR worktrees are NEVER touched. gh unavailable / no merged PRs → short note + no action. Always exits 0 (non-blocking). NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "worktree", "gc", "prune", "hexa"]
+}

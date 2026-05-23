@@ -39,3 +39,7 @@
 @D s8 := "pi5-akida is anima-only — exclude from general pool dispatch" :: governance [required active]
   do   = "use pi5-akida ONLY for anima work · explicit `pool on pi5-akida <cmd>` only"
   dont = "include pi5-akida in `pool route` / load-balancing / round-robin / auto-dispatch candidates"
+
+@D s9 := "claude sessions exempt from local load assessment" :: governance [required active]
+  do   = "exclude `claude` PIDs from CPU/load attribution · attribute load to non-claude consumers only"
+  dont = "count `claude` toward 'Mac overloaded → pool' · suggest killing claude as load remedy unasked"

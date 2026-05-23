@@ -460,7 +460,17 @@ fn main() {
     }
     if wd_remote == "" { _allow() }
     let wd_sh = _cd_target(wd_remote)
-    let remote = "cd " + wd_sh + " && " + rcmd
+    // env passthrough — hexa-native compiled builds require HEXA_MODULE_LOADER
+    // (else `use` modules codegen as extern stubs and clang link fails) and
+    // HEXA_LANG (repo root for stdlib resolution). Both are workdir-relative,
+    // so we resolve via $PWD after the cd lands — independent of the local
+    // workdir path quoting. Applies only when rcmd invokes hexa (word match
+    // OR substring); other commands (make / cargo / ...) get bare passthrough.
+    let mut hexa_env = ""
+    if _has_word(rcmd, "hexa") || rcmd.contains("hexa ") {
+        hexa_env = "export HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"$PWD\" && "
+    }
+    let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
 
     // transport — tailscale if a local daemon is up, else plain ssh
     let mut tx = "auto"

@@ -401,7 +401,14 @@ fn main() {
         }
     }
 
+    // (5) CHANGELOG.md at repo root (commons @D g29)
+    let mut nochangelog = false
+    if !file_exists(root + "/CHANGELOG.md") { nochangelog = true }
+
     let mut sections = []
+    if nochangelog {
+        sections.push("no CHANGELOG.md at repo root (commons @D g29 — create + maintain CHANGELOG.md as the chronological history surface)")
+    }
     if len(hist) > 0 {
         sections.push("stale-history patterns in staged diff (commons @D g15 — write current-state only):\n" + hist.join("\n"))
     }

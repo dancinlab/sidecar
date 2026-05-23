@@ -206,3 +206,7 @@
 @D g56 := "progress as % — ASCII bar + fraction on multi-step work" :: governance [required active]
   do   = "multi-step task → lead with `▓▓▓░░ NN% · done/total` + next step · refresh each turn"
   dont = "prose-only progress without a % bar · drop the bar mid-task on multi-step work"
+
+@D g57 := "pod fire → Monitor + SAVE_POD=1 (no fire-and-forget polling)" :: governance [required active]
+  do   = "after `hexa cloud nohup/run`, attach Monitor + SAVE_POD=1 to retain pod when SSH drops"
+  dont = "poll the log with `tail -f` / sleep-loop · let SSH drop without SAVE_POD=1 — result LOST"

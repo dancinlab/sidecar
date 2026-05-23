@@ -1,0 +1,9 @@
+{
+  "name": "pod-monitor",
+  "description": "PreToolUse(Bash) advisory hook that fires when a Bash command contains a GPU pod launch (`hexa cloud nohup` / `hexa cloud run`). Emits non-blocking additionalContext reminding the agent of commons @D g57 — attach Monitor tool to the streaming log AND set `SAVE_POD=1` envar before fire so the pod is retained when SSH drops. Closes the R8a-LOST class (pod terminated before result.json reached the operator) by enforcing the 2 invariants at fire time. Skips when both `SAVE_POD=1` and a Monitor invocation are already present in the chain. Implemented in hexa-lang (`_pod_monitor.hexa`, invoked via `hexa run`). Sister of cloud-guard (which blocks raw runpodctl/vastai); pod-monitor advises on the wrapped `hexa cloud` path.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "pod", "gpu", "monitor", "save-pod", "cloud", "hexa"]
+}

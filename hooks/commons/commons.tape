@@ -30,7 +30,7 @@
   do   = "sidekick roster → `pool on <host> <cmd>` — macOS-only (swift/xcode) · GPU · heavy build"
   dont = "run host-specific work on local shell when a sidekick host fits — roster in SessionStart"
 
-@D g10 := "Monitor tool for streaming" :: governance [active]
+@D g10 := "Monitor tool for streaming" :: governance [required active]
   do   = "use Claude Code's `Monitor` tool to stream background-process events (per-line stdout)"
   dont = "`tail -f` / `sleep`-poll loops for background-event streaming"
 

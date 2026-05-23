@@ -63,6 +63,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "plist-guard",
+      "source": "./hooks/plist-guard",
+      "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, invoked via `hexa run`). Any target file ending in `.plist` (LaunchAgents \u00b7 LaunchDaemons \u00b7 Info.plist \u00b7 UserDefaults) is denied with a redirecting message \u2014 the agent cannot distinguish user-explicit from model-autonomous intent, so all .plist writes are refused globally; if the user truly wants one, they run the command themselves outside the agent path. LaunchAgents / LaunchDaemons are persistence surfaces (auto-launch on login / boot), so silent writes risk installing daemons the user did not ask for. Enforces commons @D g37 (plist user-request only). NO opt-out by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "tape-lint",
       "source": "./hooks/tape-lint",
       "description": "PreToolUse(Edit|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` \u2014 no Python, no shell shim). Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule \u2014 `@D` blocks accept only `do` / `dont`; new `why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 `ex` \u00b7 ... refused. Fires on any `*.tape` path. (2) length cap \u2014 `do` / `dont` value > 100 chars refused (split overflow). commons.tape + project.tape only. (3) authoring-language \u2014 when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul \u00b7 CJK \u00b7 Hiragana \u00b7 Katakana) are refused. commons.tape + project.tape only. NO opt-out by design.",

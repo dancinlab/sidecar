@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **plist-guard 0.1.0 — 신규 hook plugin (g37 enforcement)** — commons `@D g37` ("plist user-request only") 의 실제 enforcement hook. PreToolUse(Write|Edit|NotebookEdit) 에서 target file path가 `.plist` 로 끝나면 `permissionDecision: deny` 응답. hexa-native 패턴 그대로 (`_plist_guard.hexa` via `hexa run`). 동기 — g37 governance rule 만으로는 모델이 self-enforce에 의존했으나, LaunchAgents / LaunchDaemons / Info.plist 는 persistence surface (로그인 · 부팅 자동 실행) 라 silent write 위험이 커서 hook-level enforcement 필요. hook은 user-explicit vs model-autonomous를 구별 불가하므로 globally deny — user가 명시 요청 시 직접 명령으로 처리 (agent path 외). `marketplace.json` 에 plist-guard entry 추가. NO opt-out by design (g30).
+
 - **commons 0.9.32 — `@D g44` 이미지 생성은 /imagine + gpt-image-2 pinned** — 새 `[required active]` governance block: 이미지 생성 needs는 `/imagine <prompt-file> <out.png>` 으로 — 기본 backend `fal`, 모델 `gpt-image-2`. **silently swap 금지**: gpt-image-2 → gpt-image-1 · dall-e-3 · flux 임의 대체 X. 동기 — user memory `feedback_gpt_image_2_pinned` 에 "무조건 gpt-image-2" 강한 신호가 있는데도 g 룰 zero라 모델이 다른 모델로 갈아탈 위험. `required` 격상으로 신호 강화. `marketplace.json` commons 설명 `g1..g43` → `g1..g44`.
 
 - **commons 0.9.31 — `@D g10` (Monitor) `[active]` → `[required active]` 격상** — `tail -f` / `sleep`-poll 루프로 background process event 스트리밍하는 패턴이 잦아서 격을 강화. 룰 본문(do/dont) 변경은 없음 — 단순 retag. 동기 — Claude Code의 `Monitor` 도구는 background process stdout을 라인 단위로 푸시 받는 정상 채널인데, `[active]` 권고 강도라 모델이 자주 `tail -f` 폴링 (CPU 낭비 + 통지 지연) 으로 빠짐. `required` 격상으로 신호 강화.

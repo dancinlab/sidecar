@@ -1,0 +1,155 @@
+// _memory_lint.hexa — PostToolUse(Write|Edit) advisory for the auto-memory
+// index file (`memory/MEMORY.md`). Fires when tool_input.file_path ends in
+// `memory/MEMORY.md` and emits non-blocking additionalContext for:
+//   1. line count > 30 (hot-tier soft cap → ship to MEMORY.archive.md)
+//   2. any single non-comment, non-blank line > 150 chars (TLDR budget)
+//
+// Advisory-only by design — per the guards-narrow-scope policy: non-blocking
+// additionalContext > deny for hygiene.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _emit(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// Extract the value of a JSON string field by raw substring scan. Sufficient
+// for tool_input.file_path which contains no embedded quotes in practice.
+fn _json_str_field(body: string, key: string) -> string {
+    let needle = "\"" + key + "\""
+    let n = len(body)
+    let p = body.index_of(needle)
+    if p < 0 { return "" }
+    let mut i = p + len(needle)
+    while i < n && (body[i] == " " || body[i] == "\t" || body[i] == ":") { i = i + 1 }
+    if i >= n || body[i] != "\"" { return "" }
+    i = i + 1
+    let start = i
+    while i < n && body[i] != "\"" {
+        if body[i] == "\\" && i + 1 < n { i = i + 2 }
+        else { i = i + 1 }
+    }
+    return body.substring(start, i)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let nx = len(suffix)
+    if nx > ns { return false }
+    return s.substring(ns - nx, ns) == suffix
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn main() {
+    let body = _read_stdin()
+    if body == "" { _allow() }
+
+    let tool = _json_str_field(body, "tool_name")
+    if tool != "Write" && tool != "Edit" { _allow() }
+
+    let file_path = _json_str_field(body, "file_path")
+    if file_path == "" { _allow() }
+    if !_ends_with(file_path, "/memory/MEMORY.md") { _allow() }
+
+    let content = _read_file_safe(file_path)
+    if content == "" { _allow() }
+
+    let lines = content.split("\n")
+    let total = len(lines)
+
+    // count non-comment, non-blank entries
+    let mut entries = 0
+    let mut long_lines = []
+    let mut i = 0
+    while i < total {
+        let raw = lines[i]
+        let t = _trim(raw)
+        if t != "" && !_starts_with(t, "<!--") && !_starts_with(t, "#") {
+            entries = entries + 1
+            let n = len(raw)
+            if n > 150 {
+                long_lines.push("    L" + to_string(i + 1) + " (" + to_string(n) + " chars)")
+            }
+        }
+        i = i + 1
+    }
+
+    let mut findings = []
+    if entries > 30 {
+        findings.push("• hot-tier soft cap exceeded: " + to_string(entries) + " entries > 30 → consider migrating older items to MEMORY.archive.md")
+    }
+    if len(long_lines) > 0 {
+        let head = "• lines > 150 chars (TLDR refactor budget — verb + nouns, drop trailing clauses into sibling file):"
+        let mut buf = [head]
+        let mut j = 0
+        while j < len(long_lines) {
+            buf.push(long_lines[j])
+            j = j + 1
+        }
+        findings.push(buf.join("\n"))
+    }
+
+    if len(findings) == 0 { _allow() }
+
+    let header = "memory-lint findings (non-blocking) for " + file_path + ":\n"
+    _emit(header + findings.join("\n"))
+}

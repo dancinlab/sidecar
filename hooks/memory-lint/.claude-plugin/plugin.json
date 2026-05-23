@@ -1,0 +1,9 @@
+{
+  "name": "memory-lint",
+  "description": "PostToolUse(Write|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`). Fires when tool_input.file_path ends in `memory/MEMORY.md` and reads the post-write file to emit non-blocking additionalContext for: entry count > 30 (hot-tier soft cap → migrate older items to sibling MEMORY.archive.md), any non-comment line > 150 chars (TLDR refactor budget — verb + nouns, push trailing clauses into the sibling `*.md` file). Implemented in hexa-lang (`_memory_lint.hexa`, invoked via `hexa run`). Keeps the always-loaded MEMORY.md dense + greppable as memories accumulate. Advisory-only by design (per the guards-narrow-scope policy: non-blocking additionalContext > deny for hygiene).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "lint", "memory", "auto-memory", "hexa"]
+}

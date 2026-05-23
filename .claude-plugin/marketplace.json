@@ -51,6 +51,12 @@
       "version": "0.4.1"
     },
     {
+      "name": "memory-lint",
+      "source": "./hooks/memory-lint",
+      "description": "PostToolUse(Write|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memory_lint.hexa`, invoked via `hexa run`). Reads the post-write file when tool_input.file_path ends in `memory/MEMORY.md` and emits non-blocking additionalContext for: entry count > 30 (hot-tier soft cap → migrate older items to sibling MEMORY.archive.md) · any non-comment line > 150 chars (TLDR refactor budget — verb + nouns, push trailing clauses into the sibling `*.md` file). Keeps the always-loaded MEMORY.md dense + greppable as memories accumulate. Advisory-only by design (per guards-narrow-scope: non-blocking additionalContext > deny for hygiene).",
+      "version": "0.1.0"
+    },
+    {
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
       "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit \u00b7 missing CHANGELOG.md at repo root (commons @D g29). NO opt-out by design.",

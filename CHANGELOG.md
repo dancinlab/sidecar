@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.39 — `@D g50` AI CLI first, API/SDK as fallback** — 새 `[required active]` governance block: AI 기능 (이미지 생성 · 검색 · transcript 등) 은 항상 CLI wrapper 먼저 (`/imagine` · `/research:arxiv` · `/research:yt` 등), API/SDK 는 wrapper 가 없는 경우에만. 동기 — 모델이 `/imagine` 같은 wrapper 가 있는데도 자꾸 openai/anthropic/fal SDK · curl POST · raw HTTP request 로 직접 호출. g50 가 설계 시점부터 강제 — wrapper 가 SSOT. `marketplace.json` commons 설명 `g1..g49` → `g1..g50`.
+
 - **commons 0.9.38 — `@D g49` GPU dispatch priority (pool first, cloud fallback)** — 새 `[required active]` governance block: GPU 작업은 (1) 먼저 `pool list` 의 sidekick roster 에서 enabled GPU host 확인 (g9 사내 pool) → (2) pool 에 GPU host 가 없을 때만 `hexa cloud` 임대 (g8 rented pod). 동기 — 모델이 GPU 작업에서 자꾸 `hexa cloud` 로만 dispatch 하고 사내 pool 의 GPU host 활용 안 하는 패턴. g49 가 g8/g9 위에 dispatch 우선순위 명시 — "pool first" doctrine. `marketplace.json` commons 설명 `g1..g48` → `g1..g49`.
 
 - **commons 0.9.37 — `@D g48` cross-project inbox ack (close-then-notify)** — 새 `[required active]` governance block: inbox entry 처리 완료 시 (1) 자기 entry frontmatter 에 `status: resolved` set + (2) sender 의 inbox 에 ack 파일 작성. 두 액션이 atomic — entry close + sender notify. 동기 — inbox-watch 가 receiver 측 자동 인지는 해결했으나 ack loop 가 빠지면 sender 는 patch 처리됐는지 모름. handoff loop 의 close-then-notify 패턴으로 양방향 인지 완성. **참고**: 현재는 governance rule (model self-discipline). 향후 hook 으로 자동 ack 가능성 — entry status set 시 sender notify 강제. `marketplace.json` commons 설명 `g1..g47` → `g1..g48`. (PR #62 commit 에서 entry 누락 — 이 PR 에서 retroactive 추가.)

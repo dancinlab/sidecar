@@ -180,3 +180,7 @@
 @D g49 := "GPU dispatch priority — pool first, cloud as fallback" :: governance [required active]
   do   = "GPU work → check `pool list` for GPU host → `hexa cloud` only when pool has no GPU host"
   dont = "default to rented runpod/vast.ai when an enabled pool host with GPU is in the roster"
+
+@D g50 := "AI CLI first — API/SDK only as fallback" :: governance [required active]
+  do   = "AI need (image/search/transcript/…) → CLI wrapper first · API/SDK only if no wrapper exists"
+  dont = "openai/anthropic/fal SDK · curl POST · raw HTTP when a /imagine /research /… CLI wraps it"

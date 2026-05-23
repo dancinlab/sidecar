@@ -5,6 +5,9 @@ allowed-tools: Bash
 ---
 
 !`H="$CLAUDE_PLUGIN_ROOT/bin/_domain.hexa"
-[ -f "$H" ] || H="$(find "$HOME/.claude/plugins/cache/sidecar/domain" -name _domain.hexa 2>/dev/null | sort -V | tail -1)"
-[ -f "$H" ] || { echo "✗ _domain.hexa not found — check sidecar install"; exit 1; }
+if [ ! -f "$H" ]; then
+    V="$(ls -1t "$HOME/.claude/plugins/cache/sidecar/domain" 2>/dev/null | head -1)"
+    [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/domain/$V/bin/_domain.hexa"
+fi
+[ -f "$H" ] || { echo "✗ _domain.hexa not found — run /reload-plugins or hx install sidecar"; exit 1; }
 hexa run "$H" $ARGUMENTS`

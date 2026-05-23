@@ -1,8 +1,12 @@
+---
+status: resolved
+---
 # `.hexa`-migrated skill 들이 `command -v _*.hexa` 로 bin 못 찾음 (PATH 미등록)
 
-## 상태
-- ✅ **research:arxiv · research:yt — 해결됨 (0.2.2)**
-- ⬜ domain · inbox · imagine · paper · ship — 동일 `command -v` 배선 버그 잔존
+## 상태 — ✅ 전부 해결
+- ✅ research:arxiv · research:yt (0.2.2)
+- ✅ domain (0.5.0 — 별도 작업에서 wiring 동시 수정)
+- ✅ inbox (0.2.3) · imagine (0.2.2) · paper (0.5.2) · ship (0.2.3)
 
 ## TL;DR
 `.sh`→`.hexa` 마이그레이션 스킬의 커맨드 템플릿이
@@ -21,11 +25,12 @@ plugin bin 은 PATH 에 미등록 → `$H` 빈 값 → `hexa run "" <첫인자>`
 ```
 `--root` 가 필요한 imagine/paper 는 `--root "$CLAUDE_PLUGIN_ROOT"` 로.
 
-## 남은 작업 (형제 스킬)
+## 적용된 파일 (전부 완료)
+- skills/research/commands/{arxiv,yt}.md  (+ 두 bin 의 dead `stdlib/regex.hexa` import 제거)
 - skills/domain/commands/domain.md
 - skills/inbox/commands/inbox.md
-- skills/imagine/commands/imagine.md  (`--root` 인자 포함)
-- skills/paper/commands/paper.md      (`--root` 인자 포함)
+- skills/imagine/commands/imagine.md  (`--root "$CLAUDE_PLUGIN_ROOT"`)
+- skills/paper/commands/paper.md      (`--root "$CLAUDE_PLUGIN_ROOT"`)
 - skills/ship/commands/ship.md
 
 ## 발견 맥락

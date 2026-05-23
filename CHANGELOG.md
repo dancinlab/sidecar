@@ -6,6 +6,12 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24
+
+- **pool-route 0.5.6 — SSH dispatch 시 `PATH` 에 `$HOME/.hx/bin:$HOME/bin` prepend (hexa 명령 한정)** — `_pool_route.hexa::main` 의 hexa-env 조립에 `export PATH="$HOME/.hx/bin:$HOME/bin:$PATH"` 추가. routed `rcmd` 가 hexa 토큰을 포함하면 기존 `HEXA_MODULE_LOADER`/`HEXA_LANG` 옆에 PATH prefix 도 같이 묶어서 export (non-hexa 명령은 변동 0). 진단 — F-LIVE-DISPATCH 측정 (2026-05-24 cycle 3 [[reference_kick_pool_routing_2026_05_23]]) 에서 0.5.5 가 SSH dispatch + env passthrough 까지는 도달했으나 remote 측에서 `bash: hexa: command not found`. ssh 비-interactive shell (심지어 `bash -lc` wrap 후에도) 의 PATH 가 mini (Mac) 는 `/usr/bin:/bin:/usr/sbin:/sbin`, ubu-2 (Linux) 는 `/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin` 으로 둘 다 `~/.hx/bin` 누락. macOS path_helper 한계 + Linux sshd PrintMotd-off non-login env. fix = ssh 명령 안 inline `export PATH=...` (가장 신뢰 가능 · sshd `AcceptEnv` 변경 불요). 모든 pool 호스트가 `hx install` 베이스라인으로 `~/.hx/bin/hexa` 보장 → 단일 prefix 가 mini/ubu-1/ubu-2 모두 커버. hexa 명령에만 적용 → make/cargo/docker 등 영향 0. plugin.json + marketplace.json 0.5.5 → 0.5.6.
+
+---
+
 ## 2026-05-23
 
 - **pool-route 0.5.5 — SSH dispatch 시 `HEXA_MODULE_LOADER` + `HEXA_LANG` env 자동 전달** — `_pool_route.hexa::main` 의 remote 명령 조립에 env-passthrough 추가. routed `rcmd` 가 `hexa` 토큰 또는 `hexa ` substring 을 포함하면 `cd <wd> && export HEXA_MODULE_LOADER="$PWD/build/hexa_module_loader" HEXA_LANG="$PWD" && <rcmd>` 로 wrap (그 외 명령은 bare passthrough — make/cargo 등 영향 0). `$PWD` 로 해결하므로 remote home expansion / workdir quoting 신경 안 써도 됨. 진단 — F-LIVE-ROUTE ✅ 측정 (2026-05-23 [[reference_kick_pool_routing_2026_05_23]]) 에서 0.5.4 가 ubu 로 SSH dispatch 까지는 도달했으나 ubu 측 hexa build 가 `[flat] warn: compiled module_loader not found` + clang link `Undefined symbols` 로 실패. 루트 코즈 = compiled module_loader env 필수 ([[reference_hexa_module_loader_env_2026_05_20]]) 미전달. ssh 는 기본 env 를 거의 안 실어보내고 sshd `AcceptEnv` 화이트리스트도 HEXA_* 없음 → 명령 안에서 inline export 가 가장 신뢰 가능. fix 는 hexa 명령에만 적용 — non-hexa 명령은 변동 0 (overhead 도 0). plugin.json + marketplace.json 0.5.4 → 0.5.5.

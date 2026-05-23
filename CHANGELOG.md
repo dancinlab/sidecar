@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.46 — `@D g5` 아래 hexa verify tier rubric legend 등록** — commons.tape g5 (verify via hexa CLI only) 바로 아래에 `hexa verify rubric` 의 6-tier 판정 등급을 비-들여쓰기 `#` legend 로 박음 — 🔵 SUPPORTED-FORMAL (closed-form/symbolic 정확 재현) · 🟢 SUPPORTED-NUMERICAL (libm/Newton 수치 재계산 일치) · 🟡 SUPPORTED-BY-CITATION (atlas/문헌 등록, 재계산 없음 — never auto-🔵) · 🟠 INSUFFICIENT/DEFERRED (calc 경로 없음 · 외부 hw/data/API 의존) · 🔴 FALSIFIED (calc 결정론적 불일치 — CLOSED negative) · ⚪ SPECULATION-FENCED (상상/은유 — verify N/A). 동기 — g5 가 "verdict 를 verbatim 붙여라" 만 말하고 각 색이 뭘 뜻하는지는 COMMANDS.md 한 줄에만 있었음 → 매 세션 주입되는 commons.tape 에 등급 의미를 inline 으로 넣어 agent 가 verdict 색을 바로 해석. legend 는 column 0 (`@D` 블록 밖) 이라 tape-lint do/dont 검사·100자 캡·non-Latin 검사 모두 비대상 (emoji 는 g14 선례대로 통과). `marketplace.json` + `plugin.json` 0.9.45 → 0.9.46.
+
 - **commons 0.9.45 — COMMANDS.md 카탈로그 SessionStart 주입** — `hooks/commons/COMMANDS.md` 신규 — sidecar 슬래시 명령 전체를 7그룹 코드블록 + 명령별 설명 + guard hook 목록으로 정리한 agent self-use 카탈로그. `_commons.hexa` 가 **SessionStart event 에서만** (매 turn 아님 — 토큰 절약) commons.tape + roster snapshot 뒤에 COMMANDS.md 를 append. 동기 — agent 가 cross-project 어디서든 어떤 슬래시 명령이 있고 뭘 하는지 인지 → 자율 사용. g23 (슬래시 명령 이름 목록) 의 상세-설명 보강. README Commands 섹션과 동일 내용 (SSOT 동기화). `marketplace.json` + `plugin.json` 0.9.44 → 0.9.45.
 
 - **commons 0.9.44 — `@D g0` Occam's razor (최상단 메타 원칙)** — commons.tape 최상단 (`@V` spec 다음, g1 앞) 에 오컴의 면도날을 `@D g0` 로 등록. `do = 가장 단순한 설명/해법 선호 (최소 가정 · 최소 moving parts)`, `dont = 불필요하게 entity 늘리기 · 단순한 길 있는데 복잡한 길 선택`. g33 (simplicity first) 가 code 한정인 반면 g0 은 explanation/solution/hypothesis 전반의 메타 원칙. 최상단 배치 — 4095 byte 주입 truncation 에서도 최우선 생존, 가장 먼저 읽히는 lens. `marketplace.json` commons 설명 `g1..g53` → `g0..g53`, 버전 0.9.43 → 0.9.44.

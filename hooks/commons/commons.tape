@@ -20,6 +20,14 @@
   do   = "`hexa verify` for correctness · purity · grade · identity claims — paste the verdict VERBATIM"
   dont = "LLM self-judge correctness · cite sympy / PyPhi / Wolfram / Mathematica as primary evidence"
 
+# g5 tier rubric (`hexa verify rubric` · TECS-L-aligned · paste the matching verdict verbatim):
+#   🔵 SUPPORTED-FORMAL       closed-form / symbolic identity reproduced exactly (Tier 1, deterministic)
+#   🟢 SUPPORTED-NUMERICAL    libm / Newton numerical recompute matches (Tier 2, non-symbolic)
+#   🟡 SUPPORTED-BY-CITATION  atlas / literature registered · NO hexa recompute (never auto-🔵)
+#   🟠 INSUFFICIENT/DEFERRED  no calc path · or external hw / data / API dep (Tier 3)
+#   🔴 FALSIFIED              calc deterministically disagrees — a CLOSED negative (≠ INSUFFICIENT)
+#   ⚪ SPECULATION-FENCED     imagination / metaphor — verify N/A, SF ≠ proven
+
 @D g6 := "hexa kick for gap discovery" :: governance [active]
   do   = "`hexa kick --seed \"<expr>\" [--rounds N]` for gap breakthroughs · discovery"
 

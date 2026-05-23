@@ -43,6 +43,39 @@ fn _contains(hay: string, needle: string) -> bool {
     return hay.index_of(needle) >= 0
 }
 
+// Word-boundary char class — [A-Za-z0-9_]. A "word match" is one where the
+// needle's neighbors are NOT word chars (so `M6` doesn't accidentally match
+// inside `M16` or `M62`). Critical for `done <term>` disambiguation.
+fn _is_word_char(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k >= 65 && k <= 90 { return true }
+    if k >= 97 && k <= 122 { return true }
+    if k == 95 { return true }
+    return false
+}
+
+fn _word_match(hay: string, needle: string) -> bool {
+    let m = len(needle)
+    if m == 0 { return false }
+    let n = len(hay)
+    let mut from = 0
+    let mut guard = 0
+    while guard < 100000 {
+        let rest = hay.substring(from, n)
+        let rel = rest.index_of(needle)
+        if rel < 0 { return false }
+        let at = from + rel
+        let left_ok = at == 0 || !_is_word_char(hay[at - 1])
+        let after = at + m
+        let right_ok = after >= n || !_is_word_char(hay[after])
+        if left_ok && right_ok { return true }
+        from = at + 1
+        guard = guard + 1
+    }
+    return false
+}
+
 // uppercase a-z, map '-' to '_', keep the rest — mirrors `tr 'a-z-' 'A-Z_'`.
 fn _domain_name(s: string) -> string {
     let mut out = ""
@@ -163,20 +196,54 @@ fn _append_goal(root: string, name: string, text: string) {
 }
 
 // flip a snapshot goal `- [ ] *<term>*` -> `- [x]` (goal completion → progress)
+//
+// Match policy: word-boundary `term` (so `M6` does not bleed into `M16`/`M62`).
+// Disambiguation:
+//   * exactly 1 open match → flip + return true (caller stops)
+//   * 2+ open matches      → print candidates + exit 1 (ambiguous, force user
+//                            to use a more specific term — never silently flip
+//                            the first hit when intent is unclear)
+//   * 0 open + closed hit  → record the closed line(s) for the dispatcher to
+//                            surface as a hint, return false
+//   * 0 anywhere           → return false (caller falls back to _flip_done)
 fn _flip_goal(root: string, name: string, term: string) -> bool {
     _ensure_files(root, name)
     let snap = root + "/" + name + ".md"
     let body = _read_file_safe(snap)
     let lines = body.split("\n")
+    let mut opens = []
+    let mut closes = []
     let mut i = 0
     while i < len(lines) {
         let ln = lines[i]
-        if _starts_with(ln, "- [ ] ") && _contains(ln, term) {
-            lines[i] = "- [x] " + ln.substring(6, len(ln))
-            write_file(snap, lines.join("\n"))
-            return true
-        }
+        if _starts_with(ln, "- [ ] ") && _word_match(ln, term) { opens.push(i) }
+        else if _starts_with(ln, "- [x] ") && _word_match(ln, term) { closes.push(i) }
         i = i + 1
+    }
+    if len(opens) == 1 {
+        let idx = opens[0]
+        let old = lines[idx]
+        lines[idx] = "- [x] " + old.substring(6, len(old))
+        write_file(snap, lines.join("\n"))
+        return true
+    }
+    if len(opens) >= 2 {
+        eprintln("domain: ambiguous — '" + term + "' matches " + to_string(len(opens)) + " open milestones in " + name + ".md:")
+        let mut j = 0
+        while j < len(opens) {
+            eprintln("  " + lines[opens[j]])
+            j = j + 1
+        }
+        eprintln("hint: use a longer / more specific term")
+        exit(1)
+    }
+    if len(closes) > 0 {
+        eprintln("domain: '" + term + "' already closed in " + name + ".md:")
+        let mut j = 0
+        while j < len(closes) {
+            eprintln("  " + lines[closes[j]])
+            j = j + 1
+        }
     }
     return false
 }
@@ -206,29 +273,53 @@ fn _new_entry(root: string, name: string, header: string) {
     write_file(log, out.join("\n"))
 }
 
+// Flip a log task `- [ ] <term>` -> `- [x]`. Same word-boundary +
+// disambiguation policy as _flip_goal (see comment there). Called only when
+// _flip_goal returned false (snapshot didn't match), so a closed-hint surfaced
+// there has already been printed.
 fn _flip_done(root: string, name: string, term: string) {
     _ensure_files(root, name)
     let log = root + "/" + name + ".log.md"
     let body = _read_file_safe(log)
     let lines = body.split("\n")
-    let mut hit = -1
+    let mut opens = []
+    let mut closes = []
     let mut i = 0
     while i < len(lines) {
         let ln = lines[i]
-        if _starts_with(ln, "- [ ] ") && _contains(ln, term) {
-            hit = i
-            break
-        }
+        if _starts_with(ln, "- [ ] ") && _word_match(ln, term) { opens.push(i) }
+        else if _starts_with(ln, "- [x] ") && _word_match(ln, term) { closes.push(i) }
         i = i + 1
     }
-    if hit < 0 {
-        eprintln("domain: no pending task matching '" + term + "'")
+    if len(opens) == 1 {
+        let idx = opens[0]
+        let old = lines[idx]
+        lines[idx] = "- [x] " + old.substring(6, len(old))
+        write_file(log, lines.join("\n"))
+        println("flipped: " + term)
+        return
+    }
+    if len(opens) >= 2 {
+        eprintln("domain: ambiguous — '" + term + "' matches " + to_string(len(opens)) + " open tasks in " + name + ".log.md:")
+        let mut j = 0
+        while j < len(opens) {
+            eprintln("  " + lines[opens[j]])
+            j = j + 1
+        }
+        eprintln("hint: use a longer / more specific term")
         exit(1)
     }
-    let old = lines[hit]
-    lines[hit] = "- [x] " + old.substring(6, len(old))
-    write_file(log, lines.join("\n"))
-    println("flipped: " + term)
+    if len(closes) > 0 {
+        eprintln("domain: '" + term + "' already closed in " + name + ".log.md:")
+        let mut j = 0
+        while j < len(closes) {
+            eprintln("  " + lines[closes[j]])
+            j = j + 1
+        }
+        exit(1)
+    }
+    eprintln("domain: no pending task matching '" + term + "' (checked snapshot + log)")
+    exit(1)
 }
 
 fn _env(name: string) -> string {

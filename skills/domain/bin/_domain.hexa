@@ -367,10 +367,14 @@ fn _show(root: string, name: string) {
     let log = root + "/" + name + ".log.md"
     let goal = _get_goal(root, name)
     let c = _count_tasks(root, name)
-    let mut head = "◆ active domain: " + name
-    if goal != "" { head = head + "   🎯 " + goal }
-    println(head)
-    println("진행 " + _progress_bar(c[0], c[0] + c[1]))
+    // progress is reported ONLY when an `@goal:` is declared — the goal is
+    // the frame of reference. No goal → no progress line (just the lint).
+    if goal == "" {
+        println("◆ active domain: " + name)
+    } else {
+        println("◆ active domain: " + name + "   🎯 " + goal)
+        println("진행 " + _progress_bar(c[0], c[0] + c[1]))
+    }
     _lint(root, name)
     println("═══ " + snap + " ═══")
     print(_read_file_safe(snap))

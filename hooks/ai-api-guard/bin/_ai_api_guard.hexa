@@ -1,0 +1,166 @@
+// _ai_api_guard.hexa — PreToolUse(Bash) hard block for raw AI-API
+// calls when a sidecar CLI wraps the same operation.
+//
+// commons @D g50: AI features (image / search / transcript / …) route
+// through the CLI wrapper first (/imagine, /research, …). Raw API/SDK
+// is allowed only when no wrapper exists. This hook enforces that at
+// the Bash layer.
+//
+// Detection (two patterns):
+//
+// (1) HTTP CLIs to an AI hostname:
+//     first-token ∈ {curl, wget, http, httpie} AND command contains
+//     one of the AI API hostnames (api.openai.com, api.anthropic.com,
+//     fal.run, api.replicate.com, generativelanguage.googleapis.com).
+//
+// (2) inline-Python/JS verification probe:
+//     first-token ∈ {python, python3, node, deno, bun} AND command
+//     contains ` -c ` (python/node) OR ` -e ` (node/deno/bun) AND one
+//     of the AI-SDK import substrings (`import openai`,
+//     `import anthropic`, `import fal_client`, `import replicate`,
+//     `import google.generativeai`, `require("openai"`, etc.).
+//
+// General SDK usage in committed code files (no -c/-e) passes through.
+//
+// NO opt-out by design (commons @D g30).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _is_http_cli(t: string) -> bool {
+    if t == "curl" { return true }
+    if t == "wget" { return true }
+    if t == "http" { return true }
+    if t == "httpie" { return true }
+    return false
+}
+
+fn _has_ai_hostname(cmd: string) -> bool {
+    if cmd.contains("api.openai.com") { return true }
+    if cmd.contains("api.anthropic.com") { return true }
+    if cmd.contains("fal.run") { return true }
+    if cmd.contains("api.replicate.com") { return true }
+    if cmd.contains("generativelanguage.googleapis.com") { return true }
+    return false
+}
+
+fn _is_inline_runtime(t: string) -> bool {
+    if t == "python" { return true }
+    if t == "python3" { return true }
+    if t == "node" { return true }
+    if t == "deno" { return true }
+    if t == "bun" { return true }
+    return false
+}
+
+fn _has_inline_flag(cmd: string) -> bool {
+    if cmd.contains(" -c ") { return true }
+    if cmd.contains(" -e ") { return true }
+    return false
+}
+
+fn _has_ai_sdk_import(cmd: string) -> bool {
+    if cmd.contains("import openai") { return true }
+    if cmd.contains("from openai") { return true }
+    if cmd.contains("import anthropic") { return true }
+    if cmd.contains("from anthropic") { return true }
+    if cmd.contains("import fal_client") { return true }
+    if cmd.contains("from fal_client") { return true }
+    if cmd.contains("import replicate") { return true }
+    if cmd.contains("from replicate") { return true }
+    if cmd.contains("import google.generativeai") { return true }
+    if cmd.contains("from google.generativeai") { return true }
+    if cmd.contains("require(\"openai\"") { return true }
+    if cmd.contains("require('openai'") { return true }
+    if cmd.contains("require(\"@anthropic-ai/") { return true }
+    if cmd.contains("require('@anthropic-ai/") { return true }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
+    if cmd == "" { _allow() }
+
+    let toks = _tokens(cmd)
+    if len(toks) < 1 { _allow() }
+    let first = toks[0]
+
+    // (1) HTTP CLI to AI hostname
+    if _is_http_cli(first) && _has_ai_hostname(cmd) {
+        let reason = "ai-api-guard (commons @D g50): `" + first + " … <AI hostname>` is a raw HTTP call to an AI provider — refused.\n  Use the sidecar CLI wrapper instead:\n    image generation → `/imagine <prompt-file> <out.png>` (g44 pinned gpt-image-2)\n    arxiv / YouTube → `/research:arxiv` / `/research:yt` (g43)\n    text/correctness → `hexa verify` (g5)\n  Raw API/SDK is allowed only when no wrapper exists. NO opt-out (g30)."
+        _deny(reason)
+    }
+
+    // (2) inline-runtime AI-SDK probe
+    if _is_inline_runtime(first) && _has_inline_flag(cmd) && _has_ai_sdk_import(cmd) {
+        let reason = "ai-api-guard (commons @D g50): inline `" + first + " -c/-e '… import <AI SDK> …'` is a raw AI-SDK probe — refused.\n  Use the sidecar CLI wrapper instead (/imagine · /research · /verify · …). Raw SDK is allowed only when no wrapper exists, and only when committed to a code file (no inline `-c`/`-e`). NO opt-out (g30)."
+        _deny(reason)
+    }
+
+    _allow()
+}

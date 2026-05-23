@@ -1,0 +1,299 @@
+// _pool_mcp.hexa — stdio MCP server exposing pool hosts as Claude Code tools.
+//
+// Protocol: JSON-RPC 2.0, newline-delimited, over stdin/stdout.
+// Methods handled:
+//   initialize          -> server capabilities ({"tools": {}})
+//   tools/list          -> the 2 tool schemas (pool_on, pool_list)
+//   tools/call          -> dispatch to pool_on / pool_list handlers
+//   notifications/*     -> swallow silently (no response per JSON-RPC spec)
+//
+// Tools:
+//   pool_on(host, command, timeout?) ->
+//       {stdout, stderr, exit_code, non_claude_load}
+//     Shells out `pool on <host> <command>` (the `pool` CLI is on PATH on
+//     user installs), captures stdout/stderr/rc, attaches a non_claude_load
+//     CPU% advisory metric (sidecar @D s9 — `claude` PIDs excluded).
+//
+//   pool_list(include_anima?) -> {hosts: [...]}
+//     Reads ~/.pool/pool.json, returns the roster. pi5-akida excluded by
+//     default per sidecar @D s8 (anima-only host); pass include_anima=true
+//     to include it.
+//
+// Implementation notes:
+//   * POC scope: reads stdin to EOF (single-shot drain) then processes each
+//     line in order, emitting responses to stdout. Real Claude Code MCP
+//     usage works because the harness sends a small handshake batch and
+//     does not require interleaved streaming for this minimal tool set.
+//     A streaming line-reader (currently absent from hexa builtins) is a
+//     0.2.0 follow-up.
+//   * stderr/stdout for the wrapped command is captured via two passes:
+//     stdout = `pool on <host> <cmd>` and stderr = `pool on <host> <cmd>
+//     2>&1 1>/dev/null` to keep them separate without a tmpfile.
+
+// ── stdin / json plumbing ────────────────────────────────────────────────
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _env(name: string) -> string {
+    let r = exec_with_status("printenv " + name)
+    if r[1] != 0 { return "" }
+    return r[0].trim()
+}
+
+// JSON-escape a string and wrap it in double quotes.
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// shell single-quote: wrap in '...', embedded ' becomes '\''
+fn _shq(s: string) -> string {
+    return "'" + s.split("'").join("'\\''") + "'"
+}
+
+// ── response envelopes ───────────────────────────────────────────────────
+
+fn _emit_result(id_raw: string, result_json: string) {
+    // id_raw is the raw JSON token (string, number, or null) — preserved
+    // verbatim so JSON-RPC id-type-fidelity is honored.
+    let env = "{\"jsonrpc\":\"2.0\",\"id\":" + id_raw + ",\"result\":" + result_json + "}"
+    println(env)
+}
+
+fn _emit_error(id_raw: string, code: int, message: string) {
+    let env = "{\"jsonrpc\":\"2.0\",\"id\":" + id_raw + ",\"error\":{\"code\":" + to_string(code) + ",\"message\":" + _json_str(message) + "}}"
+    println(env)
+}
+
+// Extract a value's raw JSON token from a parsed line by re-stringifying.
+// id may be a number, string, or null — we rely on json_stringify to keep
+// the right shape (the parsed map value preserves type).
+fn _id_token(req: map) -> string {
+    if !has_key(req, "id") { return "null" }
+    let v = req["id"]
+    let t = type_of(v)
+    if t == "string" { return _json_str(v) }
+    if t == "int" || t == "float" || t == "number" { return to_string(v) }
+    if t == "null" { return "null" }
+    return json_stringify(v)
+}
+
+// ── tool: pool_list ──────────────────────────────────────────────────────
+
+// Returns the roster JSON string. pi5-akida is filtered out unless
+// include_anima is true (sidecar @D s8 — anima-only host).
+fn _pool_list(include_anima: bool) -> string {
+    let home = _env("HOME")
+    let path = home + "/.pool/pool.json"
+    let mut raw = ""
+    try { raw = read_file(path) } catch e { return "{\"hosts\":[]}" }
+    let mut parsed = json_parse("{\"hosts\":[]}")
+    try { parsed = json_parse(raw) } catch e { return "{\"hosts\":[]}" }
+    if type_of(parsed) != "map" { return "{\"hosts\":[]}" }
+    if !has_key(parsed, "hosts") { return "{\"hosts\":[]}" }
+    let hosts = parsed["hosts"]
+    if type_of(hosts) != "array" { return "{\"hosts\":[]}" }
+    let mut kept = []
+    let mut i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        let mut name = ""
+        if type_of(h) == "map" {
+            if has_key(h, "name") { if type_of(h["name"]) == "string" { name = h["name"] } }
+        }
+        let mut skip = false
+        if !include_anima && name == "pi5-akida" { skip = true }
+        if !skip { kept.push(h) }
+        i = i + 1
+    }
+    let mut out = parsed
+    out["hosts"] = kept
+    return json_stringify(out)
+}
+
+// ── tool: pool_on ────────────────────────────────────────────────────────
+
+// Sample the LOCAL Mac's non-claude CPU% — sum pcpu for every process
+// whose comm does NOT contain "claude" (sidecar @D s9). Advisory only —
+// pool_on does not gate on this value; the caller decides.
+fn _non_claude_load() -> int {
+    let cmd = "ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'"
+    let r = exec_with_status(cmd)
+    if r[1] != 0 { return -1 }
+    let s = r[0].trim()
+    if s == "" { return -1 }
+    let mut n = 0
+    try { n = to_int(s) } catch e { n = -1 }
+    return n
+}
+
+// Run `pool on <host> <command>` and return a JSON object with stdout,
+// stderr, exit_code, non_claude_load. Two passes so stdout/stderr stay
+// separated without a tmpfile.
+fn _pool_on(host: string, command: string) -> string {
+    let load = _non_claude_load()
+    let base = "pool on " + _shq(host) + " " + _shq(command)
+    let stdout_cmd = base + " 2>/dev/null"
+    let stderr_cmd = base + " 2>&1 1>/dev/null"
+    let so = exec_with_status(stdout_cmd)
+    let se = exec_with_status(stderr_cmd)
+    let rc = so[1]
+    return "{\"stdout\":" + _json_str(so[0])
+        + ",\"stderr\":" + _json_str(se[0])
+        + ",\"exit_code\":" + to_string(rc)
+        + ",\"non_claude_load\":" + to_string(load) + "}"
+}
+
+// ── tools/list schema ────────────────────────────────────────────────────
+
+fn _tools_list_result() -> string {
+    let tools = "["
+        + "{\"name\":\"pool_on\","
+        + "\"description\":\"Run a shell command on a pool host via the local `pool` CLI. Returns stdout, stderr, exit_code, and a non_claude_load advisory (local Mac CPU%, claude PIDs excluded per sidecar @D s9).\","
+        + "\"inputSchema\":{"
+            + "\"type\":\"object\","
+            + "\"properties\":{"
+                + "\"host\":{\"type\":\"string\",\"description\":\"pool host name from ~/.pool/pool.json (e.g. mini, ubu-1, ubu-2)\"},"
+                + "\"command\":{\"type\":\"string\",\"description\":\"shell command to run on the host\"},"
+                + "\"timeout\":{\"type\":\"integer\",\"description\":\"optional timeout in seconds (advisory only in 0.1.0; enforced in 0.2.0)\"}"
+            + "},"
+            + "\"required\":[\"host\",\"command\"]"
+        + "}}"
+        + ","
+        + "{\"name\":\"pool_list\","
+        + "\"description\":\"Read the pool roster (~/.pool/pool.json) and return the host list. pi5-akida excluded by default per sidecar @D s8 (anima-only); pass include_anima=true to include it.\","
+        + "\"inputSchema\":{"
+            + "\"type\":\"object\","
+            + "\"properties\":{"
+                + "\"include_anima\":{\"type\":\"boolean\",\"description\":\"include pi5-akida (anima host) in the result (default: false)\"}"
+            + "}"
+        + "}}"
+        + "]"
+    return "{\"tools\":" + tools + "}"
+}
+
+// ── tools/call dispatch ──────────────────────────────────────────────────
+
+fn _wrap_content(text: string) -> string {
+    // MCP tools/call result shape: {content: [{type: "text", text: "..."}]}
+    return "{\"content\":[{\"type\":\"text\",\"text\":" + _json_str(text) + "}]}"
+}
+
+fn _handle_call(req: map, id_raw: string) {
+    if !has_key(req, "params") {
+        _emit_error(id_raw, -32602, "missing params")
+        return
+    }
+    let params = req["params"]
+    if type_of(params) != "map" {
+        _emit_error(id_raw, -32602, "params must be an object")
+        return
+    }
+    let mut tool_name = ""
+    if has_key(params, "name") {
+        if type_of(params["name"]) == "string" { tool_name = params["name"] }
+    }
+    let mut args = json_parse("{}")
+    if has_key(params, "arguments") {
+        if type_of(params["arguments"]) == "map" { args = params["arguments"] }
+    }
+
+    if tool_name == "pool_list" {
+        let mut include_anima = false
+        if has_key(args, "include_anima") {
+            if type_of(args["include_anima"]) == "bool" { include_anima = args["include_anima"] }
+        }
+        let body = _pool_list(include_anima)
+        _emit_result(id_raw, _wrap_content(body))
+        return
+    }
+
+    if tool_name == "pool_on" {
+        let mut host = ""
+        let mut command = ""
+        if has_key(args, "host") { if type_of(args["host"]) == "string" { host = args["host"] } }
+        if has_key(args, "command") { if type_of(args["command"]) == "string" { command = args["command"] } }
+        if host == "" || command == "" {
+            _emit_error(id_raw, -32602, "pool_on requires host + command (both strings)")
+            return
+        }
+        let body = _pool_on(host, command)
+        _emit_result(id_raw, _wrap_content(body))
+        return
+    }
+
+    _emit_error(id_raw, -32601, "unknown tool: " + tool_name)
+}
+
+// ── per-line request dispatch ────────────────────────────────────────────
+
+fn _handle_line(line: string) {
+    let mut req = json_parse("{}")
+    let mut ok = true
+    try { req = json_parse(line) } catch e { ok = false }
+    if !ok {
+        _emit_error("null", -32700, "parse error")
+        return
+    }
+    if type_of(req) != "map" {
+        _emit_error("null", -32600, "request must be an object")
+        return
+    }
+    let mut method = ""
+    if has_key(req, "method") { if type_of(req["method"]) == "string" { method = req["method"] } }
+    let id_raw = _id_token(req)
+    let has_id = has_key(req, "id")
+
+    // notifications/* — fire-and-forget, no response per JSON-RPC spec
+    if !has_id && method.starts_with("notifications/") { return }
+    if method.starts_with("notifications/") { return }
+
+    if method == "initialize" {
+        let result = "{\"protocolVersion\":\"2024-11-05\","
+            + "\"capabilities\":{\"tools\":{}},"
+            + "\"serverInfo\":{\"name\":\"pool-mcp\",\"version\":\"0.1.0\"}}"
+        _emit_result(id_raw, result)
+        return
+    }
+    if method == "tools/list" {
+        _emit_result(id_raw, _tools_list_result())
+        return
+    }
+    if method == "tools/call" {
+        _handle_call(req, id_raw)
+        return
+    }
+    _emit_error(id_raw, -32601, "method not found: " + method)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let lines = raw.split("\n")
+    let n = len(lines)
+    let mut i = 0
+    while i < n {
+        let ln = lines[i].trim()
+        if ln != "" { _handle_line(ln) }
+        i = i + 1
+    }
+}

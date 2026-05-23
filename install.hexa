@@ -158,7 +158,7 @@ fn main() {
     let settings = _parse_or(settings_path, "{}")
     if !has_key(settings, "enabledPlugins") { settings["enabledPlugins"] = json_parse("{}") }
 
-    let subs = ["hooks", "skills", "commands"]
+    let subs = ["hooks", "skills", "commands", "mcps"]
     let mut n = 0
     let mut i = 0
     while i < len(plugins) {

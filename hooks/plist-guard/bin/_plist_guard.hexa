@@ -1,0 +1,85 @@
+// _plist_guard.hexa — PreToolUse(Write|Edit|NotebookEdit) hard block for
+// `.plist` writes.
+//
+// commons @D g37: `.plist` (LaunchAgents · LaunchDaemons · Info.plist ·
+// UserDefaults) is user-request only. The hook cannot distinguish
+// user-explicit intent from model-autonomous, so every `.plist` write is
+// denied globally — if the user truly wants one, they run the write
+// themselves outside the agent path. LaunchAgents / LaunchDaemons are
+// persistence surfaces (auto-launch on login / boot), so a silent write
+// risks installing a daemon the user did not ask for.
+//
+// NO opt-out by design — no env var, no config file, no exception list,
+// no self-exclusion. Enforcement stands or the plugin is uninstalled
+// (commons @D g30).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let ne = len(suffix)
+    if ne > ns { return false }
+    return s.substring(ns - ne, ns) == suffix
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    let tool = payload["tool_name"]
+    if tool != "Write" && tool != "Edit" && tool != "NotebookEdit" { _allow() }
+
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    let mut target = ""
+    if has_key(ti, "file_path") { target = ti["file_path"] }
+    if target == "" {
+        if has_key(ti, "notebook_path") { target = ti["notebook_path"] }
+    }
+    if target == "" { _allow() }
+
+    if !_ends_with(target, ".plist") { _allow() }
+
+    let reason = "plist-guard (commons @D g37): `.plist` files (LaunchAgents · LaunchDaemons · Info.plist · UserDefaults) are user-request only.\n  Refusing to write `" + target + "`.\n  LaunchAgents / LaunchDaemons auto-launch on login / boot — a silent write risks installing a daemon the user did not ask for.\n  If the user explicitly requested this .plist, ask them to confirm and write the file themselves (outside the agent path). NO opt-out by design (commons @D g30)."
+    _deny(reason)
+}

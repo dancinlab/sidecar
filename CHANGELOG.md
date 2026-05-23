@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **project.tape — `siblings` 에 `pool` · `secret` 추가** — `@I.siblings` 가 `hexa-lang` 에서 `hexa-lang · pool · secret` 로 확장. user-explicit (g17). 동기 — `pool` (host roster CLI · pool-route hook 의 SSOT) + `secret` (Keychain credential CLI · g28 의 backend) 모두 sidecar 의 cross-project 인프라 의존성.
+
 - **project.tape — `siblings` 를 `hexa-lang` 단독으로 축소** — `@I.siblings` 가 `hexa-lang · anima · demiurge` 에서 `hexa-lang` 만 남김. user-explicit 요청 (g17). 동기 — sidecar 의 진짜 sibling 은 hexa-lang (cross-project layer · enforcement hooks · `/inbox` patches 의 주요 handoff 상대). anima · demiurge 는 sidecar 의 consumer 일 뿐 직접 sibling 아님.
 
 - **project.tape — `siblings` 에서 wilson · hive 제거** — `@I.siblings` 가 `hexa-lang · anima · wilson · hive · demiurge` 에서 `hexa-lang · anima · demiurge` 로 축소. user-explicit 요청 (g17). 동기 — wilson · hive 는 sidecar 의 직접 sibling 이 아닌 별도 카테고리 (둘 다 sidecar concept-separation 의 이전 형태 또는 별개 plugin pack).

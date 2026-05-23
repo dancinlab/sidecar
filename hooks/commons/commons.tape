@@ -188,3 +188,7 @@
 @D g51 := "paper lint — ≥10 pages + ≥1 fal.ai figure required" :: governance [required active]
   do   = "any /paper output must compile to ≥10 pages AND embed ≥1 fal.ai-generated figure (g44)"
   dont = "ship a /paper with <10 pages or zero fal-generated figures — substandard arxiv submission"
+
+@D g52 := "auto-log to /domain — every decision/done" :: governance [required active]
+  do   = "every task done / decision made → `/domain <text>` log immediately · don't batch · per-step"
+  dont = "batch-log at session end · skip routine progress · only log major events (g39 enforcement)"

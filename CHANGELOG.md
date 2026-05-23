@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **paper 0.5.0 — `/paper lint` 실제 구현 (g51 enforcement)** — `paper` plugin 에 새 verb `lint [dir]` 추가. `main.pdf` 페이지 수 (pdfinfo grep) ≥ 10 + fal.ai figure 흔적 (figures/_prompts/*.{txt,md} 1개 이상 OR figures/_scripts/*.py 안에 `fal` · `imagine` · `/paper fig` substring grep 1개 이상) 둘 다 만족 시 exit 0 · 실패 시 exit 1 + 조건별 ✓/✗ 체크리스트 출력. 동기 — g51 governance rule 만 있고 실제 lint 부재였음. 이제 model self-discipline 외 `/paper lint <dir>` 명령으로 자동 검증. `marketplace.json` + `plugin.json` paper 설명 + 버전 갱신 (0.4.0 → 0.5.0, minor — 새 verb).
+
 - **commons 0.9.40 — `@D g51` paper lint (≥10 pages + ≥1 fal.ai figure)** — 새 `[required active]` governance block: `/paper` 산출물은 compile 시 **(1) ≥10 페이지** + **(2) ≥1 fal.ai-생성 figure (g44)** 둘 다 만족해야 함. 동기 — arxiv submission 의 정량 minimum 기준 명시. fal.ai (gpt-image-2 pinned, g44) figure 가 빠진 paper 는 substandard. 향후 `/paper lint` subcommand 또는 paper-lint hook 으로 자동 enforcement 가능. `marketplace.json` commons 설명 `g1..g50` → `g1..g51`.
 
 - **commons 0.9.39 — `@D g50` AI CLI first, API/SDK as fallback** — 새 `[required active]` governance block: AI 기능 (이미지 생성 · 검색 · transcript 등) 은 항상 CLI wrapper 먼저 (`/imagine` · `/research:arxiv` · `/research:yt` 등), API/SDK 는 wrapper 가 없는 경우에만. 동기 — 모델이 `/imagine` 같은 wrapper 가 있는데도 자꾸 openai/anthropic/fal SDK · curl POST · raw HTTP request 로 직접 호출. g50 가 설계 시점부터 강제 — wrapper 가 SSOT. `marketplace.json` commons 설명 `g1..g49` → `g1..g50`.

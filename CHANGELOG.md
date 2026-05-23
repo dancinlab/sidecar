@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **q 0.1.0 — 신규 skill (`/q` = `/btw` alias)** — `/q <text>` 는 Claude Code 내장 `/btw <text>` (현재 작업 중단 없이 짧은 side question) 의 alias. 같은 의미 — 1-3 sentences로 짧게 답하고 main work 재개. plugin command 만 (markdown only, 스크립트 없음). 동기 — `/btw` 가 4글자라 자주 쓰기 부담, `/q` 2글자로 동일 기능. `skills/q/` 신규 plugin (SKILL.md + commands/q.md + .claude-plugin/plugin.json).
+
 - **check 0.1.0 — 신규 skill (`/check` task dashboard)** — `<UPPERCASE>.log.md` checkbox 작업 현황 (open vs done count + 첫 10개 open 항목 미리보기 per log) · `gh pr list --state open` (현재 repo의 open PR) · `git status -sb` (uncommitted / ahead / behind) · `git log --oneline -5` (최근 머지 5건) — 4개 surface를 한 shot에 출력. read-only, side-effect zero. 동기 — 여러 task source (domain log · PR · git · commit log) 가 흩어져 있어서 "지금 뭐가 진행 중인지" 확인하려면 4개 명령 따로 쳐야 함. `/check` 한 번으로 dashboard. `skills/check/` 신규 plugin (SKILL.md + commands/check.md + .claude-plugin/plugin.json).
 
 - **pr-automerge 0.1.0 — 신규 hook plugin (g47 enforcement)** — commons `@D g47` ("PR ship discipline — no unmerged stacks") 의 실제 enforcement hook. `PreToolUse(Bash)` 가 `gh pr create …` 로 시작하는 명령을 감지 시 `updatedInput` field 로 명령 끝에 ` && gh pr merge --squash --delete-branch` 자동 append — atomic create-then-merge (전반부 실패 시 후반부 미실행). Skip 조건: `--draft` flag · 이미 `gh pr merge` 포함 · 이미 `&&` / `;` / `|` chain · idempotent mark `__SIDECAR_AUTOMERGE__` 존재. pool-route 패턴 그대로 (transparent rewrite, deny 아님). 동기 — g47 govern rule 만으로 model self-discipline 의존이었으나, 모델이 PR 만들고 머지 잊는 패턴이 잦음. hook-level rewrite 로 atomic 보장. `marketplace.json` 에 pr-automerge entry 추가. NO opt-out by design (g30).

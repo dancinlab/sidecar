@@ -106,7 +106,7 @@ fn main() {
         let mut ev = ""
         if type_of(payload) == "map" { ev = _event_of(payload) }
         if ev == "" { exit(0) }
-        let body = "# prefs\n- code authoring (.tape · .hexa · .py · .sh · .swift · ...): " + code + "\n- doc authoring (.md · README · CHANGELOG · ...): " + docs + "\n- response language to user: " + response + "\n"
+        let body = "# prefs (MUST FOLLOW every reply — hard rules, not hints)\n- code authoring (.tape · .hexa · .py · .sh · .swift · ...): " + code + "\n- doc authoring (.md · README · CHANGELOG · ...): " + docs + "\n- response to user: " + response + " — EVERY user-visible token (headers · table cells · prose · inline notes · summaries). Switch ONLY on explicit user request. If you catch yourself drifting to another language mid-reply, restart that section in " + response + ".\n"
         println("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(ev) + ",\"additionalContext\":" + _json_escape(body) + "}}")
         return
     }

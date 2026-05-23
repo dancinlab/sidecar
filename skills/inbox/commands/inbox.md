@@ -4,4 +4,4 @@ argument-hint: "[list | new <kind> <slug>]"
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_inbox.hexa" $ARGUMENTS`
+!`H="$(command -v _inbox.hexa)"; hexa run "$H" $ARGUMENTS`

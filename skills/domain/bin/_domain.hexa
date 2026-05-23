@@ -64,8 +64,9 @@ fn _domain_name(s: string) -> string {
 }
 
 // A valid domain NAME starts with an UPPERCASE letter; subsequent chars are
-// UPPERCASE / digit / `_` / `+`. The `+` enables meta-domain composition —
+// UPPERCASE / digit / `_` / `-` / `+`. The `+` enables meta-domain composition —
 // e.g. `RTSC+HTS` writes RTSC+HTS.md + RTSC+HTS.log.md (a domain of domains).
+// `-` and `_` are interchangeable word-separators (TTR-MN ≠ TTR_MN — distinct domains).
 fn _is_name(s: string) -> bool {
     let n = len(s)
     if n == 0 { return false }
@@ -74,7 +75,7 @@ fn _is_name(s: string) -> bool {
     let mut i = 1
     while i < n {
         let k = char_code(s[i], 0)
-        let ok = (k >= 65 && k <= 90) || (k >= 48 && k <= 57) || (k == 95) || (k == 43)
+        let ok = (k >= 65 && k <= 90) || (k >= 48 && k <= 57) || (k == 95) || (k == 45) || (k == 43)
         if !ok { return false }
         i = i + 1
     }
@@ -406,7 +407,7 @@ fn _show(root: string, name: string) {
 fn _usage() {
     eprintln("usage:")
     eprintln("  domain                      Show active domain + @goal + progress bar (+ lint)")
-    eprintln("  domain init <NAME>          Scaffold <NAME>.md + <NAME>.log.md (NAME accepts `+` for meta-domain: RTSC+HTS)")
+    eprintln("  domain init <NAME>          Scaffold <NAME>.md + <NAME>.log.md (NAME = UPPERCASE-start + UPPERCASE/digits/`_`/`-`/`+`; `+` for meta-domain: RTSC+HTS)")
     eprintln("  domain set <NAME>           Select NAME as the session's active domain")
     eprintln("  domain <NAME>               (shortcut for `set <NAME>`)")
     eprintln("  domain goal <text>          Declare the FINAL goal — sets the snapshot's `@goal:` line")
@@ -443,11 +444,11 @@ fn main() {
     }
 
     // `init <NAME>` — scaffold <NAME>.md + <NAME>.log.md (does not change the
-    // session's active domain). NAME may use `+` for meta-domain composition
-    // (e.g. `RTSC+HTS` writes RTSC+HTS.md + RTSC+HTS.log.md).
+    // session's active domain). NAME may use `-` or `_` as word-separators and
+    // `+` for meta-domain composition (e.g. `RTSC+HTS` → RTSC+HTS.md + .log.md).
     if v == "init" {
         if argc < 2 || !_is_name(args[1]) {
-            eprintln("usage: domain init <NAME>   (NAME = UPPERCASE; `+` allowed for meta-domain, e.g. RTSC+HTS)")
+            eprintln("usage: domain init <NAME>   (NAME = UPPERCASE-start + UPPERCASE/digits/`_`/`-`/`+`; `+` for meta-domain, e.g. RTSC+HTS)")
             exit(1)
         }
         _ensure_files(root, args[1])
@@ -459,7 +460,7 @@ fn main() {
     // the bare `<NAME>` shortcut). Scaffolds files via show.
     if v == "set" {
         if argc < 2 || !_is_name(args[1]) {
-            eprintln("usage: domain set <NAME>   (NAME = UPPERCASE/_/digits)")
+            eprintln("usage: domain set <NAME>   (NAME = UPPERCASE-start + UPPERCASE/digits/`_`/`-`/`+`)")
             exit(1)
         }
         _set_active(root, args[1])

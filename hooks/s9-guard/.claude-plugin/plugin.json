@@ -1,0 +1,9 @@
+{
+  "name": "s9-guard",
+  "description": "PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9). Fires when a Bash command looks like a Mac load check — `uptime` (word) · `loadavg` / `vm.loadavg` (substring) · `ps -A` adjacency or `ps -Ao pcpu` · `top -l ` (macOS) / `top -b ` (Linux) · `getloadavg`. Emits non-blocking additionalContext reminding the agent that any conclusion drawn from raw load must EXCLUDE `claude` PIDs (claude sessions are exempt from local load attribution) and suggesting the canonical claude-excluded sum (`ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'`). NEVER blocks — pure advisory. Implemented in hexa-lang (`_s9_guard.hexa`, invoked via `hexa run`). Ships per @D s7 (governance + enforcement together) — the @D s9 companion guard. NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "load", "claude-pid", "advisory", "s9", "hexa"]
+}

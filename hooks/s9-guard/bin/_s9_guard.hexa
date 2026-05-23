@@ -1,0 +1,111 @@
+// _s9_guard.hexa — PreToolUse(Bash) advisory for load-assessment commands.
+//
+// Fires whenever a Bash command looks like a Mac load check — `uptime` (word
+// boundary), `loadavg` / `vm.loadavg` (substring), `ps -A` adjacency or
+// `ps -Ao pcpu` (substring), `top -l ` (macOS top) / `top -b ` (Linux top),
+// `getloadavg` (substring). When matched, emit non-blocking additionalContext
+// reminding the agent that any conclusion drawn from raw load must EXCLUDE
+// `claude` PIDs per project.tape @D s9 (claude sessions are exempt from local
+// load assessment), and suggesting the canonical claude-excluded sum.
+//
+// NEVER blocks — pure advisory. Sister of @D s9 (the governance rule);
+// shipped per @D s7 (governance + enforcement together).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _is_word_char(c: string) -> bool {
+    let k = char_code(c, 0)
+    if k >= 48 && k <= 57 { return true }
+    if k >= 65 && k <= 90 { return true }
+    if k >= 97 && k <= 122 { return true }
+    if k == 95 { return true }
+    return false
+}
+
+// `\bword\b` — substring match bounded by non-word chars / string ends.
+fn _has_word(hay: string, word: string) -> bool {
+    let hn = len(hay)
+    let wn = len(word)
+    if wn == 0 { return false }
+    let mut i = 0
+    while i + wn <= hn {
+        if hay.substring(i, i + wn) == word {
+            let mut ok = true
+            if i > 0 {
+                if _is_word_char(hay[i - 1]) { ok = false }
+            }
+            if i + wn < hn {
+                if _is_word_char(hay[i + wn]) { ok = false }
+            }
+            if ok { return true }
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn _is_load_check(cmd: string) -> bool {
+    // (1) `uptime` as a word
+    if _has_word(cmd, "uptime") { return true }
+    // (2) `loadavg` substring (catches `vm.loadavg`, `getloadavg`, loadavg.h, ...)
+    if cmd.contains("loadavg") { return true }
+    // (3) `ps -Ao pcpu` substring
+    if cmd.contains("ps -Ao pcpu") { return true }
+    // (4) bare `ps -A` adjacency (substring; covers `ps -A`, `ps -Ao ...`)
+    if cmd.contains("ps -A") { return true }
+    // (5) macOS `top -l ` / Linux `top -b `
+    if cmd.contains("top -l ") { return true }
+    if cmd.contains("top -b ") { return true }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0
+    if !_is_load_check(cmd) { _allow() }
+
+    let body = "⚠ load 평가 명령 감지 (project.tape @D s9) — claude PID 제외 필수:\n  • 합산: `ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'`\n  • 결론에 'Mac 과부하' 쓸 때 claude 합 빼고 평가 · claude 종료 권고 금지 (사용자 요청 없이)"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_str(body) + "}}"
+    println(out)
+    exit(0)
+}

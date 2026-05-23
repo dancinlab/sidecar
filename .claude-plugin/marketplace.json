@@ -125,8 +125,8 @@
     {
       "name": "pool-route",
       "source": "./hooks/pool-route",
-      "description": "PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier (incl. `find $HOME/core/anima` big-tree scan) or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh \u2014 transparent dispatch, not a suggestion. Routed hexa commands carry `PATH` (`$HOME/.hx/bin:$HOME/bin:$PATH`) + `HEXA_MODULE_LOADER` + `HEXA_LANG` env passthrough (resolved via remote $PWD) so the `hexa` shim is reachable on bare ssh shells and compiled builds on the pool host link correctly. Each routing decision appends one JSON line to `~/.pool/route-log.jsonl` (capped at 100 entries); the SessionStart event reads the last 5 entries back as additionalContext so the model sees recent routing history without recon. OS-capability filter + round-robin load balance; a preflight ssh test -d skips hosts lacking the workdir. NO opt-out by design.",
-      "version": "0.5.6"
+      "description": "PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier (incl. `find $HOME/core/anima` big-tree scan) or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh \u2014 transparent dispatch, not a suggestion. Heavy decision also load-escalates: when non-claude CPU sum (`ps -Ao pcpu,comm | awk '$2 !~ /claude/'`, per project.tape @D s9) exceeds 150% AND the cmd is non-trivial (len > 20 OR contains `|`/`>`/`&&`), a missed-by-classifier cmd is still routed. Routed hexa commands carry `PATH` (`$HOME/.hx/bin:$HOME/bin:$PATH`) + `HEXA_MODULE_LOADER` + `HEXA_LANG` env passthrough (resolved via remote $PWD) so the `hexa` shim is reachable on bare ssh shells and compiled builds on the pool host link correctly. Each routing decision appends one JSON line to `~/.pool/route-log.jsonl` (capped at 100 entries); the SessionStart event reads the last 5 entries back as additionalContext so the model sees recent routing history without recon. OS-capability filter + round-robin load balance; a preflight ssh test -d skips hosts lacking the workdir. NO opt-out by design.",
+      "version": "0.5.7"
     },
     {
       "name": "limit-guard",
@@ -210,7 +210,7 @@
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain <NAME> (SELECT the session's active domain \u2192 later verbs default to it + show a final-goal progress bar `\u2593\u2593\u2593\u2591\u2591 NN% \u00b7 done/total` from the snapshot's checkboxes) \u00b7 /domain (show active) \u00b7 /domain <task> (append `- [x]` to log) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Progress is final-goal-based (snapshot completion), not log-based \u2014 it doesn't drift as the log grows.",
-      "version": "0.7.7"
+      "version": "0.7.8"
     },
     {
       "name": "gap",
@@ -288,6 +288,12 @@
       "name": "worktree-gc",
       "source": "./hooks/worktree-gc",
       "description": "SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_worktree_gc.hexa`, invoked via `hexa run`). Threshold gate (linked-count >= 3 OR disk avail < 20 GiB) keeps the common case (1-2 worktrees, ample disk) silent. Above threshold, fetches `gh pr list --state merged --limit 200` and prunes any linked worktree whose branch is in that merged set OR whose `origin/<branch>` ref is gone (force-removes the worktree directory and deletes the local branch). Open-PR worktrees are NEVER touched. gh unavailable / no merged PRs → short note + no action. Always exits 0 (non-blocking). NO opt-out by design.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "s9-guard",
+      "source": "./hooks/s9-guard",
+      "description": "PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9). Fires when a Bash command looks like a Mac load check — `uptime` (word) · `loadavg` / `vm.loadavg` (substring) · `ps -A` adjacency or `ps -Ao pcpu` · `top -l ` (macOS) / `top -b ` (Linux) · `getloadavg`. Emits non-blocking additionalContext reminding the agent that any conclusion drawn from raw load must EXCLUDE `claude` PIDs (claude sessions are exempt from local load attribution) and suggesting the canonical claude-excluded sum (`ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'`). NEVER blocks — pure advisory. Implemented in hexa-lang (`_s9_guard.hexa`, invoked via `hexa run`). Ships per @D s7 (governance + enforcement together) — the @D s9 companion guard. NO opt-out by design.",
       "version": "0.1.0"
     }
   ]

@@ -7,6 +7,7 @@ PreToolUse(Bash) pool **auto-router**. When the pool roster has hosts and a Bash
 The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** whenever it lists at least one enabled host. When armed, a command routes if it matches:
 
 - **heavy classifier** — `make` · `cargo` · `npm` · `pnpm` · `yarn` · `gradle` · `mvn` · `bazel` · `cmake` · `ctest` · `tox` · `pytest` · `jest` · `vitest` · `webpack` · `go build`/`test` · `swift build`/`test` · `xcodebuild` · `xcrun` · `swiftc` · `docker build` · `nvidia-smi` · `train` · `hexa kick`/`drill`/`loop`/`cc` (hexa-native heavy subverbs — kick-storm 2026-05-23 Mac kill: `/kick` = `hexa kick --seed`, multi-agent local fire drove load 80+)
+- **load-aware escalation** — when the non-claude CPU sum (`ps -Ao pcpu,comm`, `claude` PIDs excluded per project.tape `@D s9`) exceeds 150% (≈1.5 cores) AND the cmd is non-trivial (length > 20, or contains `|` / `>` / `&&`), a cmd missed by the classifier is still promoted to heavy and routed. The AND-gate avoids penalising cheap `ls` / `cat` where ssh latency would dominate; the 150% threshold is high enough that one busy terminal alone does not trip routing.
 - **root-needing** — `apt` · `dpkg` · `systemctl` · `yum` · … — always routable, and `sudo`-prefixed on a host with `sudo: true`
 
 ## How it routes

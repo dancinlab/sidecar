@@ -198,7 +198,7 @@
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain <NAME> (SELECT the session's active domain \u2192 later verbs default to it + show a final-goal progress bar `\u2593\u2593\u2593\u2591\u2591 NN% \u00b7 done/total` from the snapshot's checkboxes) \u00b7 /domain (show active) \u00b7 /domain <task> (append `- [x]` to log) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Progress is final-goal-based (snapshot completion), not log-based \u2014 it doesn't drift as the log grows.",
-      "version": "0.7.5"
+      "version": "0.7.6"
     },
     {
       "name": "gap",

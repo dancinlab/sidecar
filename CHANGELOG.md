@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **question 0.2.0 — `q` plugin → `question` rename, `/q` 는 alias 로 유지** — 직전 `q` plugin 을 `question` 으로 rename — primary command 는 `/question`, 2자 `/q` 는 alias 로 같은 plugin 안에 남김. `skills/q/` → `skills/question/` (`git mv`), `commands/question.md` 신규 (primary), `commands/q.md` 본문 갱신 (alias 명시). plugin name + marketplace entry name 동시 변경. 동기 — `/q` 단독은 의미 불명확 (q 가 question 외 다른 의미일 수도), `/question` 이 self-documenting. `/q` 는 빈도 높은 사용 위한 단축. `plugin.json` 0.1.0 → 0.2.0 (minor — name + 새 command file). **주의**: 사용자의 local install 에서 `q` plugin entry 가 invalidate 됨 — `sidecar sync` 후 새 `question` entry 로 활성화.
+
 - **inject 0.2.0 — `/ij` 짧은 alias 추가** — `/inject` 의 2자 alias `/ij` 추가. 같은 plugin (`skills/inject/`) 안에 `commands/ij.md` 신규 — `sidecar sync` + commons.tape/project.tape 출력 동일. `/inject` 4자 → `/ij` 2자. `marketplace.json` + `plugin.json` 설명 갱신, 버전 0.1.3 → 0.2.0 (minor — 새 command file).
 
 - **paper 0.5.0 — `/paper lint` 실제 구현 (g51 enforcement)** — `paper` plugin 에 새 verb `lint [dir]` 추가. `main.pdf` 페이지 수 (pdfinfo grep) ≥ 10 + fal.ai figure 흔적 (figures/_prompts/*.{txt,md} 1개 이상 OR figures/_scripts/*.py 안에 `fal` · `imagine` · `/paper fig` substring grep 1개 이상) 둘 다 만족 시 exit 0 · 실패 시 exit 1 + 조건별 ✓/✗ 체크리스트 출력. 동기 — g51 governance rule 만 있고 실제 lint 부재였음. 이제 model self-discipline 외 `/paper lint <dir>` 명령으로 자동 검증. `marketplace.json` + `plugin.json` paper 설명 + 버전 갱신 (0.4.0 → 0.5.0, minor — 새 verb).

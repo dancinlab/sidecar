@@ -22,9 +22,9 @@
 @D g7 := "consult hexa --help for unfamiliar verbs" :: governance [active]
   do   = "consult `hexa --help` for unfamiliar hexa CLI verbs"
 
-@D g8 := "rented-pod dispatch via hexa cloud" :: governance [required active]
-  do   = "runpod (rented pods) → `hexa cloud {run|nohup|poll|copy-to|copy-from}` — canonical form"
-  dont = "raw `ssh` / `scp` for runpod · fall back to a separate `hexa-cloud` binary (paper-over per g11)"
+@D g8 := "rented-GPU pod dispatch via hexa cloud" :: governance [required active]
+  do   = "runpod / vast.ai → `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`"
+  dont = "raw `ssh` / `scp` / `runpodctl` / `vastai` CLI · fall back to separate hexa-cloud binary (g11)"
 
 @D g9 := "sidekick-pool dispatch via pool" :: governance [required active]
   do   = "sidekick roster → `pool on <host> <cmd>` — macOS-only (swift/xcode) · GPU · heavy build"

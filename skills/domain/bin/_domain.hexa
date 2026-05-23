@@ -238,13 +238,22 @@ fn _env(name: string) -> string {
 }
 
 // active-domain pointer store: $HOME/.claude/domain-active.tsv
-// One `<root>\t<tty>\t<NAME>` line per (project root × terminal session) — two
-// claude sessions in the same repo (different terminal windows = different tty)
-// each get an independent active domain. tty is the controlling terminal path
-// (`/dev/ttys003` etc.); when unavailable (cron/non-tty) the key falls back to
-// `<root>\tNOTTY\t<NAME>` so the slot still works but is shared across non-tty
-// callers.
-fn _tty() -> string {
+// One `<root>\t<sid>\t<NAME>` line per (project root × terminal session) — two
+// claude sessions in the same repo each get an independent active domain.
+//
+// `<sid>` fallback chain (most-specific → least):
+//   1. CLAUDE_CODE_SESSION_ID env (UUID, per-Claude-Code-session — the dominant
+//      case, since Claude Code's Bash tool runs commands without a tty)
+//   2. `tty` command (controlling terminal path like `/dev/ttys003`, for direct
+//      shell invocation outside Claude Code)
+//   3. `NOTTY` (cron / non-interactive fallback — shared across such callers)
+//
+// Pre-0.7.7 lines used a 2-field key (`<root>\t<NAME>`) and are auto-cleaned
+// on next `_set_active` for the same root (see below); `_get_active` ignores
+// them naturally because its prefix is `<root>\t<sid>\t` (three fields).
+fn _session_id() -> string {
+    let cid = _env("CLAUDE_CODE_SESSION_ID")
+    if cid != "" { return cid }
     let r = exec_with_status("tty 2>/dev/null")
     if r[1] == 0 {
         let t = _trim(to_string(r[0]))
@@ -260,7 +269,17 @@ fn _active_store() -> string {
 }
 
 fn _active_key(root: string) -> string {
-    return root + "\t" + _tty()
+    return root + "\t" + _session_id()
+}
+
+// True iff `ln` is a pre-0.7.7 2-field row (`<root>\t<NAME>`, exactly one tab)
+// for `root` — used to auto-clean legacy rows during `_set_active`.
+fn _is_legacy_row_for(ln: string, root: string) -> bool {
+    let pfx = root + "\t"
+    if !_starts_with(ln, pfx) { return false }
+    let rest = ln.substring(len(pfx), len(ln))
+    // legacy row has NO further tab; new format has at least one more (sid\tname)
+    return rest.index_of("\t") < 0
 }
 
 fn _set_active(root: string, name: string) {
@@ -275,7 +294,12 @@ fn _set_active(root: string, name: string) {
     let mut i = 0
     while i < len(lines) {
         let ln = lines[i]
-        if ln != "" && !_starts_with(ln, pfx) { out.push(ln) }
+        if ln == "" { i = i + 1; continue }
+        // drop the current (root, sid) slot — about to be rewritten
+        if _starts_with(ln, pfx) { i = i + 1; continue }
+        // drop pre-0.7.7 2-field rows for the same root (natural migration)
+        if _is_legacy_row_for(ln, root) { i = i + 1; continue }
+        out.push(ln)
         i = i + 1
     }
     out.push(pfx + name)

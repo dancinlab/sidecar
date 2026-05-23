@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.40 — `@D g51` paper lint (≥10 pages + ≥1 fal.ai figure)** — 새 `[required active]` governance block: `/paper` 산출물은 compile 시 **(1) ≥10 페이지** + **(2) ≥1 fal.ai-생성 figure (g44)** 둘 다 만족해야 함. 동기 — arxiv submission 의 정량 minimum 기준 명시. fal.ai (gpt-image-2 pinned, g44) figure 가 빠진 paper 는 substandard. 향후 `/paper lint` subcommand 또는 paper-lint hook 으로 자동 enforcement 가능. `marketplace.json` commons 설명 `g1..g50` → `g1..g51`.
+
 - **commons 0.9.39 — `@D g50` AI CLI first, API/SDK as fallback** — 새 `[required active]` governance block: AI 기능 (이미지 생성 · 검색 · transcript 등) 은 항상 CLI wrapper 먼저 (`/imagine` · `/research:arxiv` · `/research:yt` 등), API/SDK 는 wrapper 가 없는 경우에만. 동기 — 모델이 `/imagine` 같은 wrapper 가 있는데도 자꾸 openai/anthropic/fal SDK · curl POST · raw HTTP request 로 직접 호출. g50 가 설계 시점부터 강제 — wrapper 가 SSOT. `marketplace.json` commons 설명 `g1..g49` → `g1..g50`.
 
 - **commons 0.9.38 — `@D g49` GPU dispatch priority (pool first, cloud fallback)** — 새 `[required active]` governance block: GPU 작업은 (1) 먼저 `pool list` 의 sidekick roster 에서 enabled GPU host 확인 (g9 사내 pool) → (2) pool 에 GPU host 가 없을 때만 `hexa cloud` 임대 (g8 rented pod). 동기 — 모델이 GPU 작업에서 자꾸 `hexa cloud` 로만 dispatch 하고 사내 pool 의 GPU host 활용 안 하는 패턴. g49 가 g8/g9 위에 dispatch 우선순위 명시 — "pool first" doctrine. `marketplace.json` commons 설명 `g1..g48` → `g1..g49`.

@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g53` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.44"
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g53` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.45"
     },
     {
       "name": "prefs",

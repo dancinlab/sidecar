@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.45 — COMMANDS.md 카탈로그 SessionStart 주입** — `hooks/commons/COMMANDS.md` 신규 — sidecar 슬래시 명령 전체를 7그룹 코드블록 + 명령별 설명 + guard hook 목록으로 정리한 agent self-use 카탈로그. `_commons.hexa` 가 **SessionStart event 에서만** (매 turn 아님 — 토큰 절약) commons.tape + roster snapshot 뒤에 COMMANDS.md 를 append. 동기 — agent 가 cross-project 어디서든 어떤 슬래시 명령이 있고 뭘 하는지 인지 → 자율 사용. g23 (슬래시 명령 이름 목록) 의 상세-설명 보강. README Commands 섹션과 동일 내용 (SSOT 동기화). `marketplace.json` + `plugin.json` 0.9.44 → 0.9.45.
+
 - **commons 0.9.44 — `@D g0` Occam's razor (최상단 메타 원칙)** — commons.tape 최상단 (`@V` spec 다음, g1 앞) 에 오컴의 면도날을 `@D g0` 로 등록. `do = 가장 단순한 설명/해법 선호 (최소 가정 · 최소 moving parts)`, `dont = 불필요하게 entity 늘리기 · 단순한 길 있는데 복잡한 길 선택`. g33 (simplicity first) 가 code 한정인 반면 g0 은 explanation/solution/hypothesis 전반의 메타 원칙. 최상단 배치 — 4095 byte 주입 truncation 에서도 최우선 생존, 가장 먼저 읽히는 lens. `marketplace.json` commons 설명 `g1..g53` → `g0..g53`, 버전 0.9.43 → 0.9.44.
 
 - **README — Commands 섹션을 코드블록 형태로 (그룹 주석 + 명령별 설명)** — Commands 섹션의 markdown 테이블을 fenced 코드블록으로 전환. 그룹 헤더 (`# ── Discovery ──` 등 7그룹) + 각 명령어 한 줄 + 정렬된 설명 주석. guard hook 들도 코드블록 하단에 `# <hook> <설명>` 형태로 묶음. 동기 — 명령어 + 그게 뭘 하는지를 monospace 정렬로 한눈에 (테이블보다 scan 쉬움).

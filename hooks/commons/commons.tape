@@ -184,3 +184,7 @@
 @D g50 := "AI CLI first — API/SDK only as fallback" :: governance [required active]
   do   = "AI need (image/search/transcript/…) → CLI wrapper first · API/SDK only if no wrapper exists"
   dont = "openai/anthropic/fal SDK · curl POST · raw HTTP when a /imagine /research /… CLI wraps it"
+
+@D g51 := "paper lint — ≥10 pages + ≥1 fal.ai figure required" :: governance [required active]
+  do   = "any /paper output must compile to ≥10 pages AND embed ≥1 fal.ai-generated figure (g44)"
+  dont = "ship a /paper with <10 pages or zero fal-generated figures — substandard arxiv submission"

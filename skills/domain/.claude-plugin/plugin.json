@@ -1,7 +1,7 @@
 {
   "name": "domain",
-  "description": "Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) at project root — auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain <NAME> (SELECT the session's active domain → later verbs default to it + show a final-goal progress bar `▓▓▓░░ NN% · done/total` counted from the snapshot's `- [ ]`/`- [x]`) · /domain (show active) · /domain <task> (append `- [x]` to log) · /domain todo <task> (`- [ ]`) · /domain done <match> (flip [ ]→[x]) · /domain new <header>. Progress is final-goal-based (snapshot completion), so it doesn't drift as the log grows.",
-  "version": "0.5.0",
+  "description": "Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) at project root — auto-scaffolds both, defaults NAME to uppercase basename of git root. Subcommands: /domain set <NAME> (select the session's active domain — bare /domain <NAME> is a shortcut) · /domain goal <text> (add a final-goal milestone to the snapshot; /domain goal done <match> flips it to [x]) · /domain (show active domain + final-goal progress bar `▓▓▓░░ NN% · done/total` from the snapshot's checkboxes) · /domain done <match> (complete a snapshot goal, or if none flip a log task) · /domain todo <task> / <task> / new <header> (log). Progress is final-goal-based (snapshot completion), so it doesn't drift as the log grows.",
+  "version": "0.6.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

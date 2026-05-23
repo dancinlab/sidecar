@@ -95,8 +95,8 @@
     {
       "name": "pr-automerge",
       "source": "./hooks/pr-automerge",
-      "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). Whitespace-tokenizes the command and scans for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026` (the common case). When matched and not draft / not already merging, rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` \u2014 transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge`. NO opt-out by design (commons @D g30).",
-      "version": "0.2.0"
+      "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). Whitespace-tokenizes the command and scans for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026` (the common case). When matched and not draft / not already merging, rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` \u2014 transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 branch diff scoped entirely to `inbox/patches/**` (commons @D g54 \u2014 cross-project handoff entries are maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design (commons @D g30).",
+      "version": "0.3.0"
     },
     {
       "name": "tape-lint",

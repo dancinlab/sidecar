@@ -1,0 +1,20 @@
+{
+  "name": "pool-mcp",
+  "description": "stdio MCP server exposing pool hosts as Claude Code MCP tools. Two tools: `mcp__pool__on` (run `pool on <host> <command>` and return {stdout, stderr, exit_code, non_claude_load}) and `mcp__pool__list` (read ~/.pool/pool.json and return the roster, pi5-akida excluded by default per sidecar @D s8 unless `include_anima=true`). JSON-RPC 2.0 over stdio, implemented in hexa-lang (`_pool_mcp.hexa`, invoked via `hexa run`). Server registered via `mcpServers` field. POC scaffold — single-shot stdin processing (reads to EOF then drains all queued requests); streaming/fan-out/per-tool timeouts deferred to 0.2.0.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "mcp", "pool", "hexa"],
+  "mcpServers": {
+    "pool": {
+      "command": "sh",
+      "args": [
+        "-c",
+        "H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 1; exec \"$H\" run \"$@\"",
+        "_",
+        "${CLAUDE_PLUGIN_ROOT}/bin/_pool_mcp.hexa"
+      ]
+    }
+  }
+}

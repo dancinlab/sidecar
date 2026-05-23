@@ -462,7 +462,24 @@ fn main() {
         }
     }
 
-    let any = len(new_bad) > 0 || len(length_viols) > 0 || len(new_lang) > 0
+    // (4) project.tape @I siblings field — diff-aware
+    //   deny only when the new content drops siblings from an @I block
+    //   that had it, or adds a fresh @I without siblings. A project.tape
+    //   that never had siblings is grandfathered (edit passes).
+    let mut siblings_viol = false
+    if base == "project.tape" {
+        let new_has_I = new_text.contains("@I :=") || new_text.contains("@I:=")
+        if new_has_I {
+            let new_has_sib = new_text.contains("siblings")
+            if !new_has_sib {
+                let cur_has_sib = cur_text.contains("siblings")
+                let cur_has_I = cur_text.contains("@I :=") || cur_text.contains("@I:=")
+                if cur_has_sib || !cur_has_I { siblings_viol = true }
+            }
+        }
+    }
+
+    let any = len(new_bad) > 0 || len(length_viols) > 0 || len(new_lang) > 0 || siblings_viol
     if !any { _allow() }
 
     let mut sections = []
@@ -498,6 +515,10 @@ fn main() {
             i = i + 1
         }
         sections.push("authoring language (prefs.code = " + code_lang + " — non-Latin script on a new line):\n" + bullets.join("\n"))
+    }
+
+    if siblings_viol {
+        sections.push("@I siblings field (project.tape @I block must carry `siblings = \"name1 · name2 · ...\"` — cross-repo network SSOT; do not drop it or add a fresh @I without it)")
     }
 
     _deny("TAPE_LINT_BLOCK { file: " + base + ", rule: see findings, action: edit refused (pre-existing violations grandfathered, only newly-introduced or worsened items block). No override — fix the findings. Findings:\n\n" + sections.join("\n\n") + " }")

@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **tape-lint 0.5.0 — (4) @I siblings check** — tape-lint 에 4번째 check 추가: `project.tape` 의 `@I` identity 블록에 `siblings` 필드가 없으면 deny. diff-aware — siblings 를 가진 @I 에서 그것을 지우거나, siblings 없는 새 @I 를 추가하는 경우만 block (siblings 가 원래 없던 project.tape 는 grandfather). 동기 — cross-repo network SSOT (`siblings`) 가 실수로 누락/제거되는 것 방지. `marketplace.json` + `plugin.json` 0.4.0 → 0.5.0.
+
 - **sidecar-lint 0.4.0 — CHANGELOG.md root check (g29 enforcement)** — sidecar-lint 에 5번째 check 추가: `git commit` 시 repo root 에 `CHANGELOG.md` 가 없으면 non-blocking finding 으로 알림 (commons @D g29 — CHANGELOG.md as chronological history surface). 기존 4 checks (stale-history · hardpath · version-drift · sh-exec-bit) 와 동일하게 additionalContext emit. 동기 — g29 가 governance rule 만 있고 lint 부재였음. `marketplace.json` + `plugin.json` 0.3.0 → 0.4.0.
 
 - **commons 0.9.43 — `@D g10` Monitor 강화 (ALL background streaming required)** — g10 본문 강화: background process / long task 의 stdout 스트리밍은 **항상** Claude Code `Monitor` 도구로 (per-line push). `tail -f` · `sleep`-poll loop · log 반복 cat/poll 모두 금지. 이미 `[required active]` 였으나 문구를 "ALL background streaming" 으로 명확화 — 일부 케이스만 적용하던 모호함 제거. 동기 — 사용자가 Monitor 사용 필수를 더 강하게 요청. `marketplace.json` + `plugin.json` 0.9.42 → 0.9.43.

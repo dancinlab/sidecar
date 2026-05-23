@@ -152,3 +152,7 @@
 @D g42 := "depletion ideation via /brainstorm (discovery family)" :: governance [active]
   do   = "depletion ideation → `/brainstorm <seed>` · sister to /kick (g6) · /gap (g40)"
   dont = "stop at first few ideas when /brainstorm exhausts the well — width-first ideation"
+
+@D g43 := "external research fetch via /research" :: governance [active]
+  do   = "arxiv paper / YT video → `/research:arxiv <query|id>` · `/research:yt <url|id>`"
+  dont = "raw `curl` arxiv API · `WebSearch` for what /research already wraps cleanly"

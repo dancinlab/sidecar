@@ -1,0 +1,152 @@
+// _inbox_watch.hexa — SessionStart + UserPromptSubmit hook that scans
+// the cwd's `inbox/{notes,patches,poc,rfc_drafts}/*.md` for open entries
+// and emits a one-shot bullet snapshot as additionalContext.
+//
+// Open semantics: no `status:` frontmatter value, OR a value not in
+// {closed, resolved, done, merged, ack}. Cap = 5 entries, most-
+// recently-modified first.
+//
+// Empty / no inbox dir → silent (exit 0 without output).
+//
+// NO opt-out by design (commons @D g30).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+// status closed/done/resolved/merged/ack → entry is NOT open
+fn _is_closed_status(v: string) -> bool {
+    let s = v.trim().to_lower()
+    if s == "closed" { return true }
+    if s == "resolved" { return true }
+    if s == "done" { return true }
+    if s == "merged" { return true }
+    if s == "ack" { return true }
+    return false
+}
+
+// Parse the leading YAML frontmatter (between two `---` fences). Return
+// "" if no fence; otherwise the `status` value found, or "" if absent.
+fn _status_of(content: string) -> string {
+    // expect first line `---`
+    let lines = content.split("\n")
+    if len(lines) < 2 { return "" }
+    if lines[0].trim() != "---" { return "" }
+    let mut i = 1
+    while i < len(lines) {
+        let line = lines[i]
+        if line.trim() == "---" { return "" }  // fence closed without status
+        // line of shape `status: <value>`
+        let lc = line.to_lower()
+        if lc.starts_with("status:") {
+            let v = line.substring(7, len(line)).trim()
+            return v
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// list a single inbox subdir, append open entries to `out` (path strings).
+fn _scan_dir(dir: string, out: array) {
+    let r = exec_with_status("ls -t " + dir + "/*.md 2>/dev/null")
+    if r[1] != 0 { return }
+    let paths = r[0].trim()
+    if paths == "" { return }
+    let lines = paths.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let p = lines[i].trim()
+        if p != "" {
+            let mut content = ""
+            try { content = read_file(p) } catch e { content = "" }
+            // sample first 1500 chars only (frontmatter lives at top)
+            if len(content) > 1500 { content = content.substring(0, 1500) }
+            let st = _status_of(content)
+            if !_is_closed_status(st) {
+                out.push(p)
+            }
+        }
+        i = i + 1
+    }
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    let event = _event_of(payload)
+    if event == "" { _allow() }
+
+    let mut cwd = ""
+    if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd = payload["cwd"] } }
+    if cwd == "" { cwd = exec_with_status("pwd")[0].trim() }
+    if cwd == "" { _allow() }
+
+    let inbox = cwd + "/inbox"
+    if !file_exists(inbox) { _allow() }
+
+    let mut entries = []
+    _scan_dir(inbox + "/notes", entries)
+    _scan_dir(inbox + "/patches", entries)
+    _scan_dir(inbox + "/poc", entries)
+    _scan_dir(inbox + "/rfc_drafts", entries)
+
+    if len(entries) == 0 { _allow() }
+
+    // cap at 5 most-recent (`ls -t` ordered per-dir; merged order roughly
+    // recent-first per dir but not globally — keep first 5 entries).
+    let total = len(entries)
+    let mut bullets = []
+    let mut i = 0
+    while i < len(entries) && i < 5 {
+        let p = entries[i]
+        // shorten path: drop the cwd + "/" prefix
+        let prefix = cwd + "/"
+        let mut rel = p
+        if p.starts_with(prefix) { rel = p.substring(len(prefix), len(p)) }
+        bullets.push("- " + rel)
+        i = i + 1
+    }
+    let mut header = "# inbox: " + to_string(total) + " open"
+    if total > 5 { header = header + " (showing 5 most-recent)" }
+    let body = header + "\n" + bullets.join("\n") + "\n"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(body) + "}}"
+    println(out)
+    exit(0)
+}

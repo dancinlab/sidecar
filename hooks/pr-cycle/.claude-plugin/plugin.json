@@ -1,0 +1,9 @@
+{
+  "name": "pr-cycle",
+  "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hexa run`). Whitespace-tokenizes the command and scans for the `gh pr create` 3-gram anywhere — catches bare `gh pr create …` and chained forms like `git push && gh pr create …`. When matched (and not draft / not already merging / not inbox/patches-only), rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` and, IF cwd is a linked git worktree (not the main one), additionally appends ` && (cd <main-wt> && git worktree remove <this-wt> --force 2>/dev/null && git branch -D <branch> 2>/dev/null || true)` — transparent atomic create → merge → worktree+branch cleanup. The worktree+branch are detected at hook-time (`git rev-parse --show-toplevel` · `git worktree list --porcelain` first entry · `git rev-parse --abbrev-ref HEAD`), so the cleanup targets the exact context the PR was issued from. Enforces commons @D g47 (PR ship discipline — no unmerged stacks, no dead worktrees). Skip conditions: `--draft` flag present · command already contains `gh pr merge` · branch diff scoped entirely to `inbox/patches/**` (commons @D g54 — maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design (commons @D g30).",
+  "version": "0.3.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "gh", "pr", "automerge", "worktree", "hexa"]
+}

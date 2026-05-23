@@ -1,0 +1,286 @@
+// _pr_cycle.hexa — PreToolUse(Bash) PR full-cycle router for `gh pr create`.
+//
+// commons @D g47 (PR ship discipline — no unmerged stacks): a PR is
+// created → merged → its worktree+branch are cleaned in the same Bash
+// invocation. The next PR therefore starts from a fresh main, never from
+// a stacked branch waiting on N parents and never with dead worktrees.
+//
+// Detection: whitespace-tokenize the command and look for the 3-gram
+// `gh pr create` anywhere — catches both bare `gh pr create …` and
+// chained forms like `git push && gh pr create …` (the common case).
+//
+// Skip if: `--draft` flag present · `gh pr merge` already in the command ·
+// branch diff scoped entirely to `inbox/patches/**` (commons @D g54 —
+// cross-project handoff entries are maintainer review-only).
+//
+// Rewrite tail (appended via the hook `updatedInput` field):
+//   1) ` && gh pr merge --squash --delete-branch` (always)
+//   2) ` && (cd <main-wt> && git worktree remove <this-wt> --force …
+//          && git branch -D <branch> …)` — ONLY when cwd is a linked
+//      worktree (not the main one). The `(…)` subshell isolates the cd
+//      and the `|| true` swallows residual errors so a missing branch /
+//      already-pruned worktree never poisons the chain. The detection
+//      runs at hook-time so it captures the exact worktree+branch that
+//      `gh pr create` was issued from.
+//
+// Atomic — if any preceding step (including `gh pr create`) fails, the
+// merge never runs; if the merge fails, the worktree never gets removed.
+//
+// NO opt-out by design — no env var, no config file, no exception list
+// (commons @D g30).
+
+let MARK = "__SIDECAR_PR_CYCLE__"
+let MERGE_TAIL = " && gh pr merge --squash --delete-branch"
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+// JSON-escape a string and wrap it in double quotes.
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// Strip the contents of single- and double-quoted regions so trigger
+// tokens that only appear INSIDE quoted shell args (e.g. JSON test
+// payloads, heredoc-style strings echoed to a pipe) cannot fire the
+// detector. The quote characters themselves are dropped too.  Backslash
+// inside double-quotes escapes the next char.  Mismatched / unterminated
+// quotes degrade gracefully — the remainder is consumed silently, which
+// is the safe direction (we'd rather miss a trigger than rewrite a test
+// payload as a real `gh pr merge` against the wrong branch).
+fn _strip_quoted(s: string) -> string {
+    let n = len(s)
+    let mut out = ""
+    let mut i = 0
+    let mut in_sq = false
+    let mut in_dq = false
+    while i < n {
+        let c = s[i]
+        if in_sq {
+            if c == "'" { in_sq = false }
+        } else if in_dq {
+            if c == "\\" && i + 1 < n { i = i + 1 }
+            else if c == "\"" { in_dq = false }
+        } else {
+            if c == "'" { in_sq = true }
+            else if c == "\"" { in_dq = true }
+            else { out = out + c }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _trim(s: string) -> string { return s.trim() }
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(s) < len(prefix) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+// Wrap in single quotes; escape embedded singles as '\''.
+fn _shell_sq(s: string) -> string {
+    let n = len(s)
+    let mut out = "'"
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" } else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+// inbox-only diff detection: every changed file under inbox/patches/**.
+// Uses `git diff --name-only origin/main...HEAD` to read the branch's
+// proposed change set. Returns false on any git error (fail-open: the
+// auto-merge tail still gets appended — safer than silently skipping).
+fn _is_inbox_patches_only() -> bool {
+    let raw = to_string(exec("git diff --name-only origin/main...HEAD 2>/dev/null"))
+    if len(raw) == 0 { return false }
+    let n = len(raw)
+    let mut i = 0
+    let mut cur = ""
+    let mut any = false
+    while i <= n {
+        let at_end = i == n
+        let c = if at_end { "\n" } else { raw[i] }
+        if c == "\n" {
+            if len(cur) > 0 {
+                any = true
+                if !_starts_with(cur, "inbox/patches/") { return false }
+            }
+            cur = ""
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    return any
+}
+
+// sliding 3-gram scan for `gh pr create`
+fn _has_gh_pr_create(toks: array) -> bool {
+    let n = len(toks)
+    if n < 3 { return false }
+    let mut i = 0
+    while i <= n - 3 {
+        if toks[i] == "gh" && toks[i + 1] == "pr" && toks[i + 2] == "create" {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn _current_branch() -> string {
+    let r = exec_with_status("git rev-parse --abbrev-ref HEAD 2>/dev/null")
+    if r[1] != 0 { return "" }
+    return _trim(to_string(r[0]))
+}
+
+fn _cwd_toplevel() -> string {
+    let r = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+    if r[1] != 0 { return "" }
+    return _trim(to_string(r[0]))
+}
+
+// First `worktree <path>` line in `git worktree list --porcelain` is
+// always the main worktree (git invariant). Returns "" on any failure.
+fn _main_worktree() -> string {
+    let r = exec_with_status("git worktree list --porcelain 2>/dev/null")
+    if r[1] != 0 { return "" }
+    let lines = to_string(r[0]).split("\n")
+    let n = len(lines)
+    let mut i = 0
+    while i < n {
+        let line = lines[i]
+        if _starts_with(line, "worktree ") {
+            return line.substring(9, len(line))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// Empty string when cwd IS the main worktree or detection fails (no
+// cleanup tail appended). Non-empty `&& (…)` chain otherwise.
+fn _worktree_cleanup_tail() -> string {
+    let cwd = _cwd_toplevel()
+    let main = _main_worktree()
+    if cwd == "" || main == "" || cwd == main { return "" }
+    let br = _current_branch()
+    if br == "" || br == "HEAD" { return "" }
+    let p_main = _shell_sq(main)
+    let p_wt = _shell_sq(cwd)
+    let p_br = _shell_sq(br)
+    return " && (cd " + p_main + " && git worktree remove " + p_wt + " --force 2>/dev/null && git branch -D " + p_br + " 2>/dev/null || true)"
+}
+
+// rebuild tool_input with command swapped, emit updatedInput JSON.
+fn _emit(ti: map, new_cmd: string, note: string) {
+    let ks = keys(ti)
+    let mut parts = []
+    let mut i = 0
+    while i < len(ks) {
+        let k = ks[i]
+        if k == "command" {
+            parts.push(_json_str(k) + ":" + _json_str(new_cmd))
+        } else {
+            parts.push(_json_str(k) + ":" + json_stringify(ti[k]))
+        }
+        i = i + 1
+    }
+    let updated = "{" + parts.join(",") + "}"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    println(out)
+    exit(0)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
+    if cmd == "" { _allow() }
+
+    // idempotent — already rewritten
+    if cmd.contains(MARK) { _allow() }
+
+    // sliding-window 3-gram: `gh pr create` anywhere in the command,
+    // but only OUTSIDE quoted regions (so a test payload like
+    // `echo '{"command":"gh pr create …"}' | …` does not trigger).
+    let toks = _tokens(_strip_quoted(cmd))
+    if !_has_gh_pr_create(toks) { _allow() }
+
+    // skip — already contains a merge
+    if cmd.contains("gh pr merge") { _allow() }
+
+    // skip — draft PR (user wants review, not immediate merge)
+    if cmd.contains("--draft") { _allow() }
+
+    // skip — inbox/patches/** -only branch (commons @D g54: maintainer review)
+    if _is_inbox_patches_only() { _allow() }
+
+    let wt_tail = _worktree_cleanup_tail()
+    let tail = MERGE_TAIL + wt_tail
+    let new_cmd = cmd + tail + "  # " + MARK
+    let mut note = "pr-cycle: appended ` && gh pr merge --squash --delete-branch` per commons @D g47 (create→merge atomic)."
+    if wt_tail != "" {
+        note = "pr-cycle: appended merge + worktree cleanup (cwd is a linked worktree — cd main + `git worktree remove --force` + `git branch -D` after merge) per commons @D g47."
+    }
+    _emit(ti, new_cmd, note)
+}

@@ -1,9 +1,0 @@
-{
-  "name": "pr-automerge",
-  "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). Whitespace-tokenizes the command and scans for the `gh pr create` 3-gram anywhere — catches bare `gh pr create …` and chained forms like `git push && gh pr create …` (the common case). When matched and not draft / not already merging, rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` — transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline — no unmerged stacks). Skip conditions: `--draft` flag present · command already contains `gh pr merge` · branch diff scoped entirely to `inbox/patches/**` (commons @D g54 — cross-project handoff entries are maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design (commons @D g30).",
-  "version": "0.3.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hook", "guard", "gh", "pr", "automerge", "hexa"]
-}

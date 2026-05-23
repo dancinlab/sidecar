@@ -1,0 +1,115 @@
+// _cloud_guard.hexa — PreToolUse(Bash) hard block for raw rented-GPU pod
+// CLI usage (runpodctl / vastai / vast).
+//
+// commons @D g8: rented-GPU pod dispatch goes through `hexa cloud
+// {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`. Raw remote-
+// exec / transfer subcommands of the dedicated CLIs are denied with a
+// redirecting message. Pod-lifecycle subcommands (create / ps / list /
+// show / search) pass through — those are legitimate provisioning verbs
+// that `hexa cloud` does not wrap.
+//
+// Detection: first-token + second-token match. No regex (hexa has no
+// regex stdlib); plain whitespace-split.
+//
+// NO opt-out by design — no env var, no config file, no exception list
+// (commons @D g30).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _is_pod_cli(t: string) -> bool {
+    if t == "runpodctl" { return true }
+    if t == "vastai" { return true }
+    if t == "vast" { return true }
+    return false
+}
+
+fn _is_remote_verb(t: string) -> bool {
+    if t == "exec" { return true }
+    if t == "ssh" { return true }
+    if t == "send-file" { return true }
+    if t == "send-file-to-pod" { return true }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
+    if cmd == "" { _allow() }
+
+    let toks = _tokens(cmd)
+    if len(toks) < 2 { _allow() }
+
+    let first = toks[0]
+    let second = toks[1]
+    if !_is_pod_cli(first) { _allow() }
+    if !_is_remote_verb(second) { _allow() }
+
+    let reason = "cloud-guard (commons @D g8): `" + first + " " + second + " …` is raw rented-GPU pod CLI usage.\n  Refusing the command. Use `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` instead — it wraps both runpod and vast.ai (--port flag for ssh port variance) across the three cycles (A transport, B file/dir transfer, C preflight).\n  Pod-lifecycle verbs (create / ps / list / show / search) are NOT blocked — only remote exec / transfer. NO opt-out by design (commons @D g30)."
+    _deny(reason)
+}

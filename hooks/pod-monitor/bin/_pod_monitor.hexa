@@ -1,13 +1,15 @@
 // _pod_monitor.hexa — PreToolUse(Bash) advisory for GPU pod fires.
 //
 // Fires whenever a Bash command contains `hexa cloud nohup` or `hexa cloud
-// run` (the canonical pod-launch verbs per commons @D g8). When matched and
-// either of g57's two invariants is missing, emit non-blocking
-// additionalContext reminding the agent to:
+// run` (the canonical pod-launch verbs per commons @D g8). When matched,
+// emit non-blocking additionalContext reminding the agent of three
+// invariants:
 //   1. set `SAVE_POD=1` envar so the pod is retained when SSH drops
-//   2. attach the Monitor tool to the streaming log (no `tail -f` / sleep-poll)
+//   2. attach the 🛰️ Monitor tool to the streaming log (no `tail -f` / sleep-poll)
+//   3. ⏱ estimate walltime up front + reserve pod-hours with headroom
+//      (a too-short walltime = pod auto-killed mid-run = result LOST)
 //
-// Both invariants closed the R8a-LOST class — pod terminated mid-run before
+// All three close the R8a-LOST class — pod terminated mid-run before
 // result.json reached the operator. No opt-out (commons g30).
 
 fn _read_stdin() -> string {
@@ -69,6 +71,8 @@ fn main() {
     }
     // Monitor tool은 별도 호출이라 cmd 텍스트로 알 수 없음 — 항상 권고
     hints.push("  • 🛰️ 발사 직후 Monitor 도구로 stream 감시 (tail -f / sleep-poll 금지)")
+    // walltime / pod-hours도 cmd 형식이 verb별로 달라 신뢰성 있게 감지 못함 — 항상 권고
+    hints.push("  • ⏱ walltime 산정 — 예상 ETA + 여유 pod-hours 확보 (timeout = pod 자동 종료 = result LOST)")
 
     if len(hints) == 0 { _allow() }
 

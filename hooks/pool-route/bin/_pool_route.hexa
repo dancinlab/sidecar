@@ -466,9 +466,18 @@ fn main() {
     // so we resolve via $PWD after the cd lands — independent of the local
     // workdir path quoting. Applies only when rcmd invokes hexa (word match
     // OR substring); other commands (make / cargo / ...) get bare passthrough.
+    //
+    // PATH prefix — ssh non-interactive shells (even via `bash -lc`) on
+    // macOS often inherit only `/usr/bin:/bin:/usr/sbin:/sbin` (path_helper
+    // baseline), so the `hexa` shim under `~/.hx/bin` is not found and the
+    // routed command dies with `bash: hexa: command not found`. Measured
+    // 2026-05-24 on mini (Mac) + ubu-2 (Linux) hosts after env-passthrough
+    // wiring landed but PATH was still bare. Every pool host ships `~/.hx`
+    // (`hx install` baseline) plus an optional `~/bin` for user shims, so a
+    // two-dir prepend covers the roster without per-host conditionals.
     let mut hexa_env = ""
     if _has_word(rcmd, "hexa") || rcmd.contains("hexa ") {
-        hexa_env = "export HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"$PWD\" && "
+        hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"$PWD\" && "
     }
     let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
 

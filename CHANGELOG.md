@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **sidecar-lint 0.4.0 — CHANGELOG.md root check (g29 enforcement)** — sidecar-lint 에 5번째 check 추가: `git commit` 시 repo root 에 `CHANGELOG.md` 가 없으면 non-blocking finding 으로 알림 (commons @D g29 — CHANGELOG.md as chronological history surface). 기존 4 checks (stale-history · hardpath · version-drift · sh-exec-bit) 와 동일하게 additionalContext emit. 동기 — g29 가 governance rule 만 있고 lint 부재였음. `marketplace.json` + `plugin.json` 0.3.0 → 0.4.0.
+
 - **commons 0.9.43 — `@D g10` Monitor 강화 (ALL background streaming required)** — g10 본문 강화: background process / long task 의 stdout 스트리밍은 **항상** Claude Code `Monitor` 도구로 (per-line push). `tail -f` · `sleep`-poll loop · log 반복 cat/poll 모두 금지. 이미 `[required active]` 였으나 문구를 "ALL background streaming" 으로 명확화 — 일부 케이스만 적용하던 모호함 제거. 동기 — 사용자가 Monitor 사용 필수를 더 강하게 요청. `marketplace.json` + `plugin.json` 0.9.42 → 0.9.43.
 
 - **commons 0.9.42 — `@D g53` /easy 7-element default (explain/report)** — 새 `[active]` governance block: explain / 설명 / report 류 응답은 기본적으로 `/easy` 7-element 형식 (icon · name · alias · plain · analogy · ASCII · compare) 으로. session 시작 시 자동 ON — 사용자가 매번 `/easy` 명시 안 해도 적용. trivial yes/no · 진행 보고는 terse 유지 OK (judgment call). 동기 — 사용자가 직접 "보고시 바로 /easy 작동" 요청. B (explain-type only) + D (session-wide auto-ON) 통합. `marketplace.json` commons 설명 `g1..g52` → `g1..g53`.

@@ -104,6 +104,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 # cloud-guard    runpodctl/vastai exec/ssh deny → hexa cloud (g8)
 # verify-guard   wolframscript / inline-sympy deny → hexa verify (g5)
 # ai-api-guard   curl AI-hostname / inline AI-SDK deny → CLI wrapper (g50)
+# gh-api-guard   gh api -X DELETE branches/*/protection · gh pr merge --admin deny (g55)
 # pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47)
 # pool-route     heavy Bash → ssh-route to a pool host
 # git-guard      force-push deny

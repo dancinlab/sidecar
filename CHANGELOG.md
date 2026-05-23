@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **README — Commands 섹션 추가 (Plugins 위)** — README 의 `## Plugins` 테이블 위에 `## Commands` 빠른참조 섹션 신설. 슬래시 명령을 7개 group (discovery · fan-out/loop · dispatch · cross-project · verify/help · research/generate · session/meta) 으로 묶은 테이블 + command 없이 자동 발화하는 guard hook 목록 (hexa-native · plist-guard · cloud-guard · verify-guard · ai-api-guard · pr-automerge · pool-route · git-guard · sidecar-lint · tape-lint · limit-guard · inbox-watch). 동기 — plugin 테이블은 kind/version 중심이라 "어떤 슬래시 명령이 있나" 한눈에 보기 어려움. Commands 섹션이 command-first 진입점. (Plugins 테이블 자체의 버전/항목 갱신은 별도 — 이 PR 은 Commands 섹션만 추가, g34 surgical.)
+
 - **tape-lint 0.5.0 — (4) @I siblings check** — tape-lint 에 4번째 check 추가: `project.tape` 의 `@I` identity 블록에 `siblings` 필드가 없으면 deny. diff-aware — siblings 를 가진 @I 에서 그것을 지우거나, siblings 없는 새 @I 를 추가하는 경우만 block (siblings 가 원래 없던 project.tape 는 grandfather). 동기 — cross-repo network SSOT (`siblings`) 가 실수로 누락/제거되는 것 방지. `marketplace.json` + `plugin.json` 0.4.0 → 0.5.0.
 
 - **sidecar-lint 0.4.0 — CHANGELOG.md root check (g29 enforcement)** — sidecar-lint 에 5번째 check 추가: `git commit` 시 repo root 에 `CHANGELOG.md` 가 없으면 non-blocking finding 으로 알림 (commons @D g29 — CHANGELOG.md as chronological history surface). 기존 4 checks (stale-history · hardpath · version-drift · sh-exec-bit) 와 동일하게 additionalContext emit. 동기 — g29 가 governance rule 만 있고 lint 부재였음. `marketplace.json` + `plugin.json` 0.3.0 → 0.4.0.

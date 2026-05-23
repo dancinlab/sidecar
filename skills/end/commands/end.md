@@ -1,5 +1,5 @@
 ---
-description: /end — session closure safety check. Single-shot dashboard of dangling residue in the current repo (uncommitted · unpushed · stash · open PRs by me · marketplace ↔ plugin version drift) with per-item ✓/⚠ marks + recommended actions, and a closing ✅/⚠ verdict. Read-only.
+description: /end — session closure safety check. Single-shot dashboard of dangling residue in the current repo (uncommitted · unpushed · stash · open PRs by me · marketplace ↔ plugin version drift · merged-but-undeleted local branches · linked worktrees) with per-item ✓/⚠ marks + recommended actions, and a closing ✅/⚠ verdict. Read-only.
 allowed-tools: Bash
 ---
 
@@ -102,8 +102,34 @@ PY
   echo
 fi
 
+# 6. merged local branches (merged into the default branch but not deleted)
+DEFB=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+DEFB=${DEFB:-main}
+CUR=$(git branch --show-current 2>/dev/null)
+MERGED=$(git branch --merged "$DEFB" 2>/dev/null | sed 's/^[*+ ]*//' | grep -vxE "${DEFB}|${CUR}")
+N_MB=$(printf '%s' "$MERGED" | grep -c .)
+if [ "$N_MB" = "0" ]; then
+  echo "✓ merged branches    0  (vs $DEFB)"
+else
+  echo "⚠ merged branches    $N_MB (merged into $DEFB, not deleted)"
+  printf '%s\n' "$MERGED" | head -8 | sed 's/^/    /'
+  echo "  → git branch -d <branch>   (safe — already merged)"
+fi
+echo
+
+# 7. linked worktrees (anything beyond the main checkout)
+N_WT=$(git worktree list 2>/dev/null | tail -n +2 | grep -c .)
+if [ "$N_WT" = "0" ]; then
+  echo "✓ worktrees          0  (only the main checkout)"
+else
+  echo "⚠ worktrees          $N_WT linked"
+  git worktree list 2>/dev/null | tail -n +2 | head -5 | sed 's/^/    /'
+  echo "  → git worktree remove <path>   (after its branch/PR is done)"
+fi
+echo
+
 # verdict
-if [ "$N_UNC" = "0" ] && [ "$N_AHEAD" = "0" ] && [ "$N_STASH" = "0" ] && [ "$N_PR" = "0" ] && [ -z "$DRIFTS" ]; then
+if [ "$N_UNC" = "0" ] && [ "$N_AHEAD" = "0" ] && [ "$N_STASH" = "0" ] && [ "$N_PR" = "0" ] && [ -z "$DRIFTS" ] && [ "$N_MB" = "0" ] && [ "$N_WT" = "0" ]; then
   echo "═══ ✅ 100% closure — safe to end ═══"
 else
   echo "═══ ⚠ residue detected — resolve items above before closure ═══"

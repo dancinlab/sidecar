@@ -28,6 +28,10 @@
   do   = "SKILL.md body = one `@D <name> :: skill` block · do/dont only · project.tape lint standard"
   dont = "prose · tables · examples in a SKILL.md body · keys beyond do/dont · per-skill README.md"
 
+@D s7 := "ship governance + its enforcement together" :: governance [required active]
+  do   = "new governance rule / plugin → ship its lint or guard hook in the same cycle"
+  dont = "land a rule with no enforcement · defer the lint to later · rely on model self-discipline only"
+
 @D ship := "ship cycle — atomic commit + push + sync (install + enable)" :: governance [required active]
   do   = "commit (explicit paths · g28 cred-scan) → push → `sidecar sync` (cache · install · enable)"
   dont = "`ship` as cross-repo batch · sync without enable · `git add -A`/`-u` · unshipped diffs at pauses"

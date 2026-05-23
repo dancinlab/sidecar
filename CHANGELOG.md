@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.42 — `@D g53` /easy 7-element default (explain/report)** — 새 `[active]` governance block: explain / 설명 / report 류 응답은 기본적으로 `/easy` 7-element 형식 (icon · name · alias · plain · analogy · ASCII · compare) 으로. session 시작 시 자동 ON — 사용자가 매번 `/easy` 명시 안 해도 적용. trivial yes/no · 진행 보고는 terse 유지 OK (judgment call). 동기 — 사용자가 직접 "보고시 바로 /easy 작동" 요청. B (explain-type only) + D (session-wide auto-ON) 통합. `marketplace.json` commons 설명 `g1..g52` → `g1..g53`.
+
 - **project.tape — `siblings` 에 `pool` · `secret` 추가** — `@I.siblings` 가 `hexa-lang` 에서 `hexa-lang · pool · secret` 로 확장. user-explicit (g17). 동기 — `pool` (host roster CLI · pool-route hook 의 SSOT) + `secret` (Keychain credential CLI · g28 의 backend) 모두 sidecar 의 cross-project 인프라 의존성.
 
 - **project.tape — `siblings` 를 `hexa-lang` 단독으로 축소** — `@I.siblings` 가 `hexa-lang · anima · demiurge` 에서 `hexa-lang` 만 남김. user-explicit 요청 (g17). 동기 — sidecar 의 진짜 sibling 은 hexa-lang (cross-project layer · enforcement hooks · `/inbox` patches 의 주요 handoff 상대). anima · demiurge 는 sidecar 의 consumer 일 뿐 직접 sibling 아님.

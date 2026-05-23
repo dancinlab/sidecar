@@ -160,3 +160,7 @@
 @D g44 := "image generation via /imagine (gpt-image-2 pinned)" :: governance [required active]
   do   = "image needs → `/imagine <prompt-file> <out.png>` (default backend: fal · model: gpt-image-2)"
   dont = "silently swap gpt-image-2 → gpt-image-1 · dall-e-3 · flux — model is user-pinned"
+
+@D g45 := "user language prefs via /prefs" :: governance [active]
+  do   = "user changes language pref → `/prefs {code|docs|response} <lang>` (SSOT: $CLAUDE_PLUGIN_DATA)"
+  dont = "ask user to retype lang each session — `/prefs` persists 3 axes (code · docs · response)"

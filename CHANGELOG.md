@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.33 — `@D g45` 언어 prefs 변경은 /prefs** — 새 `[active]` governance block: user가 언어 선호 (code authoring · doc authoring · response) 를 바꾸려 하면 `/prefs {code|docs|response} <lang>` 으로 — `$CLAUDE_PLUGIN_DATA/prefs.json` 에 영속됨. 동기 — prefs hook이 매 turn 주입돼서 인식 자체는 강하지만, 모델이 user에게 "다시 알려주세요" 묻거나 임시로 응답 언어 바꾸는 패턴이 있어서 SSOT 명시 필요. `marketplace.json` commons 설명 `g1..g44` → `g1..g45`.
+
 - **plist-guard 0.1.0 — 신규 hook plugin (g37 enforcement)** — commons `@D g37` ("plist user-request only") 의 실제 enforcement hook. PreToolUse(Write|Edit|NotebookEdit) 에서 target file path가 `.plist` 로 끝나면 `permissionDecision: deny` 응답. hexa-native 패턴 그대로 (`_plist_guard.hexa` via `hexa run`). 동기 — g37 governance rule 만으로는 모델이 self-enforce에 의존했으나, LaunchAgents / LaunchDaemons / Info.plist 는 persistence surface (로그인 · 부팅 자동 실행) 라 silent write 위험이 커서 hook-level enforcement 필요. hook은 user-explicit vs model-autonomous를 구별 불가하므로 globally deny — user가 명시 요청 시 직접 명령으로 처리 (agent path 외). `marketplace.json` 에 plist-guard entry 추가. NO opt-out by design (g30).
 
 - **commons 0.9.32 — `@D g44` 이미지 생성은 /imagine + gpt-image-2 pinned** — 새 `[required active]` governance block: 이미지 생성 needs는 `/imagine <prompt-file> <out.png>` 으로 — 기본 backend `fal`, 모델 `gpt-image-2`. **silently swap 금지**: gpt-image-2 → gpt-image-1 · dall-e-3 · flux 임의 대체 X. 동기 — user memory `feedback_gpt_image_2_pinned` 에 "무조건 gpt-image-2" 강한 신호가 있는데도 g 룰 zero라 모델이 다른 모델로 갈아탈 위험. `required` 격상으로 신호 강화. `marketplace.json` commons 설명 `g1..g43` → `g1..g44`.

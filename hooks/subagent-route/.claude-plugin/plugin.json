@@ -1,0 +1,9 @@
+{
+  "name": "subagent-route",
+  "description": "[POC] PreToolUse(Task|Agent) observation hook + SessionStart observation-log snapshot, implemented in hexa-lang (`_subagent_route.hexa`, invoked via `hexa run`). v0.1.0 is observation-only — it does NOT deny, NOT rewrite. On every Task/Agent fire it dumps `tool_input` (key list + agent_type + prompt preview + isolation) to `~/.sidecar/subagent-route.log.jsonl` (capped 100 lines, jsonl format mirroring pool-route's route-log) and emits a non-blocking `additionalContext` advisory suggesting the equivalent `ssh <host> -- claude --print --no-tty -p '<prompt>'` rewrite. SessionStart event reads the last 5 observations back as additionalContext so the model sees recent subagent fires without recon. PoC purpose — probe the actual tool_input payload shape at runtime (Claude Code docs leave Agent/Task tool_input fields under-specified vs Bash), and probe the `additionalContext` UX before a real-rewrite v0.2.0. Always exits 0; advisory only.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "subagent", "task", "agent", "poc", "hexa"]
+}

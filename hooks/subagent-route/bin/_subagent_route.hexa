@@ -1,0 +1,215 @@
+// _subagent_route.hexa — PreToolUse(Task|Agent) observation hook.
+//
+// PoC v0.1.0 — observation only. Does NOT deny, does NOT rewrite.
+//
+// Goal of this PoC:
+//   1. Probe the actual `tool_input` payload shape for Task/Agent fires
+//      at runtime (the Claude Code hook docs leave Agent/Task tool_input
+//      fields under-specified vs Bash). Every observed payload is dumped
+//      to ~/.sidecar/subagent-route.log.jsonl (capped 100 lines, jsonl
+//      format mirroring pool-route's route-log.jsonl).
+//   2. Probe the `additionalContext` UX: on every fire emit a 3-line
+//      advisory suggesting the equivalent
+//        ssh <host> -- claude --print --no-tty -p '<prompt>'
+//      rewrite. The advisory is informational only — v0.2.0 will turn
+//      this into a real deny+rewrite once the payload shape is known.
+//
+// SessionStart event reads the last 5 observations back as
+// additionalContext so the model sees recent subagent fires without
+// recon.
+//
+// Always exits 0. Advisory only.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+// JSON-escape a string and wrap it in double quotes.
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// read an environment variable — "" when unset.
+fn _env(name: string) -> string {
+    let r = exec_with_status("printenv " + name)
+    if r[1] != 0 { return "" }
+    return r[0].trim()
+}
+
+// Event-name reader — hook payload carries `hook_event_name` (snake_case).
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+// Defensive string-field reader: empty when absent / non-string.
+fn _str_field(m: map, k: string) -> string {
+    if !has_key(m, k) { return "" }
+    let v = m[k]
+    if type_of(v) != "string" { return "" }
+    return v
+}
+
+// Append one JSON-line observation. Path = ~/.sidecar/subagent-route.log.jsonl
+// Capped at 100 lines (same pattern as pool-route's route-log).
+fn _log_obs(tool_name: string, key_list: array, agent_type: string, prompt_preview: string, isolation: string) {
+    let home = _env("HOME")
+    if home == "" { return }
+    let dir = home + "/.sidecar"
+    try { exec_with_status("mkdir -p " + dir) } catch e { }
+    let path = dir + "/subagent-route.log.jsonl"
+    let t = exec_with_status("date -u +%Y-%m-%dT%H:%M:%SZ")[0].trim()
+    // build keys array JSON
+    let mut kparts = []
+    let mut ki = 0
+    while ki < len(key_list) {
+        kparts.push(_json_str(key_list[ki]))
+        ki = ki + 1
+    }
+    let keys_json = "[" + kparts.join(",") + "]"
+    let line = "{\"t\":" + _json_str(t)
+        + ",\"tool_name\":" + _json_str(tool_name)
+        + ",\"keys\":" + keys_json
+        + ",\"agent_type\":" + _json_str(agent_type)
+        + ",\"prompt_preview\":" + _json_str(prompt_preview)
+        + ",\"isolation\":" + _json_str(isolation)
+        + "}\n"
+    // read existing, append, trim to last 100 lines
+    let mut prior = ""
+    try { prior = read_file(path) } catch e { prior = "" }
+    let combined = prior + line
+    let lines = combined.split("\n")
+    let n = len(lines)
+    let start = if n > 101 { n - 101 } else { 0 }
+    let mut kept = []
+    let mut i = start
+    while i < n {
+        if lines[i] != "" { kept.push(lines[i]) }
+        i = i + 1
+    }
+    try { write_file(path, kept.join("\n") + "\n") } catch e { }
+}
+
+// SessionStart snapshot — emit recent observations as additionalContext.
+// Skips quietly when the log is empty or unreadable.
+fn _emit_session_start() {
+    let home = _env("HOME")
+    if home == "" { exit(0) }
+    let path = home + "/.sidecar/subagent-route.log.jsonl"
+    let mut raw = ""
+    try { raw = read_file(path) } catch e { exit(0) }
+    if raw == "" { exit(0) }
+    let lines = raw.split("\n")
+    let n = len(lines)
+    let take = 5
+    let start = if n > take + 1 { n - take - 1 } else { 0 }
+    let mut bullets = []
+    let mut i = start
+    while i < n {
+        let ln = lines[i].trim()
+        if ln != "" {
+            let mut obj = json_parse("{}")
+            try { obj = json_parse(ln) } catch e { obj = json_parse("{}") }
+            if type_of(obj) == "map" {
+                let t = _str_field(obj, "t")
+                let tn = _str_field(obj, "tool_name")
+                let at = _str_field(obj, "agent_type")
+                let pv = _str_field(obj, "prompt_preview")
+                if tn != "" {
+                    let mut label = tn
+                    if at != "" { label = label + "/" + at }
+                    bullets.push("- " + t + " " + label + " : " + pv)
+                }
+            }
+        }
+        i = i + 1
+    }
+    if len(bullets) == 0 { exit(0) }
+    let body = "# recent subagent-route (~/.sidecar/subagent-route.log.jsonl · last " + to_string(len(bullets)) + ")\n" + bullets.join("\n") + "\n"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":" + _json_str(body) + "}}"
+    println(out)
+    exit(0)
+}
+
+// PreToolUse — emit advisory + log observation, never block.
+fn _emit_advisory(tool_name: string, agent_type: string, prompt_full: string, isolation: string) {
+    let plen = len(prompt_full)
+    let mut preview = prompt_full
+    if len(preview) > 80 { preview = preview.substring(0, 80) }
+    // sanitize preview for the inline ssh suggestion (single-line, capped)
+    let mut p1 = preview
+    p1 = p1.split("\n").join(" ")
+    p1 = p1.split("\r").join(" ")
+    let mut at_show = agent_type
+    if at_show == "" { at_show = "<unknown>" }
+    let note = "(i) subagent-route PoC observed " + tool_name + " fire -- agent_type=" + at_show
+        + ", prompt-len=" + to_string(plen) + " chars, isolation=" + isolation + "\n"
+        + "  If Mac load is high (`uptime`), an SSH-routed equivalent would be:\n"
+        + "    ssh mini -- claude --print --no-tty -p '" + p1 + "'\n"
+        + "  (PoC v0.1.0 does NOT rewrite -- observation only; v0.2.0 will deny + rewrite.)"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_str(note) + "}}"
+    println(out)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    // SessionStart — emit recent observations snapshot, then exit.
+    let event = _event_of(payload)
+    if event == "SessionStart" { _emit_session_start() }
+
+    // PreToolUse — observe Task/Agent only.
+    if !has_key(payload, "tool_name") { _allow() }
+    let tn = payload["tool_name"]
+    if type_of(tn) != "string" { _allow() }
+    if tn != "Task" && tn != "Agent" { _allow() }
+
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    // dump every key we see (don't assume specific shape)
+    let ks = keys(ti)
+
+    // best-effort field reads (every field optional)
+    let agent_type = _str_field(ti, "agent_type")
+    let prompt_full = _str_field(ti, "prompt")
+    let isolation = _str_field(ti, "isolation")
+
+    let mut preview = prompt_full
+    if len(preview) > 80 { preview = preview.substring(0, 80) }
+    // strip newlines so jsonl stays single-line per record
+    preview = preview.split("\n").join(" ")
+    preview = preview.split("\r").join(" ")
+
+    _log_obs(tn, ks, agent_type, preview, isolation)
+    _emit_advisory(tn, agent_type, prompt_full, isolation)
+    exit(0)
+}

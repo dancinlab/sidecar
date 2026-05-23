@@ -208,3 +208,7 @@
 @D g53 := "/easy 7-element by default — explain/report turns" :: governance [active]
   do   = "explain/report response → `/easy` 7-element format default · session-wide ON · no manual toggle"
   dont = "skip /easy in explanatory turns · trivial yes/no may stay terse (judgment call only)"
+
+@D g54 := "g47 exemption — inbox/patches/** PRs are review-only, never auto-merged" :: governance [required active]
+  do   = "PR diff scoped to inbox/patches/** → skip g47 atomic tail · maintainer reviews + merges manually"
+  dont = "auto-append `gh pr merge --squash` to inbox-only PRs — bypasses cross-project handoff review"

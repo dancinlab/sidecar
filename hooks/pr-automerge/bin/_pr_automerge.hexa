@@ -8,7 +8,9 @@
 // `gh pr create` anywhere — catches both bare `gh pr create …` and
 // chained forms like `git push && gh pr create …` (the common case).
 //
-// Skip if: `--draft` flag present · `gh pr merge` already in the command.
+// Skip if: `--draft` flag present · `gh pr merge` already in the command ·
+// branch diff scoped entirely to `inbox/patches/**` (commons @D g54 —
+// cross-project handoff entries are maintainer review-only).
 // (No `&&` / `;` / `|` skip — chained `gh pr create` is exactly when
 // auto-merge matters most.)
 //
@@ -71,6 +73,34 @@ fn _tokens(s: string) -> array {
     }
     if len(cur) > 0 { out.push(cur) }
     return out
+}
+
+// inbox-only diff detection: every changed file under inbox/patches/**.
+// Uses `git diff --name-only origin/main...HEAD` to read the branch's
+// proposed change set. Returns false on any git error (fail-open: the
+// auto-merge tail still gets appended — safer than silently skipping).
+fn _is_inbox_patches_only() -> bool {
+    let raw = to_string(exec("git diff --name-only origin/main...HEAD 2>/dev/null"))
+    if len(raw) == 0 { return false }
+    let n = len(raw)
+    let mut i = 0
+    let mut cur = ""
+    let mut any = false
+    while i <= n {
+        let at_end = i == n
+        let c = if at_end { "\n" } else { raw[i] }
+        if c == "\n" {
+            if len(cur) > 0 {
+                any = true
+                if !cur.starts_with("inbox/patches/") { return false }
+            }
+            cur = ""
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    return any
 }
 
 // sliding 3-gram scan for `gh pr create`
@@ -136,6 +166,9 @@ fn main() {
 
     // skip — draft PR (user wants review, not immediate merge)
     if cmd.contains("--draft") { _allow() }
+
+    // skip — inbox/patches/** -only branch (commons @D g54: maintainer review)
+    if _is_inbox_patches_only() { _allow() }
 
     let new_cmd = cmd + TAIL + "  # " + MARK
     let note = "pr-automerge: appended ` && gh pr merge --squash --delete-branch` per commons @D g47 (create→merge atomic)."

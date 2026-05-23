@@ -24,7 +24,7 @@
       "name": "inbox",
       "source": "./skills/inbox",
       "description": "Cross-project handoff inbox \u2014 skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
-      "version": "0.2.3"
+      "version": "0.3.0"
     },
     {
       "name": "hexa-lsp",
@@ -216,7 +216,7 @@
       "name": "ship",
       "source": "./skills/ship",
       "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. NL trigger via skill (ship · 배포 · 출시).",
-      "version": "0.2.3"
+      "version": "0.3.0"
     },
     {
       "name": "bypass",

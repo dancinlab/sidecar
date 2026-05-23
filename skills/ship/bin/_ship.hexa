@@ -97,6 +97,26 @@ fn _has_credential(diff: string) -> bool {
     return false
 }
 
+// Auto-update the README.md `<!-- LATEST-SHIP -->` marker block (if present)
+// so every successful /ship leaves the latest commit message + date visible at
+// the top of the repo. No-op when README.md is missing or has no marker.
+fn _update_readme(msg: string) {
+    let r = exec_with_status("test -f README.md")
+    if r[1] != 0 { return }
+    let mut body = ""
+    try { body = to_string(read_file("README.md")) } catch e { return }
+    let start = "<!-- LATEST-SHIP -->"
+    let end = "<!-- /LATEST-SHIP -->"
+    let si = body.index_of(start)
+    let ei = body.index_of(end)
+    if si < 0 || ei < 0 || ei <= si { return }
+    let date = _trim(to_string(exec("date -u +%Y-%m-%dT%H:%M")))
+    let prefix = body.substring(0, si + len(start))
+    let suffix = body.substring(ei, len(body))
+    let middle = "\n" + date + "Z · " + msg + "\n"
+    try { write_file("README.md", prefix + middle + suffix) } catch e { }
+}
+
 fn _usage() {
     eprintln("usage: /ship -m \"<commit message>\" <path> [<path>...]")
     eprintln("  stages ONLY the given paths, credential-scans the staged diff,")
@@ -122,6 +142,11 @@ fn main() {
     let mut pq = ""
     i = 0
     while i < len(paths) { pq = pq + " " + _shq(paths[i]); i = i + 1 }
+
+    // refresh the README LATEST-SHIP marker (if present) before staging so it
+    // rides this commit. README.md is auto-staged here, not user-listed.
+    _update_readme(msg)
+    let _rdm = exec_with_status("git add README.md 2>/dev/null")
 
     let _add = exec_with_status("git add --" + pq)
 

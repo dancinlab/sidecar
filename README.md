@@ -13,6 +13,12 @@
 
 A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, and skills onto the host harness without modifying it. Strict concept separation: one plugin = one of `{hook, command, skill}`, no mixing. Project-level identity + governance lives in a single `project.tape` at the repo root (symlinked as `CLAUDE.md`); the cross-project `do` / `dont` layer rides inside the `commons` hook plugin.
 
+## Latest ship
+
+<!-- LATEST-SHIP -->
+2026-05-23T18:49Z · feat(ship 0.3.0): auto-refresh README.md LATEST-SHIP marker on every successful ship
+<!-- /LATEST-SHIP -->
+
 ## Install
 
 ```

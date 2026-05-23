@@ -61,6 +61,49 @@ fn _event_of(payload: map) -> string {
     return ""
 }
 
+// Append a live `pool` roster snapshot to the injected context — host /
+// os / on-off / description, one line each — so the model sees the host
+// lineup without running `pool list` first. Roster source of truth is the
+// `pool` CLI's `~/.pool/pool.json`. Empty / missing / unreadable → "".
+fn _roster_snapshot() -> string {
+    let home = env_var("HOME")
+    if home == "" { return "" }
+    let raw = _read_file_safe(home + "/.pool/pool.json")
+    if raw == "" { return "" }
+    let mut cfg = json_parse("{}")
+    try { cfg = json_parse(raw) } catch e { return "" }
+    if type_of(cfg) != "map" { return "" }
+    if !has_key(cfg, "hosts") { return "" }
+    let hosts = cfg["hosts"]
+    if type_of(hosts) != "array" { return "" }
+    if len(hosts) == 0 { return "" }
+
+    // single-line CSV-ish form keeps the prepend small (hexa stdout caps at
+    // 4095 B/fire; saving bytes here saves commons.tape tail rules from
+    // truncation). Format: name[os,on|off] separated by " · ".
+    let mut parts = []
+    let mut i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        if type_of(h) == "map" {
+            let mut name = ""
+            if has_key(h, "name") { if type_of(h["name"]) == "string" { name = h["name"] } }
+            if name != "" {
+                let mut os = "linux"
+                if has_key(h, "os") { if type_of(h["os"]) == "string" { os = h["os"] } }
+                let mut enabled = true
+                if has_key(h, "enabled") { if type_of(h["enabled"]) == "bool" { enabled = h["enabled"] } }
+                let mut state = "off"
+                if enabled { state = "on" }
+                parts.push(name + "[" + os + "," + state + "]")
+            }
+        }
+        i = i + 1
+    }
+    if len(parts) == 0 { return "" }
+    return "# pool (~/.pool/pool.json · `pool on <host> <cmd>` · g9): " + parts.join(" · ") + "\n\n"
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -73,5 +116,11 @@ fn main() {
 
     let root = env_var("CLAUDE_PLUGIN_ROOT")
     let body = _read_file_safe(root + "/commons.tape")
-    _emit("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(body) + "}}")
+    // roster snapshot is PREPENDED (not appended): the hexa runtime caps
+    // stdout at 4095 bytes / fire, and commons.tape body alone (~7 KB)
+    // already saturates that envelope. Prepending the (~300 B) roster
+    // guarantees it survives the truncation. Upstream gap filed:
+    // hexa-lang/inbox/patches/stdout-4095-byte-truncation.md
+    let full = _roster_snapshot() + body
+    _emit("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(full) + "}}")
 }

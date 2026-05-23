@@ -168,3 +168,7 @@
 @D g46 := "friendly explain style via /easy" :: governance [active]
   do   = "user asks to explain simply → `/easy` (7-element friendly format)"
   dont = "ad-hoc 'simple explanation' format when /easy ships the canonical 7-element template"
+
+@D g47 := "PR ship discipline — create-then-merge, no unmerged stacks" :: governance [required active]
+  do   = "create one PR → merge it → start next · main-based always · g4 stacked = per-merge layers"
+  dont = "fan out N stacked PRs unmerged · long-lived stack rebases on every main movement"

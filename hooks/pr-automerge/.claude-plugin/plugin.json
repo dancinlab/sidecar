@@ -1,7 +1,7 @@
 {
   "name": "pr-automerge",
   "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). When a Bash command starts with `gh pr create …` and is not draft / not already chained to a merge, it is rewritten via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` — transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline — no unmerged stacks). Skip conditions: `--draft` flag present · command already contains `gh pr merge` · command chained with `&&` / `;` / `|` (multi-step intent preserved). NO opt-out by design (commons @D g30).",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

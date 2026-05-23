@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.26 — `@D g39` 프로젝트 상태 문서는 /domain으로** — 새 `[required active]` governance block: 프로젝트 단위 작업 / 결정은 `/domain <task>` 으로 — `<NAME>.md` (live spec snapshot) + `<NAME>.log.md` (append-only checkbox-task history) 페어를 자동 관리. 동기 — `/domain` 은 sidecar의 spec/log 분리 인프라인데 g 룰 zero라 모델이 자주 잊고 ad-hoc `TODO.md` · `PLAN.md` · `notes/*.md` 를 흩뿌리는 패턴. user memory `feedback_domain_md_log_split` 에 동일 신호 박혀있었음 (잊힘 빈도 높다는 의미). `/domain` 의 NAME 기본값은 git-root basename. `marketplace.json` commons 설명 `g1..g38` → `g1..g39`.
+
 - **commons 0.9.25 — `@D g38` 자율 work-loop은 /cycle로** — 새 `[required active]` governance block: 다중 라운드 목표(반복 진행이 필요한 작업)는 `/cycle` 으로 — self-enumerate → parallel-plan → fan-out → loop 의 자율 루프 드라이버. 동기 — `/cycle` 은 sidecar의 핵심 autonomous-loop 인프라인데 g 룰이 zero 라 모델이 작업 중 자주 잊어버리고 수동 직렬화로 빠짐. g12 (`fan out parallel pods`) 가 일반 fan-out 원칙을 다루지만 `/cycle` 의 self-generating loop 패턴은 별도 메커니즘이라 분리 명세. `/all-bg-go` (직전-턴 reactive fan-out) 와 disjoint — `/all-bg-go` 는 한 번, `/cycle` 은 라운드 반복. `marketplace.json` commons 설명 `g1..g37` → `g1..g38`.
 
 - **commons 0.9.24 — `@D g37` plist는 유저 요청 시에만 생성** — 새 `[required active]` governance block: `.plist` 파일 (LaunchAgents · LaunchDaemons · Info.plist) 은 명시적 유저 요청 없이 자율 생성 / 작성 금지. 동기 — LaunchAgents / LaunchDaemons는 로그인 / 부팅 시 자동 실행되는 persistence surface라 자율 작성 시 사용자가 인지하지 못한 데몬이 시스템에 상주할 수 있음; Info.plist도 macOS 앱 번들 메타데이터로 임의 수정 시 코드사이닝 / 권한 영향. g16 (AGENTS.tape 휴면) · g17 (project.tape user-request only) 와 같은 결의 `user-request only` 패밀리. `marketplace.json` commons 설명 `g1..g36` → `g1..g37`.

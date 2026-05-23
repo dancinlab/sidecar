@@ -136,3 +136,7 @@
 @D g38 := "autonomous work-loop via /cycle" :: governance [required active]
   do   = "multi-round goal → `/cycle` (self-enumerate → parallel-plan → fan-out → loop)"
   dont = "serialize multi-round work · manual orchestration when `/cycle` fits the loop pattern"
+
+@D g39 := "project-state docs via /domain" :: governance [required active]
+  do   = "project tasks/decisions → `/domain <task>` (logs <NAME>.md spec + <NAME>.log.md history)"
+  dont = "scatter project state across ad-hoc TODO.md / PLAN.md / notes/*.md — use /domain"

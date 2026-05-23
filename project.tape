@@ -2,10 +2,11 @@
   version = "1.4"
 
 @I := "sidecar" :: identity [active]
-  kind   = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
-  brief  = "Side-mounts onto Claude Code · carries the cross-project do/dont layer in hooks/commons/"
-  parent = "dancinlab"
-  ssot   = "github.com/dancinlab/sidecar (`hx install sidecar`)"
+  kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
+  brief    = "Side-mounts onto Claude Code · carries the cross-project do/dont layer in hooks/commons/"
+  parent   = "dancinlab"
+  ssot     = "github.com/dancinlab/sidecar (`hx install sidecar`)"
+  siblings = "hexa-lang · anima · wilson · hive · demiurge"
 
 @D s1 := "concept separation" :: governance [required active]
   do   = "1 plugin = exactly 1 of {hook · command · skill} · top-level dir matches the concept"

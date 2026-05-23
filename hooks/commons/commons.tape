@@ -125,3 +125,7 @@
 
 @D g35 := "goal-driven execution — verifiable success criteria" :: governance [required active]
   do   = "recast tasks as verifiable goals — bug → failing test → green · loop until verified"
+
+@D g36 := "cross-project handoff via /inbox" :: governance [required active]
+  do   = "cross-repo gap/patch/bug/RFC → `cd <target-repo>` then `/inbox new <kind> <slug>`"
+  dont = "write directly to <target-repo>/inbox/<kind>/<slug>.md — use `/inbox new` (scaffolds template)"

@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.27 — `@D g40` multi-axis gap sweep은 /gap (sister of /kick)** — 새 `[active]` governance block: 막힌 문제는 `/gap` (42-lens 8-family sweep) 또는 `/kick <seed>` (g6 · hexa kick discovery engine) 으로 lensing. 동기 — `/gap` 은 sidecar의 multi-axis breakthrough 도구인데 g 룰 zero. g6 (kick) 와 sister relationship 명시 — 두 도구는 disjoint하지만 같은 "stuck → discovery" 패턴을 다룸 (`/kick` = single-seed, `/gap` = catalog-sweep). g6 와 동일한 `[active]` 강도 (`required`는 conditional 패턴엔 과함). `marketplace.json` commons 설명 `g1..g39` → `g1..g40`.
+
 - **commons 0.9.26 — `@D g39` 프로젝트 상태 문서는 /domain으로** — 새 `[required active]` governance block: 프로젝트 단위 작업 / 결정은 `/domain <task>` 으로 — `<NAME>.md` (live spec snapshot) + `<NAME>.log.md` (append-only checkbox-task history) 페어를 자동 관리. 동기 — `/domain` 은 sidecar의 spec/log 분리 인프라인데 g 룰 zero라 모델이 자주 잊고 ad-hoc `TODO.md` · `PLAN.md` · `notes/*.md` 를 흩뿌리는 패턴. user memory `feedback_domain_md_log_split` 에 동일 신호 박혀있었음 (잊힘 빈도 높다는 의미). `/domain` 의 NAME 기본값은 git-root basename. `marketplace.json` commons 설명 `g1..g38` → `g1..g39`.
 
 - **commons 0.9.25 — `@D g38` 자율 work-loop은 /cycle로** — 새 `[required active]` governance block: 다중 라운드 목표(반복 진행이 필요한 작업)는 `/cycle` 으로 — self-enumerate → parallel-plan → fan-out → loop 의 자율 루프 드라이버. 동기 — `/cycle` 은 sidecar의 핵심 autonomous-loop 인프라인데 g 룰이 zero 라 모델이 작업 중 자주 잊어버리고 수동 직렬화로 빠짐. g12 (`fan out parallel pods`) 가 일반 fan-out 원칙을 다루지만 `/cycle` 의 self-generating loop 패턴은 별도 메커니즘이라 분리 명세. `/all-bg-go` (직전-턴 reactive fan-out) 와 disjoint — `/all-bg-go` 는 한 번, `/cycle` 은 라운드 반복. `marketplace.json` commons 설명 `g1..g37` → `g1..g38`.

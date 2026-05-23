@@ -16,8 +16,7 @@
 //       inline-evaluation signal; general sympy use in committed code
 //       files (without `-c`) passes through untouched.
 //
-// NO opt-out by design — no env var, no config file, no exception list
-// (commons @D g30).
+// No opt-out by design — no env var, no config file, no exception list.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -120,13 +119,13 @@ fn main() {
 
     // (1) Wolfram CLI deny
     if _is_wolfram_cli(first) {
-        let reason = "verify-guard (commons @D g5): `" + first + "` is a raw Wolfram / Mathematica CLI cited as primary evidence — refused.\n  Use `hexa verify` instead — it's the SSOT for correctness / purity / grade / identity claims (paste the verdict VERBATIM).\n  NO opt-out by design (commons @D g30)."
+        let reason = "verify-guard (commons @D g5): `" + first + "` is a raw Wolfram / Mathematica CLI cited as primary evidence — refused.\n  Use `hexa verify` instead — it's the SSOT for correctness / purity / grade / identity claims (paste the verdict VERBATIM).\n  No opt-out by design."
         _deny(reason)
     }
 
     // (2) inline-Python verification probe
     if _is_inline_python(first) && cmd.contains(" -c ") && _has_verify_import(cmd) {
-        let reason = "verify-guard (commons @D g5): inline-Python verification probe (`" + first + " -c '… import sympy/pyphi/wolframclient …'`) cited as primary evidence — refused.\n  Use `hexa verify` instead — it's the SSOT for correctness / purity / grade / identity claims (paste the verdict VERBATIM).\n  General sympy/wolframclient usage in committed code files (no `-c` flag) is NOT blocked — only inline `-c` verification probes. NO opt-out by design (commons @D g30)."
+        let reason = "verify-guard (commons @D g5): inline-Python verification probe (`" + first + " -c '… import sympy/pyphi/wolframclient …'`) cited as primary evidence — refused.\n  Use `hexa verify` instead — it's the SSOT for correctness / purity / grade / identity claims (paste the verdict VERBATIM).\n  General sympy/wolframclient usage in committed code files (no `-c` flag) is NOT blocked — only inline `-c` verification probes. No opt-out by design."
         _deny(reason)
     }
 

@@ -8,7 +8,7 @@
 //
 // Empty / no inbox dir → silent (exit 0 without output).
 //
-// NO opt-out by design (commons @D g30).
+// No opt-out by design.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))

@@ -1,7 +1,7 @@
 {
   "name": "inbox-watch",
   "description": "SessionStart hook that scans the current repo's `inbox/{notes,patches,poc,rfc_drafts}/*.md` for open entries (no `status:` frontmatter value, OR a value not in {closed, resolved, done, merged, ack}) and emits a one-shot snapshot as `additionalContext` — `# inbox: N open` + bullet list (cap 5, most-recently-modified). Empty / no inbox dir → silent. Implemented in hexa-lang (`_inbox_watch.hexa`, invoked via `hexa run`). Makes cross-project handoff entries visible at session start so they never sit unread. NO opt-out by design (commons @D g30).",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

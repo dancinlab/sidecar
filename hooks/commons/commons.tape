@@ -109,10 +109,6 @@
 @D g29 := "CHANGELOG.md at repo root" :: governance [required active]
   do   = "create + maintain `CHANGELOG.md` at every repo root as the chronological history surface"
 
-@D g30 := "no self-authored bypass — guards ship without an off switch" :: governance [required active]
-  do   = "if a guard / hook / lint mis-fires, fix or remove the guard itself"
-  dont = "add an opt-out / bypass (env var · flag · skip-list) to a guard or rule you authored"
-
 @D g31 := "permission-blocked write — diagnose + clear, don't punt" :: governance [required active]
   do   = "EPERM write? check `ls -lO` flags (uchg/schg) + ACLs — clear via chflags / passwordless sudo"
   dont = "declare a write impossible before diagnosing — sudo is available, immutable flags are clearable"

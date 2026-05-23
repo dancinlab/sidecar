@@ -22,7 +22,7 @@
 //
 // General SDK usage in committed code files (no -c/-e) passes through.
 //
-// NO opt-out by design (commons @D g30).
+// No opt-out by design.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -152,13 +152,13 @@ fn main() {
 
     // (1) HTTP CLI to AI hostname
     if _is_http_cli(first) && _has_ai_hostname(cmd) {
-        let reason = "ai-api-guard (commons @D g50): `" + first + " … <AI hostname>` is a raw HTTP call to an AI provider — refused.\n  Use the sidecar CLI wrapper instead:\n    image generation → `/imagine <prompt-file> <out.png>` (g44 pinned gpt-image-2)\n    arxiv / YouTube → `/research:arxiv` / `/research:yt` (g43)\n    text/correctness → `hexa verify` (g5)\n  Raw API/SDK is allowed only when no wrapper exists. NO opt-out (g30)."
+        let reason = "ai-api-guard (commons @D g50): `" + first + " … <AI hostname>` is a raw HTTP call to an AI provider — refused.\n  Use the sidecar CLI wrapper instead:\n    image generation → `/imagine <prompt-file> <out.png>` (g44 pinned gpt-image-2)\n    arxiv / YouTube → `/research:arxiv` / `/research:yt` (g43)\n    text/correctness → `hexa verify` (g5)\n  Raw API/SDK is allowed only when no wrapper exists. No opt-out by design."
         _deny(reason)
     }
 
     // (2) inline-runtime AI-SDK probe
     if _is_inline_runtime(first) && _has_inline_flag(cmd) && _has_ai_sdk_import(cmd) {
-        let reason = "ai-api-guard (commons @D g50): inline `" + first + " -c/-e '… import <AI SDK> …'` is a raw AI-SDK probe — refused.\n  Use the sidecar CLI wrapper instead (/imagine · /research · /verify · …). Raw SDK is allowed only when no wrapper exists, and only when committed to a code file (no inline `-c`/`-e`). NO opt-out (g30)."
+        let reason = "ai-api-guard (commons @D g50): inline `" + first + " -c/-e '… import <AI SDK> …'` is a raw AI-SDK probe — refused.\n  Use the sidecar CLI wrapper instead (/imagine · /research · /verify · …). Raw SDK is allowed only when no wrapper exists, and only when committed to a code file (no inline `-c`/`-e`). No opt-out by design."
         _deny(reason)
     }
 

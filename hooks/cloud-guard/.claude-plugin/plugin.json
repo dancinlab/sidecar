@@ -1,7 +1,7 @@
 {
   "name": "cloud-guard",
   "description": "PreToolUse(Bash) hard block for raw rented-GPU pod dispatch (commons @D g8). Three orthogonal detectors run on every Bash command: (a) pod-CLI + remote-verb pair scan anywhere in the command — runpodctl {exec|ssh|send|receive|send-file|receive-file|send-file-to-pod|receive-file-from-pod|port} · vast(ai) {exec|ssh|scp|copy|attach-ssh|execute}; (b) ssh/scp/rsync/sftp against `*.runpod.io` / `proxy.runpod.net` / `*.vast.ai` hosts; (c) curl/wget/http(ie)/xh against `api.runpod.io` / `api.runpod.ai` / `rest.runpod.io` / `runpod.io/graphql` / `console.vast.ai` / `vast.ai/api` URLs. Shell separators (; & | () ` \" ' \\) normalized to whitespace before tokenizing — `cd /x && runpodctl ssh …`, `bash -c '… vast exec …'`, env-prefixes all caught. Pod-lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy / config / project / version) pass through. Redirects to `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`. Implemented in hexa-lang (`_cloud_guard.hexa`, invoked via `hexa run`). NO opt-out by design (commons @D g30).",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

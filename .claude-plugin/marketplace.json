@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g56` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.51"
+      "version": "0.9.52"
     },
     {
       "name": "prefs",
@@ -66,37 +66,37 @@
       "name": "plist-guard",
       "source": "./hooks/plist-guard",
       "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, invoked via `hexa run`). Any target file ending in `.plist` (LaunchAgents \u00b7 LaunchDaemons \u00b7 Info.plist \u00b7 UserDefaults) is denied with a redirecting message \u2014 the agent cannot distinguish user-explicit from model-autonomous intent, so all .plist writes are refused globally; if the user truly wants one, they run the command themselves outside the agent path. LaunchAgents / LaunchDaemons are persistence surfaces (auto-launch on login / boot), so silent writes risk installing daemons the user did not ask for. Enforces commons @D g37 (plist user-request only). NO opt-out by design.",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "name": "cloud-guard",
       "source": "./hooks/cloud-guard",
-      "description": "PreToolUse(Bash) hard block for raw rented-GPU pod dispatch (commons @D g8). Three orthogonal detectors run on every Bash command: (a) pod-CLI + remote-verb pair scan anywhere in the command \u2014 runpodctl {exec|ssh|send|receive|send-file|receive-file|send-file-to-pod|receive-file-from-pod|port} \u00b7 vast(ai) {exec|ssh|scp|copy|attach-ssh|execute}; (b) ssh/scp/rsync/sftp against `*.runpod.io` / `proxy.runpod.net` / `*.vast.ai` hosts; (c) curl/wget/http(ie)/xh against `api.runpod.io` / `api.runpod.ai` / `rest.runpod.io` / `runpod.io/graphql` / `console.vast.ai` / `vast.ai/api` URLs. Shell separators normalized to whitespace before tokenizing \u2014 `cd /x && runpodctl ssh \u2026`, `bash -c '\u2026 vast exec \u2026'`, env-prefixes all caught. Pod-lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy / config / project / version) pass through. Redirects to `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`. Implemented in hexa-lang (`_cloud_guard.hexa`, invoked via `hexa run`). NO opt-out by design (commons @D g30).",
-      "version": "0.2.0"
+      "description": "PreToolUse(Bash) hard block for raw rented-GPU pod dispatch (commons @D g8). Three orthogonal detectors run on every Bash command: (a) pod-CLI + remote-verb pair scan anywhere in the command \u2014 runpodctl {exec|ssh|send|receive|send-file|receive-file|send-file-to-pod|receive-file-from-pod|port} \u00b7 vast(ai) {exec|ssh|scp|copy|attach-ssh|execute}; (b) ssh/scp/rsync/sftp against `*.runpod.io` / `proxy.runpod.net` / `*.vast.ai` hosts; (c) curl/wget/http(ie)/xh against `api.runpod.io` / `api.runpod.ai` / `rest.runpod.io` / `runpod.io/graphql` / `console.vast.ai` / `vast.ai/api` URLs. Shell separators normalized to whitespace before tokenizing \u2014 `cd /x && runpodctl ssh \u2026`, `bash -c '\u2026 vast exec \u2026'`, env-prefixes all caught. Pod-lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy / config / project / version) pass through. Redirects to `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`. Implemented in hexa-lang (`_cloud_guard.hexa`, invoked via `hexa run`). NO opt-out by design.",
+      "version": "0.2.1"
     },
     {
       "name": "inbox-watch",
       "source": "./hooks/inbox-watch",
-      "description": "SessionStart + UserPromptSubmit hook that scans the current repo's `inbox/{notes,patches,poc,rfc_drafts}/*.md` for open entries (no `status:` frontmatter value, OR a value not in {closed, resolved, done, merged, ack}) and emits a one-shot snapshot as `additionalContext` — `# inbox: N open` + bullet list (cap 5, most-recently-modified). Empty / no inbox dir → silent. Implemented in hexa-lang (`_inbox_watch.hexa`, invoked via `hexa run`). Makes cross-project handoff entries visible at session start so they never sit unread. NO opt-out by design (commons @D g30).",
-      "version": "0.1.1"
+      "description": "SessionStart + UserPromptSubmit hook that scans the current repo's `inbox/{notes,patches,poc,rfc_drafts}/*.md` for open entries (no `status:` frontmatter value, OR a value not in {closed, resolved, done, merged, ack}) and emits a one-shot snapshot as `additionalContext` — `# inbox: N open` + bullet list (cap 5, most-recently-modified). Empty / no inbox dir → silent. Implemented in hexa-lang (`_inbox_watch.hexa`, invoked via `hexa run`). Makes cross-project handoff entries visible at session start so they never sit unread. NO opt-out by design.",
+      "version": "0.1.2"
     },
     {
       "name": "ai-api-guard",
       "source": "./hooks/ai-api-guard",
-      "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` · `api.anthropic.com` · `fal.run` · `api.replicate.com` · `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. — commons @D g50 enforcement. General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design (commons @D g30).",
-      "version": "0.1.1"
+      "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` · `api.anthropic.com` · `fal.run` · `api.replicate.com` · `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. — commons @D g50 enforcement. General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design.",
+      "version": "0.1.2"
     },
     {
       "name": "verify-guard",
       "source": "./hooks/verify-guard",
-      "description": "PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_verify_guard.hexa`, invoked via `hexa run`). Denies first-token ∈ {wolframscript, mathematica, WolframKernel}, and inline-Python verification via `python(3)? -c '...'` containing `import sympy` / `from sympy` / `import pyphi` / `import wolframclient` with a redirecting message pointing to `hexa verify` (commons @D g5). General sympy / wolframclient usage in committed code files passes through — only inline `-c` verification probes (and the standalone Wolfram CLIs) are refused. NO opt-out by design (commons @D g30).",
-      "version": "0.1.1"
+      "description": "PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_verify_guard.hexa`, invoked via `hexa run`). Denies first-token ∈ {wolframscript, mathematica, WolframKernel}, and inline-Python verification via `python(3)? -c '...'` containing `import sympy` / `from sympy` / `import pyphi` / `import wolframclient` with a redirecting message pointing to `hexa verify` (commons @D g5). General sympy / wolframclient usage in committed code files passes through — only inline `-c` verification probes (and the standalone Wolfram CLIs) are refused. NO opt-out by design.",
+      "version": "0.1.2"
     },
     {
       "name": "pr-cycle",
       "source": "./hooks/pr-cycle",
-      "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hexa run`). Quote-aware tokenizer strips single- and double-quoted regions before scanning, then looks for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026`, while test payloads with the trigger inside quotes do NOT fire. When matched (and not draft / not already merging / not inbox/patches-only), rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` and, IF cwd is a linked git worktree (not the main one), additionally appends ` && (cd <main-wt> && git worktree remove <this-wt> --force 2>/dev/null && git branch -D <branch> 2>/dev/null || true)` \u2014 transparent atomic create \u2192 merge \u2192 worktree+branch cleanup. The worktree+branch are detected at hook-time (`git rev-parse --show-toplevel` \u00b7 `git worktree list --porcelain` first entry \u00b7 `git rev-parse --abbrev-ref HEAD`), so cleanup targets the exact context the PR was issued from. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks, no dead worktrees). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 branch diff scoped entirely to `inbox/patches/**` (commons @D g54 \u2014 maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design (commons @D g30). Also ships a `/pr-cycle` command (manual one-shot trigger): pushes the current branch then `gh pr create --fill` \u2014 the hook auto-appends merge + cleanup, so one command does create \u2192 merge \u2192 clean. Refuses on main/master.",
-      "version": "0.3.1"
+      "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hexa run`). Quote-aware tokenizer strips single- and double-quoted regions before scanning, then looks for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026`, while test payloads with the trigger inside quotes do NOT fire. When matched (and not draft / not already merging / not inbox/patches-only), rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --admin --delete-branch` and, IF cwd is a linked git worktree (not the main one), additionally appends ` && (cd <main-wt> && git worktree remove <this-wt> --force 2>/dev/null && git branch -D <branch> 2>/dev/null || true)` \u2014 transparent atomic create \u2192 merge \u2192 worktree+branch cleanup. The worktree+branch are detected at hook-time (`git rev-parse --show-toplevel` \u00b7 `git worktree list --porcelain` first entry \u00b7 `git rev-parse --abbrev-ref HEAD`), so cleanup targets the exact context the PR was issued from. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks, no dead worktrees). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 branch diff scoped entirely to `inbox/patches/**` (commons @D g54 \u2014 maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design. Also ships a `/pr-cycle` command (manual one-shot trigger): pushes the current branch then `gh pr create --fill` \u2014 the hook auto-appends merge + cleanup, so one command does create \u2192 merge \u2192 clean. Refuses on main/master.",
+      "version": "0.3.2"
     },
     {
       "name": "tape-lint",
@@ -233,8 +233,8 @@
     {
       "name": "easy-auto",
       "source": "./hooks/easy-auto",
-      "description": "SessionStart + UserPromptSubmit + PreCompact + PostCompact hook \u2014 auto-injects the `easy` (friendly) 7-element response style as additionalContext so the pattern is active from turn 0 without the user calling /easy. Reads ${CLAUDE_PLUGIN_ROOT}/styles/easy.<lang>.md (env `EASY_LANG` override, default `ko`); falls back to easy.md (English base) when the lang variant is missing. UserPromptSubmit re-injects every turn so the style never fades; PreCompact + PostCompact survive auto-compaction. Implemented in hexa-lang (`_easy_auto.hexa`, invoked via `hexa run`). Pairs with the `easy` skill (manual /easy trigger remains \u2014 easy-auto is the default-on layer). Emergency escape: `EASY_LANG=off`. NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "description": "SessionStart + UserPromptSubmit + PreCompact + PostCompact hook \u2014 auto-injects the `easy` (friendly) 7-element response style as additionalContext so the pattern is active from turn 0 without the user calling /easy. Reads ${CLAUDE_PLUGIN_ROOT}/styles/easy.<lang>.md (env `EASY_LANG` override, default `ko`); falls back to easy.md (English base) when the lang variant is missing. UserPromptSubmit re-injects every turn so the style never fades; PreCompact + PostCompact survive auto-compaction. Implemented in hexa-lang (`_easy_auto.hexa`, invoked via `hexa run`). Pairs with the `easy` skill (manual /easy trigger remains \u2014 easy-auto is the default-on layer). Emergency escape: `EASY_LANG=off`. NO opt-out by design.",
+      "version": "0.1.1"
     },
     {
       "name": "research",
@@ -263,8 +263,8 @@
     {
       "name": "output-trim",
       "source": "./hooks/output-trim",
-      "description": "PreToolUse(Bash) stdout trimmer — when a simple single Bash command would emit >8000 chars, transparently rewrite via `updatedInput` to pipe stdout through a minimal hexa-native kernel: consecutive-line dedup ([×N] counter) + per-line truncation to 200 chars. Small outputs <8000 chars pass verbatim. Skipped on any shell metacharacter so compound pipelines / redirects / heredocs / background jobs / command substitutions and other PreToolUse(Bash) rewrite hooks compose without conflict. Exit code preserved via `set -o pipefail`. Kernel chosen by benchmark on 120 real Bash-stdout samples ≥8000 chars — Pareto-dominates the TF-IDF salience + MinHash near-dup paragraph dedup approach of the original `wilson-output-trim`. NO opt-out by design (commons @D g30).",
-      "version": "0.1.1"
+      "description": "PreToolUse(Bash) stdout trimmer — when a simple single Bash command would emit >8000 chars, transparently rewrite via `updatedInput` to pipe stdout through a minimal hexa-native kernel: consecutive-line dedup ([×N] counter) + per-line truncation to 200 chars. Small outputs <8000 chars pass verbatim. Skipped on any shell metacharacter so compound pipelines / redirects / heredocs / background jobs / command substitutions and other PreToolUse(Bash) rewrite hooks compose without conflict. Exit code preserved via `set -o pipefail`. Kernel chosen by benchmark on 120 real Bash-stdout samples ≥8000 chars — Pareto-dominates the TF-IDF salience + MinHash near-dup paragraph dedup approach of the original `wilson-output-trim`. NO opt-out by design.",
+      "version": "0.1.2"
     }
   ]
 }

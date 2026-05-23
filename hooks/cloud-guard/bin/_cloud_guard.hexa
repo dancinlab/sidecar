@@ -27,8 +27,7 @@
 // quoted bash -c bodies / env-prefixes are seen through. No regex
 // (hexa has no regex stdlib); plain substring scan.
 //
-// NO opt-out by design — no env var, no config file, no exception list
-// (commons @D g30).
+// No opt-out by design — no env var, no config file, no exception list.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -62,7 +61,7 @@ fn _json_escape(s: string) -> string {
 }
 
 fn _deny(category: string, what: string) {
-    let reason = "cloud-guard (commons @D g8): refusing `" + what + "` — " + category + ".\n  Use `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` instead (wraps runpod + vast.ai across cycles A transport · B file/dir transfer · C preflight).\n  Lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy) are NOT blocked — only remote exec / transfer / API calls.\n  NO opt-out by design (commons @D g30)."
+    let reason = "cloud-guard (commons @D g8): refusing `" + what + "` — " + category + ".\n  Use `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` instead (wraps runpod + vast.ai across cycles A transport · B file/dir transfer · C preflight).\n  Lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy) are NOT blocked — only remote exec / transfer / API calls.\n  No opt-out by design."
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
     println(payload)
     exit(0)

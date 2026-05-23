@@ -13,7 +13,7 @@
 // jobs, command substitutions, and backticks (all handled by the user-
 // authored compound form, not our scope).
 //
-// NO opt-out by design (commons @D g30).
+// No opt-out by design.
 
 let MARK = "__SIDECAR_OUTPUT_TRIM__"
 
@@ -107,6 +107,6 @@ fn main() {
     let filter = root + "/bin/_trim_filter.hexa"
 
     let new_cmd = "set -o pipefail; { " + cmd + " ; } | hexa run " + filter + "  # " + MARK
-    let note = "output-trim: stdout routed through dedup+truncate kernel (commons @D g30, simple-cmd scope)."
+    let note = "output-trim: stdout routed through dedup+truncate kernel (simple-cmd scope)."
     _emit(ti, new_cmd, note)
 }

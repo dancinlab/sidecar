@@ -9,9 +9,8 @@
 // persistence surfaces (auto-launch on login / boot), so a silent write
 // risks installing a daemon the user did not ask for.
 //
-// NO opt-out by design — no env var, no config file, no exception list,
-// no self-exclusion. Enforcement stands or the plugin is uninstalled
-// (commons @D g30).
+// No opt-out by design — no env var, no config file, no exception list,
+// no self-exclusion. Enforcement stands or the plugin is uninstalled.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -80,6 +79,6 @@ fn main() {
 
     if !_ends_with(target, ".plist") { _allow() }
 
-    let reason = "plist-guard (commons @D g37): `.plist` files (LaunchAgents · LaunchDaemons · Info.plist · UserDefaults) are user-request only.\n  Refusing to write `" + target + "`.\n  LaunchAgents / LaunchDaemons auto-launch on login / boot — a silent write risks installing a daemon the user did not ask for.\n  If the user explicitly requested this .plist, ask them to confirm and write the file themselves (outside the agent path). NO opt-out by design (commons @D g30)."
+    let reason = "plist-guard (commons @D g37): `.plist` files (LaunchAgents · LaunchDaemons · Info.plist · UserDefaults) are user-request only.\n  Refusing to write `" + target + "`.\n  LaunchAgents / LaunchDaemons auto-launch on login / boot — a silent write risks installing a daemon the user did not ask for.\n  If the user explicitly requested this .plist, ask them to confirm and write the file themselves (outside the agent path). No opt-out by design."
     _deny(reason)
 }

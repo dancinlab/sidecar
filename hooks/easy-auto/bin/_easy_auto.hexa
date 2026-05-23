@@ -5,7 +5,7 @@
 // language (env EASY_LANG override, default `ko`) and emits the body as
 // additionalContext so the 7-element friendly pattern is active from turn 0
 // without the user having to call `/easy`. Falls back to easy.md (English
-// base) when the lang variant is missing. NO opt-out (commons @D g30) —
+// base) when the lang variant is missing. No opt-out by design —
 // emergency escape: EASY_LANG=off env to suppress this turn's inject.
 
 fn _read_stdin() -> string {

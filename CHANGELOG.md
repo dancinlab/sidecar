@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **README — Commands 섹션을 코드블록 형태로 (그룹 주석 + 명령별 설명)** — Commands 섹션의 markdown 테이블을 fenced 코드블록으로 전환. 그룹 헤더 (`# ── Discovery ──` 등 7그룹) + 각 명령어 한 줄 + 정렬된 설명 주석. guard hook 들도 코드블록 하단에 `# <hook> <설명>` 형태로 묶음. 동기 — 명령어 + 그게 뭘 하는지를 monospace 정렬로 한눈에 (테이블보다 scan 쉬움).
+
 - **README — Commands 섹션 추가 (Plugins 위)** — README 의 `## Plugins` 테이블 위에 `## Commands` 빠른참조 섹션 신설. 슬래시 명령을 7개 group (discovery · fan-out/loop · dispatch · cross-project · verify/help · research/generate · session/meta) 으로 묶은 테이블 + command 없이 자동 발화하는 guard hook 목록 (hexa-native · plist-guard · cloud-guard · verify-guard · ai-api-guard · pr-automerge · pool-route · git-guard · sidecar-lint · tape-lint · limit-guard · inbox-watch). 동기 — plugin 테이블은 kind/version 중심이라 "어떤 슬래시 명령이 있나" 한눈에 보기 어려움. Commands 섹션이 command-first 진입점. (Plugins 테이블 자체의 버전/항목 갱신은 별도 — 이 PR 은 Commands 섹션만 추가, g34 surgical.)
 
 - **tape-lint 0.5.0 — (4) @I siblings check** — tape-lint 에 4번째 check 추가: `project.tape` 의 `@I` identity 블록에 `siblings` 필드가 없으면 deny. diff-aware — siblings 를 가진 @I 에서 그것을 지우거나, siblings 없는 새 @I 를 추가하는 경우만 block (siblings 가 원래 없던 project.tape 는 grandfather). 동기 — cross-repo network SSOT (`siblings`) 가 실수로 누락/제거되는 것 방지. `marketplace.json` + `plugin.json` 0.4.0 → 0.5.0.

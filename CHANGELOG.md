@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.29 — `@D g42` depletion ideation은 /brainstorm (discovery family)** — 새 `[active]` governance block: 폭넓은 아이디어 발산이 필요할 때는 `/brainstorm <seed>` 으로 — exhaustion 도달까지 rounds 반복. `/kick` (g6, single-seed discovery) · `/gap` (g40, catalog-sweep) 와 함께 **discovery 3-sister** 완성: `/kick` = seed-based · `/gap` = catalog-sweep · `/brainstorm` = width-first depletion. 동기 — `/brainstorm` 은 g 룰 zero라 모델이 first 3-5 아이디어에서 멈추는 패턴이 잦음. `marketplace.json` commons 설명 `g1..g41` → `g1..g42`.
+
 - **commons 0.9.28 — `@D g41` reactive fan-out은 /all-bg-go (sister of /cycle)** — 새 `[active]` governance block: 직전 턴(PRIOR-turn)에 N개의 disjoint 분기를 제시한 상황은 `/all-bg-go` 로 한 번에 fan-out — `/cycle` (g38) 의 self-generating loop 와 분명히 disjoint 관계 (`/all-bg-go` = 단일 reactive · `/cycle` = 자율 반복). 동기 — `/all-bg-go` 는 g12 (`fan out parallel pods`) 의 일반 fan-out 원칙에 일부 흡수돼 있었지만 *어떤 명령으로* 라는 메커니즘 명세가 빠져있어 모델이 수동으로 one-by-one 호출하는 패턴이 잦았음. g40 (gap/kick sister) · g41 (all-bg-go/cycle sister) 두 sister-binding 룰로 discovery-skill 페어 + fan-out-skill 페어를 모두 disjoint 명세 완료. `marketplace.json` commons 설명 `g1..g40` → `g1..g41`.
 
 - **inject 0.1.3 — 0.1.2 누락 코드 적용** — 직전 `inject 0.1.2` 출시는 description / CHANGELOG / plugin.json 버전 라벨만 업데이트하고 **실제 fix 코드 (`skills/inject/commands/inject.md`) 변경이 빠짐** — 그래서 `/inject` 가 여전히 BSD `ls -1v` (macOS) 에서 lexicographic 정렬로 stale commons.tape (0.9.9 < 0.9.21) 를 잡는 옛 동작 그대로. 0.1.3 은 그 코드 변경만 (`ls -1v cache/sidecar/commons/ | tail -1` → `~/.claude/plugins/marketplaces/sidecar/hooks/commons/.claude-plugin/plugin.json` 의 `version` 필드 직접 파싱) 적용. `marketplace.json` + `plugin.json` 버전 0.1.2 → 0.1.3.

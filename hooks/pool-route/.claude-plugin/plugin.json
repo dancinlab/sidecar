@@ -1,7 +1,7 @@
 {
   "name": "pool-route",
   "description": "PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has ≥1 enabled host and a Bash command matches the heavy classifier (make · cargo · npm · gradle · pytest · go build · swift build · docker build · nvidia-smi · train · hexa kick/drill/loop/cc · `find $HOME/core/anima` big-tree scan · …) or a root-needing command, the command is rewritten via the hook `updatedInput` field to run on a pool host over ssh (`ssh <host> 'cd <workdir> && <cmd>'`) — transparent dispatch, not a suggestion. Each routing decision appends one JSON line to `~/.pool/route-log.jsonl` (capped at 100 entries); the SessionStart event reads the last 5 entries back and emits them as additionalContext so the model sees the recent routing history without recon. OS-capability filter + round-robin load balance; a preflight `test -d` skips hosts that lack the workdir — pool-route does NOT sync the project. NO opt-out by design.",
-  "version": "0.5.6",
+  "version": "0.5.7",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

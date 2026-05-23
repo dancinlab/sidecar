@@ -101,8 +101,8 @@
     {
       "name": "cycle",
       "source": "./skills/cycle",
-      "description": "Autonomous work-loop driver — /cycle runs next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. Repeat /cycle to march through a goal in parallel batches. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
-      "version": "0.1.1"
+      "description": "Autonomous work-loop driver. Two commands: /cycle — next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. /cycle-full — depletion brainstorm (rounds until no novel ideas, cap 8) on $ARGUMENTS, then the same plan-table → fan-out → loop tail (phase 0 is one-time per goal; subsequent rounds use plain /cycle). Repeat /cycle to march through a goal in parallel batches. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · /cycle-full · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
+      "version": "0.2.0"
     },
     {
       "name": "pool",

@@ -4,4 +4,7 @@ argument-hint: "init <NAME> | set <NAME> | goal <text> | milestone <text> | done
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_domain.hexa" $ARGUMENTS`
+!`H="$CLAUDE_PLUGIN_ROOT/bin/_domain.hexa"
+[ -f "$H" ] || H="$(find "$HOME/.claude/plugins/cache/sidecar/domain" -name _domain.hexa 2>/dev/null | sort -V | tail -1)"
+[ -f "$H" ] || { echo "✗ _domain.hexa not found — check sidecar install"; exit 1; }
+hexa run "$H" $ARGUMENTS`

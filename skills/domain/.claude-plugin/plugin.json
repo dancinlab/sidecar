@@ -1,7 +1,7 @@
 {
   "name": "domain",
   "description": "Maintain UPPERCASE <NAME>.md (snapshot = `@goal:` final-goal declaration + `- [ ]` progress milestones) + sister <NAME>.log.md (append-only step log) at project root. NAME accepts `+` for meta-domain composition (e.g. `RTSC+HTS` → RTSC+HTS.md + RTSC+HTS.log.md). Subcommands: /domain init <NAME> (scaffold files) · /domain set <NAME> (select session active — bare /domain <NAME> shortcut) · /domain goal <text> (declare the FINAL goal — sets the snapshot's `@goal:` line) · /domain milestone <text> (alias ms — add `- [ ]` progress milestone) · /domain done <match> (flip a milestone [ ]→[x], else flip a log task) · /domain (show active + @goal + progress bar `▓▓▓░░ NN% · done/total` + lint) · /domain todo <task> / <task> / new <header> (log). Lint: warns if snapshot has no `@goal:` OR no milestones. Progress = milestone completion (snapshot), not log-based.",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

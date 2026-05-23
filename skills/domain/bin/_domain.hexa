@@ -236,18 +236,22 @@ fn _env(name: string) -> string {
     return _trim(to_string(r[0]))
 }
 
-// active-domain pointer store: $CLAUDE_PLUGIN_DATA/domain-active.tsv
-// (fallback $HOME/.claude). One `<root>\t<NAME>` line per project root —
-// the active domain for that working tree, set by `/domain <NAME>`.
+// active-domain pointer store: ALWAYS anchored at $HOME/.claude/
+// (CLAUDE_PLUGIN_DATA varies by session/install and broke persistence; $HOME
+// is stable across sessions, so set in session-1 survives into session-2).
+// One `<root>\t<NAME>` line per project root — the active domain for that
+// working tree, set by `/domain <NAME>`.
 fn _active_store() -> string {
-    let d = _env("CLAUDE_PLUGIN_DATA")
-    let mut base = d
-    if base == "" { base = _env("HOME") + "/.claude" }
-    return base + "/domain-active.tsv"
+    let home = _env("HOME")
+    if home == "" { return ".domain-active.tsv" }
+    return home + "/.claude/domain-active.tsv"
 }
 
 fn _set_active(root: string, name: string) {
     let path = _active_store()
+    // ensure parent dir exists (first ever set on a fresh machine)
+    let home = _env("HOME")
+    if home != "" { let _mk = exec_with_status("mkdir -p " + home + "/.claude") }
     let body = _read_file_safe(path)
     let lines = body.split("\n")
     let mut out = []

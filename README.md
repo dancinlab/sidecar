@@ -16,7 +16,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-23T18:54Z · feat(commons 0.9.54 + cycle 0.5.0): add g58 — /cycle family enumerates only the active domain's open milestones (off-domain forbidden)
+2026-05-23T19:01Z · fix(domain 0.7.4): pin active-domain pointer at $HOME/.claude (CLAUDE_PLUGIN_DATA varies per session, broke persistence — set in session-1 now survives session-2)
 <!-- /LATEST-SHIP -->
 
 ## Install

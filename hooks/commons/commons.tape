@@ -1,6 +1,10 @@
 @V := "tape" :: spec [active]
   version = "1.2"
 
+@D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
+  do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
+  dont = "multiply entities beyond necessity · choose a complex path when a simpler one suffices"
+
 @D g1 := "ai-native + canonical first" :: governance [required active]
   do   = "ai-native · hexa-native first · native + canonical patterns per language / framework"
 

@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.44 — `@D g0` Occam's razor (최상단 메타 원칙)** — commons.tape 최상단 (`@V` spec 다음, g1 앞) 에 오컴의 면도날을 `@D g0` 로 등록. `do = 가장 단순한 설명/해법 선호 (최소 가정 · 최소 moving parts)`, `dont = 불필요하게 entity 늘리기 · 단순한 길 있는데 복잡한 길 선택`. g33 (simplicity first) 가 code 한정인 반면 g0 은 explanation/solution/hypothesis 전반의 메타 원칙. 최상단 배치 — 4095 byte 주입 truncation 에서도 최우선 생존, 가장 먼저 읽히는 lens. `marketplace.json` commons 설명 `g1..g53` → `g0..g53`, 버전 0.9.43 → 0.9.44.
+
 - **README — Commands 섹션을 코드블록 형태로 (그룹 주석 + 명령별 설명)** — Commands 섹션의 markdown 테이블을 fenced 코드블록으로 전환. 그룹 헤더 (`# ── Discovery ──` 등 7그룹) + 각 명령어 한 줄 + 정렬된 설명 주석. guard hook 들도 코드블록 하단에 `# <hook> <설명>` 형태로 묶음. 동기 — 명령어 + 그게 뭘 하는지를 monospace 정렬로 한눈에 (테이블보다 scan 쉬움).
 
 - **README — Commands 섹션 추가 (Plugins 위)** — README 의 `## Plugins` 테이블 위에 `## Commands` 빠른참조 섹션 신설. 슬래시 명령을 7개 group (discovery · fan-out/loop · dispatch · cross-project · verify/help · research/generate · session/meta) 으로 묶은 테이블 + command 없이 자동 발화하는 guard hook 목록 (hexa-native · plist-guard · cloud-guard · verify-guard · ai-api-guard · pr-automerge · pool-route · git-guard · sidecar-lint · tape-lint · limit-guard · inbox-watch). 동기 — plugin 테이블은 kind/version 중심이라 "어떤 슬래시 명령이 있나" 한눈에 보기 어려움. Commands 섹션이 command-first 진입점. (Plugins 테이블 자체의 버전/항목 갱신은 별도 — 이 PR 은 Commands 섹션만 추가, g34 surgical.)

@@ -156,3 +156,7 @@
 @D g43 := "external research fetch via /research" :: governance [active]
   do   = "arxiv paper / YT video → `/research:arxiv <query|id>` · `/research:yt <url|id>`"
   dont = "raw `curl` arxiv API · `WebSearch` for what /research already wraps cleanly"
+
+@D g44 := "image generation via /imagine (gpt-image-2 pinned)" :: governance [required active]
+  do   = "image needs → `/imagine <prompt-file> <out.png>` (default backend: fal · model: gpt-image-2)"
+  dont = "silently swap gpt-image-2 → gpt-image-1 · dall-e-3 · flux — model is user-pinned"

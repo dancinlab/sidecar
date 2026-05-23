@@ -144,3 +144,7 @@
 @D g40 := "multi-axis gap sweep via /gap (sister of /kick)" :: governance [active]
   do   = "stuck on a problem → `/gap` (42-lens 8-family sweep) or `/kick <seed>` (g6 · discovery)"
   dont = "brute-force a stuck problem without lensing — multi-axis catalog ready in /gap"
+
+@D g41 := "reactive fan-out via /all-bg-go (sister of /cycle)" :: governance [active]
+  do   = "PRIOR-turn branches → `/all-bg-go` (single reactive fan-out) · `/cycle` is self-generating (g38)"
+  dont = "manual one-by-one when prior turn offered N disjoint branches — fan them out"

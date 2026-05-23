@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.28 — `@D g41` reactive fan-out은 /all-bg-go (sister of /cycle)** — 새 `[active]` governance block: 직전 턴(PRIOR-turn)에 N개의 disjoint 분기를 제시한 상황은 `/all-bg-go` 로 한 번에 fan-out — `/cycle` (g38) 의 self-generating loop 와 분명히 disjoint 관계 (`/all-bg-go` = 단일 reactive · `/cycle` = 자율 반복). 동기 — `/all-bg-go` 는 g12 (`fan out parallel pods`) 의 일반 fan-out 원칙에 일부 흡수돼 있었지만 *어떤 명령으로* 라는 메커니즘 명세가 빠져있어 모델이 수동으로 one-by-one 호출하는 패턴이 잦았음. g40 (gap/kick sister) · g41 (all-bg-go/cycle sister) 두 sister-binding 룰로 discovery-skill 페어 + fan-out-skill 페어를 모두 disjoint 명세 완료. `marketplace.json` commons 설명 `g1..g40` → `g1..g41`.
+
 - **commons 0.9.27 — `@D g40` multi-axis gap sweep은 /gap (sister of /kick)** — 새 `[active]` governance block: 막힌 문제는 `/gap` (42-lens 8-family sweep) 또는 `/kick <seed>` (g6 · hexa kick discovery engine) 으로 lensing. 동기 — `/gap` 은 sidecar의 multi-axis breakthrough 도구인데 g 룰 zero. g6 (kick) 와 sister relationship 명시 — 두 도구는 disjoint하지만 같은 "stuck → discovery" 패턴을 다룸 (`/kick` = single-seed, `/gap` = catalog-sweep). g6 와 동일한 `[active]` 강도 (`required`는 conditional 패턴엔 과함). `marketplace.json` commons 설명 `g1..g39` → `g1..g40`.
 
 - **commons 0.9.26 — `@D g39` 프로젝트 상태 문서는 /domain으로** — 새 `[required active]` governance block: 프로젝트 단위 작업 / 결정은 `/domain <task>` 으로 — `<NAME>.md` (live spec snapshot) + `<NAME>.log.md` (append-only checkbox-task history) 페어를 자동 관리. 동기 — `/domain` 은 sidecar의 spec/log 분리 인프라인데 g 룰 zero라 모델이 자주 잊고 ad-hoc `TODO.md` · `PLAN.md` · `notes/*.md` 를 흩뿌리는 패턴. user memory `feedback_domain_md_log_split` 에 동일 신호 박혀있었음 (잊힘 빈도 높다는 의미). `/domain` 의 NAME 기본값은 git-root basename. `marketplace.json` commons 설명 `g1..g38` → `g1..g39`.

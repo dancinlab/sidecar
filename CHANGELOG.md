@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.31 — `@D g10` (Monitor) `[active]` → `[required active]` 격상** — `tail -f` / `sleep`-poll 루프로 background process event 스트리밍하는 패턴이 잦아서 격을 강화. 룰 본문(do/dont) 변경은 없음 — 단순 retag. 동기 — Claude Code의 `Monitor` 도구는 background process stdout을 라인 단위로 푸시 받는 정상 채널인데, `[active]` 권고 강도라 모델이 자주 `tail -f` 폴링 (CPU 낭비 + 통지 지연) 으로 빠짐. `required` 격상으로 신호 강화.
+
 - **pool-route 0.5.1 — routing log + SessionStart 가시성** — pool-route hook이 routing decision 마다 `~/.pool/route-log.jsonl` 에 한 줄 append (`{"t":<iso>,"host":<name>,"cmd":<first 40 chars>}`), 100 entry cap. 동시에 SessionStart event 도 listen — 최근 5건을 markdown bullet list로 `additionalContext` 에 emit. 동기 — pool-route 의 routing 결정은 매 PreToolUse 의 휘발성 `additionalContext` 한 줄로만 통지돼서, 모델이 다음 턴에 "어떤 명령이 어디서 실행됐는지" 잊는 패턴 잦음. 영구 log + 세션 시작 snapshot 으로 가시성 확보. `hooks.json` 에 SessionStart event 추가; 기존 PreToolUse 동작은 그대로 (preflight `ssh test -d` · 라운드로빈 · OS-capability filter · NO opt-out). `marketplace.json` pool-route 설명 갱신.
 
 - **commons 0.9.30 — `@D g43` 외부 자료 fetch는 /research** — 새 `[active]` governance block: arxiv 논문 / YouTube 영상 자료는 `/research:arxiv <query|id>` · `/research:yt <url|id>` 로 — raw `curl` arxiv API 또는 `WebSearch` 로 fallback하지 말 것. 동기 — `/research` 는 arxiv Atom + YT caption XML 파싱을 hexa-native로 깔끔하게 wrap하지만 g 룰 zero라 모델이 자주 raw HTTP fetch로 빠짐. `marketplace.json` commons 설명 `g1..g42` → `g1..g43`.

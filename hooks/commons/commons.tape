@@ -22,12 +22,13 @@
 @D g7 := "consult hexa --help for unfamiliar verbs" :: governance [active]
   do   = "consult `hexa --help` for unfamiliar hexa CLI verbs"
 
-@D g8 := "runpod dispatch via hexa cloud" :: governance [required active]
-  do   = "runpod dispatch via `hexa cloud {run|nohup|poll|copy-to|copy-from}` — canonical subcommand form"
+@D g8 := "rented-pod dispatch via hexa cloud" :: governance [required active]
+  do   = "runpod (rented pods) → `hexa cloud {run|nohup|poll|copy-to|copy-from}` — canonical form"
   dont = "raw `ssh` / `scp` for runpod · fall back to a separate `hexa-cloud` binary (paper-over per g11)"
 
-@D g9 := "pool + /inbox CLIs available" :: governance [active]
-  do   = "know `pool` (host roster + remote exec) and `/inbox` (cross-project handoff) are available CLIs"
+@D g9 := "sidekick-pool dispatch via pool" :: governance [required active]
+  do   = "sidekick roster → `pool on <host> <cmd>` — macOS-only (swift/xcode) · GPU · heavy build"
+  dont = "run host-specific work on local shell when a sidekick host fits — roster in SessionStart"
 
 @D g10 := "Monitor tool for streaming" :: governance [active]
   do   = "use Claude Code's `Monitor` tool to stream background-process events (per-line stdout)"

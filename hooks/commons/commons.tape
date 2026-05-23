@@ -164,3 +164,7 @@
 @D g45 := "user language prefs via /prefs" :: governance [active]
   do   = "user changes language pref → `/prefs {code|docs|response} <lang>` (SSOT: $CLAUDE_PLUGIN_DATA)"
   dont = "ask user to retype lang each session — `/prefs` persists 3 axes (code · docs · response)"
+
+@D g46 := "friendly explain style via /easy" :: governance [active]
+  do   = "user asks to explain simply → `/easy` (7-element friendly format)"
+  dont = "ad-hoc 'simple explanation' format when /easy ships the canonical 7-element template"

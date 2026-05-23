@@ -172,3 +172,7 @@
 @D g47 := "PR ship discipline — create-then-merge, no unmerged stacks" :: governance [required active]
   do   = "create one PR → merge it → start next · main-based always · g4 stacked = per-merge layers"
   dont = "fan out N stacked PRs unmerged · long-lived stack rebases on every main movement"
+
+@D g48 := "cross-project inbox ack — close-then-notify" :: governance [required active]
+  do   = "inbox entry done → own entry `status: resolved` + ack file in sender's inbox (handoff loop)"
+  dont = "close own inbox entry without ack-ing sender — handoff loop broken · sender stays in dark"

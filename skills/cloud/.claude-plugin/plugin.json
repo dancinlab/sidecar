@@ -1,7 +1,7 @@
 {
   "name": "cloud",
-  "description": "/cloud <args> — wraps `hexa cloud` (runpod dispatch · canonical subcommand form, structured argv — never raw ssh/scp per commons g8). Subverbs: preflight · run · nohup · poll · copy-to · copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup · no LLM · $0). NL trigger via skill ('runpod dispatch', 'GPU pod 에 돌려', 'pod 결과 가져와', 'OOM 사전체크', '메모리 예산 확인'). Pairs with commons g8 + g12.",
-  "version": "0.3.1",
+  "description": "/cloud <args> — wraps `hexa cloud` (runpod / vast.ai dispatch · canonical subcommand form, structured argv — never raw runpodctl/vastai/ssh/scp/curl per commons g8, hard-enforced by the cloud-guard hook). Subverbs: preflight · run · nohup · poll · copy-to · copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup · no LLM · $0). NL trigger via skill ('runpod dispatch', 'GPU pod 에 돌려', 'pod 결과 가져와', 'OOM 사전체크', '메모리 예산 확인'). Pairs with commons g8 + g12.",
+  "version": "0.3.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

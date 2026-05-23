@@ -1,9 +1,9 @@
 ---
 name: cloud
-description: Wrap `hexa cloud` for runpod GPU dispatch — structured argv, never raw ssh/scp (commons g8). Subverbs preflight · run · nohup · poll · copy-to · copy-from. Triggers — "runpod dispatch", "GPU pod에 돌려", "학습 cloud에 던져", "pod 결과 가져와", "OOM 사전체크", "preflight".
+description: Wrap `hexa cloud` for runpod / vast.ai GPU dispatch — structured argv, never raw ssh/scp/runpodctl/vastai/REST (commons g8 · enforced by cloud-guard hook). Subverbs preflight · run · nohup · poll · copy-to · copy-from. Triggers — "runpod dispatch", "GPU pod에 돌려", "학습 cloud에 던져", "pod 결과 가져와", "OOM 사전체크", "preflight".
 allowed-tools: Bash
 ---
 
-@D cloud := "wrap `hexa cloud` for runpod dispatch" :: skill
+@D cloud := "wrap `hexa cloud` for runpod / vast.ai dispatch" :: skill
   do   = "`hexa cloud {preflight|run|nohup|poll|copy-to|copy-from}` — structured argv (commons g8)"
-  dont = "raw ssh/scp for runpod · skip the preflight mem-budget check before pod spinup"
+  dont = "raw `runpodctl {exec|ssh|send|receive|send-file|receive-file|port}` · raw `vast(ai) {exec|ssh|scp|copy|attach-ssh|execute}` · raw `ssh`/`scp`/`rsync`/`sftp` to `*.runpod.io`/`proxy.runpod.net`/`*.vast.ai` · raw `curl`/`wget` to `api.runpod.{io,ai}`/`rest.runpod.io`/`runpod.io/graphql`/`console.vast.ai`/`vast.ai/api` · skip the preflight mem-budget check before pod spinup — cloud-guard hard-blocks all of these"

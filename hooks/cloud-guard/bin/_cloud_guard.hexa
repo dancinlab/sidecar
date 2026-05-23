@@ -1,15 +1,31 @@
 // _cloud_guard.hexa — PreToolUse(Bash) hard block for raw rented-GPU pod
-// CLI usage (runpodctl / vastai / vast).
+// dispatch (runpodctl / vastai / vast CLI, raw ssh/scp/rsync/sftp to pod
+// hosts, raw curl/wget against pod REST/GraphQL APIs).
 //
-// commons @D g8: rented-GPU pod dispatch goes through `hexa cloud
-// {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`. Raw remote-
-// exec / transfer subcommands of the dedicated CLIs are denied with a
-// redirecting message. Pod-lifecycle subcommands (create / ps / list /
-// show / search) pass through — those are legitimate provisioning verbs
-// that `hexa cloud` does not wrap.
+// commons @D g8: rented-GPU pod dispatch goes through
+//   `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`.
+// Three orthogonal detectors run on every Bash command:
 //
-// Detection: first-token + second-token match. No regex (hexa has no
-// regex stdlib); plain whitespace-split.
+//   (a) pod-CLI + remote-verb pair scan — anywhere in the command, not
+//       just the first token. Catches `cd /x && runpodctl ssh …`,
+//       `KEY=x vastai exec …`, `bash -c '… runpodctl send-file …'`.
+//   (b) ssh/scp/rsync/sftp + pod-host scan — any of those binaries
+//       followed by a token containing `.runpod.io`,
+//       `proxy.runpod.net`, or `.vast.ai`.
+//   (c) curl/wget/http(ie)/xh + pod-API URL scan — any of those binaries
+//       followed by a token containing `api.runpod.io`,
+//       `api.runpod.ai`, `rest.runpod.io`, `runpod.io/graphql`,
+//       `console.vast.ai`, or `vast.ai/api`.
+//
+// Pod-lifecycle subcommands (runpodctl create / get / start / stop /
+// remove / config / project / version · vast(ai) create / show / search
+// / launch / destroy) pass through — those are legitimate provisioning
+// verbs that `hexa cloud` does not wrap.
+//
+// Normalization splits on whitespace AND treats shell separators
+// (; & | ( ) ` " ' \) as whitespace before tokenizing, so subshells /
+// quoted bash -c bodies / env-prefixes are seen through. No regex
+// (hexa has no regex stdlib); plain substring scan.
 //
 // NO opt-out by design — no env var, no config file, no exception list
 // (commons @D g30).
@@ -45,13 +61,59 @@ fn _json_escape(s: string) -> string {
     return parts.join("")
 }
 
-fn _deny(reason: string) {
+fn _deny(category: string, what: string) {
+    let reason = "cloud-guard (commons @D g8): refusing `" + what + "` — " + category + ".\n  Use `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` instead (wraps runpod + vast.ai across cycles A transport · B file/dir transfer · C preflight).\n  Lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy) are NOT blocked — only remote exec / transfer / API calls.\n  NO opt-out by design (commons @D g30)."
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
     println(payload)
     exit(0)
 }
 
-// whitespace-split into tokens
+// substring containment (hexa has no regex / index_of stdlib in scope here)
+fn _str_contains(s: string, sub: string) -> bool {
+    let n = len(s)
+    let m = len(sub)
+    if m == 0 { return true }
+    if m > n { return false }
+    let mut i = 0
+    while i + m <= n {
+        let mut j = 0
+        let mut ok = true
+        while j < m {
+            if ok {
+                if s[i+j] != sub[j] { ok = false }
+            }
+            j = j + 1
+        }
+        if ok { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// replace shell separators / quotes / backslash with space so that
+// `cd /x && runpodctl ssh`, `bash -c '… vast exec …'`,
+// `KEY=v runpodctl send` all tokenize uniformly.
+fn _normalize(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut out = ""
+    while i < n {
+        let c = s[i]
+        if c == ";" { out = out + " " }
+        else if c == "&" { out = out + " " }
+        else if c == "|" { out = out + " " }
+        else if c == "(" { out = out + " " }
+        else if c == ")" { out = out + " " }
+        else if c == "`" { out = out + " " }
+        else if c == "\"" { out = out + " " }
+        else if c == "'" { out = out + " " }
+        else if c == "\\" { out = out + " " }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out
+}
+
 fn _tokens(s: string) -> array {
     let mut out = []
     let n = len(s)
@@ -77,11 +139,65 @@ fn _is_pod_cli(t: string) -> bool {
     return false
 }
 
-fn _is_remote_verb(t: string) -> bool {
+fn _is_remote_verb_runpod(t: string) -> bool {
     if t == "exec" { return true }
     if t == "ssh" { return true }
+    if t == "send" { return true }
+    if t == "receive" { return true }
     if t == "send-file" { return true }
+    if t == "receive-file" { return true }
     if t == "send-file-to-pod" { return true }
+    if t == "receive-file-from-pod" { return true }
+    if t == "port" { return true }
+    return false
+}
+
+fn _is_remote_verb_vast(t: string) -> bool {
+    if t == "exec" { return true }
+    if t == "ssh" { return true }
+    if t == "scp" { return true }
+    if t == "copy" { return true }
+    if t == "attach-ssh" { return true }
+    if t == "execute" { return true }
+    return false
+}
+
+fn _is_remote_verb(cli: string, verb: string) -> bool {
+    if cli == "runpodctl" { return _is_remote_verb_runpod(verb) }
+    return _is_remote_verb_vast(verb)
+}
+
+fn _is_ssh_like(t: string) -> bool {
+    if t == "ssh" { return true }
+    if t == "scp" { return true }
+    if t == "rsync" { return true }
+    if t == "sftp" { return true }
+    return false
+}
+
+fn _is_pod_host(t: string) -> bool {
+    if _str_contains(t, ".runpod.io") { return true }
+    if _str_contains(t, "proxy.runpod.net") { return true }
+    if _str_contains(t, ".vast.ai") { return true }
+    return false
+}
+
+fn _is_http_client(t: string) -> bool {
+    if t == "curl" { return true }
+    if t == "wget" { return true }
+    if t == "http" { return true }
+    if t == "httpie" { return true }
+    if t == "xh" { return true }
+    return false
+}
+
+fn _is_pod_api(t: string) -> bool {
+    if _str_contains(t, "api.runpod.io") { return true }
+    if _str_contains(t, "api.runpod.ai") { return true }
+    if _str_contains(t, "rest.runpod.io") { return true }
+    if _str_contains(t, "runpod.io/graphql") { return true }
+    if _str_contains(t, "console.vast.ai") { return true }
+    if _str_contains(t, "vast.ai/api") { return true }
     return false
 }
 
@@ -102,14 +218,51 @@ fn main() {
     let cmd = cmd0.trim()
     if cmd == "" { _allow() }
 
-    let toks = _tokens(cmd)
-    if len(toks) < 2 { _allow() }
+    let toks = _tokens(_normalize(cmd))
+    let n = len(toks)
 
-    let first = toks[0]
-    let second = toks[1]
-    if !_is_pod_cli(first) { _allow() }
-    if !_is_remote_verb(second) { _allow() }
+    // (a) pod-CLI + remote-verb pair scan — anywhere
+    let mut i = 0
+    while i + 1 < n {
+        let cli = toks[i]
+        let verb = toks[i+1]
+        if _is_pod_cli(cli) {
+            if _is_remote_verb(cli, verb) {
+                _deny("raw rented-GPU pod CLI remote-exec/transfer", cli + " " + verb)
+            }
+        }
+        i = i + 1
+    }
 
-    let reason = "cloud-guard (commons @D g8): `" + first + " " + second + " …` is raw rented-GPU pod CLI usage.\n  Refusing the command. Use `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` instead — it wraps both runpod and vast.ai (--port flag for ssh port variance) across the three cycles (A transport, B file/dir transfer, C preflight).\n  Pod-lifecycle verbs (create / ps / list / show / search) are NOT blocked — only remote exec / transfer. NO opt-out by design (commons @D g30)."
-    _deny(reason)
+    // (b) ssh/scp/rsync/sftp to pod host
+    i = 0
+    while i < n {
+        if _is_ssh_like(toks[i]) {
+            let mut j = i + 1
+            while j < n {
+                if _is_pod_host(toks[j]) {
+                    _deny("raw ssh/scp/rsync to a rented-GPU pod host", toks[i] + " … " + toks[j])
+                }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+
+    // (c) curl/wget/http(ie)/xh against pod REST/GraphQL API
+    i = 0
+    while i < n {
+        if _is_http_client(toks[i]) {
+            let mut j = i + 1
+            while j < n {
+                if _is_pod_api(toks[j]) {
+                    _deny("raw HTTP call to a rented-GPU pod API endpoint", toks[i] + " … " + toks[j])
+                }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+
+    _allow()
 }

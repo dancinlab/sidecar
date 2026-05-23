@@ -7,6 +7,15 @@ allowed-tools: Agent, Bash, Read
 Engage the `cycle` skill. In ONE message run all five stages:
 
 1. **Next-list (self-enumerate, ACTIVE DOMAIN ONLY)** — read the session's active domain (`domain` skill's active-domain pointer; if none set, run `/domain set <NAME>` first and stop). Enumerate from the active `<NAME>.md` snapshot's open `- [ ]` milestone checkboxes (commons @D g58 — off-domain work is explicitly forbidden). If `$ARGUMENTS` is non-empty, intersect the enumeration with that scope. State in one line: active domain name + count of open milestones picked.
+
+   **1a. Auto-seed on empty next-list** — if zero open milestones (snapshot at 100% closure or freshly initialized), do NOT punt back to the user; instead inspect the recent conversation context for next-batch candidates and seed them into the snapshot before proceeding:
+
+   - **Allowed signal sources** (priority): direct user mention in this or the prior turn ("add X milestone", "신규 추가 후 cycle", explicit shortlist) · prior-turn `/gap` deep-dive priority shortlist · prior-turn `/check` or `/end` follow-up table · the active `<NAME>.log.md` tail when it surfaces an open thread the snapshot hasn't yet captured.
+   - **Seed action** — derive ≤3 candidate milestones (each a concrete `- [ ]` task in the active domain's scope) and append them via `/domain milestone <text>` per item. Print one line per seeded item: `🌱 auto-seeded: <text> · source: <signal>`.
+   - **Re-enumerate** — after seeding, re-read the snapshot and proceed to Stage 2 with the newly added items.
+   - **No-signal fallback** — if context yields NO defensible candidate (domain truly closed, no follow-up signals, no user hint), stop with one line: `🛑 no open milestones + no seed signal — choose: extend domain (/domain milestone <text>), switch (/domain set <other>), or close (/end)`. Do NOT fabricate off-domain items just to keep the loop running.
+   - **Cap** — seed at most 3 items per /cycle invocation; further items wait for the next round so the user can steer between batches.
+
 2. **Dup-race precheck** — for each item whose label names an inbox patch slug (matches `inbox/**/<slug>.md` in the current repo), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
 
    - **Signal A — patch file Status:** `grep -iE '(^|\s)(\*\*)?status(\*\*)?\s*[:：]' inbox/**/<slug>.md` then test the matched line against the resolved-class regex `(fixed|resolved|closed|landed|shipped|absorbed|superseded|merged|done|✅|🟢)`. Body strings like `Status: fixed` / `**status**: resolved-ssot` / `🟢 RESOLVED` count.

@@ -63,6 +63,9 @@ fn _domain_name(s: string) -> string {
     return out
 }
 
+// A valid domain NAME starts with an UPPERCASE letter; subsequent chars are
+// UPPERCASE / digit / `_` / `+`. The `+` enables meta-domain composition —
+// e.g. `RTSC+HTS` writes RTSC+HTS.md + RTSC+HTS.log.md (a domain of domains).
 fn _is_name(s: string) -> bool {
     let n = len(s)
     if n == 0 { return false }
@@ -71,7 +74,7 @@ fn _is_name(s: string) -> bool {
     let mut i = 1
     while i < n {
         let k = char_code(s[i], 0)
-        let ok = (k >= 65 && k <= 90) || (k >= 48 && k <= 57) || (k == 95)
+        let ok = (k >= 65 && k <= 90) || (k >= 48 && k <= 57) || (k == 95) || (k == 43)
         if !ok { return false }
         i = i + 1
     }
@@ -303,12 +306,72 @@ fn _progress_bar(done: int, total: int) -> string {
     return bar + " " + to_string(pct) + "% · " + to_string(done) + "/" + to_string(total)
 }
 
+// the snapshot's final-goal declaration: a single `@goal: <text>` line (the
+// domain's north star — distinct from `- [ ]` milestones, which are progress
+// units). Empty string when none declared.
+fn _get_goal(root: string, name: string) -> string {
+    let body = _read_file_safe(root + "/" + name + ".md")
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@goal:") {
+            return _trim(lines[i].substring(6, len(lines[i])))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// set/replace the `@goal:` line — inserted right after the first `# ` heading.
+fn _set_goal(root: string, name: string, text: string) {
+    _ensure_files(root, name)
+    let snap = root + "/" + name + ".md"
+    let body = _read_file_safe(snap)
+    let lines = body.split("\n")
+    let mut out = []
+    let mut placed = false
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "@goal:") {
+            if !placed { out.push("@goal: " + text); placed = true }
+        } else {
+            out.push(ln)
+            if !placed && _starts_with(ln, "# ") {
+                out.push("")
+                out.push("@goal: " + text)
+                placed = true
+            }
+        }
+        i = i + 1
+    }
+    if !placed { out.push("@goal: " + text) }
+    write_file(snap, out.join("\n"))
+}
+
+// lint a domain's snapshot: a final goal (`@goal:`) AND ≥1 milestone (`- [ ]`/
+// `- [x]`) are both required. Warn-only (stderr), never blocks.
+fn _lint(root: string, name: string) {
+    if _get_goal(root, name) == "" {
+        eprintln("⚠ lint: no `@goal:` in " + name + ".md — declare the final goal: /domain goal <text>")
+    }
+    let c = _count_tasks(root, name)
+    if c[0] + c[1] == 0 {
+        eprintln("⚠ lint: no milestones (`- [ ]`) in " + name + ".md — add: /domain milestone <text>")
+    }
+}
+
 fn _show(root: string, name: string) {
     _ensure_files(root, name)
     let snap = root + "/" + name + ".md"
     let log = root + "/" + name + ".log.md"
+    let goal = _get_goal(root, name)
     let c = _count_tasks(root, name)
-    println("◆ active domain: " + name + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
+    let mut head = "◆ active domain: " + name
+    if goal != "" { head = head + "   🎯 " + goal }
+    println(head)
+    println("진행 " + _progress_bar(c[0], c[0] + c[1]))
+    _lint(root, name)
     println("═══ " + snap + " ═══")
     print(_read_file_safe(snap))
     println("")
@@ -318,14 +381,15 @@ fn _show(root: string, name: string) {
 
 fn _usage() {
     eprintln("usage:")
-    eprintln("  domain                      Show active domain + final-goal progress bar")
+    eprintln("  domain                      Show active domain + @goal + progress bar (+ lint)")
+    eprintln("  domain init <NAME>          Scaffold <NAME>.md + <NAME>.log.md (NAME accepts `+` for meta-domain: RTSC+HTS)")
     eprintln("  domain set <NAME>           Select NAME as the session's active domain")
     eprintln("  domain <NAME>               (shortcut for `set <NAME>`)")
-    eprintln("  domain goal <text>          Add a final-goal milestone to the snapshot (counts toward progress)")
-    eprintln("  domain goal done <match>    Flip a snapshot goal \"- [ ]\" -> \"- [x]\" (advances progress)")
-    eprintln("  domain done <match>         Complete a goal (snapshot) or, if none, flip a log task")
-    eprintln("  domain todo <task-text>     Append \"- [ ] <task-text>\" to the log")
-    eprintln("  domain <task-text>          Append \"- [x] <task-text>\" to the log")
+    eprintln("  domain goal <text>          Declare the FINAL goal — sets the snapshot's `@goal:` line")
+    eprintln("  domain milestone <text>     Add a `- [ ]` progress milestone (alias: ms) — counts toward progress")
+    eprintln("  domain done <match>         Flip a milestone `- [ ]` -> `- [x]`, else flip a log task")
+    eprintln("  domain todo <task-text>     Append `- [ ] <task-text>` to the log")
+    eprintln("  domain <task-text>          Append `- [x] <task-text>` to the log")
     eprintln("  domain new <header>         Start a new log entry")
 }
 
@@ -354,8 +418,21 @@ fn main() {
         return
     }
 
+    // `init <NAME>` — scaffold <NAME>.md + <NAME>.log.md (does not change the
+    // session's active domain). NAME may use `+` for meta-domain composition
+    // (e.g. `RTSC+HTS` writes RTSC+HTS.md + RTSC+HTS.log.md).
+    if v == "init" {
+        if argc < 2 || !_is_name(args[1]) {
+            eprintln("usage: domain init <NAME>   (NAME = UPPERCASE; `+` allowed for meta-domain, e.g. RTSC+HTS)")
+            exit(1)
+        }
+        _ensure_files(root, args[1])
+        println("✓ initialized · " + root + "/" + args[1] + ".md + " + args[1] + ".log.md")
+        return
+    }
+
     // `set <NAME>` — select the session's active domain (subcommand form of
-    // the bare `<NAME>` shortcut).
+    // the bare `<NAME>` shortcut). Scaffolds files via show.
     if v == "set" {
         if argc < 2 || !_is_name(args[1]) {
             eprintln("usage: domain set <NAME>   (NAME = UPPERCASE/_/digits)")
@@ -366,27 +443,30 @@ fn main() {
         return
     }
 
-    // `goal <text>` — add a final-goal milestone to the active domain's
-    // snapshot (counts toward progress %). `goal done <match>` flips it.
+    // `goal <text>` — declare the domain's FINAL goal: a single `@goal:` line
+    // in the snapshot (replaces any existing). The north star — distinct from
+    // `- [ ]` milestones, which are the progress units.
     if v == "goal" {
         if argc < 2 {
-            eprintln("usage: domain goal <text>   ·   domain goal done <match>")
+            eprintln("usage: domain goal <text>   (sets the @goal: final goal)")
             exit(1)
         }
-        if args[1] == "done" && argc >= 3 {
-            let term = _join_from(args, 2)
-            if _flip_goal(root, eff_name, term) {
-                let c = _count_tasks(root, eff_name)
-                println("goal done: " + term + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
-            } else {
-                eprintln("domain: no open goal matching '" + term + "' in " + eff_name)
-                exit(1)
-            }
-            return
+        let g = _join_from(args, 1)
+        _set_goal(root, eff_name, g)
+        println("🎯 goal set · " + eff_name + ": " + g)
+        return
+    }
+
+    // `milestone <text>` (alias `ms`) — add a `- [ ]` progress milestone to the
+    // snapshot (counts toward the progress bar). `done <match>` flips it to [x].
+    if v == "milestone" || v == "ms" {
+        if argc < 2 {
+            eprintln("usage: domain milestone <text>")
+            exit(1)
         }
         _append_goal(root, eff_name, _join_from(args, 1))
         let c = _count_tasks(root, eff_name)
-        println("goal added to " + eff_name + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
+        println("milestone + · " + eff_name + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
         return
     }
 

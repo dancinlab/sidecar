@@ -1,6 +1,6 @@
 ---
-description: UPPERCASE <DOMAIN>.md (snapshot = final-goal milestone checkboxes) + <DOMAIN>.log.md (append-only step log). Subcommands — set `<NAME>` (or bare `<NAME>`) = SELECT the session's active domain · goal `<text>` = add a snapshot final-goal milestone (counts toward the progress bar; goal done `<match>` flips it `[ ]`→`[x]`) · bare = show active domain + progress bar `▓▓▓░░ NN% · done/total` · done `<match>` = complete a snapshot goal, else flip a log task · todo `<text>` / `<text>` / new `<header>` = log. Progress is final-goal-based (snapshot completion), not log-based.
-argument-hint: "set <NAME> | goal <text> | goal done <match> | done <match> | todo <text>"
+description: UPPERCASE <DOMAIN>.md (snapshot = `@goal:` final goal + `- [ ]` progress milestones) + <DOMAIN>.log.md (append-only step log). NAME accepts `+` for meta-domain (e.g. `RTSC+HTS`). Subcommands — init `<NAME>` = scaffold files · set `<NAME>` (or bare `<NAME>`) = SELECT session active · goal `<text>` = declare FINAL goal (sets `@goal:`) · milestone `<text>` (alias `ms`) = add `- [ ]` milestone · done `<match>` = flip a milestone, else a log task · bare = show active + @goal + progress bar `▓▓▓░░ NN% · done/total` + lint warnings (no @goal / no milestones) · todo `<text>` / `<text>` / new `<header>` = log.
+argument-hint: "init <NAME> | set <NAME> | goal <text> | milestone <text> | done <match>"
 allowed-tools: Bash
 ---
 

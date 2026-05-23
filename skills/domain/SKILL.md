@@ -1,9 +1,9 @@
 ---
 name: domain
-description: Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log). `/domain set <NAME>` selects the session's active domain (later verbs default to it); `/domain goal <text>` adds a final-goal milestone (`/domain goal done <match>` flips it); progress bar = snapshot [x]/total. NAME defaults to git-root basename. Triggers — "domain set", "도메인 선택", "골 지정", "goal 추가", "기록해줘", "체크 추가", "이것 완료 처리", "진행도".
+description: Maintain UPPERCASE <NAME>.md (snapshot = `@goal:` final goal + `- [ ]` progress milestones) + sister <NAME>.log.md (append-only step log). NAME accepts `+` for meta-domain (e.g. `RTSC+HTS`). Subcommands — `/domain init <NAME>` scaffolds files · `/domain set <NAME>` selects session active · `/domain goal <text>` declares the FINAL goal (`@goal:` line) · `/domain milestone <text>` (alias `ms`) adds a progress milestone · `/domain done <match>` flips a milestone (else a log task) · `/domain` shows active + @goal + progress bar + lint. Lint warns when `@goal:` or milestones are missing. Triggers — "domain init", "도메인 만들어", "도메인 선택", "골 지정", "milestone 추가", "진행도".
 allowed-tools: Bash
 ---
 
-@D domain := "set active <NAME> · goal milestones in snapshot → progress % · log step checkboxes" :: skill
-  do   = "`set <NAME>` selects active domain · `goal <text>` adds a snapshot milestone (`done <match>` flips → progress %) · log newest-first"
-  dont = "changelog / `Last updated:` in the snapshot · edit prior log entries · prose log"
+@D domain := "active <NAME> · @goal: final goal + `- [ ]` milestones in snapshot → progress + lint" :: skill
+  do   = "`init/set <NAME>` (NAME accepts `+` for meta) · `goal <text>` sets @goal · `ms <text>` adds milestone · `done` flips → progress"
+  dont = "changelog / `Last updated:` in snapshot · edit prior log entries · skip @goal/milestone (lint warns)"

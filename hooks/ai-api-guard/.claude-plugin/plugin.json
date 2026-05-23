@@ -1,0 +1,9 @@
+{
+  "name": "ai-api-guard",
+  "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` · `api.anthropic.com` · `fal.run` · `api.replicate.com` · `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. — commons @D g50 enforcement. General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design (commons @D g30).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "ai", "api", "openai", "anthropic", "fal", "hexa"]
+}

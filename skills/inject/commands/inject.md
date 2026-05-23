@@ -6,9 +6,10 @@ allowed-tools: Bash
 !`set -e
 sidecar sync
 echo
-LATEST_COMMONS=$(ls -1v ~/.claude/plugins/cache/sidecar/commons/ | tail -1)
-echo "═══ commons.tape (v$LATEST_COMMONS) ═══"
-cat ~/.claude/plugins/cache/sidecar/commons/$LATEST_COMMONS/commons.tape
+COMMONS=~/.claude/plugins/marketplaces/sidecar/hooks/commons
+VER=$(grep -o '"version"[^,}]*' "$COMMONS/.claude-plugin/plugin.json" | grep -o '[0-9][0-9.]*')
+echo "═══ commons.tape (v$VER) ═══"
+cat "$COMMONS/commons.tape"
 if [ -f "$(pwd)/project.tape" ]; then
   echo
   echo "═══ project.tape ($(pwd)/project.tape) ═══"

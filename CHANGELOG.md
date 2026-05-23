@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **inject 0.1.3 — 0.1.2 누락 코드 적용** — 직전 `inject 0.1.2` 출시는 description / CHANGELOG / plugin.json 버전 라벨만 업데이트하고 **실제 fix 코드 (`skills/inject/commands/inject.md`) 변경이 빠짐** — 그래서 `/inject` 가 여전히 BSD `ls -1v` (macOS) 에서 lexicographic 정렬로 stale commons.tape (0.9.9 < 0.9.21) 를 잡는 옛 동작 그대로. 0.1.3 은 그 코드 변경만 (`ls -1v cache/sidecar/commons/ | tail -1` → `~/.claude/plugins/marketplaces/sidecar/hooks/commons/.claude-plugin/plugin.json` 의 `version` 필드 직접 파싱) 적용. `marketplace.json` + `plugin.json` 버전 0.1.2 → 0.1.3.
+
 - **commons 0.9.27 — `@D g40` multi-axis gap sweep은 /gap (sister of /kick)** — 새 `[active]` governance block: 막힌 문제는 `/gap` (42-lens 8-family sweep) 또는 `/kick <seed>` (g6 · hexa kick discovery engine) 으로 lensing. 동기 — `/gap` 은 sidecar의 multi-axis breakthrough 도구인데 g 룰 zero. g6 (kick) 와 sister relationship 명시 — 두 도구는 disjoint하지만 같은 "stuck → discovery" 패턴을 다룸 (`/kick` = single-seed, `/gap` = catalog-sweep). g6 와 동일한 `[active]` 강도 (`required`는 conditional 패턴엔 과함). `marketplace.json` commons 설명 `g1..g39` → `g1..g40`.
 
 - **commons 0.9.26 — `@D g39` 프로젝트 상태 문서는 /domain으로** — 새 `[required active]` governance block: 프로젝트 단위 작업 / 결정은 `/domain <task>` 으로 — `<NAME>.md` (live spec snapshot) + `<NAME>.log.md` (append-only checkbox-task history) 페어를 자동 관리. 동기 — `/domain` 은 sidecar의 spec/log 분리 인프라인데 g 룰 zero라 모델이 자주 잊고 ad-hoc `TODO.md` · `PLAN.md` · `notes/*.md` 를 흩뿌리는 패턴. user memory `feedback_domain_md_log_split` 에 동일 신호 박혀있었음 (잊힘 빈도 높다는 의미). `/domain` 의 NAME 기본값은 git-root basename. `marketplace.json` commons 설명 `g1..g38` → `g1..g39`.

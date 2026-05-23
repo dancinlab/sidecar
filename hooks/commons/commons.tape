@@ -176,3 +176,7 @@
 @D g48 := "cross-project inbox ack — close-then-notify" :: governance [required active]
   do   = "inbox entry done → own entry `status: resolved` + ack file in sender's inbox (handoff loop)"
   dont = "close own inbox entry without ack-ing sender — handoff loop broken · sender stays in dark"
+
+@D g49 := "GPU dispatch priority — pool first, cloud as fallback" :: governance [required active]
+  do   = "GPU work → check `pool list` for GPU host → `hexa cloud` only when pool has no GPU host"
+  dont = "default to rented runpod/vast.ai when an enabled pool host with GPU is in the roster"

@@ -138,6 +138,25 @@ fn _any_adjacent(toks: array, pairs: array) -> bool {
     return false
 }
 
+// Substring-pair fallback — token-adjacency fails when claude-code wraps
+// the user command in a zsh shell-snapshot envelope
+// (`/bin/zsh -c 'source <snap>; ... eval ''<cmd>'''`) where the inner cmd
+// becomes a single quoted argument; `hexa kick` then appears as token
+// `'hexa` followed by `kick;` rather than two clean tokens. The `_any_word`
+// path (heavy_words) survives this because `cmd.contains(word)` is
+// substring-based; the pair path needs the same robustness. False-positive
+// risk is bounded: pairs are 2-token compound verbs (`hexa kick`,
+// `go build`) unlikely to appear coincidentally in unrelated cmds.
+fn _any_pair_substring(cmd: string, pairs: array) -> bool {
+    let mut i = 0
+    while i + 1 < len(pairs) {
+        let needle = pairs[i] + " " + pairs[i + 1]
+        if cmd.contains(needle) { return true }
+        i = i + 2
+    }
+    return false
+}
+
 // shell single-quote: wrap in '...', embedded ' becomes '\''
 fn _shq(s: string) -> string {
     return "'" + s.split("'").join("'\\''") + "'"
@@ -355,7 +374,7 @@ fn main() {
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)
     let heavy_pairs = ["go", "test", "go", "build", "swift", "build", "swift", "test", "docker", "build", "hexa", "kick", "hexa", "drill", "hexa", "loop", "hexa", "cc"]
-    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs)
+    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs)
 
     // root-needing commands — always routable, and `sudo`-prefixed on a
     // host tagged sudo:true.

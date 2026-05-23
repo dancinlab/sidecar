@@ -6,7 +6,7 @@ allowed-tools: Agent, Bash, Read
 
 Engage the `cycle` skill. In ONE message run all five stages:
 
-1. **Next-list (self-enumerate)** — derive the next viable, DISJOINT work items from the current context (roadmap/todo · active-goal sub-tasks · obvious "what's next"). If `$ARGUMENTS` is non-empty, scope the enumeration to it. State in one line what you enumerated.
+1. **Next-list (self-enumerate, ACTIVE DOMAIN ONLY)** — read the session's active domain (`domain` skill's active-domain pointer; if none set, run `/domain set <NAME>` first and stop). Enumerate from the active `<NAME>.md` snapshot's open `- [ ]` milestone checkboxes (commons @D g58 — off-domain work is explicitly forbidden). If `$ARGUMENTS` is non-empty, intersect the enumeration with that scope. State in one line: active domain name + count of open milestones picked.
 2. **Dup-race precheck** — for each item whose label names an inbox patch slug (matches `inbox/**/<slug>.md` in the current repo), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
 
    - **Signal A — patch file Status:** `grep -iE '(^|\s)(\*\*)?status(\*\*)?\s*[:：]' inbox/**/<slug>.md` then test the matched line against the resolved-class regex `(fixed|resolved|closed|landed|shipped|absorbed|superseded|merged|done|✅|🟢)`. Body strings like `Status: fixed` / `**status**: resolved-ssot` / `🟢 RESOLVED` count.

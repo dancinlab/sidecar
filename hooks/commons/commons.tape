@@ -210,3 +210,7 @@
 @D g57 := "pod fire → Monitor + SAVE_POD=1 (no fire-and-forget polling)" :: governance [required active]
   do   = "after `hexa cloud nohup/run`, attach Monitor + SAVE_POD=1 to retain pod when SSH drops"
   dont = "poll the log with `tail -f` / sleep-loop · let SSH drop without SAVE_POD=1 — result LOST"
+
+@D g58 := "/cycle family — enumerate only the active domain's open milestones" :: governance [required active]
+  do   = "next-list = active <NAME>.md `- [ ]` items · run `/domain set <NAME>` first if none active"
+  dont = "enumerate off-domain work · add milestones to non-active domain · scope drift"

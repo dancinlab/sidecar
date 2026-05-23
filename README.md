@@ -16,7 +16,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-23T18:49Z · feat(ship 0.3.0): auto-refresh README.md LATEST-SHIP marker on every successful ship
+2026-05-23T18:54Z · feat(commons 0.9.54 + cycle 0.5.0): add g58 — /cycle family enumerates only the active domain's open milestones (off-domain forbidden)
 <!-- /LATEST-SHIP -->
 
 ## Install

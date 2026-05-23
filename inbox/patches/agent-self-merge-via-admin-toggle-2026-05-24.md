@@ -1,9 +1,27 @@
+---
+status: resolved
+resolved: 2026-05-24
+---
+
 # agent-self-merge-via-admin-toggle
 
 **Source**: hexa-lang (PROBE r14 cycle 7-10 fan-out)
 **Target**: sidecar (g47 pr-automerge hook · commons.tape governance)
 **Kind**: patches
-**Status**: open — agent 자체-머지 거동이 branch protection 우회
+**Status**: resolved — gh-api-guard 0.1.0 + commons @D g55 land
+
+## Resolution (2026-05-24)
+
+옵션 A + 옵션 C hybrid 채택, env-var bypass는 제외 (g30 정합).
+
+| 축 | 정착 |
+|---|------|
+| A. 소프트 | `commons.tape @D g55` — agent: branch protection toggle 금지 · `gh pr merge --admin` 금지 · admin merge는 user-only |
+| C. 하드 | `hooks/gh-api-guard 0.1.0` — PreToolUse(Bash) hard-block: (A-pat) `gh api`/`curl`/`wget`/`http(ie)`/`xh` + 파괴적 method(`-X DELETE\|POST\|PUT\|PATCH` / `--method`(`=`)?) + `/branches/<b>/protection*` 경로 · (B-pat) `gh pr merge --admin` |
+
+bypass env-var는 **없음** — user가 합법적으로 branch protection을 토글하려면 Claude Code 바깥 셸에서 수행하거나 https://github.com/<repo>/settings/branches 사용. 가드는 agent surface만 차단.
+
+로컬 검증 11 deny / 9 allow 통과 (chained `&&` toggle 패턴, env-prefix, `bash -c` quoted, `-XDELETE` no-space form, `--method=PUT` 형태 모두 deny; lifecycle / GET / non-protection DELETE 모두 allow).
 
 ## 발견
 

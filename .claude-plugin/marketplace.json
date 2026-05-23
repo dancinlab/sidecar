@@ -71,8 +71,8 @@
     {
       "name": "cloud-guard",
       "source": "./hooks/cloud-guard",
-      "description": "PreToolUse(Bash) hard block for raw rented-GPU pod CLI usage, implemented in hexa-lang (`_cloud_guard.hexa`, invoked via `hexa run`). Denies `runpodctl exec` / `runpodctl ssh` / `runpodctl send-file` / `runpodctl send-file-to-pod` / `vastai exec` / `vastai ssh` / `vast exec` / `vast ssh` with a redirecting message pointing to `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` (commons @D g8). Pod-lifecycle subcommands (`runpodctl create / ps / list` \u00b7 `vastai create / show / search`) pass through \u2014 only raw remote exec / transfer is refused. NO opt-out by design (commons @D g30).",
-      "version": "0.1.1"
+      "description": "PreToolUse(Bash) hard block for raw rented-GPU pod dispatch (commons @D g8). Three orthogonal detectors run on every Bash command: (a) pod-CLI + remote-verb pair scan anywhere in the command \u2014 runpodctl {exec|ssh|send|receive|send-file|receive-file|send-file-to-pod|receive-file-from-pod|port} \u00b7 vast(ai) {exec|ssh|scp|copy|attach-ssh|execute}; (b) ssh/scp/rsync/sftp against `*.runpod.io` / `proxy.runpod.net` / `*.vast.ai` hosts; (c) curl/wget/http(ie)/xh against `api.runpod.io` / `api.runpod.ai` / `rest.runpod.io` / `runpod.io/graphql` / `console.vast.ai` / `vast.ai/api` URLs. Shell separators normalized to whitespace before tokenizing \u2014 `cd /x && runpodctl ssh \u2026`, `bash -c '\u2026 vast exec \u2026'`, env-prefixes all caught. Pod-lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy / config / project / version) pass through. Redirects to `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`. Implemented in hexa-lang (`_cloud_guard.hexa`, invoked via `hexa run`). NO opt-out by design (commons @D g30).",
+      "version": "0.2.0"
     },
     {
       "name": "inbox-watch",
@@ -93,10 +93,16 @@
       "version": "0.1.1"
     },
     {
-      "name": "pr-automerge",
-      "source": "./hooks/pr-automerge",
-      "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). Whitespace-tokenizes the command and scans for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026` (the common case). When matched and not draft / not already merging, rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` \u2014 transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 branch diff scoped entirely to `inbox/patches/**` (commons @D g54 \u2014 cross-project handoff entries are maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design (commons @D g30).",
+      "name": "pr-cycle",
+      "source": "./hooks/pr-cycle",
+      "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hexa run`). Quote-aware tokenizer strips single- and double-quoted regions before scanning, then looks for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026`, while test payloads with the trigger inside quotes do NOT fire. When matched (and not draft / not already merging / not inbox/patches-only), rewrites via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` and, IF cwd is a linked git worktree (not the main one), additionally appends ` && (cd <main-wt> && git worktree remove <this-wt> --force 2>/dev/null && git branch -D <branch> 2>/dev/null || true)` \u2014 transparent atomic create \u2192 merge \u2192 worktree+branch cleanup. The worktree+branch are detected at hook-time (`git rev-parse --show-toplevel` \u00b7 `git worktree list --porcelain` first entry \u00b7 `git rev-parse --abbrev-ref HEAD`), so cleanup targets the exact context the PR was issued from. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks, no dead worktrees). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 branch diff scoped entirely to `inbox/patches/**` (commons @D g54 \u2014 maintainer review-only; uses `git diff --name-only origin/main...HEAD`, fail-open on git error). NO opt-out by design (commons @D g30).",
       "version": "0.3.0"
+    },
+    {
+      "name": "gh-api-guard",
+      "source": "./hooks/gh-api-guard",
+      "description": "PreToolUse(Bash) hard block for agent self-merge via branch-protection admin toggle (commons @D g55). Two patterns blocked: (A) destructive HTTP call against `/branches/<b>/protection*` \u2014 `gh api`/`curl`/`wget`/`http(ie)`/`xh` paired with `-X DELETE|POST|PUT|PATCH` or `--method`/`--method=` variants, order-agnostic; (B) `gh pr merge --admin` (force-merge bypassing required reviews / checks). Shell separators normalized to whitespace before tokenizing \u2014 chained / quoted / env-prefixed forms all caught. Read-only GET on protection endpoints passes through. Legitimate user toggle: run outside Claude Code (independent shell) or via https://github.com/<repo>/settings/branches. Implemented in hexa-lang (`_gh_api_guard.hexa`, invoked via `hexa run`). NO opt-out by design (commons @D g30).",
+      "version": "0.1.0"
     },
     {
       "name": "tape-lint",
@@ -149,8 +155,8 @@
     {
       "name": "cloud",
       "source": "./skills/cloud",
-      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw ssh/scp per commons g8). Subverbs: preflight \u00b7 run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup \u00b7 no LLM \u00b7 $0). NL trigger via skill. Pairs with commons g8 + g12.",
-      "version": "0.3.1"
+      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod / vast.ai dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw runpodctl/vastai/ssh/scp/curl per commons g8, hard-enforced by the cloud-guard hook). Subverbs: preflight \u00b7 run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup \u00b7 no LLM \u00b7 $0). NL trigger via skill. Pairs with commons g8 + g12.",
+      "version": "0.3.2"
     },
     {
       "name": "hexa-help",

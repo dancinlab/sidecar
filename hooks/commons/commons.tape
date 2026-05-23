@@ -212,3 +212,7 @@
 @D g54 := "g47 exemption — inbox/patches/** PRs are review-only, never auto-merged" :: governance [required active]
   do   = "PR diff scoped to inbox/patches/** → skip g47 atomic tail · maintainer reviews + merges manually"
   dont = "auto-append `gh pr merge --squash` to inbox-only PRs — bypasses cross-project handoff review"
+
+@D g55 := "no branch-protection toggle by agent — admin merges are user-only" :: governance [required active]
+  do   = "agent STOPs after `gh pr create` if protection blocks · user does the admin merge by hand"
+  dont = "`gh api -X DELETE|POST|PUT|PATCH .../branches/*/protection*` · `gh pr merge --admin` — blocked"

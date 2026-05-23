@@ -75,6 +75,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "verify-guard",
+      "source": "./hooks/verify-guard",
+      "description": "PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_verify_guard.hexa`, invoked via `hexa run`). Denies first-token ∈ {wolframscript, mathematica, WolframKernel}, and inline-Python verification via `python(3)? -c '...'` containing `import sympy` / `from sympy` / `import pyphi` / `import wolframclient` with a redirecting message pointing to `hexa verify` (commons @D g5). General sympy / wolframclient usage in committed code files passes through — only inline `-c` verification probes (and the standalone Wolfram CLIs) are refused. NO opt-out by design (commons @D g30).",
+      "version": "0.1.0"
+    },
+    {
       "name": "pr-automerge",
       "source": "./hooks/pr-automerge",
       "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). When a Bash command starts with `gh pr create \u2026` and is not draft / not already chained to a merge, it is rewritten via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` \u2014 transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 command chained with `&&` / `;` / `|` (multi-step intent preserved). NO opt-out by design (commons @D g30).",

@@ -1,0 +1,134 @@
+// _verify_guard.hexa — PreToolUse(Bash) hard block for raw verification-
+// tool usage cited as primary evidence.
+//
+// commons @D g5: `hexa verify` is the SSOT for correctness / purity /
+// grade / identity claims. The `dont` clause forbids citing sympy /
+// PyPhi / Wolfram / Mathematica as primary evidence. This hook enforces
+// that at the Bash layer.
+//
+// Detection:
+//   (1) first-token ∈ {wolframscript, mathematica, WolframKernel} — the
+//       dedicated Wolfram CLIs, no legitimate non-verify use in this
+//       project.
+//   (2) inline-Python verification probe — command contains `-c` AND
+//       one of {`import sympy`, `from sympy`, `import pyphi`,
+//       `import wolframclient`}. The `-c` flag is the
+//       inline-evaluation signal; general sympy use in committed code
+//       files (without `-c`) passes through untouched.
+//
+// NO opt-out by design — no env var, no config file, no exception list
+// (commons @D g30).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _is_wolfram_cli(t: string) -> bool {
+    if t == "wolframscript" { return true }
+    if t == "mathematica" { return true }
+    if t == "WolframKernel" { return true }
+    return false
+}
+
+fn _is_inline_python(t: string) -> bool {
+    if t == "python" { return true }
+    if t == "python3" { return true }
+    return false
+}
+
+// command contains one of the verification-import substrings
+fn _has_verify_import(cmd: string) -> bool {
+    if cmd.contains("import sympy") { return true }
+    if cmd.contains("from sympy") { return true }
+    if cmd.contains("import pyphi") { return true }
+    if cmd.contains("import wolframclient") { return true }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
+    if cmd == "" { _allow() }
+
+    let toks = _tokens(cmd)
+    if len(toks) < 1 { _allow() }
+    let first = toks[0]
+
+    // (1) Wolfram CLI deny
+    if _is_wolfram_cli(first) {
+        let reason = "verify-guard (commons @D g5): `" + first + "` is a raw Wolfram / Mathematica CLI cited as primary evidence — refused.\n  Use `hexa verify` instead — it's the SSOT for correctness / purity / grade / identity claims (paste the verdict VERBATIM).\n  NO opt-out by design (commons @D g30)."
+        _deny(reason)
+    }
+
+    // (2) inline-Python verification probe
+    if _is_inline_python(first) && cmd.contains(" -c ") && _has_verify_import(cmd) {
+        let reason = "verify-guard (commons @D g5): inline-Python verification probe (`" + first + " -c '… import sympy/pyphi/wolframclient …'`) cited as primary evidence — refused.\n  Use `hexa verify` instead — it's the SSOT for correctness / purity / grade / identity claims (paste the verdict VERBATIM).\n  General sympy/wolframclient usage in committed code files (no `-c` flag) is NOT blocked — only inline `-c` verification probes. NO opt-out by design (commons @D g30)."
+        _deny(reason)
+    }
+
+    _allow()
+}

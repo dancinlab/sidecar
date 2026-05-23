@@ -1,0 +1,78 @@
+name: release
+
+# Source-tarball release — fires on tag push (`v*`). sidecar has NO compiled
+# binary: a release is a versioned snapshot of the marketplace plugin pack
+# (hooks/ · commands/ · skills/ · .claude-plugin/ · install.hexa). We package
+# the source tree as `sidecar-<tag>.tar.gz` and attach it to the GitHub Release
+# the tag created, so users can pin a version and each tag gets release notes.
+#
+#   https://github.com/dancinlab/sidecar/releases/download/<tag>/sidecar-<tag>.tar.gz
+#
+# `hx install sidecar` still installs from the live marketplace HEAD; the
+# tarball is the pinnable, notes-bearing snapshot for a given release.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing release tag to (re)build the source tarball for'
+        required: true
+
+permissions:
+  contents: write  # gh release upload
+
+# Tag push (v*) keeps every run — distinct group per tag, no cancellation.
+# Cancel in-flight runs only for branch refs (workflow_dispatch off a branch),
+# never for tags.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type == 'branch' }}
+
+jobs:
+  # ── Package source tree + upload to the GitHub Release ─────────────
+  release:
+    name: release (source)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - id: c
+        name: Compute release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
+              tag="${{ github.event.inputs.tag }}"
+          else
+              tag="${{ github.ref_name }}"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+
+      - name: Package — sidecar-<tag>.tar.gz
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ steps.c.outputs.tag }}"
+          # Source-only snapshot: exclude VCS / CI / scratch dirs, keep the
+          # marketplace plugin pack + install hook + top-level docs.
+          tar -czf "sidecar-${tag}.tar.gz" \
+              --exclude='./.git' \
+              --exclude='./.github' \
+              --exclude='./.worktrees' \
+              --exclude='./inbox' \
+              .
+          ls -la "sidecar-${tag}.tar.gz"
+          tar -tzf "sidecar-${tag}.tar.gz" | head -n 40
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.c.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          files: sidecar-${{ steps.c.outputs.tag }}.tar.gz
+          fail_on_unmatched_files: true
+          generate_release_notes: true

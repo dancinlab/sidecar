@@ -1,7 +1,7 @@
 {
   "name": "paper",
   "description": "/paper <args> — arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold template/ skeleton at ./<slug>/, now ships with a working matplotlib figure example + `make figures` target) · sample <slug> (copy the bundled demiurge sample-nb-bcs-absorbed verbatim, an arxiv-quality reference exhibit) · fig <size> <prompt> <out.png> (delegates to sister `imagine` plugin → fal.ai `openai/gpt-image-2`) · compile [dir] (pdflatex × 3 + bibtex) · lint [dir] (enforces commons @D g51 — main.pdf ≥10 pages AND ≥1 fal.ai figure detected via figures/_prompts/*.{txt,md} or figures/_scripts/*.py grep for fal/imagine; exit 0 = pass) · list (bundled samples) · help. Template is a minimal arxiv-style single-column 11pt skeleton — compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

@@ -24,7 +24,7 @@
       "name": "inbox",
       "source": "./skills/inbox",
       "description": "Cross-project handoff inbox \u2014 skill (natural language) + /inbox list / new <kind> <slug> for filing inbox/<kind>/<slug>.md entries in the current repo.",
-      "version": "0.2.1"
+      "version": "0.2.2"
     },
     {
       "name": "hexa-lsp",
@@ -180,7 +180,7 @@
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) \u00b7 /domain <task> (append `- [x]`) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Records progress as work proceeds \u2014 log accumulates a checkbox audit trail.",
-      "version": "0.4.1"
+      "version": "0.4.2"
     },
     {
       "name": "gap",
@@ -198,7 +198,7 @@
       "name": "ship",
       "source": "./skills/ship",
       "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. NL trigger via skill (ship · 배포 · 출시).",
-      "version": "0.2.1"
+      "version": "0.2.2"
     },
     {
       "name": "bypass",
@@ -222,7 +222,7 @@
       "name": "research",
       "source": "./skills/research",
       "description": "Research-fetch tools \u2014 `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title \u00b7 authors \u00b7 abstract \u00b7 pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`_arxiv.hexa` / `_yt.hexa`, invoked via `hexa run`); HTTP via curl, no API key.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "gh-stack",
@@ -234,13 +234,13 @@
       "name": "paper",
       "source": "./skills/paper",
       "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> \u00b7 sample <slug> \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 lint [dir] (enforces commons @D g51 \u2014 main.pdf \u226510 pages AND \u22651 fal.ai figure detected via figures/_prompts/*.{txt,md} or figures/_scripts/*.py grep for fal/imagine; exit 0 = pass) \u00b7 list \u00b7 help. Template is a minimal arxiv-style single-column 11pt skeleton \u2014 compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin.",
-      "version": "0.5.0"
+      "version": "0.5.1"
     },
     {
       "name": "imagine",
       "source": "./skills/imagine",
       "description": "/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model] \u2014 generic AI image generator. Two backends out of the box: `fal` (queue+poll fal.ai, default \u2014 `secret get fal.api_key`, model = openai/gpt-image-2 firm-pinned default) and `openai` (sync /v1/images/generations \u2014 `secret get openai.api_key`, model = gpt-image-1). Canonical fal-style size tokens (`square_hd` / `landscape_16_9` / `portrait_16_9` / `square`) translate per-backend. Prompt always read from a file (provenance), payload JSON via mktemp (prompt never on argv). Backend pluggable \u2014 drop a new `_backends/<name>.hexa` to add one.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "output-trim",

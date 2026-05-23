@@ -189,6 +189,12 @@
       "version": "0.2.1"
     },
     {
+      "name": "atlas",
+      "source": "./skills/atlas",
+      "description": "/atlas <args> \u2014 wraps `hexa atlas` (atlas SSOT surface, PR-only landing per @D g_atlas_binary_builtin). Read verbs: hash \u00b7 stats [--audit] \u00b7 lookup [K] <id> \u00b7 dump [K] [--json] \u2014 all resolve against compile-time embedded static_atlas() (zero fs read, ~6594 P/C/L nodes). Write verbs: append-witness --kind <P|C|L|E> --id <id> {--raw <body> | --stdin} (staging shard for merger.hexa::_discover) \u00b7 register --from-{verify,drill,check} [--auto-pr] (multi-verb DIRECT in-memory node-gen \u2014 builds AtlasNode struct-literal IN MEMORY, folds into compiler/atlas/embedded.gen.hexa via DiscoveryEvent \u2192 register_from_event sink; no .n6, no markdown intermediate; honest degrade) \u00b7 pr --staging <file.n6> (the sole landing verb under PR-only policy). NL trigger via skill (`atlas lookup`, `atlas stats`, `\uc544\ud2c0\ub77c\uc2a4 \uc870\ud68c`, `\uc544\ud2c0\ub77c\uc2a4 \ub4f1\ub85d`, `register from drill`).",
+      "version": "0.1.0"
+    },
+    {
       "name": "domain",
       "source": "./skills/domain",
       "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root \u2014 auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) \u00b7 /domain <task> (append `- [x]`) \u00b7 /domain todo <task> (`- [ ]`) \u00b7 /domain done <match> (flip [ ]\u2192[x]) \u00b7 /domain new <header>. Records progress as work proceeds \u2014 log accumulates a checkbox audit trail.",

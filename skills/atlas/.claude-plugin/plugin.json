@@ -1,0 +1,9 @@
+{
+  "name": "atlas",
+  "description": "/atlas <args> — wraps `hexa atlas` (the atlas SSOT surface, PR-only landing per @D g_atlas_binary_builtin). Read verbs: hash · stats [--audit [--scope=rodata|overlay|merged] [--format=json]] · lookup [K] <id> · lookup --prefix=<p> · dump [K] [--json] — all resolve against the compile-time embedded static_atlas() (zero fs read, zero parse, ~6594 P/C/L nodes). Write verbs: append-witness --kind <P|C|L|E> --id <id> {--raw <body> | --stdin} (record a node as `atlas.append.witness-<ts>-<id>.n6` staging shard, picked up by merger.hexa::_discover on next regen) · register --from-{verify,drill,check} [--auto-pr] (multi-verb DIRECT in-memory node-gen — every `--from-<verb>` arm runs the verb in-process, builds an AtlasNode struct-literal IN MEMORY, folds directly into compiler/atlas/embedded.gen.hexa via the canonical DiscoveryEvent → register_from_event sink — no .n6 shard, no markdown intermediate; honest degrade — drill with verdict=skip opens NO PR, verify FALSIFIED rejects; with --auto-pr — branch + commit + `gh || api` PR, NEVER claims a PR opened unless `gh` rc=0 or HTTP 201) · pr --staging <file.n6> (the sole landing verb under PR-only policy — fold the shard onto a fresh branch, commit, `gh pr create`; direct fold-to-live is forbidden). NL trigger via skill ('atlas lookup', 'atlas stats', '아틀라스 조회', '아틀라스 등록', 'register from drill', 'atlas absorb').",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "atlas", "hexa-atlas", "ssot", "register"]
+}

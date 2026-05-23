@@ -8,7 +8,7 @@
 // Scope is deliberately narrow — wrap only "simple" single commands
 // (no shell metacharacters). That keeps composition safe with the other
 // PreToolUse(Bash) rewrite hooks (pool-route routes heavy commands;
-// pr-automerge chains `gh pr create`) and preserves exit-code / syntax
+// pr-cycle chains `gh pr create`) and preserves exit-code / syntax
 // semantics for compound pipelines, redirects, heredocs, background
 // jobs, command substitutions, and backticks (all handled by the user-
 // authored compound form, not our scope).

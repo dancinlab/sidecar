@@ -4,4 +4,4 @@ argument-hint: "[NAME] [todo|done|new|show] <text>"
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_domain.hexa" $ARGUMENTS`
+!`H="$(command -v _domain.hexa)"; hexa run "$H" $ARGUMENTS`

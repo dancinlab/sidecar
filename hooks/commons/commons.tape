@@ -181,9 +181,9 @@
   do   = "user asks to explain simply → `/easy` (7-element friendly format)"
   dont = "ad-hoc 'simple explanation' format when /easy ships the canonical 7-element template"
 
-@D g47 := "PR ship discipline — create-then-merge, no unmerged stacks" :: governance [required active]
-  do   = "create one PR → merge it → start next · main-based always · g4 stacked = per-merge layers"
-  dont = "fan out N stacked PRs unmerged · long-lived stack rebases on every main movement"
+@D g47 := "PR ship discipline — create → merge → clean, no unmerged stacks / dead worktrees" :: governance [required active]
+  do   = "create one PR → merge (squash) → delete branch + remove its worktree → next · main-based"
+  dont = "leave a PR unmerged · a merged branch · or a dead worktree behind at session end"
 
 @D g48 := "cross-project inbox ack — close-then-notify" :: governance [required active]
   do   = "inbox entry done → own entry `status: resolved` + ack file in sender's inbox (handoff loop)"
@@ -213,6 +213,6 @@
   do   = "PR diff scoped to inbox/patches/** → skip g47 atomic tail · maintainer reviews + merges manually"
   dont = "auto-append `gh pr merge --squash` to inbox-only PRs — bypasses cross-project handoff review"
 
-@D g55 := "no branch-protection toggle by agent — admin merges are user-only" :: governance [required active]
-  do   = "agent STOPs after `gh pr create` if protection blocks · user does the admin merge by hand"
-  dont = "`gh api -X DELETE|POST|PUT|PATCH .../branches/*/protection*` · `gh pr merge --admin` — blocked"
+@D g55 := "wall-time first — minimize elapsed time, parallel / distributed over serial" :: governance [required active]
+  do   = "fan out independent work across hosts/GPUs · many cheap-parallel beat 1 slow-serial"
+  dont = "serialize embarrassingly-parallel work · 1 big slow unit when many small parallel are faster"

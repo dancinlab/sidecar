@@ -116,11 +116,14 @@ fn main() {
 
     let root = env_var("CLAUDE_PLUGIN_ROOT")
     let body = _read_file_safe(root + "/commons.tape")
-    // roster snapshot is PREPENDED (not appended): the hexa runtime caps
-    // stdout at 4095 bytes / fire, and commons.tape body alone (~7 KB)
-    // already saturates that envelope. Prepending the (~300 B) roster
-    // guarantees it survives the truncation. Upstream gap filed:
-    // hexa-lang/inbox/patches/stdout-4095-byte-truncation.md
-    let full = _roster_snapshot() + body
+    // roster snapshot is PREPENDED so the live pool host lineup leads the
+    // payload. On SessionStart only, the COMMANDS.md catalog is appended
+    // (once per session, not every turn) so the agent sees the full
+    // cross-project slash-command surface and can use it autonomously.
+    let mut full = _roster_snapshot() + body
+    if event == "SessionStart" {
+        let cat = _read_file_safe(root + "/COMMANDS.md")
+        if cat != "" { full = full + "\n\n" + cat }
+    }
     _emit("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(event) + ",\"additionalContext\":" + _json_escape(full) + "}}")
 }

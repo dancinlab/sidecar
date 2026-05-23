@@ -149,8 +149,8 @@
     {
       "name": "pool",
       "source": "./skills/pool",
-      "description": "/pool <args> \u2014 wraps the `pool` CLI (host roster + remote exec \u2014 minimal Python, zero deps). Verbs: list \u00b7 add <host> \u00b7 on <host> <cmd> \u00b7 status \u00b7 install tailscale \u00b7 rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
-      "version": "0.2.1"
+      "description": "/pool <args> \u2014 wraps the `pool` CLI (host roster + remote exec \u2014 minimal, zero deps). Verbs: list \u00b7 add <host> \u00b7 on <host> <cmd> \u00b7 status \u00b7 install tailscale \u00b7 rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
+      "version": "0.2.2"
     },
     {
       "name": "cloud",

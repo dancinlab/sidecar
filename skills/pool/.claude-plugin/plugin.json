@@ -1,7 +1,7 @@
 {
   "name": "pool",
-  "description": "/pool <args> — wraps the `pool` CLI (host roster + remote exec — minimal Python, zero deps). Verbs: list · add <host> · on <host> <cmd> · status · install tailscale · rm <host> · off <host>. NL trigger via skill ('pool 호스트', '다른 호스트에서 돌려', 'remote exec'). Pairs with commons.tape g9 + sidecar's pool-route hook.",
-  "version": "0.2.1",
+  "description": "/pool <args> — wraps the `pool` CLI (host roster + remote exec — minimal, zero deps). Verbs: list · add <host> · on <host> <cmd> · status · install tailscale · rm <host>. NL trigger via skill ('pool 호스트', '다른 호스트에서 돌려', 'remote exec'). Pairs with commons.tape g9 + sidecar's pool-route hook.",
+  "version": "0.2.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

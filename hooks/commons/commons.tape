@@ -206,3 +206,7 @@
 @D g55 := "wall-time first — minimize elapsed time, parallel / distributed over serial" :: governance [required active]
   do   = "fan out independent work across hosts/GPUs/pods (≤8) · many cheap-parallel beat 1 slow-serial"
   dont = "serialize embarrassingly-parallel work · 1 big slow unit when many small parallel are faster"
+
+@D g56 := "progress as % — ASCII bar + fraction on multi-step work" :: governance [required active]
+  do   = "multi-step task → lead with `▓▓▓░░ NN% · done/total` + next step · refresh each turn"
+  dont = "prose-only progress without a % bar · drop the bar mid-task on multi-step work"

@@ -50,9 +50,6 @@
   do   = "file hexa-lang upstream gaps as `<hexa-lang>/inbox/patches/<slug>.md` on discovery"
   dont = "implement workarounds for known gaps — file an upstream inbox patch, fix at source"
 
-@D g12 := "fan out parallel pods" :: governance [active]
-  do   = "fan out up to 8 parallel pods when total wall time shrinks (compute / variants disjoint)"
-
 @D g13 := "portable paths only" :: governance [required active]
   do   = "resolve paths at runtime: `$HOME` · `${CLAUDE_PLUGIN_ROOT}` · `$CLAUDE_PLUGIN_DATA` · PATH binaries"
   dont = "hardcode absolute paths in shipped code (`/Users/<you>/…` · `/home/<you>/…` · machine dirs)"
@@ -88,9 +85,6 @@
 @D g22 := "version discipline — bump SemVer + lockstep surfaces" :: governance [required active]
   do   = "user-visible change → bump SemVer + update ALL version surfaces in the same commit + CHANGELOG"
   dont = "ship a behavior change without a version bump · drift between surfaces · skip the CHANGELOG"
-
-@D g23 := "sidecar slash commands — use when applicable" :: governance [active]
-  do   = "use sidecar slash commands when they fit: /brainstorm /gap /kick /verify /hexa-help /inbox /all-bg-go /cycle /domain /inject /ship /prefs /pool /cloud /secret /easy /research"
 
 @D g24 := "research — explore all viable paths in parallel" :: governance [active]
   do   = "in research / experiment, fan out ALL disjoint viable paths in parallel — let evidence converge"
@@ -177,10 +171,6 @@
   do   = "user changes language pref → `/prefs {code|docs|response} <lang>` (SSOT: $CLAUDE_PLUGIN_DATA)"
   dont = "ask user to retype lang each session — `/prefs` persists 3 axes (code · docs · response)"
 
-@D g46 := "friendly explain style via /easy" :: governance [active]
-  do   = "user asks to explain simply → `/easy` (7-element friendly format)"
-  dont = "ad-hoc 'simple explanation' format when /easy ships the canonical 7-element template"
-
 @D g47 := "PR ship discipline — create → merge → clean, no unmerged stacks / dead worktrees" :: governance [required active]
   do   = "create one PR → merge (squash) → delete branch + remove its worktree → next · main-based"
   dont = "leave a PR unmerged · a merged branch · or a dead worktree behind at session end"
@@ -214,5 +204,5 @@
   dont = "auto-append `gh pr merge --squash` to inbox-only PRs — bypasses cross-project handoff review"
 
 @D g55 := "wall-time first — minimize elapsed time, parallel / distributed over serial" :: governance [required active]
-  do   = "fan out independent work across hosts/GPUs · many cheap-parallel beat 1 slow-serial"
+  do   = "fan out independent work across hosts/GPUs/pods (≤8) · many cheap-parallel beat 1 slow-serial"
   dont = "serialize embarrassingly-parallel work · 1 big slow unit when many small parallel are faster"

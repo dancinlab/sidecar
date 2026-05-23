@@ -200,6 +200,97 @@ fn _is_pod_api(t: string) -> bool {
     return false
 }
 
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) } catch e { out = "" }
+    return out
+}
+
+fn _is_sh_runner(t: string) -> bool {
+    if t == "bash" { return true }
+    if t == "sh" { return true }
+    if t == "zsh" { return true }
+    if t == "dash" { return true }
+    return false
+}
+
+// (d) dispatcher-script content scan — when the command invokes
+// `bash <path>` / `sh <path>` / `zsh <path>` / `dash <path>`, read the
+// script and re-run detectors (a)/(b)/(c) on its body. Catches the common
+// g8 workaround: pre-write a dispatch.sh that contains `runpodctl ssh …`
+// and then call `bash dispatch.sh` from the Bash tool (which the main
+// command-line detectors don't see through).
+//
+// Conservative scope: only triggers on an explicit shell runner with a
+// positional path argument (skips `-c`/`-lc` because the body is then
+// inlined into the same command and already covered by detectors a-c).
+// Returns a non-empty reason string when a hit is found.
+fn _scan_dispatch_scripts(toks: array) -> string {
+    let n = len(toks)
+    let mut i = 0
+    while i + 1 < n {
+        if _is_sh_runner(toks[i]) {
+            let mut j = i + 1
+            let mut path = ""
+            let mut inline = false
+            while j < n {
+                let arg = toks[j]
+                if len(arg) > 0 && arg.substring(0, 1) == "-" {
+                    if arg == "-c" || arg == "-lc" || arg == "-cl" { inline = true; break }
+                    j = j + 1
+                } else {
+                    path = arg
+                    break
+                }
+            }
+            if !inline && path != "" {
+                let body = _read_file_safe(path)
+                if body != "" {
+                    let inner = _tokens(_normalize(body))
+                    let in_n = len(inner)
+                    let mut k = 0
+                    while k + 1 < in_n {
+                        if _is_pod_cli(inner[k]) {
+                            if _is_remote_verb(inner[k], inner[k+1]) {
+                                return "dispatcher script `" + path + "`: " + inner[k] + " " + inner[k+1] + " (raw rented-GPU pod CLI)"
+                            }
+                        }
+                        k = k + 1
+                    }
+                    k = 0
+                    while k < in_n {
+                        if _is_ssh_like(inner[k]) {
+                            let mut l = k + 1
+                            while l < in_n {
+                                if _is_pod_host(inner[l]) {
+                                    return "dispatcher script `" + path + "`: " + inner[k] + " … " + inner[l] + " (raw ssh/scp to pod host)"
+                                }
+                                l = l + 1
+                            }
+                        }
+                        k = k + 1
+                    }
+                    k = 0
+                    while k < in_n {
+                        if _is_http_client(inner[k]) {
+                            let mut l = k + 1
+                            while l < in_n {
+                                if _is_pod_api(inner[l]) {
+                                    return "dispatcher script `" + path + "`: " + inner[k] + " … " + inner[l] + " (raw HTTP to pod API)"
+                                }
+                                l = l + 1
+                            }
+                        }
+                        k = k + 1
+                    }
+                }
+            }
+        }
+        i = i + 1
+    }
+    return ""
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -261,6 +352,13 @@ fn main() {
             }
         }
         i = i + 1
+    }
+
+    // (d) dispatcher-script content scan — `bash/sh foo.sh` whose body
+    // contains a raw pod CLI / ssh / API call
+    let reason_d = _scan_dispatch_scripts(toks)
+    if reason_d != "" {
+        _deny("raw rented-GPU pod dispatch inside a dispatcher script", reason_d)
     }
 
     _allow()

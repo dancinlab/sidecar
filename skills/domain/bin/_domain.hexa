@@ -236,39 +236,55 @@ fn _env(name: string) -> string {
     return _trim(to_string(r[0]))
 }
 
-// active-domain pointer store: ALWAYS anchored at $HOME/.claude/
-// (CLAUDE_PLUGIN_DATA varies by session/install and broke persistence; $HOME
-// is stable across sessions, so set in session-1 survives into session-2).
-// One `<root>\t<NAME>` line per project root — the active domain for that
-// working tree, set by `/domain <NAME>`.
+// active-domain pointer store: $HOME/.claude/domain-active.tsv
+// One `<root>\t<tty>\t<NAME>` line per (project root × terminal session) — two
+// claude sessions in the same repo (different terminal windows = different tty)
+// each get an independent active domain. tty is the controlling terminal path
+// (`/dev/ttys003` etc.); when unavailable (cron/non-tty) the key falls back to
+// `<root>\tNOTTY\t<NAME>` so the slot still works but is shared across non-tty
+// callers.
+fn _tty() -> string {
+    let r = exec_with_status("tty 2>/dev/null")
+    if r[1] == 0 {
+        let t = _trim(to_string(r[0]))
+        if t != "" { return t }
+    }
+    return "NOTTY"
+}
+
 fn _active_store() -> string {
     let home = _env("HOME")
     if home == "" { return ".domain-active.tsv" }
     return home + "/.claude/domain-active.tsv"
 }
 
+fn _active_key(root: string) -> string {
+    return root + "\t" + _tty()
+}
+
 fn _set_active(root: string, name: string) {
     let path = _active_store()
-    // ensure parent dir exists (first ever set on a fresh machine)
     let home = _env("HOME")
     if home != "" { let _mk = exec_with_status("mkdir -p " + home + "/.claude") }
     let body = _read_file_safe(path)
     let lines = body.split("\n")
+    let key = _active_key(root)
+    let pfx = key + "\t"
     let mut out = []
     let mut i = 0
     while i < len(lines) {
         let ln = lines[i]
-        if ln != "" && !_starts_with(ln, root + "\t") { out.push(ln) }
+        if ln != "" && !_starts_with(ln, pfx) { out.push(ln) }
         i = i + 1
     }
-    out.push(root + "\t" + name)
+    out.push(pfx + name)
     try { write_file(path, out.join("\n") + "\n") } catch e { }
 }
 
 fn _get_active(root: string) -> string {
     let body = _read_file_safe(_active_store())
     let lines = body.split("\n")
-    let pfx = root + "\t"
+    let pfx = _active_key(root) + "\t"
     let mut i = 0
     while i < len(lines) {
         let ln = lines[i]

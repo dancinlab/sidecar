@@ -16,7 +16,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-23T19:01Z · fix(domain 0.7.4): pin active-domain pointer at $HOME/.claude (CLAUDE_PLUGIN_DATA varies per session, broke persistence — set in session-1 now survives session-2)
+2026-05-23T20:09Z · fix(domain 0.7.5): per-session active domain — key is now <root>+<tty> (two terminals in same repo each have an independent active domain instead of overwriting each other)
 <!-- /LATEST-SHIP -->
 
 ## Install

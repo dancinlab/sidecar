@@ -192,3 +192,7 @@
 @D g52 := "auto-log to /domain — every decision/done" :: governance [required active]
   do   = "every task done / decision made → `/domain <text>` log immediately · don't batch · per-step"
   dont = "batch-log at session end · skip routine progress · only log major events (g39 enforcement)"
+
+@D g53 := "/easy 7-element by default — explain/report turns" :: governance [active]
+  do   = "explain/report response → `/easy` 7-element format default · session-wide ON · no manual toggle"
+  dont = "skip /easy in explanatory turns · trivial yes/no may stay terse (judgment call only)"

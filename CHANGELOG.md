@@ -8,6 +8,8 @@ For the full audit trail, see `git log`.
 
 ## 2026-05-23
 
+- **commons 0.9.36 — `@D g8` rented-GPU pod dispatch 강화** — g8 본문에 vast.ai 명시 추가 + 금지 CLI 목록 확장: `runpodctl` · `vastai` · raw `ssh` · raw `scp` 모두 금지, `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` 가 SSOT. `hexa cloud --help` 확인 결과 `--port` flag 로 runpod / vast.ai 모두 지원 (cycle A transport · cycle B file transfer · cycle C preflight). 동기 — 기존 g8 dont 가 "raw ssh/scp for runpod" 뿐이라 vast.ai · `runpodctl` · `vastai` CLI 케이스 명시 부재, 모델이 자꾸 직접 배포로 빠짐. 본문 갱신 + 모든 cycle 동작 명시. `marketplace.json` + `plugin.json` 0.9.35 → 0.9.36.
+
 - **commons 0.9.35 — `@D g47` PR ship discipline (no unmerged stacks)** — 새 `[required active]` governance block: PR을 한 개 만들면 즉시 머지하고 다음 PR 시작 — long-lived stacked PR 금지. `g4` 의 "stacked PRs" 는 *per-merge layer* (각 layer가 빠르게 main에 들어가는 구조) 이지 *unmerged stack of N* 이 아님. 동기 — 직전 작업에서 9개 stacked PR을 한꺼번에 쌓다 main이 움직일 때마다 rebase 충돌이 layer마다 발생 (CHANGELOG / marketplace.json / plugin.json 같은 lockstep surface가 항상 충돌). 결국 squash-merge로 청산. 이 패턴 자체를 룰로 금지. `marketplace.json` commons 설명 `g1..g46` → `g1..g47`.
 
 - **commons 0.9.34 — `@D g46` 친근 설명 스타일은 /easy** — 새 `[active]` governance block: user가 "쉽게/친근하게 설명해줘" 류 요청을 하면 `/easy` 로 — `styles/easy.<lang>.md` 의 canonical 7-element 패턴 (icon · name · alias · plain-line · analogy · ASCII · compare). 동기 — 모델이 ad-hoc "simple explanation" 형식을 즉흥적으로 짜는 패턴이 잦은데 `/easy` 가 이미 canonical template ship. `marketplace.json` commons 설명 `g1..g45` → `g1..g46`.

@@ -191,6 +191,14 @@ fn _env(name: string) -> string {
     return r[0].trim()
 }
 
+// load-aware escalation: when non-claude CPU usage exceeds threshold, treat as heavy
+// even if the classifier misses. Excludes `claude` PIDs per project.tape @D s9.
+fn _non_claude_load() -> int {
+    let r = exec_with_status("ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'")
+    if r[1] != 0 { return 0 }
+    return to_int(r[0].trim())
+}
+
 // emit the updatedInput rewrite — rebuild tool_input with command swapped.
 fn _emit(ti: map, new_cmd: string, note: string) {
     let ks = keys(ti)
@@ -381,7 +389,20 @@ fn main() {
     // installs that lack the tree never match (substring is empty).
     let mut heavy_find_subs = []
     if home != "" { heavy_find_subs.push("find " + home + "/core/anima") }
-    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
+    let mut heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
+
+    // load-aware escalation: promote a non-trivial cmd to heavy when non-claude
+    // CPU usage (per @D s9 — claude PIDs excluded) exceeds the threshold. The
+    // cmd-nontriviality AND-gate avoids penalising cheap `ls` / `cat` over ssh
+    // (routing latency would dominate). Threshold = 150 ≈ 1.5 cores of non-claude
+    // work — conservative so a single chatty terminal does not trip routing.
+    let load_threshold = 150
+    let cmd_nontrivial = len(cmd) > 20 || cmd.contains("|") || cmd.contains(">") || cmd.contains("&&")
+    let mut load_heavy = false
+    if !heavy && cmd_nontrivial {
+        if _non_claude_load() > load_threshold { load_heavy = true }
+    }
+    heavy = heavy || load_heavy
 
     // root-needing commands — always routable, and `sudo`-prefixed on a
     // host tagged sudo:true.
@@ -401,6 +422,7 @@ fn main() {
     let is_linux = _any_word(cmd, linux_words) || _any_contains(cmd, linux_subs)
 
     let mut why = "load-balanced"
+    if load_heavy { why = "load-escalated (non-claude load > " + to_string(load_threshold) + "%)" }
     let mut elig = []
     let mut ei = 0
     if is_macos {

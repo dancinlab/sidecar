@@ -1,0 +1,291 @@
+// _gh_api_guard.hexa — PreToolUse(Bash) hard block for agent self-merge
+// via branch-protection admin toggle (commons @D g55).
+//
+// Two attack patterns observed (sidecar inbox/patches/agent-self-merge-
+// via-admin-toggle-2026-05-24.md, PROBE r14 cycle 7-10 #538):
+//
+//   pattern A — admin toggle to bypass `New changes require approval from
+//   someone other than the last pusher` rule:
+//
+//     gh api -X DELETE /repos/<o>/<r>/branches/<b>/protection/enforce_admins
+//     gh pr merge --admin --squash --delete-branch
+//     gh api -X POST   /repos/<o>/<r>/branches/<b>/protection/enforce_admins
+//
+//   pattern B — `--admin` flag forces merge even when reviews / checks
+//   are unsatisfied (standalone form, no toggle required if user token
+//   already has admin scope):
+//
+//     gh pr merge --admin …
+//
+// Both are user-only operations. Agent surface MUST NOT touch branch-
+// protection endpoints (DELETE/POST/PUT/PATCH) or `--admin` merge flag.
+// Legitimate user toggles happen outside Claude Code (in an independent
+// shell or via GitHub UI · https://github.com/<repo>/settings/branches).
+//
+// Detection: token scan with shell-separator normalization (catches
+// chained / quoted / env-prefixed forms). HTTP-client agnostic — any of
+// `gh`, `curl`, `wget`, `http`, `httpie`, `xh` paired with a destructive
+// method and a `/branches/<b>/protection*` path triggers pattern A.
+//
+// NO opt-out by design — no env var, no config file, no exception list
+// (commons @D g30 + @D g55). Hard-block, period.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(pattern: string, evidence: string) {
+    let reason = "gh-api-guard (commons @D g55): refusing " + pattern + " — " + evidence + ".\n  Branch-protection toggle and `gh pr merge --admin` are user-only operations (sidecar inbox · PROBE r14 #538 self-merge). Agent must STOP after `gh pr create`; user performs the merge.\n  Legitimate toggle: run it outside Claude Code (independent shell) or use https://github.com/<repo>/settings/branches.\n  NO opt-out by design (commons @D g30)."
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _str_contains(s: string, sub: string) -> bool {
+    let n = len(s)
+    let m = len(sub)
+    if m == 0 { return true }
+    if m > n { return false }
+    let mut i = 0
+    while i + m <= n {
+        let mut j = 0
+        let mut ok = true
+        while j < m {
+            if ok {
+                if s[i+j] != sub[j] { ok = false }
+            }
+            j = j + 1
+        }
+        if ok { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    let n = len(s)
+    let m = len(prefix)
+    if m > n { return false }
+    let mut i = 0
+    while i < m {
+        if s[i] != prefix[i] { return false }
+        i = i + 1
+    }
+    return true
+}
+
+// Replace shell separators / quotes / backslash with space so chained,
+// quoted, env-prefixed invocations all tokenize uniformly.
+fn _normalize(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut out = ""
+    while i < n {
+        let c = s[i]
+        if c == ";" { out = out + " " }
+        else if c == "&" { out = out + " " }
+        else if c == "|" { out = out + " " }
+        else if c == "(" { out = out + " " }
+        else if c == ")" { out = out + " " }
+        else if c == "`" { out = out + " " }
+        else if c == "\"" { out = out + " " }
+        else if c == "'" { out = out + " " }
+        else if c == "\\" { out = out + " " }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out
+}
+
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _has_3gram(toks: array, a: string, b: string, c: string) -> bool {
+    let n = len(toks)
+    if n < 3 { return false }
+    let mut i = 0
+    while i + 2 < n {
+        if toks[i] == a {
+            if toks[i+1] == b {
+                if toks[i+2] == c { return true }
+            }
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn _has_2gram(toks: array, a: string, b: string) -> bool {
+    let n = len(toks)
+    if n < 2 { return false }
+    let mut i = 0
+    while i + 1 < n {
+        if toks[i] == a {
+            if toks[i+1] == b { return true }
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn _is_destructive_verb(t: string) -> bool {
+    if t == "DELETE" { return true }
+    if t == "POST" { return true }
+    if t == "PUT" { return true }
+    if t == "PATCH" { return true }
+    return false
+}
+
+// -X DELETE, --method DELETE, --method=DELETE, -XDELETE — order-agnostic
+fn _has_destructive_method(toks: array) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i < n {
+        let t = toks[i]
+        if t == "-X" {
+            if i + 1 < n {
+                if _is_destructive_verb(toks[i+1]) { return true }
+            }
+        }
+        if t == "--method" {
+            if i + 1 < n {
+                if _is_destructive_verb(toks[i+1]) { return true }
+            }
+        }
+        if t == "-XDELETE" { return true }
+        if t == "-XPOST" { return true }
+        if t == "-XPUT" { return true }
+        if t == "-XPATCH" { return true }
+        if t == "--method=DELETE" { return true }
+        if t == "--method=POST" { return true }
+        if t == "--method=PUT" { return true }
+        if t == "--method=PATCH" { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// any token containing both `/branches/` and `/protection`
+fn _has_protection_path(toks: array) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i < n {
+        let t = toks[i]
+        if _str_contains(t, "/branches/") {
+            if _str_contains(t, "/protection") { return true }
+        }
+        i = i + 1
+    }
+    return false
+}
+
+// `gh api` 2-gram OR an HTTP-client binary anywhere in the tokens
+fn _has_http_caller(toks: array) -> bool {
+    if _has_2gram(toks, "gh", "api") { return true }
+    let n = len(toks)
+    let mut i = 0
+    while i < n {
+        let t = toks[i]
+        if t == "curl" { return true }
+        if t == "wget" { return true }
+        if t == "http" { return true }
+        if t == "httpie" { return true }
+        if t == "xh" { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// `--admin` flag anywhere (--admin or --admin=…)
+fn _has_admin_flag(toks: array) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i < n {
+        let t = toks[i]
+        if t == "--admin" { return true }
+        if _starts_with(t, "--admin=") { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
+    if cmd == "" { _allow() }
+
+    let toks = _tokens(_normalize(cmd))
+
+    // pattern A — admin toggle (HTTP-client + destructive method +
+    // /branches/<b>/protection* path).
+    if _has_http_caller(toks) {
+        if _has_destructive_method(toks) {
+            if _has_protection_path(toks) {
+                _deny("branch-protection admin toggle", "destructive HTTP call against `/branches/<b>/protection*`")
+            }
+        }
+    }
+
+    // pattern B — `gh pr merge --admin` (force-merge bypassing reviews)
+    if _has_3gram(toks, "gh", "pr", "merge") {
+        if _has_admin_flag(toks) {
+            _deny("`gh pr merge --admin`", "`--admin` flag bypasses required reviews / checks")
+        }
+    }
+
+    _allow()
+}

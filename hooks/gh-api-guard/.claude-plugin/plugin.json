@@ -1,0 +1,9 @@
+{
+  "name": "gh-api-guard",
+  "description": "PreToolUse(Bash) hard block for agent self-merge via branch-protection admin toggle (commons @D g55). Two patterns blocked: (A) destructive HTTP call against `/branches/<b>/protection*` — `gh api`/`curl`/`wget`/`http(ie)`/`xh` paired with `-X DELETE|POST|PUT|PATCH` or `--method`/`--method=` variants, order-agnostic; (B) `gh pr merge --admin` (force-merge bypassing required reviews / checks). Shell separators (; & | () ` \" ' \\) normalized to whitespace before tokenizing — chained / quoted / env-prefixed forms all caught. Read-only GET on protection endpoints passes through. Legitimate user toggle: run outside Claude Code or via https://github.com/<repo>/settings/branches. Implemented in hexa-lang (`_gh_api_guard.hexa`, invoked via `hexa run`). NO opt-out by design (commons @D g30).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "gh", "github-api", "branch-protection", "admin", "self-merge", "hexa"]
+}

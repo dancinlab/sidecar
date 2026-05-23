@@ -197,10 +197,88 @@ fn _flip_done(root: string, name: string, term: string) {
     println("flipped: " + term)
 }
 
+fn _env(name: string) -> string {
+    let r = exec_with_status("printenv " + name)
+    if r[1] != 0 { return "" }
+    return _trim(to_string(r[0]))
+}
+
+// active-domain pointer store: $CLAUDE_PLUGIN_DATA/domain-active.tsv
+// (fallback $HOME/.claude). One `<root>\t<NAME>` line per project root —
+// the active domain for that working tree, set by `/domain <NAME>`.
+fn _active_store() -> string {
+    let d = _env("CLAUDE_PLUGIN_DATA")
+    let mut base = d
+    if base == "" { base = _env("HOME") + "/.claude" }
+    return base + "/domain-active.tsv"
+}
+
+fn _set_active(root: string, name: string) {
+    let path = _active_store()
+    let body = _read_file_safe(path)
+    let lines = body.split("\n")
+    let mut out = []
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if ln != "" && !_starts_with(ln, root + "\t") { out.push(ln) }
+        i = i + 1
+    }
+    out.push(root + "\t" + name)
+    try { write_file(path, out.join("\n") + "\n") } catch e { }
+}
+
+fn _get_active(root: string) -> string {
+    let body = _read_file_safe(_active_store())
+    let lines = body.split("\n")
+    let pfx = root + "\t"
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, pfx) { return ln.substring(len(pfx), len(ln)) }
+        i = i + 1
+    }
+    return ""
+}
+
+// [done, todo] checkbox counts across the SNAPSHOT (<NAME>.md) — the final-goal
+// board (RTSC.md pattern: milestones live in the snapshot, not the log). Progress
+// = goal completion, so it doesn't drift as the append-only log grows.
+fn _count_tasks(root: string, name: string) -> array {
+    let body = _read_file_safe(root + "/" + name + ".md")
+    let lines = body.split("\n")
+    let mut done = 0
+    let mut todo = 0
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [x] ") { done = done + 1 }
+        else if _starts_with(ln, "- [ ] ") { todo = todo + 1 }
+        i = i + 1
+    }
+    return [done, todo]
+}
+
+// g56 progress bar: `▓▓▓░░ NN% · done/total` (10-cell)
+fn _progress_bar(done: int, total: int) -> string {
+    if total == 0 { return "░░░░░░░░░░ 0% · 0/0 (no tasks yet — /domain todo <text>)" }
+    let pct = (done * 100) / total
+    let filled = (done * 10) / total
+    let mut bar = ""
+    let mut i = 0
+    while i < 10 {
+        if i < filled { bar = bar + "▓" } else { bar = bar + "░" }
+        i = i + 1
+    }
+    return bar + " " + to_string(pct) + "% · " + to_string(done) + "/" + to_string(total)
+}
+
 fn _show(root: string, name: string) {
     _ensure_files(root, name)
     let snap = root + "/" + name + ".md"
     let log = root + "/" + name + ".log.md"
+    let c = _count_tasks(root, name)
+    println("◆ active domain: " + name + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
     println("═══ " + snap + " ═══")
     print(_read_file_safe(snap))
     println("")
@@ -211,8 +289,8 @@ fn _show(root: string, name: string) {
 fn _usage() {
     eprintln("usage:")
     eprintln("  domain                      Show <PROJECT>.md + .log.md (scaffold if missing)")
-    eprintln("  domain <NAME>               Show specific NAME.md + .log.md")
-    eprintln("  domain <task-text>          Append \"- [x] <task-text>\" to top log entry")
+    eprintln("  domain <NAME>               Select NAME as the session's active domain (+ show + progress %)")
+    eprintln("  domain <task-text>          Append \"- [x] <task-text>\" to the active domain's top entry")
     eprintln("  domain todo <task-text>     Append \"- [ ] <task-text>\"")
     eprintln("  domain done <match>         Flip the first \"- [ ] *<match>*\" -> \"- [x] ...\"")
     eprintln("  domain new <header>         Start a new log entry")
@@ -224,6 +302,8 @@ fn main() {
     if rr[1] == 0 { root = _trim(to_string(rr[0])) }
     if root == "" { root = _trim(to_string(exec("pwd"))) }
     let def_name = _domain_name(_basename(root))
+    let active = _get_active(root)
+    let eff_name = if active != "" { active } else { def_name }
 
     let raw = argv()
     let mut args = []
@@ -232,7 +312,7 @@ fn main() {
     let argc = len(args)
 
     if argc == 0 {
-        _show(root, def_name)
+        _show(root, eff_name)
         return
     }
     let v = args[0]
@@ -246,7 +326,7 @@ fn main() {
             _usage()
             exit(1)
         }
-        let mut name = def_name
+        let mut name = eff_name
         let mut from = 1
         if _is_name(args[1]) && argc >= 3 {
             name = args[1]
@@ -260,14 +340,16 @@ fn main() {
     }
 
     if v == "show" {
-        let mut name = def_name
+        let mut name = eff_name
         if argc >= 2 && _is_name(args[1]) { name = args[1] }
         _show(root, name)
         return
     }
 
-    // bare: NAME-only show · NAME + task · default task
+    // `/domain <NAME>` alone → select that domain as the session's active
+    // domain (subsequent todo/done/append default to it) + show with progress.
     if _is_name(args[0]) && argc == 1 {
+        _set_active(root, args[0])
         _show(root, args[0])
         return
     }
@@ -275,5 +357,5 @@ fn main() {
         _append_task(root, args[0], "x", _join_from(args, 1))
         return
     }
-    _append_task(root, def_name, "x", _join_from(args, 0))
+    _append_task(root, eff_name, "x", _join_from(args, 0))
 }

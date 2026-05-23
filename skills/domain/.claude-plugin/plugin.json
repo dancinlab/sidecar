@@ -1,7 +1,7 @@
 {
   "name": "domain",
-  "description": "Maintain UPPERCASE <NAME>.md (current snapshot) + sister <NAME>.log.md (append-only checkbox-task log) at project root — auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain (show) · /domain <task> (append `- [x]`) · /domain todo <task> (`- [ ]`) · /domain done <match> (flip [ ]→[x]) · /domain new <header> · /domain <NAME> <task>. Record progress as work proceeds — log accumulates a checkbox audit trail.",
-  "version": "0.4.2",
+  "description": "Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) at project root — auto-scaffolds both, defaults NAME to uppercase basename of git root. Verbs: /domain <NAME> (SELECT the session's active domain → later verbs default to it + show a final-goal progress bar `▓▓▓░░ NN% · done/total` counted from the snapshot's `- [ ]`/`- [x]`) · /domain (show active) · /domain <task> (append `- [x]` to log) · /domain todo <task> (`- [ ]`) · /domain done <match> (flip [ ]→[x]) · /domain new <header>. Progress is final-goal-based (snapshot completion), so it doesn't drift as the log grows.",
+  "version": "0.5.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

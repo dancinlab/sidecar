@@ -4,13 +4,17 @@
 // created and merged in the same Bash invocation so the next PR starts
 // from a fresh main, never from a stacked branch waiting on N parents.
 //
-// Detection: command starts with `gh pr create` (whitespace-split first
-// three tokens). Skip if: `--draft` flag present · `gh pr merge` already
-// in the command · the command is already chained (`&&` / `;` / `|`).
+// Detection: whitespace-tokenize the command and look for the 3-gram
+// `gh pr create` anywhere — catches both bare `gh pr create …` and
+// chained forms like `git push && gh pr create …` (the common case).
+//
+// Skip if: `--draft` flag present · `gh pr merge` already in the command.
+// (No `&&` / `;` / `|` skip — chained `gh pr create` is exactly when
+// auto-merge matters most.)
 //
 // Rewrite: append ` && gh pr merge --squash --delete-branch` to the
-// command via the hook `updatedInput` field. Atomic — if `gh pr create`
-// fails, the merge never runs.
+// command tail via the hook `updatedInput` field. Atomic — if any
+// preceding step (including `gh pr create`) fails, the merge never runs.
 //
 // NO opt-out by design — no env var, no config file, no exception list
 // (commons @D g30).
@@ -69,6 +73,20 @@ fn _tokens(s: string) -> array {
     return out
 }
 
+// sliding 3-gram scan for `gh pr create`
+fn _has_gh_pr_create(toks: array) -> bool {
+    let n = len(toks)
+    if n < 3 { return false }
+    let mut i = 0
+    while i <= n - 3 {
+        if toks[i] == "gh" && toks[i + 1] == "pr" && toks[i + 2] == "create" {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
 // rebuild tool_input with command swapped, emit updatedInput JSON.
 fn _emit(ti: map, new_cmd: string, note: string) {
     let ks = keys(ti)
@@ -109,17 +127,9 @@ fn main() {
     // idempotent — already rewritten
     if cmd.contains(MARK) { _allow() }
 
-    // first-three-token check: `gh pr create`
+    // sliding-window 3-gram: `gh pr create` anywhere in the command
     let toks = _tokens(cmd)
-    if len(toks) < 3 { _allow() }
-    if toks[0] != "gh" { _allow() }
-    if toks[1] != "pr" { _allow() }
-    if toks[2] != "create" { _allow() }
-
-    // skip — already chained (user-intent multi-step)
-    if cmd.contains("&&") { _allow() }
-    if cmd.contains(";") { _allow() }
-    if cmd.contains("|") { _allow() }
+    if !_has_gh_pr_create(toks) { _allow() }
 
     // skip — already contains a merge
     if cmd.contains("gh pr merge") { _allow() }

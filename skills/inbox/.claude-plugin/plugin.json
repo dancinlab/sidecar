@@ -1,7 +1,7 @@
 {
   "name": "inbox",
   "description": "Cross-project handoff inbox — when a gap or request affects another SSOT repo, file it as inbox/<kind>/<slug>.md in the target repo. Triggers on natural language (skill description) and exposes two verbs: /inbox list, /inbox new <kind> <slug>.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

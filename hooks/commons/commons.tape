@@ -214,3 +214,7 @@
 @D g58 := "/cycle family — enumerate only the active domain's open milestones" :: governance [required active]
   do   = "next-list = active <NAME>.md `- [ ]` items · run `/domain set <NAME>` first if none active"
   dont = "enumerate off-domain work · add milestones to non-active domain · scope drift"
+
+@D g59 := "hexa improvement found → file upstream inbox immediately (g11 specialization)" :: governance [required active]
+  do   = "hexa-lang / CLI / runtime gap → `cd ~/core/hexa-lang && /inbox new patches <slug>` now"
+  dont = "workaround silently · defer · note-in-chat-only · file under sidecar (wrong repo)"

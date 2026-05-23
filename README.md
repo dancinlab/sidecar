@@ -16,7 +16,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-23T20:09Z · fix(domain 0.7.5): per-session active domain — key is now <root>+<tty> (two terminals in same repo each have an independent active domain instead of overwriting each other)
+2026-05-23T20:30Z · feat(commons 0.9.56): add g59 — hexa improvement found → file at hexa-lang/inbox/patches immediately (g11 specialization)
 <!-- /LATEST-SHIP -->
 
 ## Install

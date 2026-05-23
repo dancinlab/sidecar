@@ -54,6 +54,22 @@ sidecar/
 └── .claude-plugin/marketplace.json
 ```
 
+## Commands
+
+All slash commands at a glance, grouped by purpose. Each is backed by a plugin in the table below.
+
+| Group | Commands |
+|---|---|
+| Discovery | `/kick` · `/gap` · `/brainstorm` |
+| Fan-out / loop | `/all-bg-go` · `/cycle` · `/cycle-full` |
+| Dispatch | `/pool` · `/cloud` |
+| Cross-project | `/inbox` · `/domain` |
+| Verify / help | `/verify` · `/hexa-help` |
+| Research / generate | `/research:arxiv` · `/research:yt` · `/imagine` · `/paper` (incl. `/paper lint`) |
+| Session / meta | `/inject` (`/ij`) · `/ship` · `/prefs` · `/secret` · `/easy` · `/check` · `/question` (`/q`) |
+
+Guard hooks (no command — fire automatically): `hexa-native` · `plist-guard` · `cloud-guard` · `verify-guard` · `ai-api-guard` · `pr-automerge` · `pool-route` · `git-guard` · `sidecar-lint` · `tape-lint` · `limit-guard` · `inbox-watch`.
+
 ## Plugins
 
 | Name | Kind | Version | Summary |

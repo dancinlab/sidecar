@@ -68,7 +68,7 @@ fn main() {
         hints.push("  • SAVE_POD=1 envar 누락 — pod retain 안 됨 (SSH 끊기면 result LOST)")
     }
     // Monitor tool은 별도 호출이라 cmd 텍스트로 알 수 없음 — 항상 권고
-    hints.push("  • 발사 직후 Monitor 도구로 stream 감시 (tail -f / sleep-poll 금지)")
+    hints.push("  • 🛰️ 발사 직후 Monitor 도구로 stream 감시 (tail -f / sleep-poll 금지)")
 
     if len(hints) == 0 { _allow() }
 

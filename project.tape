@@ -35,3 +35,7 @@
 @D ship := "ship cycle — atomic commit + push + sync (install + enable)" :: governance [required active]
   do   = "commit (explicit paths · g28 cred-scan) → push → `sidecar sync` (cache · install · enable)"
   dont = "`ship` as cross-repo batch · sync without enable · `git add -A`/`-u` · unshipped diffs at pauses"
+
+@D s8 := "pi5-akida is anima-only — exclude from general pool dispatch" :: governance [required active]
+  do   = "use pi5-akida ONLY for anima work · explicit `pool on pi5-akida <cmd>` only"
+  dont = "include pi5-akida in `pool route` / load-balancing / round-robin / auto-dispatch candidates"

@@ -1,0 +1,112 @@
+// _output_trim.hexa — PreToolUse(Bash) stdout trimmer.
+//
+// Rewrites a Bash command's stdout to pass through `_trim_filter.hexa`
+// before the model ingests it. The only real token-economy lever Claude
+// Code exposes: PostToolUse cannot mutate tool_response and compaction
+// is CC-internal, so this PreToolUse `updatedInput` rewrite is the path.
+//
+// Scope is deliberately narrow — wrap only "simple" single commands
+// (no shell metacharacters). That keeps composition safe with the other
+// PreToolUse(Bash) rewrite hooks (pool-route routes heavy commands;
+// pr-automerge chains `gh pr create`) and preserves exit-code / syntax
+// semantics for compound pipelines, redirects, heredocs, background
+// jobs, command substitutions, and backticks (all handled by the user-
+// authored compound form, not our scope).
+//
+// NO opt-out by design (commons @D g30).
+
+let MARK = "__SIDECAR_OUTPUT_TRIM__"
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// rebuild tool_input with command swapped, emit updatedInput JSON.
+fn _emit(ti: map, new_cmd: string, note: string) {
+    let ks = keys(ti)
+    let mut parts = []
+    let mut i = 0
+    while i < len(ks) {
+        let k = ks[i]
+        if k == "command" {
+            parts.push(_json_str(k) + ":" + _json_str(new_cmd))
+        } else {
+            parts.push(_json_str(k) + ":" + json_stringify(ti[k]))
+        }
+        i = i + 1
+    }
+    let updated = "{" + parts.join(",") + "}"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    println(out)
+    exit(0)
+}
+
+fn _is_simple(cmd: string) -> bool {
+    // any shell metacharacter that would clash with wrapping in `{ ... } | filter`
+    if cmd.contains("|") { return false }
+    if cmd.contains(">") { return false }
+    if cmd.contains("<") { return false }    // covers heredoc <<, redirect <
+    if cmd.contains(";") { return false }
+    if cmd.contains("&") { return false }    // covers && and background &
+    if cmd.contains("$(") { return false }
+    if cmd.contains("`") { return false }
+    return true
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0.trim()
+    if cmd == "" { _allow() }
+
+    // idempotent — already wrapped
+    if cmd.contains(MARK) { _allow() }
+
+    if !_is_simple(cmd) { _allow() }
+
+    let root = env_var("CLAUDE_PLUGIN_ROOT")
+    if root == "" { _allow() }
+    let filter = root + "/bin/_trim_filter.hexa"
+
+    let new_cmd = "set -o pipefail; { " + cmd + " ; } | hexa run " + filter + "  # " + MARK
+    let note = "output-trim: stdout routed through dedup+truncate kernel (commons @D g30, simple-cmd scope)."
+    _emit(ti, new_cmd, note)
+}

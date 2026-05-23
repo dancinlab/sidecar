@@ -192,11 +192,92 @@ fn _emit(ti: map, new_cmd: string, note: string) {
     exit(0)
 }
 
+// Event-name reader — hook payload carries `hook_event_name` (snake_case).
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+// Append a routing log entry — ~/.pool/route-log.jsonl, capped at 100 lines.
+// Each line: {"t":"<iso>","host":"<name>","cmd":"<first 40 chars, sanitized>"}.
+fn _log_route(host: string, cmd: string) {
+    let home = _env("HOME")
+    if home == "" { return }
+    let path = home + "/.pool/route-log.jsonl"
+    // sanitize: drop newlines/tabs, first 40 chars
+    let mut head = cmd
+    head = head.split("\n").join(" ")
+    head = head.split("\t").join(" ")
+    if len(head) > 40 { head = head.substring(0, 40) }
+    let t = exec_with_status("date -u +%Y-%m-%dT%H:%M:%SZ")[0].trim()
+    let line = "{\"t\":" + _json_str(t) + ",\"host\":" + _json_str(host) + ",\"cmd\":" + _json_str(head) + "}\n"
+    // read existing, append, trim to last 100 lines
+    let mut prior = ""
+    try { prior = read_file(path) } catch e { prior = "" }
+    let combined = prior + line
+    let lines = combined.split("\n")
+    let n = len(lines)
+    let start = if n > 101 { n - 101 } else { 0 }
+    let mut kept = []
+    let mut i = start
+    while i < n {
+        if lines[i] != "" { kept.push(lines[i]) }
+        i = i + 1
+    }
+    try { write_file(path, kept.join("\n") + "\n") } catch e { }
+}
+
+// SessionStart snapshot — emit recent routing log as additionalContext.
+// Skips quietly when the log is empty or unreadable.
+fn _emit_session_start() {
+    let home = _env("HOME")
+    if home == "" { exit(0) }
+    let path = home + "/.pool/route-log.jsonl"
+    let mut raw = ""
+    try { raw = read_file(path) } catch e { exit(0) }
+    if raw == "" { exit(0) }
+    let lines = raw.split("\n")
+    let n = len(lines)
+    let take = 5
+    let start = if n > take + 1 { n - take - 1 } else { 0 }
+    let mut bullets = []
+    let mut i = start
+    while i < n {
+        let ln = lines[i].trim()
+        if ln != "" {
+            let mut obj = json_parse("{}")
+            try { obj = json_parse(ln) } catch e { obj = json_parse("{}") }
+            if type_of(obj) == "map" {
+                let mut t = ""
+                let mut host = ""
+                let mut cmd = ""
+                if has_key(obj, "t") { if type_of(obj["t"]) == "string" { t = obj["t"] } }
+                if has_key(obj, "host") { if type_of(obj["host"]) == "string" { host = obj["host"] } }
+                if has_key(obj, "cmd") { if type_of(obj["cmd"]) == "string" { cmd = obj["cmd"] } }
+                if host != "" {
+                    bullets.push("- " + t + " → " + host + " : " + cmd)
+                }
+            }
+        }
+        i = i + 1
+    }
+    if len(bullets) == 0 { exit(0) }
+    let body = "# recent pool-route (~/.pool/route-log.jsonl · last " + to_string(len(bullets)) + ")\n" + bullets.join("\n") + "\n"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":" + _json_str(body) + "}}"
+    println(out)
+    exit(0)
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
     try { payload = json_parse(raw) } catch e { _allow() }
     if type_of(payload) != "map" { _allow() }
+
+    // SessionStart — emit recent routing log snapshot, then exit.
+    let event = _event_of(payload)
+    if event == "SessionStart" { _emit_session_start() }
 
     // Bash tool only — Read/Write/Edit operate on the local fs.
     if !has_key(payload, "tool_name") { _allow() }
@@ -387,5 +468,7 @@ fn main() {
     note = "pool-route: routed to " + host + ":" + wd_remote + " via " + tx + " (workdir is user-synced)"
 
     note = note + " (" + why + sudo_note + "; " + to_string(len(h_name)) + "-host roster)."
+    // append to ~/.pool/route-log.jsonl — visible at next SessionStart
+    _log_route(host, cmd)
     _emit(ti, new_cmd, note)
 }

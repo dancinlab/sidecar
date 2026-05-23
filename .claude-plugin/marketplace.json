@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g40` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.27"
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g1..g46` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.9.34"
     },
     {
       "name": "prefs",
@@ -63,6 +63,12 @@
       "version": "0.2.0"
     },
     {
+      "name": "plist-guard",
+      "source": "./hooks/plist-guard",
+      "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, invoked via `hexa run`). Any target file ending in `.plist` (LaunchAgents \u00b7 LaunchDaemons \u00b7 Info.plist \u00b7 UserDefaults) is denied with a redirecting message \u2014 the agent cannot distinguish user-explicit from model-autonomous intent, so all .plist writes are refused globally; if the user truly wants one, they run the command themselves outside the agent path. LaunchAgents / LaunchDaemons are persistence surfaces (auto-launch on login / boot), so silent writes risk installing daemons the user did not ask for. Enforces commons @D g37 (plist user-request only). NO opt-out by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "tape-lint",
       "source": "./hooks/tape-lint",
       "description": "PreToolUse(Edit|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` \u2014 no Python, no shell shim). Three checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule \u2014 `@D` blocks accept only `do` / `dont`; new `why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 `ex` \u00b7 ... refused. Fires on any `*.tape` path. (2) length cap \u2014 `do` / `dont` value > 100 chars refused (split overflow). commons.tape + project.tape only. (3) authoring-language \u2014 when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul \u00b7 CJK \u00b7 Hiragana \u00b7 Katakana) are refused. commons.tape + project.tape only. NO opt-out by design.",
@@ -71,8 +77,8 @@
     {
       "name": "pool-route",
       "source": "./hooks/pool-route",
-      "description": "PreToolUse(Bash) pool auto-router, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier (make \u00b7 cargo \u00b7 npm \u00b7 gradle \u00b7 pytest \u00b7 go build \u00b7 swift build \u00b7 docker build \u00b7 nvidia-smi \u00b7 train \u00b7 \u2026) or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh (`ssh <host> 'cd <workdir> && <cmd>'`) \u2014 transparent dispatch, not a suggestion. OS-capability filter + round-robin load balance; a preflight ssh test -d skips hosts lacking the workdir (project kept on pool hosts by the user, not synced by pool-route). No roster / no match / no eligible host \u2192 passes through untouched. NO opt-out by design.",
-      "version": "0.5.0"
+      "description": "PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh \u2014 transparent dispatch, not a suggestion. Each routing decision appends one JSON line to `~/.pool/route-log.jsonl` (capped at 100 entries); the SessionStart event reads the last 5 entries back as additionalContext so the model sees recent routing history without recon. OS-capability filter + round-robin load balance; a preflight ssh test -d skips hosts lacking the workdir. NO opt-out by design.",
+      "version": "0.5.1"
     },
     {
       "name": "limit-guard",

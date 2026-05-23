@@ -30,7 +30,7 @@
   do   = "sidekick roster → `pool on <host> <cmd>` — macOS-only (swift/xcode) · GPU · heavy build"
   dont = "run host-specific work on local shell when a sidekick host fits — roster in SessionStart"
 
-@D g10 := "Monitor tool for streaming" :: governance [active]
+@D g10 := "Monitor tool for streaming" :: governance [required active]
   do   = "use Claude Code's `Monitor` tool to stream background-process events (per-line stdout)"
   dont = "`tail -f` / `sleep`-poll loops for background-event streaming"
 
@@ -144,3 +144,27 @@
 @D g40 := "multi-axis gap sweep via /gap (sister of /kick)" :: governance [active]
   do   = "stuck on a problem → `/gap` (42-lens 8-family sweep) or `/kick <seed>` (g6 · discovery)"
   dont = "brute-force a stuck problem without lensing — multi-axis catalog ready in /gap"
+
+@D g41 := "reactive fan-out via /all-bg-go (sister of /cycle)" :: governance [active]
+  do   = "PRIOR-turn branches → `/all-bg-go` (single reactive fan-out) · `/cycle` is self-generating (g38)"
+  dont = "manual one-by-one when prior turn offered N disjoint branches — fan them out"
+
+@D g42 := "depletion ideation via /brainstorm (discovery family)" :: governance [active]
+  do   = "depletion ideation → `/brainstorm <seed>` · sister to /kick (g6) · /gap (g40)"
+  dont = "stop at first few ideas when /brainstorm exhausts the well — width-first ideation"
+
+@D g43 := "external research fetch via /research" :: governance [active]
+  do   = "arxiv paper / YT video → `/research:arxiv <query|id>` · `/research:yt <url|id>`"
+  dont = "raw `curl` arxiv API · `WebSearch` for what /research already wraps cleanly"
+
+@D g44 := "image generation via /imagine (gpt-image-2 pinned)" :: governance [required active]
+  do   = "image needs → `/imagine <prompt-file> <out.png>` (default backend: fal · model: gpt-image-2)"
+  dont = "silently swap gpt-image-2 → gpt-image-1 · dall-e-3 · flux — model is user-pinned"
+
+@D g45 := "user language prefs via /prefs" :: governance [active]
+  do   = "user changes language pref → `/prefs {code|docs|response} <lang>` (SSOT: $CLAUDE_PLUGIN_DATA)"
+  dont = "ask user to retype lang each session — `/prefs` persists 3 axes (code · docs · response)"
+
+@D g46 := "friendly explain style via /easy" :: governance [active]
+  do   = "user asks to explain simply → `/easy` (7-element friendly format)"
+  dont = "ad-hoc 'simple explanation' format when /easy ships the canonical 7-element template"

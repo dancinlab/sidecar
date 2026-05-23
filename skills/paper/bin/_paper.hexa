@@ -91,6 +91,7 @@ fn _usage() {
     println("  /paper sample <slug>                       copy bundled demiurge sample verbatim")
     println("  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine)")
     println("  /paper compile [dir]                       pdflatex x 3 + bibtex")
+    println("  /paper lint [dir]                          enforce commons g51 — >=10 pages + >=1 fal.ai figure")
     println("  /paper list                                list bundled samples")
     println("  /paper help                                this message")
     println("")
@@ -256,6 +257,71 @@ fn _cmd_list(root: string) {
     }
 }
 
+// commons @D g51 — paper lint: PDF must compile to ≥10 pages AND embed
+// ≥1 fal.ai-generated figure (detected via figures/_prompts/*.txt OR
+// figures/_scripts/*.py grep for "imagine" / "fal" / "/paper fig").
+// Exit 0 = pass, 1 = fail. Output is a per-condition checklist.
+fn _cmd_lint(args: array) {
+    let mut dir = "."
+    if len(args) >= 1 && _trim(args[0]) != "" { dir = args[0] }
+    if !_dir_exists(dir) {
+        eprintln("paper lint: directory not found: " + dir)
+        exit(2)
+    }
+
+    let pdf = dir + "/main.pdf"
+    let mut pages = 0
+    let mut pdf_present = false
+    if _path_exists(pdf) {
+        pdf_present = true
+        let r = exec_with_status("pdfinfo " + _shq(pdf) + " 2>/dev/null | awk '/^Pages:/ {print $2}'")
+        if r[1] == 0 {
+            let v = _trim(r[0])
+            if v != "" { pages = to_int(v) }
+        }
+    }
+    let pages_ok = pages >= 10
+
+    // (A) figures/_prompts/ contains ≥1 .txt/.md file
+    let prompts_dir = dir + "/figures/_prompts"
+    let mut prompt_hits = 0
+    if _dir_exists(prompts_dir) {
+        let r = exec_with_status("ls -1 " + _shq(prompts_dir) + " 2>/dev/null | grep -Ec '\\.(txt|md)$'")
+        if r[1] == 0 {
+            let v = _trim(r[0])
+            if v != "" { prompt_hits = to_int(v) }
+        }
+    }
+
+    // (B) figures/_scripts/*.py greps for fal / imagine
+    let scripts_dir = dir + "/figures/_scripts"
+    let mut script_hits = 0
+    if _dir_exists(scripts_dir) {
+        let r = exec_with_status("grep -liE 'fal|imagine|/paper fig' " + _shq(scripts_dir) + "/*.py 2>/dev/null | wc -l")
+        if r[1] == 0 {
+            let v = _trim(r[0])
+            if v != "" { script_hits = to_int(v) }
+        }
+    }
+    let fal_ok = prompt_hits > 0 || script_hits > 0
+
+    println("paper lint (commons @D g51) — " + dir)
+    if pdf_present {
+        if pages_ok { println("  ✓ pages: " + to_string(pages) + " (>=10)") }
+        else { println("  ✗ pages: " + to_string(pages) + " (<10, need >=10)") }
+    } else {
+        println("  ✗ pages: main.pdf not found — run `/paper compile " + dir + "` first")
+    }
+    if fal_ok {
+        println("  ✓ fal.ai figure: " + to_string(prompt_hits) + " prompt(s) + " + to_string(script_hits) + " script(s) reference fal/imagine")
+    } else {
+        println("  ✗ fal.ai figure: no figures/_prompts/*.txt and no fal/imagine reference in figures/_scripts/*.py")
+    }
+
+    if pages_ok && fal_ok { exit(0) }
+    exit(1)
+}
+
 fn main() {
     let raw = argv()
     let mut root = ""
@@ -295,6 +361,8 @@ fn main() {
         _cmd_fig(root, rest)
     } else if verb == "compile" {
         _cmd_compile(rest)
+    } else if verb == "lint" {
+        _cmd_lint(rest)
     } else if verb == "list" {
         _cmd_list(root)
     } else if verb == "help" || verb == "-h" || verb == "--help" || verb == "" {

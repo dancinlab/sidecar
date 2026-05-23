@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "hexa run ${CLAUDE_PLUGIN_ROOT}/bin/_ai_api_guard.hexa"
+            "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; exec \"$H\" run \"$@\"' _ ${CLAUDE_PLUGIN_ROOT}/bin/_ai_api_guard.hexa"
           }
         ]
       }

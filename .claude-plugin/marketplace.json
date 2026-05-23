@@ -12,13 +12,13 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g53` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.9.46"
+      "version": "0.9.47"
     },
     {
       "name": "prefs",
       "source": "./hooks/prefs",
       "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values; UserPromptSubmit re-injects every turn so the preference never fades. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
-      "version": "0.3.0"
+      "version": "0.3.1"
     },
     {
       "name": "inbox",
@@ -42,79 +42,79 @@
       "name": "project-tape",
       "source": "./hooks/project-tape",
       "description": "PreCompact + PostCompact hook \u2014 re-injects <project-root>/project.tape as additionalContext so the project's identity + governance survive auto-compaction. No-op when project.tape is absent.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "git-guard",
       "source": "./hooks/git-guard",
       "description": "PreToolUse(Bash) deny for force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run`) \u2014 `git push --force` / `-f` \u00b7 `git push --force-with-lease` \u00b7 `git push <remote> +<refspec>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked (left to user discipline). NO opt-out by design.",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
       "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit \u00b7 missing CHANGELOG.md at repo root (commons @D g29). NO opt-out by design.",
-      "version": "0.4.0"
+      "version": "0.4.1"
     },
     {
       "name": "hexa-native",
       "source": "./hooks/hexa-native",
       "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.py` / `.sh` writes inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file), implemented in hexa-lang (`_hexa_native.hexa`, invoked via `hexa run`). Walks up parent dirs of the target file; if a `project.tape` is found, the write is denied with a message redirecting to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). NO opt-out: no env var, no config file, no exception list, no self-exclusion \u2014 hard-coded by design. Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` are unaffected.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "plist-guard",
       "source": "./hooks/plist-guard",
       "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, invoked via `hexa run`). Any target file ending in `.plist` (LaunchAgents \u00b7 LaunchDaemons \u00b7 Info.plist \u00b7 UserDefaults) is denied with a redirecting message \u2014 the agent cannot distinguish user-explicit from model-autonomous intent, so all .plist writes are refused globally; if the user truly wants one, they run the command themselves outside the agent path. LaunchAgents / LaunchDaemons are persistence surfaces (auto-launch on login / boot), so silent writes risk installing daemons the user did not ask for. Enforces commons @D g37 (plist user-request only). NO opt-out by design.",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "cloud-guard",
       "source": "./hooks/cloud-guard",
       "description": "PreToolUse(Bash) hard block for raw rented-GPU pod CLI usage, implemented in hexa-lang (`_cloud_guard.hexa`, invoked via `hexa run`). Denies `runpodctl exec` / `runpodctl ssh` / `runpodctl send-file` / `runpodctl send-file-to-pod` / `vastai exec` / `vastai ssh` / `vast exec` / `vast ssh` with a redirecting message pointing to `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` (commons @D g8). Pod-lifecycle subcommands (`runpodctl create / ps / list` \u00b7 `vastai create / show / search`) pass through \u2014 only raw remote exec / transfer is refused. NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "inbox-watch",
       "source": "./hooks/inbox-watch",
       "description": "SessionStart + UserPromptSubmit hook that scans the current repo's `inbox/{notes,patches,poc,rfc_drafts}/*.md` for open entries (no `status:` frontmatter value, OR a value not in {closed, resolved, done, merged, ack}) and emits a one-shot snapshot as `additionalContext` — `# inbox: N open` + bullet list (cap 5, most-recently-modified). Empty / no inbox dir → silent. Implemented in hexa-lang (`_inbox_watch.hexa`, invoked via `hexa run`). Makes cross-project handoff entries visible at session start so they never sit unread. NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "ai-api-guard",
       "source": "./hooks/ai-api-guard",
       "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` · `api.anthropic.com` · `fal.run` · `api.replicate.com` · `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. — commons @D g50 enforcement. General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "verify-guard",
       "source": "./hooks/verify-guard",
       "description": "PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_verify_guard.hexa`, invoked via `hexa run`). Denies first-token ∈ {wolframscript, mathematica, WolframKernel}, and inline-Python verification via `python(3)? -c '...'` containing `import sympy` / `from sympy` / `import pyphi` / `import wolframclient` with a redirecting message pointing to `hexa verify` (commons @D g5). General sympy / wolframclient usage in committed code files passes through — only inline `-c` verification probes (and the standalone Wolfram CLIs) are refused. NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "pr-automerge",
       "source": "./hooks/pr-automerge",
       "description": "PreToolUse(Bash) auto-merge router for `gh pr create`, implemented in hexa-lang (`_pr_automerge.hexa`, invoked via `hexa run`). When a Bash command starts with `gh pr create \u2026` and is not draft / not already chained to a merge, it is rewritten via the hook `updatedInput` field to append ` && gh pr merge --squash --delete-branch` \u2014 transparent atomic create-then-merge. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge` \u00b7 command chained with `&&` / `;` / `|` (multi-step intent preserved). NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "version": "0.1.1"
     },
     {
       "name": "tape-lint",
       "source": "./hooks/tape-lint",
       "description": "PreToolUse(Edit|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` \u2014 no Python, no shell shim). Four checks, all diff-aware (pre-existing violations grandfathered, only newly-introduced or worsened items block). (1) fields rule \u2014 `@D` blocks accept only `do` / `dont`; new `why` \u00b7 `tool` \u00b7 `note` \u00b7 `ref` \u00b7 `ex` \u00b7 ... refused. Fires on any `*.tape` path. (2) length cap \u2014 `do` / `dont` value > 100 chars refused (split overflow). commons.tape + project.tape only. (3) authoring-language \u2014 when `sidecar prefs` `code` axis is `english`, lines newly introducing non-Latin scripts (Hangul \u00b7 CJK \u00b7 Hiragana \u00b7 Katakana) are refused. commons.tape + project.tape only. (4) @I siblings \u2014 project.tape's @I block must carry a `siblings` field; dropping it or adding a fresh @I without it is refused (cross-repo network SSOT). project.tape only. NO opt-out by design.",
-      "version": "0.5.0"
+      "version": "0.5.1"
     },
     {
       "name": "pool-route",
       "source": "./hooks/pool-route",
       "description": "PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, invoked via `hexa run`). When the `pool` CLI's roster (`~/.pool/pool.json`) has \u22651 enabled host and a Bash command matches the heavy classifier or a root-needing command, it is rewritten via the hook `updatedInput` field to run on a pool host over ssh \u2014 transparent dispatch, not a suggestion. Each routing decision appends one JSON line to `~/.pool/route-log.jsonl` (capped at 100 entries); the SessionStart event reads the last 5 entries back as additionalContext so the model sees recent routing history without recon. OS-capability filter + round-robin load balance; a preflight ssh test -d skips hosts lacking the workdir. NO opt-out by design.",
-      "version": "0.5.1"
+      "version": "0.5.2"
     },
     {
       "name": "limit-guard",
       "source": "./hooks/limit-guard",
       "description": "PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) \u2014 detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out and switch to sequential commit-per-unit work. NO opt-out by design.",
-      "version": "0.1.1"
+      "version": "0.1.2"
     },
     {
       "name": "question",
@@ -246,7 +246,7 @@
       "name": "output-trim",
       "source": "./hooks/output-trim",
       "description": "PreToolUse(Bash) stdout trimmer — when a simple single Bash command would emit >8000 chars, transparently rewrite via `updatedInput` to pipe stdout through a minimal hexa-native kernel: consecutive-line dedup ([×N] counter) + per-line truncation to 200 chars. Small outputs <8000 chars pass verbatim. Skipped on any shell metacharacter so compound pipelines / redirects / heredocs / background jobs / command substitutions and other PreToolUse(Bash) rewrite hooks compose without conflict. Exit code preserved via `set -o pipefail`. Kernel chosen by benchmark on 120 real Bash-stdout samples ≥8000 chars — Pareto-dominates the TF-IDF salience + MinHash near-dup paragraph dedup approach of the original `wilson-output-trim`. NO opt-out by design (commons @D g30).",
-      "version": "0.1.0"
+      "version": "0.1.1"
     }
   ]
 }

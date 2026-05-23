@@ -1,7 +1,7 @@
 {
   "name": "commons",
   "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape + a live `pool` roster snapshot (~/.pool/pool.json); UserPromptSubmit re-injects every turn so the layer never fades from context.",
-  "version": "0.9.25",
+  "version": "0.9.26",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

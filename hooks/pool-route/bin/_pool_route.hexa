@@ -374,7 +374,14 @@ fn main() {
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)
     let heavy_pairs = ["go", "test", "go", "build", "swift", "build", "swift", "test", "docker", "build", "hexa", "kick", "hexa", "drill", "hexa", "loop", "hexa", "cc"]
-    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs)
+    // big-tree find substring — multi-session `find $HOME/core/anima` (~458GB tree)
+    // is the documented Mac-kill pattern (267% CPU from 3× concurrent bfs). Route
+    // when the cmd contains `find <user>/core/anima`; preflight test -d gates the
+    // host so non-mirrored hosts fall through to local. $HOME-relative so other
+    // installs that lack the tree never match (substring is empty).
+    let mut heavy_find_subs = []
+    if home != "" { heavy_find_subs.push("find " + home + "/core/anima") }
+    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
 
     // root-needing commands — always routable, and `sudo`-prefixed on a
     // host tagged sudo:true.

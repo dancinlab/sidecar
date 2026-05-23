@@ -149,8 +149,8 @@
     {
       "name": "cycle",
       "source": "./skills/cycle",
-      "description": "Autonomous work-loop driver. Four commands: /cycle — next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. /cycle-full — depletion brainstorm (rounds until no novel ideas, cap 8) on $ARGUMENTS, then the same plan-table → fan-out → loop tail (phase 0 is one-time per goal; subsequent rounds use plain /cycle). /cycle-loop — thin wrapper that hands /cycle off to the `loop` skill (dynamic ScheduleWakeup pacing) so rounds fire automatically until ideas deplete or user halts. /cycle-full-loop — /cycle-full once (one-time brainstorm + first fan-out) then hands off to /loop /cycle for subsequent rounds. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · /cycle-full · /cycle-loop · /cycle-full-loop · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
-      "version": "0.3.0"
+      "description": "Autonomous work-loop driver. Four commands: /cycle — next-list (self-enumerate next viable work from current context) → dup-race precheck (3-signal grep: patch Status + merged PR + git log) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. /cycle-full — depletion brainstorm (rounds until no novel ideas, cap 8) on $ARGUMENTS, then the same precheck → plan-table → fan-out → loop tail (phase 0 is one-time per goal; subsequent rounds use plain /cycle). /cycle-loop — thin wrapper that hands /cycle off to the `loop` skill (dynamic ScheduleWakeup pacing) so rounds fire automatically until ideas deplete or user halts. /cycle-full-loop — /cycle-full once (one-time brainstorm + first fan-out) then hands off to /loop /cycle for subsequent rounds. Distinct from all-bg-go (reactive fan-out of PRIOR-turn branches; /cycle self-generates the next batch each round). NL triggers: /cycle · /cycle-full · /cycle-loop · /cycle-full-loop · 사이클 · 계속 진행 · 다음 라운드 · keep cycling · march on.",
+      "version": "0.4.0"
     },
     {
       "name": "pool",

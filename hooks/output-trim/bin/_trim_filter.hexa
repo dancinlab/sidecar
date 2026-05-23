@@ -1,0 +1,68 @@
+// _trim_filter.hexa — minimal output-trim kernel.
+//
+// Contract: read all of stdin; if < THRESHOLD bytes, emit verbatim
+// (small outputs carry exact-value semantics — SHAs, counts).
+// Otherwise: collapse consecutive duplicate lines into one with a
+// `[×N]` counter, and truncate any line beyond BUDGET to BUDGET-1
+// chars + "…". Append a one-line footer with before→after sizes.
+// ALWAYS exit 0 so `set -o pipefail` surfaces the wrapped command's
+// own exit code, not ours.
+//
+// Bench-selected over TF-IDF salience + MinHash near-dup paragraph
+// dedup (the original wilson-output-trim kernel) on 120 real Bash
+// stdout samples ≥8000 chars — see CHANGELOG entry for the verdict.
+
+let THRESHOLD = 8000
+let BUDGET = 200
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _trunc(line: string) -> string {
+    if len(line) <= BUDGET { return line }
+    return line.substring(0, BUDGET - 1) + "…"
+}
+
+fn main() {
+    let text = _read_stdin()
+    let n_in = len(text)
+    if n_in < THRESHOLD {
+        print(text)
+        exit(0)
+    }
+
+    let lines = text.split("\n")
+    let n = len(lines)
+    let mut out = []
+    let mut prev = ""
+    let mut have_prev = false
+    let mut run = 0
+    let mut i = 0
+    while i < n {
+        let s = lines[i]
+        if have_prev && s == prev {
+            run = run + 1
+            i = i + 1
+            continue
+        }
+        // close any open run before pushing the new line
+        if run > 1 {
+            out.push("  [×" + to_string(run) + "]")
+        }
+        out.push(_trunc(s))
+        prev = s
+        have_prev = true
+        run = 1
+        i = i + 1
+    }
+    if run > 1 {
+        out.push("  [×" + to_string(run) + "]")
+    }
+
+    let result = out.join("\n")
+    let n_out = len(result)
+    print(result)
+    print("\n\n[sidecar/output-trim: " + to_string(n_in) + "→" + to_string(n_out) + " bytes; dedup+truncate kernel A]\n")
+    exit(0)
+}

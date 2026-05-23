@@ -241,6 +241,12 @@
       "source": "./skills/imagine",
       "description": "/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model] \u2014 generic AI image generator. Two backends out of the box: `fal` (queue+poll fal.ai, default \u2014 `secret get fal.api_key`, model = openai/gpt-image-2 firm-pinned default) and `openai` (sync /v1/images/generations \u2014 `secret get openai.api_key`, model = gpt-image-1). Canonical fal-style size tokens (`square_hd` / `landscape_16_9` / `portrait_16_9` / `square`) translate per-backend. Prompt always read from a file (provenance), payload JSON via mktemp (prompt never on argv). Backend pluggable \u2014 drop a new `_backends/<name>.hexa` to add one.",
       "version": "0.2.0"
+    },
+    {
+      "name": "output-trim",
+      "source": "./hooks/output-trim",
+      "description": "PreToolUse(Bash) stdout trimmer — when a simple single Bash command would emit >8000 chars, transparently rewrite via `updatedInput` to pipe stdout through a minimal hexa-native kernel: consecutive-line dedup ([×N] counter) + per-line truncation to 200 chars. Small outputs <8000 chars pass verbatim. Skipped on any shell metacharacter so compound pipelines / redirects / heredocs / background jobs / command substitutions and other PreToolUse(Bash) rewrite hooks compose without conflict. Exit code preserved via `set -o pipefail`. Kernel chosen by benchmark on 120 real Bash-stdout samples ≥8000 chars — Pareto-dominates the TF-IDF salience + MinHash near-dup paragraph dedup approach of the original `wilson-output-trim`. NO opt-out by design (commons @D g30).",
+      "version": "0.1.0"
     }
   ]
 }

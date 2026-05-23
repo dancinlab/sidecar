@@ -99,6 +99,12 @@
       "version": "0.1.1"
     },
     {
+      "name": "check",
+      "source": "./skills/check",
+      "description": "Task dashboard skill \u2014 /check prints current-state status across surfaces in one shot: `<UPPERCASE>.log.md` checkbox tasks (open vs done count + first 10 open items per log), `gh pr list` open PRs in this repo, `git status -sb` (uncommitted / ahead / behind), `git log --oneline -5` (recent merges). Read-only; no side effects. Triggers: /check \u00b7 \uc0c1\ud0dc \u00b7 \uccb4\ud06c \u00b7 \ud604\ud669 \u00b7 status check \u00b7 dashboard.",
+      "version": "0.1.0"
+    },
+    {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
       "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command.",

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — commons `@D g60`: aggressive upstream INBOX reflex (commons 0.10.1 → 0.10.2)
+
+- **`@D g60` 추가 — "upstream INBOX reflex — aggressive, same-turn, over-file"** — 기존 INBOX 거버넌스(g11 fix-at-source · g36 INBOX domain · g48 ack · g59 hexa gap)의 일반화·강화. 모든 타-repo gap/friction/improvement/idea 를 surface 된 **그 턴에** 대상 repo INBOX 로 stub-first over-file (먼저 g20 중복 트래커 확인 후 append-or-create). **금지**: session 끝까지 미루기 · full reproduction/resolution 까지 게이팅 · finding 을 chat-only 로 다운그레이드 · "다른 세션이 하겠지" 가정. 버전 lockstep(g22): commons 0.10.1 → 0.10.2 (`.claude-plugin/marketplace.json` + `hooks/commons/.claude-plugin/plugin.json`) · marketplace description g-range `g0..g59` → `g0..g60`. from demiurge CARDIO+ (사용자 지시 "INBOX upstream 적극적으로").
+
 ## 2026-05-24
 
 - **domain 0.8.0 — folder-nested 도메인 경로 해석 (`<NAME>/<NAME>.md`)** — `skills/domain` 의 모든 verb 가 도메인 쌍을 repo-root `<NAME>.md` 에서만 찾던 결함 수정. 신규 resolver `_domain_dir`/`_snap_path`/`_log_path` 가 (1) 기존 root `<NAME>.md` → (2) 기존 folder-nested `<NAME>/<NAME>.md` → (3) root 기본(fresh scaffold) 순으로 해석하고, log 는 snapshot 의 디렉터리를 따라감(쌍 분리 방지). 인라인 경로 구성(`root + "/" + name + ".md"` × 9, `.log.md` × 5)을 resolver 호출로 교체 + `init` 출력줄 갱신. 동기 — INBOX #120 (demiurge CARDIO+): `CARDIO+/CARDIO+.md` self-contained 메타도메인에서 `/domain set CARDIO+` 가 매번 root 에 빈 스캐폴드 재생성 → `/cycle`(g58) 가 빈 root 파일 읽어 milestone 0개 → 루프 구동 불가. **root 도메인은 동작 불변**(root `<NAME>.md` 존재 시 resolver 가 root 반환 = 무회귀). Smoke: nested FOO show/set/milestone/done/todo 전부 `FOO/FOO.*` 로 라우팅 + root 빈파일 0개 · root BAR 정상 · fresh NEWDOM → root 스캐폴드. plugin.json + marketplace.json 0.7.8 → 0.8.0.

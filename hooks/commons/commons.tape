@@ -214,3 +214,7 @@
 @D g59 := "hexa improvement found → log upstream INBOX immediately (g11 specialization)" :: governance [required active]
   do   = "hexa-lang / CLI / runtime gap → log to `~/core/hexa-lang/INBOX.log.md` (`/domain set INBOX`) now"
   dont = "workaround silently · defer · note-in-chat-only · log under sidecar (wrong repo)"
+
+@D g60 := "upstream INBOX reflex — aggressive, same-turn, over-file (g11/g59 generalization)" :: governance [required active]
+  do   = "cross-repo gap / fix / idea → file that repo's INBOX same-turn · stub-first · dedup-check first"
+  dont = "defer · gate on full repro · chat-only downgrade · assume another session will file it"

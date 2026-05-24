@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — domain 0.8.2: 캐시 resolver `sort -V` 버그 수정 (quota 0.8.1 동일 패턴 전파)
+
+- **domain 0.8.2 — `commands/domain.md` 캐시 resolver `ls -1t | head -1` → `ls -1 | sort -V | tail -1`** — quota 0.8.1 에서 고친 것과 동일한 mtime-vs-semver resolver 버그가 `domain.md` 에도 있어 fix-at-source(@D g11)로 전파. `$CLAUDE_PLUGIN_ROOT` 가 빈 값일 때 fallback 이 mtime 최신(구버전 가능)이 아니라 semver 최신 캐시 버전을 해석하도록 교체. 표면 lockstep(g22): domain plugin.json + marketplace.json 0.8.1 → 0.8.2. sidecar 전체 grep 결과 이 fallback idiom 은 quota·domain 두 command 뿐 — 둘 다 수정 완료.
+
 ## 2026-05-24 — quota 0.8.1 · quota-autoadd 0.1.1: 표 헤더 영어화 + 캐시 버전 정렬 버그(`sort -V`) 수정
 
 - **표 헤더 영어화 + `ls -1t`→`sort -V` 캐시 resolver 버그 수정** — (1) `commands/quota.md` 통합 표 헤더를 한글→영어로: `Nickname · Email · Session Used · Session Reset · Weekly Used · Weekly Reset` (사용자 요청 "헤더 영어로"; 푸터·prose 는 한글 유지 — prefs 응답 한국어, 헤더만 명시 전환). (2) **버그**: `quota.md` + `quota-autoadd` hook 의 캐시 바이너리 resolver 가 `ls -1t … | head -1`(mtime 최신)이라, sync 후 캐시 디렉터리 mtime 순서가 뒤엉키면 **구버전을 실행**함 — 실측: reload 직후 `/quota list` 가 0.8.0 통합표 대신 0.6.0 텍스트 list 를 렌더(`$CLAUDE_PLUGIN_ROOT` 가 slash 컨텍스트에서 빈 값이라 fallback 발동 + `ls -1t` 가 0.6.0 을 첫 항목으로 반환). `ls -1 … | sort -V | tail -1`(semver 최신)로 교체 → 항상 최고 버전 선택. Smoke: `ls -1t|head -1`=0.6.0 vs `ls -1|sort -V|tail -1`=0.8.0 확인. 표면 lockstep(@D ship · g22): quota plugin.json + marketplace.json 0.8.0 → 0.8.1 · quota-autoadd 0.1.0 → 0.1.1 · marketplace quota 설명 "Korean header: 닉네임…" → "English header: Nickname…", quota-autoadd 설명에 semver-resolver 명시. `_quota.hexa` 는 help 버전 문자열 + 헤더 히스토리만 갱신(바이너리 로직 불변).

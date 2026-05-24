@@ -6,7 +6,7 @@ allowed-tools: Bash
 
 !`H="$CLAUDE_PLUGIN_ROOT/bin/_domain.hexa"
 if [ ! -f "$H" ]; then
-    V="$(ls -1t "$HOME/.claude/plugins/cache/sidecar/domain" 2>/dev/null | head -1)"
+    V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/domain" 2>/dev/null | sort -V | tail -1)"
     [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/domain/$V/bin/_domain.hexa"
 fi
 [ -f "$H" ] || { echo "✗ _domain.hexa not found — run /reload-plugins or hx install sidecar"; exit 1; }

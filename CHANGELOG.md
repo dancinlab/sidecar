@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — 명령 카탈로그 네임스페이스 정정: plain → 실제 `/plugin:command` (직전 denamespace 되돌림)
+
+- **명령 표기 전면 `/plugin:command` 화 — 직전 "네임스페이스 제거"가 틀렸음을 정정** — 플러그인 슬래시 명령은 Claude Code 에서 **항상 `/plugin:command`** 로만 호출됨이 TUI 실측 + 웹(anthropics/claude-code **Issue #15882**: "plugin commands are always namespaced") 으로 확정. command==plugin 이어도 `/gap:gap`, SKILL.md 없는 순수 command 도 `/step-by-step:step-by-step`. plain `/이름` 은 built-in(`/btw`)·비-plugin(`.claude/commands/`)만. 따라서 직전 커밋의 "plain 화"는 잘못 — 동작 안 하는 plain 형을 안내하던 문서를 실제 형으로 되돌림. `hooks/commons/COMMANDS.md` + 루트 `README.md` 카탈로그를 전 명령 `/plugin:command` 로 재작성(정렬 포함 · 강제-네임스페이스 NOTE 추가) · `/research:arxiv`·`/research:yt`·`/quota:quota`·`/step-by-step:step-by-step` prose(SKILL.md·plugin.json·marketplace 설명·commons.tape g43·quota README) 복원. built-in `/btw`·`/loop` 은 plain 유지. 동작·버전 변동 없음(lockstep 유지). 사용자 요청 + 실측 근거.
+
 ## 2026-05-24 — domain 0.8.2: 캐시 resolver `sort -V` 버그 수정 (quota 0.8.1 동일 패턴 전파)
 
 - **domain 0.8.2 — `commands/domain.md` 캐시 resolver `ls -1t | head -1` → `ls -1 | sort -V | tail -1`** — quota 0.8.1 에서 고친 것과 동일한 mtime-vs-semver resolver 버그가 `domain.md` 에도 있어 fix-at-source(@D g11)로 전파. `$CLAUDE_PLUGIN_ROOT` 가 빈 값일 때 fallback 이 mtime 최신(구버전 가능)이 아니라 semver 최신 캐시 버전을 해석하도록 교체. 표면 lockstep(g22): domain plugin.json + marketplace.json 0.8.1 → 0.8.2. sidecar 전체 grep 결과 이 fallback idiom 은 quota·domain 두 command 뿐 — 둘 다 수정 완료.

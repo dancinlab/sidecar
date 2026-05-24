@@ -1,5 +1,5 @@
 ---
-description: /quota — Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames. Bare form → unified all-accounts table (6-col table — Nickname · Email · Session Used/Reset · Weekly Used/Reset; ★ = active account, live · others cached). Verbs — list (= status = bare, the unified table) · all (every account fetched live) · add [<nick>] · nick <ref> [<nick>] · switch <ref> · remove <ref> · refresh [<ref>] · help. <ref> = nickname · email · numeric index. Active account fetched live via OAuth usage endpoint with 45s cache; others show last cached (`—` = never fetched). own-accounts-serial only. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.
+description: /quota:quota — Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames. Bare form → unified all-accounts table (6-col table — Nickname · Email · Session Used/Reset · Weekly Used/Reset; ★ = active account, live · others cached). Verbs — list (= status = bare, the unified table) · all (every account fetched live) · add [<nick>] · nick <ref> [<nick>] · switch <ref> · remove <ref> · refresh [<ref>] · help. <ref> = nickname · email · numeric index. Active account fetched live via OAuth usage endpoint with 45s cache; others show last cached (`—` = never fetched). own-accounts-serial only. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.
 argument-hint: "[list | status | all | add [<nick>] | nick <ref> [<nick>] | switch <ref> | remove <ref> | refresh [<ref>] | help]"
 allowed-tools: Bash
 ---
@@ -9,8 +9,8 @@ Run the bash command below via the Bash tool. `$ARGUMENTS` carries the verb + ar
 ```bash
 H="$CLAUDE_PLUGIN_ROOT/bin/_quota.hexa"
 if [ ! -f "$H" ]; then
-    V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/quota" 2>/dev/null | sort -V | tail -1)"
-    [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/quota/$V/bin/_quota.hexa"
+    V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/quota:quota" 2>/dev/null | sort -V | tail -1)"
+    [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/quota:quota/$V/bin/_quota.hexa"
 fi
 [ -f "$H" ] || { echo "✗ _quota.hexa not found — run /reload-plugins or hx install sidecar" >&2; exit 1; }
 hexa run "$H" $ARGUMENTS
@@ -36,7 +36,7 @@ If `Error=` or `Empty=` is present, report that line and stop. Otherwise render 
 | <nick> | <email> | <session-bar> | <session-time-left> | <week-bar> | <week-time-left> |
 | …one row per Row= line… |
 
-_레지스트리: N개 계정 · ★ = 현재 활성 · `/quota all` = 전 계정 라이브_
+_레지스트리: N개 계정 · ★ = 현재 활성 · `/quota:quota all` = 전 계정 라이브_
 _Agent SDK credit: <AgentSDKCredit value>_
 ```
 

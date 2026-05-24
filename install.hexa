@@ -113,10 +113,17 @@ fn main() {
     let _mk = exec("mkdir -p " + _shq(cache) + " " + _shq(plugins_dir + "/marketplaces"))
 
     // ── 1. marketplace clone / pull ──────────────────────────────────
-    // Branch-guard: if a prior session left the clone on a feature branch
-    // (e.g. `fix/...`), `pull --ff-only origin main` would silent-no-op
-    // and the cache would stay stale forever. Force-checkout `main` (or
-    // recreate it tracking origin/main) before pulling.
+    // Branch-guard (PR#104): if a prior session left the clone on a feature
+    // branch (e.g. `fix/...`), force-checkout `main` (or recreate it tracking
+    // origin/main) first.
+    //
+    // Force-sync (PR#9): then always `fetch + reset --hard origin/main`. The
+    // previous `pull --ff-only ... 2>/dev/null` silently swallowed failure
+    // modes (transient HTTP error, lock files, shallow-clone fetch limits) and
+    // left the clone stuck at an old HEAD while reporting "pulled" — which is
+    // exactly how the user's clone ended up frozen at 0.4.2 after 0.4.3 merged.
+    // The marketplace clone has no local edits we ever want to preserve, so
+    // reset --hard is safe and immune to silent-no-op.
     println("sidecar install: setting up the Claude Code marketplace…")
     if _is_dir(mp + "/.git") {
         let cur = _trim(to_string(exec("git -C " + _shq(mp) + " branch --show-current 2>/dev/null")))
@@ -125,8 +132,9 @@ fn main() {
             let _co = exec("git -C " + _shq(mp) + " checkout main 2>/dev/null || git -C " + _shq(mp) + " checkout -B main origin/main 2>/dev/null")
             println("  marketplace · realigned " + cur + " → main")
         }
-        let _p = exec("git -C " + _shq(mp) + " pull --ff-only origin main 2>/dev/null")
-        println("  marketplace · pulled latest main")
+        let _f2 = exec("git -C " + _shq(mp) + " fetch origin main 2>/dev/null")
+        let _r  = exec("git -C " + _shq(mp) + " reset --hard origin/main 2>/dev/null")
+        println("  marketplace · synced to origin/main")
     } else {
         let cl = exec_with_status("git clone --depth 1 " + _shq(repo) + " " + _shq(mp) + " 2>&1")
         if cl[1] != 0 {

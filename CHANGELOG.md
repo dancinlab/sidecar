@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — sign-guard 0.1.2: self-mint 코드 강제 (에이전트가 `sidecar sign` 못 함) [보안 · HIGH]
+
+- **sign-guard 0.1.2 — no-self-mint 를 social contract → 코드 강제로 승격** — 신고: AI 에이전트가 유저 승인 없이 `sidecar sign project` 를 스스로 실행해 사인 토큰을 self-mint, 거버넌스 사인 게이트를 무력화하던 약점. 기존 게이트는 `commons.tape`·`project.tape` **편집**만 막고, "에이전트는 self-mint 금지"는 코드 주석의 약속(social contract)일 뿐 실제 강제가 없었음. 신뢰 경계는 오직 PreToolUse 훅(하네스가 평가 · 에이전트 우회 불가)뿐이고 — 출처(에이전트 vs 유저)를 가를 구조적 신호(env·payload 필드)가 없음을 claude-code-guide 로 확인 — 따라서 훅에서 차단.
+  - **레이어 A (액티브 · 훅)**: `_sign_guard.hexa` 가 (a) 민팅 명령 `sidecar sign <key>` 자체(`list`/`clear` 는 허용 · abs-path 포함) (b) `~/.sidecar/signs/` 하위 토큰 파일 위조 쓰기(redirect·tee·dd·cp/mv·Write/Edit/NotebookEdit) 를 hard-deny. Claude Code 의 모든 실행 표면(Bash 도구 · 슬래시 명령의 `!` · 대화형 `!` 뱅 — 전부 Bash 도구 경유)을 커버하므로, 훅 없는 **out-of-band 실제 터미널**에서만 민팅 가능.
+  - **레이어 B (옵트인 · `bin/sidecar` · 주석 문서화)**: 민팅 시 제어 터미널(`/dev/tty`) 존재를 요구. 실측 — 에이전트 Bash 도구는 제어 TTY 가 없음(`/dev/tty` open 불가 · `[ -t 0 ]` false), 사람 셸은 있음. 훅 파서를 우회하는 난독화 민팅(`s=sign; sidecar $s project`·`eval`·래퍼 스크립트)까지 차단. `export SIDECAR_SIGN_REQUIRE_TTY=1` 로 활성(기본 OFF — 유저 사인 마찰 최소화). **opt-OUT 아님**: 끄면 훅으로 폴백할 뿐 그 아래로 약화되지 않음(@D s11).
+  - **한계 명시**: 레이어 A 만으로는 난독화 임의코드 민팅(python/perl/eval)을 못 잡음(기존 project.tape 가드와 동일한 한계) — 그 갭이 레이어 B 의 존재 이유.
+- Smoke(12/12 통과): mint(직접·abs-path·commons)·forge(redirect·tee·Write)·project.tape 무토큰 → DENY · clear·list·`ls`·README·난독화`s=sign` → ALLOW. 레이어 B: TTY 없는 컨텍스트 → 민팅 거부(exit 1·토큰 미생성) · OFF → 정상 민팅. lockstep(@D ship · g22): plugin.json + marketplace 0.1.1 → 0.1.2 (`bin/sidecar` 는 무버전 CLI).
+
 ## 2026-05-25 — ai-api-guard 0.1.3: 매칭 전 공백/줄연결 normalize [약점분석 #10 · MED]
 
 - **ai-api-guard 0.1.3 — `_norm` 으로 매칭 전 공백류 collapse** — 약점 분석에서, AI-SDK import / hostname 매칭이 정확한 단일 공백 substring(`import openai`)이라 다중 공백·탭·줄연결 변형을 놓칠 수 있던 약점. 신규 `_norm` 이 공백/`\n`/`\r`/`\t`/`\` 를 단일 공백으로 collapse 후 매칭 — `import  openai`(다중공백) 등 흡수. **한계 명시**: 따옴표 안 line-continuation 은 실제로 유효 import 가 아니라 애초에 안 돌아가고, dynamic import(`exec(x+' openai')`·base64)는 정적 substring 스캔으로 탐지 불가 — 가드는 흔한 형태를 좁힐 뿐. Smoke: 정석 `import openai` deny(무회귀) · `python script.py` allow(오탐0). lockstep(@D ship · g22): plugin.json + marketplace 0.1.2 → 0.1.3.

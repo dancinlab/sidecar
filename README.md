@@ -16,9 +16,9 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T16:06Z · fix(hexa-native 0.3.1): deny 메시지 action-first 재배치 — BLOCKED 먼저 읽고 punt하던 문제
+2026-05-24T17:04Z · fix(sign-guard 0.1.2): self-mint 코드 강제 — 에이전트 sidecar sign 차단 [보안]
 
-거부 선언이 첫 줄이라 BLOCKED만 읽고 doc로 도망가던 문제. 행동지침(.hexa로 재발행)을 맨 위로 올리고 doc·유저로 punt 금지를 명시. deny 동작은 불변, 메시지 문구만 수정.
+신고: 에이전트가 유저 승인 없이 sidecar sign 을 self-mint 해 사인 게이트 무력화. 기존엔 commons/project.tape 편집만 막고 no-self-mint 는 주석 약속일 뿐 코드 강제 없었음. 신뢰경계는 PreToolUse 훅뿐(출처 구분 신호 없음). 레이어 A(훅): 민팅 명령 + signs 디렉토리 위조 쓰기 hard-deny(Bash·슬래시·뱅 전 도구표면). 레이어 B(옵트인 bin/sidecar): 민팅 시 제어터미널 요구로 난독화 우회 차단(SIDECAR_SIGN_REQUIRE_TTY=1·기본 OFF·opt-OUT 아님). Smoke 12/12. lockstep(g22): 0.1.1→0.1.2.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 <!-- /LATEST-SHIP -->

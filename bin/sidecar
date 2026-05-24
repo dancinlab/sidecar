@@ -178,6 +178,42 @@ TAPE
         ;;
       *)
         KEY="$SUB"
+        # ── Layer B · OPT-IN human-terminal gate (default OFF) ──────────────
+        # A sign token is the ROOT OF TRUST for the whole governance gate, so
+        # the mint must come from a real human at a terminal — never the agent.
+        #
+        # ACTIVE enforcement lives in the sign-guard PreToolUse hook, which
+        # hard-denies `sidecar sign <key>` AND any write under ~/.sidecar/signs/
+        # across every Claude Code tool surface (Bash tool · slash command's
+        # `!`backtick` · interactive `!` bang all route through the Bash tool).
+        #
+        # This is the stronger SECOND layer: require a controlling terminal
+        # (/dev/tty) for the mint. Empirically the agent's Bash tool runs with
+        # NO controlling TTY (verified: /dev/tty not openable, `[ -t 0 ]` false),
+        # while a human's real shell has one — so this catches even an
+        # OBFUSCATED mint that slips past the hook's command parser (e.g.
+        # `s=sign; sidecar $s project`, `eval`, a wrapper script): any agent
+        # tool execution lacks /dev/tty regardless of how the string is shaped.
+        #
+        # OPT-IN (export SIDECAR_SIGN_REQUIRE_TTY=1) to keep the user's own sign
+        # frictionless by default. This is ADDITIVE strictness, NOT an opt-OUT
+        # that disables a guard (project.tape @D s11 forbids the latter): when
+        # unset it falls back to the hook, never below it.
+        if [ -n "${SIDECAR_SIGN_REQUIRE_TTY:-}" ]; then
+          if ( exec </dev/tty ) 2>/dev/null; then
+            printf 'sidecar sign: confirm you are the human user — retype the key (%s): ' "$KEY" >/dev/tty
+            IFS= read -r _confirm </dev/tty || _confirm=""
+            if [ "$_confirm" != "$KEY" ]; then
+              echo "sidecar sign: ✗ confirmation mismatch — mint of '$KEY' aborted." >&2
+              exit 1
+            fi
+          else
+            echo "sidecar sign: ✗ no controlling terminal — refusing to mint '$KEY'." >&2
+            echo "  Minting requires a real interactive terminal (a human shell)." >&2
+            echo "  An agent tool / pipe / \`!\` bang has no /dev/tty — that is why you see this." >&2
+            exit 1
+          fi
+        fi
         mkdir -p "$SIGN_DIR"
         date +%s > "$SIGN_DIR/$KEY.sign"
         echo "sidecar sign: ✅ signed '$KEY' — the agent may edit the file gated under '$KEY' for the next 15 minutes."

@@ -15,8 +15,15 @@
 //
 // The token is the gate's single precondition (project.tape @D s11: gate on a
 // real precondition, never an opt-out switch). The sign must come FROM the
-// user — the agent must not self-mint; that social contract + the visible,
-// auditable `sidecar sign` call is the enforcement, on top of the hard deny.
+// user — the agent must NOT self-mint. This is no longer just a social
+// contract: the hook now CODE-ENFORCES it on the agent's tool boundary by
+// denying, for any agent-issued Bash/Write/Edit:
+//   a. the mint command itself — `sidecar sign <key>` (list / clear stay ok)
+//   b. forging the token file — any write under ~/.sidecar/signs/
+// Every Claude Code execution surface (Bash tool · slash command's `!`backtick`
+// · interactive `!` bang) routes through the Bash tool and so hits this hook;
+// only a genuine out-of-band terminal (no hook) can mint. (`bin/sidecar` carries
+// an OPT-IN /dev/tty second layer that defeats hook-parser-evading obfuscation.)
 //
 // To gate another file: add one `["key", "/suffix"]` row to GATED and reship.
 
@@ -116,6 +123,61 @@ fn _deny_for(target: string, key: string) {
         + "  Ask the user to run  `sidecar sign " + key + "`  (or `/sidecar:sidecar sign " + key + "`), THEN retry.\n"
         + "  Do NOT run `sidecar sign` yourself — the sign must come FROM the user; that is the whole point of this gate.\n"
         + "  A sign-off is valid for 15 minutes. NO env-var / flag override by design."
+    _deny(reason)
+}
+
+// ── self-mint enforcement ──────────────────────────────────────────────────
+// The sign token is the root of trust for the whole gate, so the agent must
+// never create one. Two channels are denied: the mint command, and any write
+// that forges the token file directly under ~/.sidecar/signs/.
+
+fn _signs_dir() -> string {
+    return env_var("HOME") + "/.sidecar/signs/"
+}
+
+// `~`-expand only (Write/Edit file_path is already absolute; defensive).
+fn _expand_home(p: string) -> string {
+    if _starts_with(p, "~") { return env_var("HOME") + p.substring(1, len(p)) }
+    return p
+}
+
+fn _under_signs(abs: string) -> bool {
+    return _starts_with(_expand_home(abs), _signs_dir())
+}
+
+// Mint form = `sidecar sign <key>` where <key> is NOT a read/clear sub-verb.
+// Bare `sidecar sign` (list) and `sidecar sign clear|list|status|--list` pass.
+fn _is_sign_mint(toks: array) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i + 1 < n {
+        if _basename(toks[i]) == "sidecar" && toks[i + 1] == "sign" {
+            if i + 2 >= n { return false }
+            let sub = toks[i + 2]
+            if sub == "clear" { return false }
+            if sub == "list" { return false }
+            if sub == "status" { return false }
+            if sub == "--list" { return false }
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+fn _deny_mint() {
+    let reason = "sign-guard: minting a governance sign-off token is a USER-ONLY action.\n"
+        + "  BLOCKED — the agent must NOT run `sidecar sign <key>` (self-mint defeats the gate; project.tape @D s13).\n"
+        + "  Ask the USER to run  `sidecar sign <key>`  in THEIR OWN terminal — a real shell, not through Claude Code.\n"
+        + "  Keys: `commons` (commons.tape) · `project` (project.tape). Valid 15 min, then retry your edit.\n"
+        + "  Allowed for you: `sidecar sign` (list) · `sidecar sign clear [<key>]`. NO override by design."
+    _deny(reason)
+}
+
+fn _deny_forge(abs: string) {
+    let reason = "sign-guard: `" + abs + "` is inside the sign-token store (~/.sidecar/signs/).\n"
+        + "  BLOCKED — writing here forges a USER sign-off token (project.tape @D s13: agent must not self-mint).\n"
+        + "  The token must be minted by the USER via `sidecar sign <key>` in their own terminal. NO override by design."
     _deny(reason)
 }
 
@@ -256,6 +318,9 @@ fn _handle_bash(payload: map, ti: map) {
     if has_key(payload, "cwd") { cwd = payload["cwd"] }
 
     let toks = _tokens(cmd)
+    // self-mint channel a: the mint command itself.
+    if _is_sign_mint(toks) { _deny_mint() }
+
     let mut cands = _redirect_targets(cmd)
     let tees = _tee_targets(toks)
     let mut b = 0
@@ -270,6 +335,8 @@ fn _handle_bash(payload: map, ti: map) {
     let mut k = 0
     while k < len(cands) {
         let abs = _resolve(cwd, cands[k])
+        // self-mint channel b: forging the token file via a write redirect.
+        if _under_signs(abs) { _deny_forge(abs) }
         let key = _gated_key(abs)
         if key != "" && !_signed(key) { _deny_for(abs, key) }
         k = k + 1
@@ -299,6 +366,9 @@ fn main() {
         if has_key(ti, "notebook_path") { target = ti["notebook_path"] }
     }
     if target == "" { _allow() }
+
+    // self-mint channel b: forging the token file via a structured write.
+    if _under_signs(target) { _deny_forge(target) }
 
     let key = _gated_key(target)
     if key == "" { _allow() }

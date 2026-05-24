@@ -245,8 +245,8 @@
     {
       "name": "ship",
       "source": "./skills/ship",
-      "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. NL trigger via skill (ship · 배포 · 출시).",
-      "version": "0.3.1"
+      "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... stages explicit paths (never -A/-u), credential-scans the staged diff (rpa_ · sk- · hf_ · AKIA), commits, pushes origin/<branch>, then runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch). Mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + message FIRST. Bare /ship (no -m / no paths) is helper mode (0.3.2): lists uncommitted changes + emits a ready-to-edit `/ship -m \"...\" <paths>` template instead of a usage error, exits 0, still never auto-stages. NL trigger via skill (ship · 배포 · 출시).",
+      "version": "0.3.2"
     },
     {
       "name": "bypass",

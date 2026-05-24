@@ -16,12 +16,11 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T17:40Z · feat(domain 0.8.4): NAME 분리자 - 만 허용 · _ 차단 (메타도메인 + 유지)
+2026-05-24T17:44Z · fix(ship 0.3.2): bare /ship 헬퍼 모드 — usage 에러 대신 상태+템플릿
 
-도메인 NAME 검증에서 언더스코어 거부. TTR-LM / TTR_LM 양쪽을 다 받아
-같은 도메인이 두 갈래로 쪼개지는 걸 막고, 하이픈을 유일한 단어 구분자로
-고정. +는 메타도메인(RTSC+HTS) 합성용으로 유지. 프로젝트 basename
-fallback도 -를 _로 바꾸던 동작을 - 유지로 변경.
+인자 없는 /ship 이 매번 usage 만 뱉던 불편 개선. no-args 분기가 (a) git status porcelain 의 미커밋 변경을 후보 목록으로 나열하고 (b) 붙여쓸 /ship -m <msg> <paths> 템플릿을 출력한 뒤 exit 0(에러 아님·헬퍼 모드). 신규 _changed_paths 가 porcelain 파싱(rename old->new 는 new 채택). @D ship 불변 준수: 여전히 자동 스테이징/커밋 안 함 — 명시 경로+에이전트 메시지 규율 그대로. Smoke: clean→nothing to ship, 변경→후보+템플릿(exit 0). lockstep(g22): 0.3.1→0.3.2.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 <!-- /LATEST-SHIP -->
 
 ## Install

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — ship 0.3.2: bare `/ship` 헬퍼 모드 (usage 에러 → 상태+템플릿)
+
+- **ship 0.3.2 — 인자 없는 `/ship` 이 usage 에러 대신 상태+템플릿 출력** — 인자 없이 `/ship` 을 치면 매번 usage 만 뱉어 불편하던 점 개선. `_ship.hexa` 의 no-args 분기가 이제 (a) `git status --porcelain` 의 미커밋 변경을 후보 목록으로 나열하고 (b) 바로 붙여쓸 `/ship -m "<commit message>" <변경파일들>` 템플릿을 출력한 뒤 **exit 0**(에러 아님·헬퍼 모드). 신규 `_changed_paths` 가 porcelain 을 파싱(rename `old -> new` 는 new 채택). **@D ship 불변 준수**: 여전히 자동 스테이징/커밋 안 함 — 명시 경로 + 에이전트 작성 메시지가 필수라는 규율은 그대로, bare 폼은 "무엇을 어떻게 올릴지" 템플릿만 제공. Smoke: 깨끗한 트리 → "nothing to ship" · 변경 있을 때 → 후보 목록 + 채워진 템플릿(exit 0). ship.md argument-hint/description 에 bare 폼 명시. lockstep(@D ship · g22): plugin.json + marketplace 0.3.1 → 0.3.2.
+
 ## 2026-05-25 — pr-cycle 0.3.6: cross-repo PR 머지 오작동 fix [INBOX #4 from anima]
 
 - **pr-cycle 0.3.6 — `gh pr create --repo X` 의 머지를 같은 repo 로 라우팅** — anima INBOX handoff #4: `gh pr create --repo dancinlab/kosmos …` 시 pr-cycle hook 이 ` && gh pr merge --squash --admin` 를 append 하는데, 그 머지가 **대상 repo(kosmos)가 아닌 cwd repo(anima)의 main 을 fetch/머지** 시도하던 cross-repo 오작동. 신규 `_repo_flag` 가 명령에서 `--repo <X>` 를 파싱 → cross-repo create 면 머지도 `gh pr merge --repo <X>`, 그리고 **로컬(cwd) worktree cleanup 은 skip**(PR repo ≠ cwd repo 라 cwd worktree 정리가 부적절). same-repo 동작 불변. Smoke: `--repo dancinlab/kosmos` → merge 도 `--repo dancinlab/kosmos`(worktree tail 없음) · `--repo` 없음 → 기존 cwd merge(+worktree cleanup). INBOX.md/log 의 #4 `- [x]` 해소; #1·#2·#3 은 harness-upstream(`isolation:worktree` 영역)으로 재분류 — sidecar 직접 fix 불가, 추적만. lockstep(@D ship · g22): plugin.json + marketplace 0.3.5 → 0.3.6.

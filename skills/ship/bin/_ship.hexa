@@ -117,10 +117,59 @@ fn _update_readme(msg: string) {
     try { write_file("README.md", prefix + middle + suffix) } catch e { }
 }
 
+// Parse `git status --porcelain` into a list of changed paths (handles the
+// rename `old -> new` form by taking the new path). Feeds the no-args helper.
+fn _changed_paths() -> array {
+    let raw = to_string(exec("git status --porcelain 2>/dev/null"))
+    let lines = raw.split("\n")
+    let mut out = []
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        i = i + 1
+        if len(ln) < 4 { continue }
+        let mut p = ln.substring(3, len(ln))
+        let ri = p.index_of(" -> ")
+        if ri >= 0 { p = p.substring(ri + 4, len(p)) }
+        p = _trim(p)
+        if len(p) > 0 { out.push(p) }
+    }
+    return out
+}
+
+// No-args (or malformed-args) helper. Per @D ship, /ship needs explicit paths
+// and an agent-authored message — it never auto-stages. So instead of a bare
+// usage error, list the uncommitted changes and emit a ready-to-edit template
+// (fill the message, prune unwanted paths). Prints to stdout + the caller exits
+// 0: this is helper mode, not a failure. NOTHING is staged or committed here.
 fn _usage() {
-    eprintln("usage: /ship -m \"<commit message>\" <path> [<path>...]")
-    eprintln("  stages ONLY the given paths, credential-scans the staged diff,")
-    eprintln("  commits, pushes to origin/<branch>, then runs 'sidecar sync'.")
+    println("usage: /ship -m \"<commit message>\" <path> [<path>...]")
+    println("  stages ONLY the given paths, credential-scans the staged diff,")
+    println("  commits, pushes to origin/<branch>, then runs 'sidecar sync'.")
+    println("  explicit paths only — never git add -A/-u; you own the message + version bump.")
+
+    let changed = _changed_paths()
+    if len(changed) == 0 {
+        println("")
+        println("nothing to ship — working tree is clean (no uncommitted changes).")
+        return
+    }
+    println("")
+    println("uncommitted changes (candidates — prune any you do NOT want in this commit):")
+    let mut i = 0
+    while i < len(changed) {
+        println("  - " + changed[i])
+        i = i + 1
+    }
+    println("")
+    println("ready-to-edit template:")
+    let mut tmpl = "  /ship -m \"<commit message>\""
+    i = 0
+    while i < len(changed) {
+        tmpl = tmpl + " " + changed[i]
+        i = i + 1
+    }
+    println(tmpl)
 }
 
 fn main() {
@@ -128,7 +177,7 @@ fn main() {
     let n = len(a)
     if n < 3 || a[1] != "-m" || a[2] == "" {
         _usage()
-        exit(1)
+        exit(0)
     }
     let msg = a[2]
     let mut paths = []

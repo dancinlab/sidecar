@@ -1,7 +1,7 @@
 {
   "name": "ship",
-  "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... refreshes the README.md `<!-- LATEST-SHIP -->` marker (if present) with the commit message + UTC date, stages explicit paths (never -A/-u; README.md is auto-staged when the marker was refreshed) → credential-scans the staged diff → commit → push origin/<branch> → sidecar sync (marketplace pull + cache copy + installed_plugins.json patch). The mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + commit message FIRST. NL trigger via skill (ship · 배포 · 출시).",
-  "version": "0.3.1",
+  "description": "Atomic ship tail for sidecar plugin changes — /ship -m \"<msg>\" <path>... refreshes the README.md `<!-- LATEST-SHIP -->` marker (if present) with the commit message + UTC date, stages explicit paths (never -A/-u; README.md is auto-staged when the marker was refreshed) → credential-scans the staged diff → commit → push origin/<branch> → sidecar sync (marketplace pull + cache copy + installed_plugins.json patch). The mechanical tail of @D ship / commons g27; the agent owns version bump + surface lockstep + commit message FIRST. Bare /ship (no -m / no paths) is helper mode (0.3.2): instead of a usage error it lists the repo's uncommitted changes + emits a ready-to-edit `/ship -m \"...\" <paths>` template (fill the message, prune unwanted paths) and exits 0 — still never auto-stages, per @D ship. NL trigger via skill (ship · 배포 · 출시).",
+  "version": "0.3.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

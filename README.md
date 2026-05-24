@@ -16,7 +16,14 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-23T20:30Z · feat(commons 0.9.56): add g59 — hexa improvement found → file at hexa-lang/inbox/patches immediately (g11 specialization)
+2026-05-24T12:21Z · feat(step-by-step 0.1.0): 계획 우선 순차 런북 command (신규 plugin)
+
+작업을 의존성 순 번호 단계로 분해 → 계획 표시(승인 게이트 없음) → 위→아래
+한 단계씩 직렬 자동 실행(▶ i/N · ✅/⚠/❌). /cycle(병렬 fan-out)의 직렬 정반대.
+멈춤은 단계 실패 또는 비가역·외부 노출 단계 직전(확인 후 재개, bypass 기준)뿐.
+별칭 /sbs. marketplace + commons/COMMANDS.md + CHANGELOG 등록.
+
+Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 <!-- /LATEST-SHIP -->
 
 ## Install

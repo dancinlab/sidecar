@@ -307,6 +307,12 @@
       "source": "./hooks/s9-guard",
       "description": "PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9). Fires when a Bash command looks like a Mac load check — `uptime` (word) · `loadavg` / `vm.loadavg` (substring) · `ps -A` adjacency or `ps -Ao pcpu` · `top -l ` (macOS) / `top -b ` (Linux) · `getloadavg`. Emits non-blocking additionalContext reminding the agent that any conclusion drawn from raw load must EXCLUDE `claude` PIDs (claude sessions are exempt from local load attribution) and suggesting the canonical claude-excluded sum (`ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'`). NEVER blocks — pure advisory. Implemented in hexa-lang (`_s9_guard.hexa`, invoked via `hexa run`). Ships per @D s7 (governance + enforcement together) — the @D s9 companion guard. NO opt-out by design.",
       "version": "0.1.0"
+    },
+    {
+      "name": "step-by-step",
+      "source": "./commands/step-by-step",
+      "description": "/step-by-step (alias /sbs) — plan-first sequential runbook. Decomposes the task into an ordered, numbered plan, then executes every step strictly in order WITHOUT pausing between steps, narrating each step's start + ✅/⚠/❌ result. Halts only on a step failure (reports the failing step + verbatim error + un-run tail) or before a genuinely irreversible / destructive / outward-facing step (confirm-then-resume, same bar as the bypass self-check). The deliberate single-threaded counterpart to /cycle's parallel fan-out — one thread, top to bottom. Bare = the task in context; /step-by-step <task> targets explicitly.",
+      "version": "0.1.0"
     }
   ]
 }

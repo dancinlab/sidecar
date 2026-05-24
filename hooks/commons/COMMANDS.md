@@ -12,6 +12,7 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 /all-bg-go            reactive single fan-out of the prior turn's branches
 /cycle                autonomous loop: self-enumerate → plan → fan-out → loop
 /cycle-full <goal>    /cycle preceded by a phase-0 depletion brainstorm
+/step-by-step <task>  sequential runbook: plan → auto-run steps in order (sequential counterpart to /cycle · alias /sbs)
 
 # ── Dispatch ────────────────────────────────────────────────
 /pool <args>          host roster + remote exec on sidekick hosts

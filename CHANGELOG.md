@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — step-by-step 0.1.0: 계획 우선 순차 런북 command (신규 plugin)
+
+- **step-by-step 0.1.0 — `/step-by-step` (별칭 `/sbs`) 신규 command plugin** — `commands/step-by-step/` (gap 에 이은 두 번째 순수 command 패밀리, SKILL.md 없음 · @D s1). 작업을 의존성 순 번호 단계로 분해 → 계획을 보여주되 승인 게이트 없이 → 위→아래 한 번에 한 단계씩 직렬 자동 실행, 단계마다 `▶ i/N` 마커 + `✅`/`⚠`/`❌` 결과. **`/cycle`(병렬 fan-out)의 직렬 정반대**. 멈춤 조건은 단계 실패(`❌` → 단계+에러 원문+안 돌린 나머지 보고) 또는 비가역·파괴적·외부 노출 단계 직전(확인 후 재개, `bypass` self-check 기준)뿐. `commands/step-by-step.md` + 별칭 `sbs.md`(`/question`→`/q` 선례) + 한글 README. marketplace.json + commons/COMMANDS.md(Fan-out/loop 섹션) 등록.
+
 ## 2026-05-24 — commons `@D g60`: aggressive upstream INBOX reflex (commons 0.10.1 → 0.10.2)
 
 - **`@D g60` 추가 — "upstream INBOX reflex — aggressive, same-turn, over-file"** — 기존 INBOX 거버넌스(g11 fix-at-source · g36 INBOX domain · g48 ack · g59 hexa gap)의 일반화·강화. 모든 타-repo gap/friction/improvement/idea 를 surface 된 **그 턴에** 대상 repo INBOX 로 stub-first over-file (먼저 g20 중복 트래커 확인 후 append-or-create). **금지**: session 끝까지 미루기 · full reproduction/resolution 까지 게이팅 · finding 을 chat-only 로 다운그레이드 · "다른 세션이 하겠지" 가정. 버전 lockstep(g22): commons 0.10.1 → 0.10.2 (`.claude-plugin/marketplace.json` + `hooks/commons/.claude-plugin/plugin.json`) · marketplace description g-range `g0..g59` → `g0..g60`. from demiurge CARDIO+ (사용자 지시 "INBOX upstream 적극적으로").

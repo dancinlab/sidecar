@@ -9,15 +9,15 @@
 
 ## 등록
 
-`mcpServers` 필드를 `plugin.json` 에 포함 — 플러그인 활성화 시 Claude Code 가 자동 spawn (transport: stdio).
+`mcpServers` 필드를 `plugin.json` 에 포함 — 플러그인 활성화 시 Claude Code 가 자동 spawn (transport: stdio). 런처는 셸 read-loop: JSON-RPC 한 줄마다 `hexa run` 1회를 띄워 그 줄만 처리하고 종료한다.
 
-## 동작 범위 (0.1.0 POC)
+## 동작 범위 (0.1.1 POC)
 
 - `initialize` · `tools/list` · `tools/call` 3개 메서드 처리
-- stdin 을 EOF 까지 모아 라인별 처리 (단발 drain) — Claude Code 의 handshake batch 통과 검증
+- 메시지당 1회 디스패치 — 런처 read-loop 이 한 줄을 받을 때마다 `hexa run` 1회를 띄워 그 줄만 처리. 장수명 in-process 리더 없이도 stdio 핸드셰이크가 즉시 응답 (클라이언트가 stdin 을 닫기 전에 `initialize` 응답)
 - `notifications/*` 는 silent swallow (JSON-RPC 스펙)
 - 오류는 `{"error": {"code": -32xxx, "message": "..."}}` 봉투
 
 ## 0.2.0 follow-ups
 
-스트리밍 라인 리더 (hexa builtin 부재 → 0.1.0 은 batch drain), per-tool `timeout` 강제, fan-out 병렬 dispatch (`hosts: []`).
+per-tool `timeout` 강제, fan-out 병렬 dispatch (`hosts: []`).

@@ -20,12 +20,13 @@
 //     to include it.
 //
 // Implementation notes:
-//   * POC scope: reads stdin to EOF (single-shot drain) then processes each
-//     line in order, emitting responses to stdout. Real Claude Code MCP
-//     usage works because the harness sends a small handshake batch and
-//     does not require interleaved streaming for this minimal tool set.
-//     A streaming line-reader (currently absent from hexa builtins) is a
-//     0.2.0 follow-up.
+//   * Per-message dispatch: this script handles ONE JSON-RPC message per
+//     invocation. It reads stdin to EOF, but the plugin.json mcpServers
+//     launcher is a shell read-loop that feeds exactly one line per
+//     `hexa run`, so each process sees a single message then exits. That
+//     keeps the stdio handshake responsive (initialize is answered before
+//     the client closes stdin) without a long-lived in-process line reader.
+//     Fan-out / per-tool timeouts are a 0.2.0 follow-up.
 //   * stderr/stdout for the wrapped command is captured via two passes:
 //     stdout = `pool on <host> <cmd>` and stderr = `pool on <host> <cmd>
 //     2>&1 1>/dev/null` to keep them separate without a tmpfile.
@@ -271,7 +272,7 @@ fn _handle_line(line: string) {
     if method == "initialize" {
         let result = "{\"protocolVersion\":\"2024-11-05\","
             + "\"capabilities\":{\"tools\":{}},"
-            + "\"serverInfo\":{\"name\":\"pool-mcp\",\"version\":\"0.1.0\"}}"
+            + "\"serverInfo\":{\"name\":\"pool-mcp\",\"version\":\"0.1.1\"}}"
         _emit_result(id_raw, result)
         return
     }

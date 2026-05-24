@@ -119,8 +119,8 @@
     {
       "name": "pool-mcp",
       "source": "./mcps/pool-mcp",
-      "description": "stdio MCP server exposing pool hosts as Claude Code MCP tools. Two tools: `mcp__pool__on` (run `pool on <host> <command>` and return {stdout, stderr, exit_code, non_claude_load}) and `mcp__pool__list` (read ~/.pool/pool.json and return the roster, pi5-akida excluded by default per sidecar @D s8 unless `include_anima=true`). JSON-RPC 2.0 over stdio, implemented in hexa-lang (`_pool_mcp.hexa`, invoked via `hexa run`). Server registered via `mcpServers` field in plugin.json. POC scaffold — single-shot stdin drain (reads to EOF then processes all queued requests); streaming line-reader / per-tool timeouts / fan-out deferred to 0.2.0.",
-      "version": "0.1.0"
+      "description": "stdio MCP server exposing pool hosts as Claude Code MCP tools. Two tools: `mcp__pool__on` (run `pool on <host> <command>` and return {stdout, stderr, exit_code, non_claude_load}) and `mcp__pool__list` (read ~/.pool/pool.json and return the roster, pi5-akida excluded by default per sidecar @D s8 unless `include_anima=true`). JSON-RPC 2.0 over stdio, implemented in hexa-lang (`_pool_mcp.hexa`). Server registered via the `mcpServers` field in plugin.json; the launcher is a shell read-loop that feeds one JSON-RPC line per `hexa run` invocation (stateless per-message dispatch — keeps the stdio handshake responsive without a long-lived in-process line reader). POC scope — fan-out parallel dispatch / per-tool timeouts deferred to 0.2.0.",
+      "version": "0.1.1"
     },
     {
       "name": "pool-route",

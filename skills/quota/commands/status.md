@@ -1,9 +1,9 @@
 ---
-description: /quota:status — current Claude account + live 5h/7d usage (45s cache). Surfaces `nick (email)` when the live account is registered with a nickname. The agent runs the bash binary, parses the key=value lines, and renders a markdown table directly in chat so CC's TUI renders it as a real visible table.
+description: /quota:status — current Claude account in a 6-column row (nick · email · session-time-left · week-time-left · session-bar · week-bar). The agent runs the hexa binary, parses the `Row=...` line, and renders a markdown table in chat so the CC TUI shows it as a real visible table.
 allowed-tools: Bash
 ---
 
-Run the bash command below via the Bash tool to fetch the current Claude account's live 5h/7d quota and registry summary.
+Run the bash command below via the Bash tool. The binary emits one `Row=...` line for the current Claude account plus a few metadata lines.
 
 ```bash
 H="$CLAUDE_PLUGIN_ROOT/bin/_quota.hexa"
@@ -15,25 +15,26 @@ fi
 hexa run "$H" status
 ```
 
-The stdout is plain `Key=Value` lines (one per row, in this exact order when present): `Account`, `Org`, `StaleCache` (optional — only when live fetch failed + cache is served), `5h`, `7d` (or `Limits` when both unavailable), `AgentSDKCredit`, `Registry`.
+Output shape (lines, in this order when present):
+- `Row=<nick>|<email>|<session-time-left>|<week-time-left>|<session-bar>|<week-bar>` — 6 pipe-separated cells. `<nick>` is `—` when no nickname is set. Bars are `▓▓▓░░ NN%`.
+- `StaleCache=<message>` — optional; only when the live fetch failed and a stale cache was served.
+- `AgentSDKCredit=<note>` — informational, render as a small footer.
+- `Registry=N account(s)` — count footer.
+- `Error=<message>` — error path; only this line appears, no `Row=`.
 
-Then **respond to the user with a markdown table** rendered exactly like this:
+**If an `Error=` line appears**, just report the error to the user. Stop.
+
+**Otherwise**, respond with this exact shape:
 
 ```
-| Field | Value |
-|---|---|
-| Account | <Account value> |
-| Org | <Org value> |
-| 5h | <5h value> |
-| 7d | <7d value> |
-| Agent SDK credit | <AgentSDKCredit value> |
-| Registry | <Registry value> · `/quota:list` |
+| nick | email | session limit | week limit | session | week |
+|---|---|---|---|---|---|
+| <nick cell from Row> | <email> | <session-time-left> | <week-time-left> | <session-bar> | <week-bar> |
 ```
 
-Rules:
-- Omit the `Org` row when not present in the output.
-- When `StaleCache=...` is present, prepend a one-line callout **above** the table:
-  `> ⚠ <StaleCache value>`
-- When `Limits=(unavailable) ...` is present (no `5h`/`7d` rows), collapse the two rows into a single `Limits` row carrying that message.
-- Do not invent values. Render exactly what the binary emitted (never faked).
-- Add no extra prose around the table unless the user clearly asked for analysis — just the table.
+Then below the table, on separate lines:
+- If `StaleCache=...` was present: `> ⚠ <StaleCache value>` (markdown blockquote) **above** the table.
+- Footer line: `_Registry: N account(s) · `/quota:quota list`_` (italic, with the count from `Registry=`).
+- One more footer line for SDK credit: `_Agent SDK credit: <AgentSDKCredit value>_` (italic).
+
+Do not invent values. Render exactly what the binary emitted (never faked). Add no extra prose unless the user clearly asked for analysis — just the table + the two footer lines.

@@ -90,6 +90,31 @@ TAPE
     # plugin installed-but-disabled (no command/hook/skill loaded); the enable
     # step is what makes `sidecar sync` a complete ship-cycle tail.
     ROOT=$(sidecar_root)
+    # Self-update (PR#9): keep the hx-managed package in lockstep with
+    # origin/main BEFORE delegating to install.hexa. Without this, the user's
+    # `sidecar sync` runs whatever install.hexa landed in $ROOT at the last
+    # `hx install sidecar` — meaning improvements to install.hexa (e.g. the
+    # marketplace-clone branch-guard and the PR#9 force-reset itself) never
+    # take effect on its own user base until they manually reinstall.
+    #
+    # Skipped in three cases:
+    #   - $ROOT is not a git clone (e.g. dev tree without origin)
+    #   - the working tree has dirty changes (preserve the dev's edits)
+    #   - the user has set SIDECAR_SYNC_NO_SELF_UPDATE=1 (escape hatch)
+    if [ -d "$ROOT/.git" ] && [ -z "${SIDECAR_SYNC_NO_SELF_UPDATE-}" ]; then
+      if [ -z "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]; then
+        cur=$(git -C "$ROOT" branch --show-current 2>/dev/null || echo "")
+        if [ "$cur" != "main" ] && [ -n "$cur" ]; then
+          git -C "$ROOT" fetch origin main >/dev/null 2>&1 || true
+          git -C "$ROOT" checkout main >/dev/null 2>&1 \
+            || git -C "$ROOT" checkout -B main origin/main >/dev/null 2>&1 \
+            || true
+          echo "sidecar sync: hx-package realigned $cur → main"
+        fi
+        git -C "$ROOT" fetch origin main >/dev/null 2>&1 || true
+        git -C "$ROOT" reset --hard origin/main >/dev/null 2>&1 || true
+      fi
+    fi
     if [ ! -f "$ROOT/install.hexa" ]; then
       echo "sidecar sync: install.hexa not found at $ROOT" >&2
       exit 1

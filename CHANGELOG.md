@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — limit-guard 0.1.3: 세션-한도 신호 매칭 case-insensitive [약점분석 #3]
+
+- **limit-guard 0.1.3 — 한도 신호 매칭을 case-insensitive 로** — 약점 분석에서, limit-guard 의 `_contains` substring 매칭이 case-sensitive 라 실제 한도 메시지의 대소문자/구두점 변형 시 **silent miss**(advisory 발행 안 함 → subagent 가 mid-work 중단했는데 체크포인트 지시 누락)하던 약점 발견. `raw.to_lower()` 후 매칭으로 변형 흡수. 본질적 한계 주석 명시: substring 매칭은 진짜 신호와 그 신호의 **verbatim 인용**(이 가드 자체를 분석한 Agent result 등 — 이번 세션에서 실제 false-positive 발생)을 구분 못 함 → self-referential false-positive 가능하나, hook 이 advisory-only(never deny)이고 **실제 한도 miss(작업 손실) > 헛경보** 라 수용. Smoke: `"HIT YOUR SESSION LIMIT, resets at 3pm"`(대문자) → 감지 · `"build completed"` → silent. lockstep(@D ship · g22): plugin.json + marketplace 0.1.2 → 0.1.3.
+
 ## 2026-05-25 — research 0.2.3: `_yt`·`_arxiv` 에러 경로 silent-success(exit 0) → exit(1) [약점분석 #2]
 
 - **research 0.2.3 — `_yt.hexa`·`_arxiv.hexa` 의 모든 에러 조기종료를 `exit(1)` 로** — 약점 분석에서, 두 바이너리가 네트워크 실패·파싱 실패·재생불가·자막없음·잘못된 id·빈 결과에서 메시지만 출력하고 `return`(=exit 0)으로 끝나, **호출자/에이전트가 실패를 정상 결과와 구분 못 하던** 데이터-무결성 약점 발견(`"transcript not available"` 를 진짜 transcript 로 오인 가능). main 의 bare `return` 9개(`_yt`) + 4개(`_arxiv`)를 `exit(1)` 로 교체 — 함수 본문의 `return <expr>`(값 반환) 33개는 8칸/4칸 들여쓰기·inline 구분으로 무영향. 정상 경로(transcript/논문 출력)만 exit 0. Smoke: bare return 0 잔존 · `return <expr>` 유지 · 두 바이너리 컴파일+usage 정상. lockstep(@D ship · g22): plugin.json + marketplace 0.2.2 → 0.2.3.

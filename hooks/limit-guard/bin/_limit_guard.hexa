@@ -47,11 +47,17 @@ fn _contains(hay: string, needle: string) -> bool {
 
 fn main() {
     let raw = _read_stdin()
+    let lo = raw.to_lower()   // case-insensitive — real limit messages vary in casing
 
-    let hit = _contains(raw, "hit your session limit")
-        || _contains(raw, "hit your usage limit")
-        || (_contains(raw, "session limit") && _contains(raw, "resets"))
-        || (_contains(raw, "usage limit") && _contains(raw, "resets"))
+    // NOTE: substring matching can't tell a genuine limit signal from a verbatim
+    // QUOTE of one (e.g. an Agent result that analyzes this very guard quotes the
+    // keywords), so self-referential false-positives are possible. Acceptable —
+    // the hook is advisory-only (PostToolUse additionalContext, never denies),
+    // and missing a REAL limit (lost mid-work) is worse than a spurious reminder.
+    let hit = _contains(lo, "hit your session limit")
+        || _contains(lo, "hit your usage limit")
+        || (_contains(lo, "session limit") && _contains(lo, "resets"))
+        || (_contains(lo, "usage limit") && _contains(lo, "resets"))
     if !hit { _allow() }
 
     let ctx = "SESSION-LIMIT SIGNAL detected in a tool result -- a usage/session limit was hit (a subagent likely stopped mid-work). Before anything else:\n\n1. REPORT how far you got: per work item, state what is COMMITTED (list commit SHAs) vs UNCOMMITTED, and exactly where work stopped.\n2. COMMIT + PUSH uncommitted work now -- stage explicit paths; a limit hit mid-edit loses uncommitted work.\n3. Write .claude/RESUME.md -- a resume manifest: done items, remaining items, the limit reset time if visible, and the next concrete step.\n4. STOP remaining parallel fan-out -- do not spawn more background agents; switch to sequential foreground work, one committed increment at a time.\n\nWhy: parallel subagent fan-outs burn quota fast -- when the limit hits, N agents fail at once and uncommitted work is lost. Sequential + commit-per-unit caps the loss at one unit."

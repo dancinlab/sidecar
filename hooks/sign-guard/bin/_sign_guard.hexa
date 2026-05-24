@@ -20,10 +20,14 @@
 // denying, for any agent-issued Bash/Write/Edit:
 //   a. the mint command itself — `sidecar sign <key>` (list / clear stay ok)
 //   b. forging the token file — any write under ~/.sidecar/signs/
-// Every Claude Code execution surface (Bash tool · slash command's `!`backtick`
-// · interactive `!` bang) routes through the Bash tool and so hits this hook;
-// only a genuine out-of-band terminal (no hook) can mint. (`bin/sidecar` carries
-// an OPT-IN /dev/tty second layer that defeats hook-parser-evading obfuscation.)
+// SECURITY MODEL: the agent's tool calls (Bash · Write/Edit) route through this
+// hook, so the agent's mint command is denied here — the agent CANNOT self-mint.
+// The interactive `!` bang a USER types in the TUI prompt does NOT route through
+// this hook and mints freely (verified 2026-05-25); that is the intended user
+// path and is safe because the agent cannot emit a `!` bang (user-only input).
+// So the gate rests on "the agent can't trigger `!`", not "`!` is denied".
+// (`bin/sidecar` carries an OPT-IN /dev/tty second layer that defeats
+//  hook-parser-evading obfuscation.)
 //
 // To gate another file: add one `["key", "/suffix"]` row to GATED and reship.
 
@@ -120,7 +124,7 @@ fn _deny_for(target: string, key: string) {
     let base = _basename(target)
     let reason = "sign-guard: `" + base + "` is SIGN-GATED governance SSOT (sign key: `" + key + "`).\n"
         + "  BLOCKED — this file needs the USER's explicit sign-off before any edit.\n"
-        + "  Ask the user to run  `sidecar sign " + key + "`  (or `/sidecar:sidecar sign " + key + "`), THEN retry.\n"
+        + "  Ask the USER to run  `! sidecar sign " + key + "`  (the TUI `!` bang mints — only the agent's OWN run is denied), THEN retry.\n"
         + "  Do NOT run `sidecar sign` yourself — the sign must come FROM the user; that is the whole point of this gate.\n"
         + "  A sign-off is valid for 15 minutes. NO env-var / flag override by design."
     _deny(reason)
@@ -168,7 +172,7 @@ fn _is_sign_mint(toks: array) -> bool {
 fn _deny_mint() {
     let reason = "sign-guard: minting a governance sign-off token is a USER-ONLY action.\n"
         + "  BLOCKED — the agent must NOT run `sidecar sign <key>` (self-mint defeats the gate; project.tape @D s13).\n"
-        + "  Ask the USER to run  `sidecar sign <key>`  in THEIR OWN terminal — a real shell, not through Claude Code.\n"
+        + "  Ask the USER to run  `! sidecar sign <key>`  (the TUI `!` bang mints — only the agent's OWN run is denied).\n"
         + "  Keys: `commons` (commons.tape) · `project` (project.tape). Valid 15 min, then retry your edit.\n"
         + "  Allowed for you: `sidecar sign` (list) · `sidecar sign clear [<key>]`. NO override by design."
     _deny(reason)

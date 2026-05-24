@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — sign-guard 0.1.3: 보안 모델 설명 정정 — 대화형 `!` 뱅은 훅 미경유(유저 민팅 정상 경로) [문서 정확성]
+
+- **sign-guard 0.1.3 — 0.1.2 의 "모든 표면이 훅 경유" 주장 실측 정정** — 0.1.2 설명(`_sign_guard.hexa` 주석 · plugin.json · marketplace.json)이 "Claude Code 의 모든 실행 표면(Bash 도구 · 슬래시 `!` · 대화형 `!` 뱅)이 전부 Bash 도구 경유라 훅에 걸리고, out-of-band 실제 터미널에서만 민팅 가능"이라 적었으나 — 실측 결과 **유저가 TUI 프롬프트에 직접 치는 대화형 `!` 뱅은 훅을 경유하지 않고 그냥 민팅됨**(`! sidecar sign project` → `~/.sidecar/signs/project.sign` 신선 토큰 생성 확인). 게이트는 **여전히 안전** — 근거가 "`!` 가 차단돼서"가 아니라 **"에이전트는 `!` 뱅을 발화할 수 없어서"**(유저 전용 입력)로 정정될 뿐. 에이전트의 유일한 채널인 tool 콜(Bash·Write/Edit)은 전부 이 훅에 걸려 deny 되므로 self-mint 불가는 그대로 성립.
+  - **정정 표면(enforcement 무변경 · 설명만)**: `_sign_guard.hexa` 주석 + plugin.json + marketplace.json description 의 틀린 절을 "에이전트 tool 콜 = 훅 경유 → self-mint 불가; 유저 대화형 `!` 뱅 = 훅 미경유 → 정상 민팅 경로(에이전트는 `!` 발화 불가라 안전)"로 교체. `_is_sign_mint`·`_under_signs`·deny 로직은 **무변경**(로직 미수정 = Smoke 무회귀).
+  - **운영 영향**: sign 게이트가 막힐 때 안내를 별도 터미널 대신 `! sidecar sign <key>`(TUI 인라인)로 가능. 슬래시 명령의 `!`backtick` pre-exec 경유 여부는 미검증(별도 확인 대상).
+- lockstep(@D ship · g22): plugin.json + marketplace 0.1.2 → 0.1.3 (로직 무변경 · 설명 정정 patch).
+
 ## 2026-05-25 — workdir-guard 0.1.0: 공유 워킹트리 SessionStart 어드바이저리 (예방형 2겹)
 
 - **workdir-guard 0.1.0 (신규 훅) — 세션 시작 시 "이 working tree 를 ≥2 claude 에이전트가 공유 중"이면 worktree 규율 1회 주입** — git-guard 0.5.0(반응형 · push 시점)의 예방형 짝. 공유 인덱스/HEAD 해저드(동시 에이전트가 내 commit↔push 사이 HEAD swap → stale 브랜치 push · commit commingling)를 *랜딩 전에* 회피하도록 세션 시작부터 멘탈모델을 잡아줌.

@@ -16,7 +16,18 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T18:18Z · feat(workdir-guard 0.1.0): 공유 워킹트리 SessionStart 어드바이저리 — git 랜딩 worktree 유도 (예방형 2겹)
+2026-05-24T18:28Z · feat(quota 0.9.0): bare 뷰 백그라운드 SWR — 전 계정 갱신 체감
+
+bare quota 호출 시 캐시 즉시 출력 + detached 백그라운드로 stale 비활성
+계정 갱신 → 다음 뷰가 신선(stale-while-revalidate). 뷰가 네트워크에
+안 막힘. 직전 인라인 시도는 죽은 백업토큰의 curl 재시도창에 막혀 bare가
+~21초로 퇴행했는데, 갱신을 백그라운드로 빼서 0.7초로 복구.
+
+경계: staleness 게이트(캐시 300초↑ 또는 미수집) + 계정별 fail 쿨다운
+(.fail 마커 1800초 — 죽은 토큰을 매 사이클 재공격 안 함; refresh <ref>로
+갱신 전까지 정직하게 —). 활성 계정은 기존 45초 인라인 SWR 유지. 계정별
+레이트리밋이 독립이라 병목은 429가 아니라 지연 → 백그라운드로 격리.
+자기 바이너리는 캐시 경로 sort -V로 해석해 _swr-refresh 재호출.
 <!-- /LATEST-SHIP -->
 
 ## Install

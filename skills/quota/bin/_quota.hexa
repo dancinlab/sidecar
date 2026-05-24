@@ -17,6 +17,7 @@
 //   0.8.1 → command-surface fix: commands/quota.md table headers → English (Nickname · Email · Session Used/Reset · Weekly Used/Reset); cache-binary resolver `ls -1t | head -1` (mtime, picked a STALE version) → `ls -1 | sort -V | tail -1` (semver). help version string only — binary logic unchanged. (quota-autoadd hook got the same sort -V fix.)
 //   0.8.2 → table rows sorted by `_sort_key` (nickname when set, else email; lowercased — case-insensitive) via `_sort_accounts` (selection sort). Slash-command surface restored to `/quota:quota` form (CC plugin commands are namespaced — issue #15882); the over-broad rename had also corrupted filesystem paths (`cache/sidecar/quota:quota`), fixed back to `quota`.
 //   0.8.3 → `_fmt_remaining`: a reset time already in the past (delta <= 0) → `—` (stale cache, refresh needed) instead of a misleading `0m` that read like an imminent reset. Live accounts (resets_at always future) unaffected; only stale per-account cache rows change.
+//   0.9.0 → bare `quota` view trends fresh without an explicit `all`, via background stale-while-revalidate: the view renders from cache INSTANTLY, then spawns a DETACHED `_swr-refresh` process (`_spawn_bg_refresh` → `_self_bin` resolves the installed binary) that refreshes stale non-active accounts (`_bare_refresh_stale`) for the NEXT view — so the network never blocks the view (an earlier inline attempt regressed bare to ~20s on a dead backup token). Bounds: staleness gate (cache older than BARE_STALE_TTL=300s, or never cached, with backup creds) + per-account fail cooldown (FAIL_COOLDOWN=1800s `.fail` marker so a dead/expired token isn't re-burned every cycle — shows `—` until `/quota refresh <ref>` renews it). Active account keeps its 45s inline SWR via `_fetch_limits`. Per-account rate limits are independent, so the bound is latency (now backgrounded), not 429.
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -44,6 +45,8 @@ let CLIENT_ID        = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 let KEYCHAIN_SVC     = "Claude Code-credentials"
 let BACKUP_SVC       = "sidecar-quota"   // sidecar's per-account backup keychain svc (macOS) — distinct from the live "Claude Code-credentials"
 let CACHE_TTL        = 45    // s — fresh-cache window; throttles repeat status repaints away from the 429 source
+let BARE_STALE_TTL   = 300   // s — on a plain `quota` view, a non-active account whose per-account cache is older than this is eligible for BACKGROUND refresh (SWR staleness gate; the active account uses CACHE_TTL inline)
+let FAIL_COOLDOWN    = 1800  // s — after a non-active background refresh fails (dead / expired backup token), skip that account for this long so a plain view never re-burns the curl-retry window on an unrefreshable account each time (it honestly shows `—` until `/quota refresh <ref>` renews it)
 let AGENTSDK_STUB    = "future:agent-sdk-credit — source known (Agent SDK result.total_cost_usd · dual-bucket since 2026-06-15) · integration deferred to next release"
 
 // ── small helpers ────────────────────────────────────────────────────
@@ -554,6 +557,80 @@ fn _sort_accounts(accts: any) -> any {
 // commands/quota.md reads each Row + StaleCache/AgentSDKCredit/Registry/Empty
 // footer and renders a markdown table, one row per account, headers in Korean.
 // `status`/`list`/bare all call this with all_live=false; `all` passes true.
+// ── background SWR refresh (bare view freshness, off the critical path) ──
+// A plain `quota` view renders from cache instantly, then spawns a DETACHED
+// process that refreshes stale non-active accounts so the NEXT view is fresh —
+// stale-while-revalidate (RFC 5861), adapted for a CLI. The view never blocks
+// on the network, which is what kept an earlier inline attempt from regressing
+// the bare view to ~20s when a backup token was dead (curl retry window).
+
+// per-account fail marker — sits next to the usage cache. Records the last
+// failed-refresh timestamp so the background cycle can cool down on an
+// unrefreshable account instead of re-burning the curl-retry window every view.
+fn _fail_path(uuid: string) -> string { return _cache_path_for(uuid) + ".fail" }
+fn _fail_fresh(uuid: string, now: int) -> bool {
+    let p = _fail_path(uuid)
+    if !file_exists(p) { return false }
+    let mut ts = 0
+    try { ts = to_int(_trim(_read_text(p))) } catch e { ts = 0 }
+    return now - ts < FAIL_COOLDOWN
+}
+fn _fail_mark(uuid: string, now: int) { let _w = write_file(_fail_path(uuid), str(now)) }
+fn _fail_clear(uuid: string) { let _r = exec_with_status("rm -f " + _shq(_fail_path(uuid)) + " 2>/dev/null ; true") }
+
+// Refresh every STALE non-active account (background cycle). A candidate must
+// be non-active, have backup creds, be stale (cache older than BARE_STALE_TTL,
+// or never cached), and NOT be in fail cooldown. Per-account rate limits are
+// independent (each fetch uses that account's own token), so this is latency-
+// bound, not 429-bound — and the latency lands in the background, not the view.
+fn _bare_refresh_stale(accts: any, active_uuid: string) {
+    let n = len(accts)
+    let now = timestamp()
+    let mut i = 0
+    while i < n {
+        let e = accts[i]
+        let euuid = _g(e, "account_uuid")
+        let email = _g(e, "email")
+        i = i + 1
+        if len(active_uuid) > 0 && euuid == active_uuid { continue }   // active is SWR'd inline via _fetch_limits (CACHE_TTL)
+        if _fail_fresh(euuid, now) { continue }                        // recent dead-token failure → cool down
+        if len(_trim(_load_creds(email))) == 0 { continue }            // no backup creds → can't refresh; shows cache / —
+        let cu = _cached_util(euuid)
+        let age = if cu["ok"] { to_int(str(cu["age_s"])) } else { 999999999 }   // never-cached = maximally stale
+        if age < BARE_STALE_TTL { continue }                           // still fresh → SWR skip
+        let r = _cli_refresh(email)                                    // best-effort; on failure keep prior cache
+        if _envelope_ok(r) { _fail_clear(euuid) } else { _fail_mark(euuid, now) }
+    }
+}
+
+// background entrypoint (hidden `_swr-refresh` verb) — refresh stale non-active
+// accounts, then exit silently. No rendering, no re-spawn (so it never loops).
+fn _swr_refresh_run() {
+    let reg = _registry_load(_registry_path())
+    _bare_refresh_stale(reg["accounts"], _active_uuid())
+}
+
+// resolve THIS plugin's installed binary (newest cache version, semver-sorted)
+// so the foreground can re-invoke it detached. Empty when not installed (dev /
+// uninstalled) → the caller simply skips the background refresh.
+fn _self_bin() -> string {
+    let base = _home() + "/.claude/plugins/cache/sidecar/quota"
+    let r = exec_with_status("ls -1 " + _shq(base) + " 2>/dev/null | sort -V | tail -1")
+    let v = _trim(to_string(r[0]))
+    if len(v) == 0 { return "" }
+    let p = base + "/" + v + "/bin/_quota.hexa"
+    if file_exists(p) { return p }
+    return ""
+}
+
+// fire-and-forget the background SWR refresh. Detached (`& `, stdio to /dev/null)
+// so it returns immediately — the bare view never waits on it.
+fn _spawn_bg_refresh() {
+    let bin = _self_bin()
+    if len(bin) == 0 { return }
+    let _s = exec_with_status("nohup hexa run " + _shq(bin) + " _swr-refresh >/dev/null 2>&1 & echo ok")
+}
+
 fn _unified_lines(all_live: bool) -> array {
     // autoadd parity: a fresh login that hasn't hit a SessionStart yet still
     // shows up — register the live account if it isn't tracked.
@@ -581,6 +658,9 @@ fn _unified_lines(all_live: bool) -> array {
             k = k + 1
         }
     }
+    // bare view (all_live == false) renders straight from cache — the refresh of
+    // stale non-active accounts runs DETACHED in the background (see the bare
+    // handler's _spawn_bg_refresh), so the view never blocks on the network.
     let mut i = 0
     while i < n {
         let e = accts[i]
@@ -1134,8 +1214,15 @@ fn main() {
     // unified registry view (0.8.0): status · list · bare all render the SAME
     // all-accounts table (active = ★ + live; rest = cache). `all` fetches every
     // account live (slower, rate-bound) — the easy 1-shot "refresh everything".
+    // hidden background entrypoint — refresh stale non-active accounts (SWR
+    // revalidation), then exit silently. Spawned detached by the bare view.
+    if verb == "_swr-refresh" {
+        _swr_refresh_run()
+        exit(0)
+    }
     if verb == "status" || verb == "show" || verb == "" || verb == "list" || verb == "ls" {
-        println(_join(_unified_lines(false)))
+        _spawn_bg_refresh()                       // SWR: kick a detached refresh of stale accounts for the NEXT view
+        println(_join(_unified_lines(false)))     // this view renders instantly from cache
         exit(0)
     }
     if verb == "all" || verb == "all-live" {

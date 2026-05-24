@@ -18,6 +18,7 @@
 //   0.8.2 → table rows sorted by `_sort_key` (nickname when set, else email; lowercased — case-insensitive) via `_sort_accounts` (selection sort). Slash-command surface restored to `/quota:quota` form (CC plugin commands are namespaced — issue #15882); the over-broad rename had also corrupted filesystem paths (`cache/sidecar/quota:quota`), fixed back to `quota`.
 //   0.8.3 → `_fmt_remaining`: a reset time already in the past (delta <= 0) → `—` (stale cache, refresh needed) instead of a misleading `0m` that read like an imminent reset. Live accounts (resets_at always future) unaffected; only stale per-account cache rows change.
 //   0.9.0 → bare `quota` view trends fresh without an explicit `all`, via background stale-while-revalidate: the view renders from cache INSTANTLY, then spawns a DETACHED `_swr-refresh` process (`_spawn_bg_refresh` → `_self_bin` resolves the installed binary) that refreshes stale non-active accounts (`_bare_refresh_stale`) for the NEXT view — so the network never blocks the view (an earlier inline attempt regressed bare to ~20s on a dead backup token). Bounds: staleness gate (cache older than BARE_STALE_TTL=300s, or never cached, with backup creds) + per-account fail cooldown (FAIL_COOLDOWN=1800s `.fail` marker so a dead/expired token isn't re-burned every cycle — shows `—` until `/quota refresh <ref>` renews it). Active account keeps its 45s inline SWR via `_fetch_limits`. Per-account rate limits are independent, so the bound is latency (now backgrounded), not 429.
+//   0.10.0 → `_parallel_refresh`: refresh a SET of accounts concurrently — token-prep stays sequential in-process (instant unless a token needs a refresh-grant), but the usage GETs go out in ONE shell command (each backgrounded `&` then `wait`), so latency is ~max(one fetch) not the serial sum. Used by `all` (foreground "refresh everything" — the big win) and the background SWR cycle (`_bare_refresh_stale` now selects stale candidates → `_parallel_refresh`). Per-account limits are independent so concurrency costs no shared 429 budget; cred-less / token-dead accounts are skipped / fail-marked and never enter the batch. Also fast-fail on `_refresh_access_token` (--retry 0 --max-time 8): a dead refresh token returns non-transient `invalid_grant`, so the old --retry 2 --retry-delay 5 was costing ~10s per dead account and dominating `all`; now ~0.3s. Net: `all` 32s → ~2s, background SWR cycle 0.1s when nothing's stale.
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -177,7 +178,11 @@ fn _parse_limits(body: string) -> any {
 fn _refresh_access_token(refresh_token: string) -> any {
     if len(refresh_token) == 0 { return #{ "ok": false, "error": "no refreshToken in credentials" } }
     let body = json_stringify(#{ "grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": CLIENT_ID })
-    let cmd = "curl -sS --max-time 15 --retry 2 --retry-delay 5"
+    // fast-fail: a dead/expired refresh token returns a non-transient error
+    // (`invalid_grant`) — retrying it just multiplies latency (a dead account
+    // was costing ~10s of retry-delay and dominating `all`). One short attempt;
+    // a genuine transient blip is recovered by the next SWR cycle, not here.
+    let cmd = "curl -sS --max-time 8 --retry 0"
         + " -H " + _shq("Content-Type: application/json")
         + " -d " + _shq(body)
         + " " + _shq(TOKEN_URL) + " 2>&1"
@@ -578,29 +583,93 @@ fn _fail_fresh(uuid: string, now: int) -> bool {
 fn _fail_mark(uuid: string, now: int) { let _w = write_file(_fail_path(uuid), str(now)) }
 fn _fail_clear(uuid: string) { let _r = exec_with_status("rm -f " + _shq(_fail_path(uuid)) + " 2>/dev/null ; true") }
 
-// Refresh every STALE non-active account (background cycle). A candidate must
-// be non-active, have backup creds, be stale (cache older than BARE_STALE_TTL,
-// or never cached), and NOT be in fail cooldown. Per-account rate limits are
-// independent (each fetch uses that account's own token), so this is latency-
-// bound, not 429-bound — and the latency lands in the background, not the view.
+// Refresh a SET of accounts concurrently. Token-prep (read creds, renew an
+// expired token, persist) stays sequential in-process — it's instant unless a
+// token actually needs a refresh-grant — but the usage GETs (the slow, uniform
+// part) are issued in ONE shell command, each backgrounded with `&` then
+// `wait`ed, so total latency is ~max(one fetch) instead of the serial sum. This
+// is what makes `all` (foreground) and the background SWR cycle scale with the
+// roster. Per-account rate limits are independent (each GET uses that account's
+// own bearer), so concurrency here costs no shared 429 budget. Cache-less and
+// token-dead accounts are skipped / fail-marked and never enter the batch.
+fn _parallel_refresh(records: any) {
+    let m = len(records)
+    if m == 0 { return }
+    let now = timestamp()
+    let stamp = str(now)
+    // phase 1 — token-prep (sequential; cheap unless a token needs a refresh-grant)
+    let mut uuids  = []
+    let mut tokens = []
+    let mut tmps   = []
+    let mut i = 0
+    while i < m {
+        let rec   = records[i]
+        let email = _g(rec, "email")
+        let uuid  = _g(rec, "account_uuid")
+        i = i + 1
+        let blob = _trim(_load_creds(email))
+        if len(blob) == 0 { continue }                                  // no backup creds → not a failure; just skip
+        let tk = _token_from_blob(blob)
+        if !_envelope_ok(tk) { _fail_mark(uuid, now); continue }         // dead/expired token → cool down
+        let did = type_of(tk) == "map" && has_key(tk, "refreshed") && tk["refreshed"] == true
+        if did && has_key(tk, "blob") { let _s = _store_creds(email, str(tk["blob"])) }   // persist renewed token (parity with _cli_refresh)
+        uuids.push(uuid)
+        tokens.push(str(tk["token"]))
+        tmps.push("/tmp/sidecar-quota-pf-" + stamp + "-" + str(len(uuids)) + ".out")
+    }
+    let k = len(uuids)
+    if k == 0 { return }
+    // phase 2 — one shell command: all usage GETs backgrounded, then `wait` (concurrent)
+    let mut cmd = ""
+    let mut j = 0
+    while j < k {
+        if j > 0 { cmd = cmd + " " }
+        cmd = cmd + "curl -sS -f --max-time 20 --retry 2 --retry-delay 1 --retry-max-time 30"
+            + " -H " + _shq("Authorization: Bearer " + tokens[j])
+            + " -H " + _shq("anthropic-beta: " + OAUTH_BETA)
+            + " " + _shq(OAUTH_URL) + " > " + _shq(tmps[j]) + " 2>/dev/null &"
+        j = j + 1
+    }
+    cmd = cmd + " wait"
+    let _r = exec_with_status(cmd)
+    // phase 3 — parse each temp → cache write / fail mark (sequential; cheap)
+    j = 0
+    while j < k {
+        let body = if file_exists(tmps[j]) { _read_text(tmps[j]) } else { "" }
+        let _c = exec_with_status("rm -f " + _shq(tmps[j]) + " ; true")
+        let lim = if len(body) > 0 { _parse_limits(body) } else { #{ "ok": false } }
+        if _envelope_ok(lim) {
+            let row = "{\"ts\":" + str(timestamp()) + ",\"lim\":" + json_stringify(lim) + "}"
+            let _w  = write_file(_cache_path_for(uuids[j]), row)
+            _fail_clear(uuids[j])
+        } else {
+            _fail_mark(uuids[j], now)
+        }
+        j = j + 1
+    }
+}
+
+// Select the STALE non-active accounts (background SWR cycle) and refresh them
+// in parallel. A candidate must be non-active, stale (cache older than
+// BARE_STALE_TTL, or never cached), and NOT in fail cooldown. (Cred-less /
+// token-dead accounts are filtered inside _parallel_refresh.)
 fn _bare_refresh_stale(accts: any, active_uuid: string) {
     let n = len(accts)
     let now = timestamp()
+    let mut cands = []
     let mut i = 0
     while i < n {
         let e = accts[i]
         let euuid = _g(e, "account_uuid")
-        let email = _g(e, "email")
         i = i + 1
         if len(active_uuid) > 0 && euuid == active_uuid { continue }   // active is SWR'd inline via _fetch_limits (CACHE_TTL)
         if _fail_fresh(euuid, now) { continue }                        // recent dead-token failure → cool down
-        if len(_trim(_load_creds(email))) == 0 { continue }            // no backup creds → can't refresh; shows cache / —
         let cu = _cached_util(euuid)
         let age = if cu["ok"] { to_int(str(cu["age_s"])) } else { 999999999 }   // never-cached = maximally stale
         if age < BARE_STALE_TTL { continue }                           // still fresh → SWR skip
-        let r = _cli_refresh(email)                                    // best-effort; on failure keep prior cache
-        if _envelope_ok(r) { _fail_clear(euuid) } else { _fail_mark(euuid, now) }
+        cands.push(e)
     }
+    _parallel_refresh(cands)
 }
 
 // background entrypoint (hidden `_swr-refresh` verb) — refresh stale non-active
@@ -649,14 +718,15 @@ fn _unified_lines(all_live: bool) -> array {
     }
     let active_uuid = _active_uuid()
     if all_live {
+        // refresh ALL non-active accounts concurrently (explicit "refresh
+        // everything" — ignores the staleness gate + cooldown the bare cycle uses)
+        let mut recs = []
         let mut k = 0
         while k < n {
-            let euuid = _g(accts[k], "account_uuid")
-            if len(active_uuid) == 0 || euuid != active_uuid {
-                let _r = _cli_refresh(_g(accts[k], "email"))   // best-effort live fetch + cache write
-            }
+            if len(active_uuid) == 0 || _g(accts[k], "account_uuid") != active_uuid { recs.push(accts[k]) }
             k = k + 1
         }
+        _parallel_refresh(recs)
     }
     // bare view (all_live == false) renders straight from cache — the refresh of
     // stale non-active accounts runs DETACHED in the background (see the bare

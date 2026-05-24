@@ -16,18 +16,22 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T18:28Z · feat(quota 0.9.0): bare 뷰 백그라운드 SWR — 전 계정 갱신 체감
+2026-05-24T18:37Z · feat(quota 0.10.0): 병렬 갱신 + fast-fail — all 32초→2초
 
-bare quota 호출 시 캐시 즉시 출력 + detached 백그라운드로 stale 비활성
-계정 갱신 → 다음 뷰가 신선(stale-while-revalidate). 뷰가 네트워크에
-안 막힘. 직전 인라인 시도는 죽은 백업토큰의 curl 재시도창에 막혀 bare가
-~21초로 퇴행했는데, 갱신을 백그라운드로 빼서 0.7초로 복구.
+#18 병렬 레이어 (0.9.0 백그라운드 SWR 위에 스택). _parallel_refresh:
+계정 셋을 동시 갱신 — token-prep은 in-process 순차(토큰 갱신 필요할
+때만 느림), usage GET은 한 셸 명령에 전부 백그라운드(&)+wait로 동시
+발사 → 지연이 직렬 합이 아니라 ~max(1개). all(포그라운드 '전부 갱신')
+과 백그라운드 SWR 사이클이 둘 다 사용.
 
-경계: staleness 게이트(캐시 300초↑ 또는 미수집) + 계정별 fail 쿨다운
-(.fail 마커 1800초 — 죽은 토큰을 매 사이클 재공격 안 함; refresh <ref>로
-갱신 전까지 정직하게 —). 활성 계정은 기존 45초 인라인 SWR 유지. 계정별
-레이트리밋이 독립이라 병목은 429가 아니라 지연 → 백그라운드로 격리.
-자기 바이너리는 캐시 경로 sort -V로 해석해 _swr-refresh 재호출.
+추가로 _refresh_access_token fast-fail(--retry 0 --max-time 8): 죽은
+refresh 토큰은 invalid_grant(비-일시적)이라 재시도가 무의미한데 기존
+--retry 2 --retry-delay 5가 죽은 계정당 ~10초를 먹어 all을 지배했음.
+이제 ~0.3초.
+
+실측: all 32초→1.9초 · 죽은계정 10.4초→0.3초 · 백그라운드 사이클
+0.095초(쿨다운+staleness 게이트로 할 일 없으면 즉시 종료). 계정별
+레이트리밋 독립이라 동시성은 공유 429 예산 안 씀.
 <!-- /LATEST-SHIP -->
 
 ## Install

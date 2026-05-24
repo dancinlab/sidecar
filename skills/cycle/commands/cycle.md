@@ -16,13 +16,13 @@ Engage the `cycle` skill. In ONE message run all five stages:
    - **No-signal fallback** — if context yields NO defensible candidate (domain truly closed, no follow-up signals, no user hint), stop with one line: `🛑 no open milestones + no seed signal — choose: extend domain (/domain milestone <text>), switch (/domain set <other>), or close (/end)`. Do NOT fabricate off-domain items just to keep the loop running.
    - **Cap** — seed at most 3 items per /cycle invocation; further items wait for the next round so the user can steer between batches.
 
-2. **Dup-race precheck** — for each item whose label names an inbox patch slug (matches `inbox/**/<slug>.md` in the current repo), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
+2. **Dup-race precheck** — for each item whose label names an INBOX handoff entry (slug/header present in `INBOX.log.md` in the current repo), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
 
-   - **Signal A — patch file Status:** `grep -iE '(^|\s)(\*\*)?status(\*\*)?\s*[:：]' inbox/**/<slug>.md` then test the matched line against the resolved-class regex `(fixed|resolved|closed|landed|shipped|absorbed|superseded|merged|done|✅|🟢)`. Body strings like `Status: fixed` / `**status**: resolved-ssot` / `🟢 RESOLVED` count.
+   - **Signal A — INBOX entry status:** `grep -niE -A6 '<slug>' INBOX.log.md` to locate the entry, then test its checkbox/status line against the resolved-class regex `(fixed|resolved|closed|landed|shipped|absorbed|superseded|merged|done|✅|🟢|- \[x\])`. A `- [x]` checkbox or `Status: resolved` under the entry counts.
    - **Signal B — merged PR for slug:** `gh pr list --state merged --search "<slug>" --json number,title,mergedAt --limit 5` — any hit ⇒ resolved.
    - **Signal C — git log mentions slug as fix/close:** `git log --all --oneline --grep="<slug>" -n 5` plus a same-line resolved-class regex check (commit subjects like `fix(<slug>): …`, `close <slug>`, `land <slug>`).
 
-   Treat as SKIP if **any** of A/B/C fires resolved-class; otherwise PROCEED. Print one judgement line per item: `precheck <slug>: SKIP (A:Status=fixed) | PROCEED (no signal)`. Items whose label does NOT match an inbox slug bypass precheck (always PROCEED).
+   Treat as SKIP if **any** of A/B/C fires resolved-class; otherwise PROCEED. Print one judgement line per item: `precheck <slug>: SKIP (A:[x] done) | PROCEED (no signal)`. Items whose label does NOT name an INBOX entry bypass precheck (always PROCEED).
 3. **Parallel-plan** — print a compact table `| # | item | subagent_type | iso | goal | precheck |` before dispatch (precheck = `SKIP <reason>` or `PROCEED`).
 4. **Fan-out** — issue an `Agent` tool call **only for PROCEED rows** (each `run_in_background: true`, `isolation: "worktree"` if it edits code, fully self-contained prompt). SKIP rows do not get an Agent.
 5. **Loop bias** — end with:

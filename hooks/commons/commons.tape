@@ -47,8 +47,8 @@
   dont = "`tail -f` · `sleep`-poll loop · repeated cat/poll of a log for background events — never"
 
 @D g11 := "no gap workarounds — fix at source" :: governance [required active]
-  do   = "file hexa-lang upstream gaps as `<hexa-lang>/inbox/patches/<slug>.md` on discovery"
-  dont = "implement workarounds for known gaps — file an upstream inbox patch, fix at source"
+  do   = "log hexa-lang upstream gaps to `<hexa-lang>/INBOX.log.md` (`/domain set INBOX`) on discovery"
+  dont = "implement workarounds for known gaps — log an upstream INBOX handoff, fix at source"
 
 @D g13 := "portable paths only" :: governance [required active]
   do   = "resolve paths at runtime: `$HOME` · `${CLAUDE_PLUGIN_ROOT}` · `$CLAUDE_PLUGIN_DATA` · PATH binaries"
@@ -128,9 +128,9 @@
 @D g35 := "goal-driven execution — verifiable success criteria" :: governance [required active]
   do   = "recast tasks as verifiable goals — bug → failing test → green · loop until verified"
 
-@D g36 := "cross-project handoff via /inbox" :: governance [required active]
-  do   = "cross-repo gap/patch/bug/RFC → `cd <target-repo>` then `/inbox new <kind> <slug>`"
-  dont = "write directly to <target-repo>/inbox/<kind>/<slug>.md — use `/inbox new` (scaffolds template)"
+@D g36 := "cross-project handoff via INBOX domain" :: governance [required active]
+  do   = "cross-repo gap/patch/bug/RFC → `cd <repo> && /domain set INBOX` then `/domain todo <handoff>`"
+  dont = "scatter handoffs in ad-hoc files — use the target repo's INBOX domain (INBOX.md/INBOX.log.md)"
 
 @D g37 := "plist — user-request only" :: governance [required active]
   dont = "create `.plist` (LaunchAgents · LaunchDaemons · Info.plist) unprompted — explicit request only"
@@ -171,9 +171,9 @@
   do   = "create one PR → merge (squash) → delete branch + remove its worktree → next · main-based"
   dont = "leave a PR unmerged · a merged branch · or a dead worktree behind at session end"
 
-@D g48 := "cross-project inbox ack — close-then-notify" :: governance [required active]
-  do   = "inbox entry done → own entry `status: resolved` + ack file in sender's inbox (handoff loop)"
-  dont = "close own inbox entry without ack-ing sender — handoff loop broken · sender stays in dark"
+@D g48 := "cross-project INBOX ack — close-then-notify" :: governance [required active]
+  do   = "handoff done → `/domain done <item>` in your INBOX + ack entry to sender's INBOX.log.md"
+  dont = "close your handoff without ack-ing sender — handoff loop broken · sender stays in the dark"
 
 @D g49 := "GPU dispatch priority — pool first, cloud as fallback" :: governance [required active]
   do   = "GPU work → check `pool list` for GPU host → `hexa cloud` only when pool has no GPU host"
@@ -195,9 +195,9 @@
   do   = "explain/report response → `/easy` 7-element format default · session-wide ON · no manual toggle"
   dont = "skip /easy in explanatory turns · trivial yes/no may stay terse (judgment call only)"
 
-@D g54 := "g47 exemption — inbox/patches/** PRs are review-only, never auto-merged" :: governance [required active]
-  do   = "PR diff scoped to inbox/patches/** → skip g47 atomic tail · maintainer reviews + merges manually"
-  dont = "auto-append `gh pr merge --squash` to inbox-only PRs — bypasses cross-project handoff review"
+@D g54 := "g47 exemption — INBOX handoff PRs are review-only, never auto-merged" :: governance [required active]
+  do   = "PR scoped to INBOX.md/INBOX.log.md → skip g47 tail · maintainer reviews + merges manually"
+  dont = "auto-append `gh pr merge --squash` to INBOX-only PRs — bypasses cross-project handoff review"
 
 @D g55 := "wall-time first — minimize elapsed time, parallel / distributed over serial" :: governance [required active]
   do   = "fan out independent work across hosts/GPUs/pods (≤8) · many cheap-parallel beat 1 slow-serial"
@@ -215,6 +215,6 @@
   do   = "next-list = active <NAME>.md `- [ ]` items · run `/domain set <NAME>` first if none active"
   dont = "enumerate off-domain work · add milestones to non-active domain · scope drift"
 
-@D g59 := "hexa improvement found → file upstream inbox immediately (g11 specialization)" :: governance [required active]
-  do   = "hexa-lang / CLI / runtime gap → `cd ~/core/hexa-lang && /inbox new patches <slug>` now"
-  dont = "workaround silently · defer · note-in-chat-only · file under sidecar (wrong repo)"
+@D g59 := "hexa improvement found → log upstream INBOX immediately (g11 specialization)" :: governance [required active]
+  do   = "hexa-lang / CLI / runtime gap → log to `~/core/hexa-lang/INBOX.log.md` (`/domain set INBOX`) now"
+  dont = "workaround silently · defer · note-in-chat-only · log under sidecar (wrong repo)"

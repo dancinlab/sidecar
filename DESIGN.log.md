@@ -45,6 +45,14 @@
   - placed under `skills/` so the SKILL.md description auto-triggers on natural language ("file an inbox entry", "this belongs in <repo>'s inbox") — slash invocation optional. Concept-separation rule relaxed for this bundle: a skill MAY ship its own slash command when the command is the literal mechanism the skill orchestrates.
   - template = 5 lines (slug · source · kind · status · body) — minimal, easy to grow.
 
+### Decision 7 — `inbox` 폐기 → `INBOX` 도메인 흡수
+- **picked**: `skills/inbox/` + `hooks/inbox-watch/` 플러그인 제거, `inbox/<kind>/<slug>.md` 폴더 구조 폐기. cross-project handoff 는 대상 repo 루트의 `INBOX` 도메인 1쌍(`INBOX.md` 스냅샷 + `INBOX.log.md` append-only 로그)으로 이관 — `cd <target> && /domain set INBOX` → `/domain todo <handoff>`. Decision 3 을 대체.
+- **rationale**:
+  - handoff 저장소가 도메인 시스템과 별개 개념(중복)이었음 — `domain` 스킬이 이미 임의 UPPERCASE NAME 을 받으므로 `INBOX` 도메인이 신규 코드 0 으로 동일 기능 + 진행도 / lint / 체크박스까지 제공.
+  - `inbox-watch` 훅의 SessionStart open-entry 스냅샷은 domain 진행도(commons + `/check` 노출)로 대체 — 별도 watcher 불필요.
+  - 거버넌스 lockstep(@D s7): commons `@D g11` · `g36` · `g48` · `g54` · `g59` 를 INBOX 모델로 재작성, `pr-cycle` 의 g54 예외 판정을 `INBOX.md` / `INBOX.log.md` diff(`_is_inbox_handoff_only`)로, `cycle` 의 dup-race precheck slug 앵커를 `INBOX.log.md` 엔트리(`- [x]` 포함)로 전환.
+  - 기존 inbox 항목 5건(전부 resolved)은 `INBOX.log.md` 에 완료 이력으로 이관 후 `inbox/` 폴더 삭제.
+
 ### Decision 2 — `project.tape` as project SSOT
 - **picked**: project identity + governance live in `<root>/project.tape` (`.tape` v1.2 — `@V` spec · `@I` identity (kind/brief/parent/ssot) · `@D` governance (do/dont)). `CLAUDE.md → project.tape` symlink for harness auto-load. `hooks/project-tape/` re-injects the same file on PreCompact + PostCompact (auto-compaction survival).
 - **rationale**:

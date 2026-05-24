@@ -18,8 +18,8 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 /cloud <args>         hexa cloud — rented-GPU pod dispatch (runpod / vast.ai)
 
 # ── Cross-project ───────────────────────────────────────────
-/inbox new <k> <s>    file a cross-repo handoff (notes·patches·poc·rfc_drafts)
 /domain <task>        <NAME>.md snapshot + <NAME>.log.md checkbox-task log
+#                      cross-repo handoff → `cd <target> && /domain set INBOX`
 
 # ── Verify / help ───────────────────────────────────────────
 /verify <args>        hexa verify — tier rubric (🔵🟢🟡🟠🔴⚪)
@@ -53,6 +53,5 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 # sidecar-lint   git-commit lint (stale-history · hardpath · drift · CHANGELOG)
 # tape-lint      .tape edit lint (fields · length · lang · @I siblings)
 # limit-guard    session-limit checkpoint directive
-# inbox-watch    SessionStart inbox open-entry snapshot
 # sidecar-auto-sync  SessionStart `sidecar sync` (cache always fresh; no opt-out — uninstall to disable)
 ```

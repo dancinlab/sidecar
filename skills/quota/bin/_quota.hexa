@@ -9,7 +9,8 @@
 //   0.4.1 → per-verb commands/<verb>.md so the picker shows /quota:<verb> entries
 //   0.4.2 → /quota:status renders as markdown table (REVERTED in 0.4.3 — CC TUI doesn't render slash-command bash stdout as markdown)
 //   0.4.3 → /quota:status emits Key=Value lines; commands/status.md instructs the agent to render a markdown table in chat (ai-native, so CC actually renders it)
-//   0.5.0 → /quota status emits per-account `Row=` line (6 cols: nick · email · session-time · week-time · session-bar · week-bar); progress bar ▓▓▓░░ NN%; time-to-reset humanized; help text now points at `/quota:quota <verb>` unified form
+//   0.5.0 → /quota status emits per-account `Row=` line (6 cols); progress bar ▓▓▓░░ NN%; time-to-reset humanized; help text now points at `/quota:quota <verb>` unified form
+//   0.5.1 → Row column reorder — bar BEFORE time (nick · email · session-bar · session-time · week-bar · week-time); chat headers in Korean (닉네임 · 이메일 · 세션 사용량 · 세션 리밋 · 주간 사용량 · 주간 리밋)
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -497,10 +498,10 @@ fn _join(lines: array) -> string {
 }
 
 // Per-account `Row=` line emitter — 6 pipe-separated cells:
-//   nick | email | session-time-left | week-time-left | session-bar | week-bar
+//   nick | email | session-bar | session-time-left | week-bar | week-time-left
 // commands/status.md reads each `Row=...` line and renders a markdown table
-// with one row per account. Empty nick is emitted as `—` so the col always has
-// content. Bar = ▓▓▓░░ NN% (5-slot, 20% per slot).
+// with one row per account, headers in Korean. Empty nick is emitted as `—` so
+// the col always has content. Bar = ▓▓▓░░ NN% (5-slot, 20% per slot).
 //
 // `/quota status` emits one Row (the live ~/.claude.json account). `/quota list`
 // (see _registry_text) emits one Row per registered account.
@@ -531,7 +532,7 @@ fn _status_lines() -> array {
     let t5 = _fmt_remaining(lim["five_hour"])
     let t7 = _fmt_remaining(lim["seven_day"])
     let nick_cell = if len(nick) > 0 { nick } else { "—" }
-    lines.push("Row=" + nick_cell + "|" + email + "|" + t5 + "|" + t7 + "|" + _bar(u5) + "|" + _bar(u7))
+    lines.push("Row=" + nick_cell + "|" + email + "|" + _bar(u5) + "|" + t5 + "|" + _bar(u7) + "|" + t7)
     lines.push("AgentSDKCredit=" + AGENTSDK_STUB)
     let reg = _registry_load(_registry_path())
     lines.push("Registry=" + str(len(reg["accounts"])) + " account(s)")

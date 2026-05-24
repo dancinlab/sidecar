@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — ship 0.3.1 · research 0.2.4 · imagine 0.2.3 · paper 0.5.3: command `$CLAUDE_PLUGIN_ROOT` 빈값 fallback [약점분석 #7 · MED]
+
+- **5개 command 에 `$CLAUDE_PLUGIN_ROOT` 빈값 fallback 추가** — 약점 분석에서, `ship`·`research`(arxiv·yt)·`imagine`·`paper` command 가 `$CLAUDE_PLUGIN_ROOT` 를 직접 참조해서, 빈값이면 `/bin/_X.hexa`(빈 경로 prefix)로 깨지던 약점 발견 — `quota`/`domain` 만 fallback 보유했음(이번 세션 `/quota` 초반에 실제로 `$CLAUDE_PLUGIN_ROOT` 빈값→fallback 발동 사례 있었음). 각 command 에 quota/domain 의 `ls -1 … | sort -V | tail -1` 캐시 fallback 패턴을 inline `;`-연결로 추가 — 빈값이면 `$HOME/.claude/plugins/cache/sidecar/<plugin>` 의 semver 최신 버전으로 해석. `imagine`/`paper` 는 `--root` 인자도 함께 복구. Smoke: 빈 ROOT → ship 은 캐시 최신 `_ship.hexa`, imagine 은 H+R(--root) 둘 다 정확 해석. lockstep(@D ship · g22): ship 0.3.0→0.3.1 · research 0.2.3→0.2.4 · imagine 0.2.2→0.2.3 · paper 0.5.2→0.5.3.
+
 ## 2026-05-25 — prefs 0.3.3: prefs.json 필드 타입 게이트 [약점분석 #9 · MED]
 
 - **prefs 0.3.3 — `prefs.json` 각 필드 읽기에 타입 게이트** — 약점 분석에서, `has_key(m,"code")` 후 타입 검증 없이 `code = m["code"]` 해서, `prefs.json` 에 비-string 값(예: `{"code": 123}`)이 들어오면 이후 string 연결에서 깨지던 약점 발견. 각 분기에 `&& type_of(m[k]) == "string"` 추가 — 비-string 이면 기본값 유지. Smoke: `{"code":123,...}` → 크래시 없이 code=기본값(english) 으로 정상 inject. lockstep(@D ship · g22): plugin.json + marketplace 0.3.2 → 0.3.3.

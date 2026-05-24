@@ -4,4 +4,4 @@ argument-hint: "<prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | l
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_imagine.hexa" --root "$CLAUDE_PLUGIN_ROOT" $ARGUMENTS`
+!`R="$CLAUDE_PLUGIN_ROOT"; H="$R/bin/_imagine.hexa"; [ -f "$H" ] || { V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/imagine" 2>/dev/null | sort -V | tail -1)"; [ -n "$V" ] && { R="$HOME/.claude/plugins/cache/sidecar/imagine/$V"; H="$R/bin/_imagine.hexa"; }; }; hexa run "$H" --root "$R" $ARGUMENTS`

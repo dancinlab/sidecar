@@ -4,4 +4,4 @@ argument-hint: "<query | arxiv-id> [--n N]"
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_arxiv.hexa" $ARGUMENTS`
+!`H="$CLAUDE_PLUGIN_ROOT/bin/_arxiv.hexa"; [ -f "$H" ] || { V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/research" 2>/dev/null | sort -V | tail -1)"; [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/research/$V/bin/_arxiv.hexa"; }; hexa run "$H" $ARGUMENTS`

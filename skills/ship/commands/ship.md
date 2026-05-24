@@ -4,4 +4,4 @@ argument-hint: "-m \"<commit message>\" <path> [<path>...]"
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_ship.hexa" $ARGUMENTS`
+!`H="$CLAUDE_PLUGIN_ROOT/bin/_ship.hexa"; [ -f "$H" ] || { V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/ship" 2>/dev/null | sort -V | tail -1)"; [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/ship/$V/bin/_ship.hexa"; }; hexa run "$H" $ARGUMENTS`

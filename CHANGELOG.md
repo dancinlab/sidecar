@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — sign-guard 0.1.4 · sidecar(command) 0.1.1: 사인 토큰 TTL 15분 → 5분 축소
+
+- **sign-guard 0.1.4 · sidecar 0.1.1 — 유저 사인 토큰 유효기간 900s(15분) → 300s(5분)** — 유저 요청. 거버넌스 SSOT(commons.tape·project.tape) 편집을 여는 사인 토큰의 유효창을 좁혀, 토큰이 떠 있는 시간을 줄임(공유 워킹트리 등에서 잊고 방치되는 창 최소화).
+  - **enforcement(실제 창)**: `_sign_guard.hexa` 의 `TTL` 상수(= `_signed()` 의 `age <= TTL`)를 300s 로. 이게 편집 허용/거부를 가르는 단일 값.
+  - **lockstep 문구**: `bin/sidecar` 의 `SIGN_TTL`(= `sign` 목록의 잔여시간 표시 + mint 확인 메시지)도 300s. deny 메시지 2개(`_deny_for`·`_deny_mint`) + 두 plugin.json + marketplace 설명 2건 + sidecar.md 의 "15 min/15분" 문구를 전부 "5 min" 으로 동기.
+  - **반영 시점**: enforcement 는 `sidecar sync` + `/reload-plugins`(또는 재시작) 후 즉시 300s. 라이브 `sidecar` CLI 의 표시 문구는 `~/.hx/packages/sidecar`(복사본)라 `hx install sidecar` 재설치 때 반영(표시 전용 · enforcement 와 무관).
+- Smoke: `bin/sidecar` `sh -n` OK · hexa 파싱 OK · deny 메시지 "valid for 5 minutes" / "Valid 5 min" 확인. lockstep(@D ship · g22): sign-guard 0.1.3 → 0.1.4 · sidecar(command) 0.1.0 → 0.1.1 (`bin/sidecar` 무버전 CLI).
+
 ## 2026-05-25 — sign-guard 0.1.3: 보안 모델 설명 정정 — 대화형 `!` 뱅은 훅 미경유(유저 민팅 정상 경로) [문서 정확성]
 
 - **sign-guard 0.1.3 — 0.1.2 의 "모든 표면이 훅 경유" 주장 실측 정정** — 0.1.2 설명(`_sign_guard.hexa` 주석 · plugin.json · marketplace.json)이 "Claude Code 의 모든 실행 표면(Bash 도구 · 슬래시 `!` · 대화형 `!` 뱅)이 전부 Bash 도구 경유라 훅에 걸리고, out-of-band 실제 터미널에서만 민팅 가능"이라 적었으나 — 실측 결과 **유저가 TUI 프롬프트에 직접 치는 대화형 `!` 뱅은 훅을 경유하지 않고 그냥 민팅됨**(`! sidecar sign project` → `~/.sidecar/signs/project.sign` 신선 토큰 생성 확인). 게이트는 **여전히 안전** — 근거가 "`!` 가 차단돼서"가 아니라 **"에이전트는 `!` 뱅을 발화할 수 없어서"**(유저 전용 입력)로 정정될 뿐. 에이전트의 유일한 채널인 tool 콜(Bash·Write/Edit)은 전부 이 훅에 걸려 deny 되므로 self-mint 불가는 그대로 성립.

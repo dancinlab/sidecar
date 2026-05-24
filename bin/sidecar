@@ -4,7 +4,7 @@
 # usage:
 #   sidecar init        Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
 #   sidecar sync        Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
-#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated SSOT file (commons · project) for 15 min.
+#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated SSOT file (commons · project) for 5 min.
 #   sidecar --help      Show this help.
 
 set -eu
@@ -18,7 +18,7 @@ show_help() {
 # file unless a token < SIGN_TTL seconds old exists. Keep SIGN_TTL in lockstep
 # with `TTL` in hooks/sign-guard/bin/_sign_guard.hexa.
 SIGN_DIR="$HOME/.sidecar/signs"
-SIGN_TTL=900
+SIGN_TTL=300
 
 # Absolute path of the sidecar repo root (this script lives in <root>/bin/sidecar,
 # follow symlinks so it works when `sidecar` is symlinked onto PATH).
@@ -138,7 +138,7 @@ TAPE
     # gated governance SSOT file (commons.tape · project.tape) unless a fresh
     # token exists. This mints / lists / clears those tokens.
     #
-    #   sidecar sign <key>          mint a 15-min token for <key>  (commons · project)
+    #   sidecar sign <key>          mint a 5-min token for <key>  (commons · project)
     #   sidecar sign  | --list      show active tokens + remaining validity
     #   sidecar sign clear [<key>]  remove one / all tokens
     SUB="${1:-}"
@@ -216,7 +216,7 @@ TAPE
         fi
         mkdir -p "$SIGN_DIR"
         date +%s > "$SIGN_DIR/$KEY.sign"
-        echo "sidecar sign: ✅ signed '$KEY' — the agent may edit the file gated under '$KEY' for the next 15 minutes."
+        echo "sidecar sign: ✅ signed '$KEY' — the agent may edit the file gated under '$KEY' for the next 5 minutes."
         echo "  (sign-guard will allow it until the token expires; clear early with: sidecar sign clear $KEY)"
         ;;
     esac

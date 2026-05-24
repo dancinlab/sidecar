@@ -31,7 +31,7 @@
 //
 // To gate another file: add one `["key", "/suffix"]` row to GATED and reship.
 
-let TTL = 900   // s — sign-off window (keep in lockstep with `bin/sidecar` sign)
+let TTL = 300   // s — sign-off window (keep in lockstep with `bin/sidecar` sign)
 
 // sign-gated targets — { key, path-suffix }. Grows as more SSOT files are added.
 fn _gated() -> array {
@@ -126,7 +126,7 @@ fn _deny_for(target: string, key: string) {
         + "  BLOCKED — this file needs the USER's explicit sign-off before any edit.\n"
         + "  Ask the USER to run  `! sidecar sign " + key + "`  (the TUI `!` bang mints — only the agent's OWN run is denied), THEN retry.\n"
         + "  Do NOT run `sidecar sign` yourself — the sign must come FROM the user; that is the whole point of this gate.\n"
-        + "  A sign-off is valid for 15 minutes. NO env-var / flag override by design."
+        + "  A sign-off is valid for 5 minutes. NO env-var / flag override by design."
     _deny(reason)
 }
 
@@ -173,7 +173,7 @@ fn _deny_mint() {
     let reason = "sign-guard: minting a governance sign-off token is a USER-ONLY action.\n"
         + "  BLOCKED — the agent must NOT run `sidecar sign <key>` (self-mint defeats the gate; project.tape @D s13).\n"
         + "  Ask the USER to run  `! sidecar sign <key>`  (the TUI `!` bang mints — only the agent's OWN run is denied).\n"
-        + "  Keys: `commons` (commons.tape) · `project` (project.tape). Valid 15 min, then retry your edit.\n"
+        + "  Keys: `commons` (commons.tape) · `project` (project.tape). Valid 5 min, then retry your edit.\n"
         + "  Allowed for you: `sidecar sign` (list) · `sidecar sign clear [<key>]`. NO override by design."
     _deny(reason)
 }

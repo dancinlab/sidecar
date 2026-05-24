@@ -96,6 +96,25 @@ fn _write_json(path: string, value: map) {
     }
 }
 
+// active enable-profile name — ~/.sidecar/profile (one word), else the
+// profiles.json "default" (full). Default `full` = enable everything = the
+// pre-profiles behavior, so existing installs are unaffected.
+fn _read_active_profile(home: string, def: string) -> string {
+    let raw = _trim(_read_safe(home + "/.sidecar/profile"))
+    if raw == "" { return def }
+    return raw
+}
+
+fn _arr_has(arr: any, v: string) -> bool {
+    if type_of(arr) != "array" { return false }
+    let mut i = 0
+    while i < len(arr) {
+        if to_string(arr[i]) == v { return true }
+        i = i + 1
+    }
+    return false
+}
+
 fn main() {
     let home = env_var("HOME")
     if home == "" {
@@ -157,6 +176,25 @@ fn main() {
     let plugins = manifest["plugins"]
     let now = _now()
 
+    // ── multi-user enable profiles (.claude-plugin/profiles.json) ────
+    // A plugin is enabled iff its tier is in the active profile's tier list,
+    // unless ~/.sidecar/plugin-overrides.json names it explicitly (per-plugin
+    // wins). Filtering applies ONLY for a non-`full` profile with a readable
+    // config — `full` (the default) and any missing/broken config fall straight
+    // back to enable-everything, so this is a no-op for existing installs and
+    // can never silently disable the whole roster. This is plugin enable/disable
+    // (Claude Code's own mechanism), NOT an in-guard opt-out — project.tape @D
+    // s11 forbids the latter; a disabled plugin simply isn't loaded.
+    let prof_cfg = _parse_or(mp + "/.claude-plugin/profiles.json", "{}")
+    let prof_def = if has_key(prof_cfg, "default") { to_string(prof_cfg["default"]) } else { "full" }
+    let active_profile = _read_active_profile(home, prof_def)
+    let prof_map = if has_key(prof_cfg, "profiles") { prof_cfg["profiles"] } else { json_parse("{}") }
+    let tier_map = if has_key(prof_cfg, "tiers") { prof_cfg["tiers"] } else { json_parse("{}") }
+    let active_tiers = if has_key(prof_map, active_profile) { prof_map[active_profile] } else { json_parse("[]") }
+    let prof_ok = has_key(prof_cfg, "profiles") && has_key(prof_cfg, "tiers") && len(active_tiers) > 0
+    let filtering = prof_ok && active_profile != "full"
+    let overrides = _parse_or(home + "/.sidecar/plugin-overrides.json", "{}")
+
     // ── 2. register the marketplace in known_marketplaces.json ───────
     let known = _parse_or(known_path, "{}")
     let src = json_parse("{}")
@@ -178,6 +216,7 @@ fn main() {
 
     let subs = ["hooks", "skills", "commands", "mcps"]
     let mut n = 0
+    let mut ndis = 0
     let mut i = 0
     while i < len(plugins) {
         let p = plugins[i]
@@ -222,8 +261,18 @@ fn main() {
         entry["gitCommitSha"] = sha
         installed["plugins"][key] = [entry]
 
-        // the step that fixes "commands don't show up"
-        settings["enabledPlugins"][key] = true
+        // enable per the active profile (the step that also fixes "commands
+        // don't show up"). Override wins; else tier∈active_tiers when filtering;
+        // else true (full / legacy → enable everything).
+        let mut en = true
+        if has_key(overrides, name) {
+            en = overrides[name] == true
+        } else if filtering {
+            let tier = if has_key(tier_map, name) { to_string(tier_map[name]) } else { "personal" }
+            en = _arr_has(active_tiers, tier)
+        }
+        settings["enabledPlugins"][key] = en
+        if !en { ndis = ndis + 1 }
 
         n = n + 1
         i = i + 1
@@ -232,7 +281,11 @@ fn main() {
     _write_json(installed_path, installed)
     _write_json(settings_path, settings)
 
+    let en_n = n - ndis
+    let prof_note = if filtering { "  profile '" + active_profile + "' · " + to_string(en_n) + " enabled · " + to_string(ndis) + " disabled" }
+        else { "  profile '" + active_profile + "' · all " + to_string(n) + " enabled" }
     println("sidecar install: " + to_string(n)
-        + " plugin(s) cached · installed · enabled  (HEAD " + shortsha + ")")
+        + " plugin(s) cached · installed  (HEAD " + shortsha + ")")
+    println(prof_note)
     println("  → run /reload-plugins in Claude Code (or restart) to load them now.")
 }

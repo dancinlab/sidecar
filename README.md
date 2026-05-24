@@ -16,22 +16,21 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T18:37Z · feat(quota 0.10.0): 병렬 갱신 + fast-fail — all 32초→2초
+2026-05-24T19:02Z · feat(install): 다수 사용자용 enable 프로파일 — minimal·hexa·full (PR1 기반)
 
-#18 병렬 레이어 (0.9.0 백그라운드 SWR 위에 스택). _parallel_refresh:
-계정 셋을 동시 갱신 — token-prep은 in-process 순차(토큰 갱신 필요할
-때만 느림), usage GET은 한 셸 명령에 전부 백그라운드(&)+wait로 동시
-발사 → 지연이 직렬 합이 아니라 ~max(1개). all(포그라운드 '전부 갱신')
-과 백그라운드 SWR 사이클이 둘 다 사용.
+sidecar를 일반 사용자가 쓸 수 있게, 플러그인을 tier로 분류하고 프로파일로
+on/off. .claude-plugin/profiles.json = 분류 SSOT (core=범용 안전/QoL/워크플로
+25 · hexa=hexa CLI/.hexa·.tape 의존 13 · personal=dancinlab 거버넌스/인프라/
+스타일 17). install.hexa가 ~/.sidecar/profile(기본 full) + plugin-overrides.json을
+읽어 플러그인별 enable 결정: override 우선 → tier∈active_tiers → 아니면 true.
 
-추가로 _refresh_access_token fast-fail(--retry 0 --max-time 8): 죽은
-refresh 토큰은 invalid_grant(비-일시적)이라 재시도가 무의미한데 기존
---retry 2 --retry-delay 5가 죽은 계정당 ~10초를 먹어 all을 지배했음.
-이제 ~0.3초.
+핵심 안전장치: 비-full 프로파일 + 읽기가능 설정일 때만 필터. full(기본)·설정
+누락·깨짐은 전부 enable-everything으로 fallback → 기존 설치 무변화, 전체 로스터를
+조용히 disable하는 일 절대 없음. 이건 플러그인 enable/disable(CC 네이티브)이지
+가드 안 env opt-out이 아님 — s11 안 건드림.
 
-실측: all 32초→1.9초 · 죽은계정 10.4초→0.3초 · 백그라운드 사이클
-0.095초(쿨다운+staleness 게이트로 할 일 없으면 즉시 종료). 계정별
-레이트리밋 독립이라 동시성은 공유 429 예산 안 씀.
+검증: hexa parse 통과 · 결정 로직 하니스 5케이스 통과(minimal=core만·hexa·full
+전체·override 우선·미분류=personal 제외). CLI verbs(profile·enable·disable)는 PR2.
 <!-- /LATEST-SHIP -->
 
 ## Install

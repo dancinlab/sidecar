@@ -15,7 +15,11 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 
 ## Install
 
-```
+```bash
+# 1. Install hexa-lang (gives you `hexa` + `hx` package manager)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/dancinlab/hexa-lang/main/install.sh)"
+
+# 2. Install sidecar
 hx install sidecar
 ```
 

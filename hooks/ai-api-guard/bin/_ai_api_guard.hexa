@@ -111,6 +111,26 @@ fn _has_inline_flag(cmd: string) -> bool {
     return false
 }
 
+// collapse whitespace + line-continuations (\n \r \t \) to single spaces so a
+// split import (e.g. `import\` <newline> `openai`) still matches. Static-only —
+// dynamic imports (`exec(x+' openai')`, base64) are NOT detectable, out of scope.
+fn _norm(s: string) -> string {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut prev_sp = false
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\n" || c == "\r" || c == "\t" || c == "\\" {
+            if !prev_sp { out.push(" "); prev_sp = true }
+        } else {
+            out.push(c); prev_sp = false
+        }
+        i = i + 1
+    }
+    return out.join("")
+}
+
 fn _has_ai_sdk_import(cmd: string) -> bool {
     if cmd.contains("import openai") { return true }
     if cmd.contains("from openai") { return true }
@@ -149,15 +169,16 @@ fn main() {
     let toks = _tokens(cmd)
     if len(toks) < 1 { _allow() }
     let first = toks[0]
+    let cmd_norm = _norm(cmd)   // line-continuation / whitespace-split evasion
 
     // (1) HTTP CLI to AI hostname
-    if _is_http_cli(first) && _has_ai_hostname(cmd) {
+    if _is_http_cli(first) && _has_ai_hostname(cmd_norm) {
         let reason = "ai-api-guard (commons @D g50): `" + first + " … <AI hostname>` is a raw HTTP call to an AI provider — refused.\n  Use the sidecar CLI wrapper instead:\n    image generation → `/imagine <prompt-file> <out.png>` (g44 pinned gpt-image-2)\n    arxiv / YouTube → `/research:arxiv` / `/research:yt` (g43)\n    text/correctness → `hexa verify` (g5)\n  Raw API/SDK is allowed only when no wrapper exists. No opt-out by design."
         _deny(reason)
     }
 
     // (2) inline-runtime AI-SDK probe
-    if _is_inline_runtime(first) && _has_inline_flag(cmd) && _has_ai_sdk_import(cmd) {
+    if _is_inline_runtime(first) && _has_inline_flag(cmd_norm) && _has_ai_sdk_import(cmd_norm) {
         let reason = "ai-api-guard (commons @D g50): inline `" + first + " -c/-e '… import <AI SDK> …'` is a raw AI-SDK probe — refused.\n  Use the sidecar CLI wrapper instead (/imagine · /research · /verify · …). Raw SDK is allowed only when no wrapper exists, and only when committed to a code file (no inline `-c`/`-e`). No opt-out by design."
         _deny(reason)
     }

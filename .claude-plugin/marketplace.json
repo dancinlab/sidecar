@@ -95,8 +95,8 @@
     {
       "name": "ai-api-guard",
       "source": "./hooks/ai-api-guard",
-      "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` · `api.anthropic.com` · `fal.run` · `api.replicate.com` · `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. — commons @D g50 enforcement. General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design.",
-      "version": "0.1.2"
+      "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` · `api.anthropic.com` · `fal.run` · `api.replicate.com` · `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. — commons @D g50 enforcement. Whitespace/line-continuation is normalized before matching (0.1.3) so multi-space / split forms still match; dynamic imports (`exec(...)`, base64) remain out of scope (static scan limit). General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design.",
+      "version": "0.1.3"
     },
     {
       "name": "verify-guard",

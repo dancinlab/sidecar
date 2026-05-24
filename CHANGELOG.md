@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — ai-api-guard 0.1.3: 매칭 전 공백/줄연결 normalize [약점분석 #10 · MED]
+
+- **ai-api-guard 0.1.3 — `_norm` 으로 매칭 전 공백류 collapse** — 약점 분석에서, AI-SDK import / hostname 매칭이 정확한 단일 공백 substring(`import openai`)이라 다중 공백·탭·줄연결 변형을 놓칠 수 있던 약점. 신규 `_norm` 이 공백/`\n`/`\r`/`\t`/`\` 를 단일 공백으로 collapse 후 매칭 — `import  openai`(다중공백) 등 흡수. **한계 명시**: 따옴표 안 line-continuation 은 실제로 유효 import 가 아니라 애초에 안 돌아가고, dynamic import(`exec(x+' openai')`·base64)는 정적 substring 스캔으로 탐지 불가 — 가드는 흔한 형태를 좁힐 뿐. Smoke: 정석 `import openai` deny(무회귀) · `python script.py` allow(오탐0). lockstep(@D ship · g22): plugin.json + marketplace 0.1.2 → 0.1.3.
+
 ## 2026-05-25 — pool-route 0.6.3: 따옴표 감싼 heavy 서브버브(`hexa 'kick'`) 분류 우회 차단 [약점분석 #11 · MED]
 
 - **pool-route 0.6.3 — 분류 토큰 따옴표 strip 으로 quoted heavy verb 우회 차단** — 약점 분석에서, heavy classifier 의 adjacency(`_any_adjacent`) + pair-substring(`_any_pair_substring`)이 `hexa 'kick'` 처럼 따옴표 감싼 서브버브를 못 잡아 pool 라우팅을 우회(Mac 로컬 실행 = kick-storm 부하 위험)하던 약점 발견(`_any_word`/heavy_words 는 `cmd.contains` 라 이미 quote 생존). 신규 `_strip_quotes` 로 **분류용** 토큰만 따옴표 제거 — ssh 재작성은 원본 cmd 유지(따옴표 보존). heavy + macos 분류 모두 quote-robust. Smoke: `hexa 'kick' --seed x` → heavy 분류 → ssh updatedInput 재작성(+permissionDecision allow) · `ls -la` → allow(경량, 무재작성). lockstep(@D ship · g22): plugin.json + marketplace 0.6.2 → 0.6.3.

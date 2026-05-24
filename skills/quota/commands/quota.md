@@ -1,5 +1,5 @@
 ---
-description: /quota — Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames. Bare form → status (6-col row). Verbs — status · list · add [<nick>] · nick <ref> [<nick>] · switch <ref> · remove <ref> · refresh [<ref>] · help. <ref> = nickname · email · numeric index. Live fetch via OAuth usage endpoint with 45s per-account cache; labelled-stale fallback (honest, never faked). Per-account OAuth blob in macOS keychain svc "sidecar-quota" / linux $HOME/.sidecar/quota/creds/<email>.json (0600). own-accounts-serial only. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.
+description: /quota — Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames. Bare form → status (6-col 한글 헤더 표). Verbs — status · list · add [<nick>] · nick <ref> [<nick>] · switch <ref> · remove <ref> · refresh [<ref>] · help. <ref> = nickname · email · numeric index. Live fetch via OAuth usage endpoint with 45s per-account cache; labelled-stale fallback (honest, never faked). Per-account OAuth blob in macOS keychain svc "sidecar-quota" / linux $HOME/.sidecar/quota/creds/<email>.json (0600). own-accounts-serial only. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.
 argument-hint: "[status | list | add [<nick>] | nick <ref> [<nick>] | switch <ref> | remove <ref> | refresh [<ref>] | help]"
 allowed-tools: Bash
 ---
@@ -16,28 +16,28 @@ fi
 hexa run "$H" $ARGUMENTS
 ```
 
-Then render in chat based on verb:
+Then render based on verb:
 
 **If verb is `status` or empty (default)** — output has these lines (in order, when present):
-- `Row=<nick>|<email>|<session-time-left>|<week-time-left>|<session-bar>|<week-bar>` — 6 pipe-separated cells. `<nick>` is `—` when unset. Bars are `▓▓▓░░ NN%`.
+- `Row=<nick>|<email>|<session-bar>|<session-time-left>|<week-bar>|<week-time-left>` — 6 pipe-separated cells.
 - `StaleCache=...` — optional callout above the table.
 - `AgentSDKCredit=...` — italic footer.
 - `Registry=N account(s)` — italic footer.
 - `Error=...` — error path; just report and stop.
 
-If `Error=`, report the error. Otherwise render this exact shape:
+If `Error=`, report the error. Otherwise render exactly this shape:
 
 ```
 > ⚠ <StaleCache value>   ← only if StaleCache= line was present
 
-| nick | email | session limit | week limit | session | week |
+| 닉네임 | 이메일 | 세션 사용량 | 세션 리밋 | 주간 사용량 | 주간 리밋 |
 |---|---|---|---|---|---|
-| <nick> | <email> | <session-time> | <week-time> | <session-bar> | <week-bar> |
+| <nick> | <email> | <session-bar> | <session-time-left> | <week-bar> | <week-time-left> |
 
-_Registry: N account(s) · `/quota:quota list`_
+_레지스트리: N개 계정 · `/quota:quota list`_
 _Agent SDK credit: <AgentSDKCredit value>_
 ```
 
-**For any other verb** (`list`, `add`, `nick`, `switch`, `remove`, `refresh`, `help`) — the binary's output is already human-readable. Show it verbatim in a fenced code block.
+**For any other verb** (`list`, `add`, `nick`, `switch`, `remove`, `refresh`, `help`) — output is already human-readable. Show verbatim in a fenced code block.
 
-Render exactly what the binary emitted. Never fake values. Add no extra prose unless the user clearly asked for analysis.
+Render exactly what the binary emitted. Never fake values. No extra prose unless the user asked for analysis.

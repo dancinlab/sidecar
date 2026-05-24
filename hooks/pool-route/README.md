@@ -39,6 +39,14 @@ Within the absolute-path exemption, a gated invocation demands a fresh **`local`
 
 The `!` bang mints from the TUI prompt (user-only — agents cannot self-mint, by sign-guard's tool-boundary enforcement). The token lasts **5 minutes** and writes `~/.sidecar/signs/local.sign`. Without a fresh token the hook emits `permissionDecision: deny` with the mint instruction inline. Mint once, fire many; the token covers every gated invocation in the window.
 
+### Hotfix 0.6.5 — false-positive + false-negative paths closed
+
+0.6.4 had two bugs that 0.6.5 patches together:
+
+**False-positive (bare reads gated).** `_local_heavy_interp` used `_has_word(cmd, "hexa")` to detect hexa invocations, but `_has_word` treats `-` as a word boundary — so `cat /Users/…/hexa-lang/foo.txt` matched (the `hexa` inside the path was scored as a verb). That made `cat`/`ls`/`grep` on the hexa-lang tree demand a sign token. 0.6.5 matches by **first-token basename** (`toks[0]` → `hexa`/`hexa.real`/`hexac`/`hexadrv`/`hxv2`/`python*`/`bash`/`sh`) — the first token is the invoked verb; matching there is sound. Bare reads on any path stay free.
+
+**False-negative (`hexa run`/`build` ran local instead of routing).** The 0.6.x heavy classifier listed `hexa kick/drill/loop/cc` but **not** `hexa run` or `hexa build` — yet those are exactly the verbs that hit the dispatch-cache → re-fork loop on every invocation (canonical mac fork-storm, load 130+ measured with multiple sessions). 0.6.5 adds `hexa run`/`hexa build` to the heavy pairs so they route through the pool by default. The sign gate above remains as the local-bound exemption's narrow guard.
+
 ## How it routes
 
 1. **Capability filter** — a macOS-only command (`xcodebuild`, `codesign`, `swift build`, `.dylib`, …) is restricted to `os: macos` hosts; a Linux-only command (`apt`, `dpkg`, `.deb`, …) to `os: linux`. No eligible host → runs local.

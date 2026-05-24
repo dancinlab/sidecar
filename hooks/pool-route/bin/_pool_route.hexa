@@ -25,6 +25,16 @@ fn _allow() {
     exit(0)
 }
 
+// `_deny(reason)` — block the Bash invocation entirely via the PreToolUse
+// permission-decision channel. Used when a command was classified heavy
+// (must go to the pool) but every routing path failed — running locally
+// would silently violate the "pool-only resources" contract.
+fn _deny(reason: string) {
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_str(reason) + "}}"
+    println(out)
+    exit(0)
+}
+
 // JSON-escape a string and wrap it in double quotes.
 fn _json_str(s: string) -> string {
     let n = len(s)
@@ -453,18 +463,10 @@ fn main() {
         if rr != "" { n = to_int(rr) }
     } catch e { n = 0 }
     if n < 0 { n = 0 }
-    let pick = elig[n % len(elig)]
+    let start_pick = elig[n % len(elig)]
     try { write_file(rr_path, to_string((n + 1) % 1000000)) } catch e { }
 
-    let host = h_name[pick]
-
-    // auto-sudo — a sudo:true host gets a root-needing command prefixed
-    let mut rcmd = cmd
-    let mut sudo_note = ""
-    if h_sudo[pick] && needs_sudo && !rcmd.starts_with("sudo ") {
-        rcmd = "sudo " + rcmd
-        sudo_note = ", sudo-prefixed"
-    }
+    // ── workdir + transport (host-independent — pull above the host loop) ─
 
     // resolve the remote workdir — `auto` mirrors the local cwd under $HOME
     let mut wd_remote = workdir
@@ -477,31 +479,11 @@ fn main() {
         } else if cwd.starts_with(home + "/") {
             wd_remote = "~/" + cwd.substring(len(home) + 1, len(cwd))
         } else {
-            _allow()        // cwd outside $HOME — cannot mirror, run local
+            _deny("pool-route: cwd outside $HOME cannot be mirrored to any pool host — heavy command refused (move into $HOME or rerun without the heavy-classifier trigger).")
         }
     }
-    if wd_remote == "" { _allow() }
+    if wd_remote == "" { _deny("pool-route: empty remote workdir — heavy command refused.") }
     let wd_sh = _cd_target(wd_remote)
-    // env passthrough — hexa-native compiled builds require HEXA_MODULE_LOADER
-    // (else `use` modules codegen as extern stubs and clang link fails) and
-    // HEXA_LANG (repo root for stdlib resolution). Both are workdir-relative,
-    // so we resolve via $PWD after the cd lands — independent of the local
-    // workdir path quoting. Applies only when rcmd invokes hexa (word match
-    // OR substring); other commands (make / cargo / ...) get bare passthrough.
-    //
-    // PATH prefix — ssh non-interactive shells (even via `bash -lc`) on
-    // macOS often inherit only `/usr/bin:/bin:/usr/sbin:/sbin` (path_helper
-    // baseline), so the `hexa` shim under `~/.hx/bin` is not found and the
-    // routed command dies with `bash: hexa: command not found`. Measured
-    // 2026-05-24 on mini (Mac) + ubu-2 (Linux) hosts after env-passthrough
-    // wiring landed but PATH was still bare. Every pool host ships `~/.hx`
-    // (`hx install` baseline) plus an optional `~/bin` for user shims, so a
-    // two-dir prepend covers the roster without per-host conditionals.
-    let mut hexa_env = ""
-    if _has_word(rcmd, "hexa") || rcmd.contains("hexa ") {
-        hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"$PWD\" && "
-    }
-    let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
 
     // transport — tailscale if a local daemon is up, else plain ssh
     let mut tx = "auto"
@@ -512,33 +494,91 @@ fn main() {
         }
     }
 
-    // No autosync. pool-route routes the command via ssh only — the
-    // project workdir is kept on pool hosts by the user. The former
-    // `rsync -az --force` of the entire cwd before every routed command
-    // produced a CPU storm (large trees x many heavy commands x sessions),
-    // so the autosync/rsync feature is removed. A preflight probe skips
-    // routing when the workdir is absent so a non-synced host never runs
-    // a routed command blind.
-    let mut new_cmd = ""
-    let mut note = ""
-    // preflight — never route to a host missing the workdir. rc != 0 is a
-    // missing workdir OR an ssh transport failure (host asleep / network
-    // blip): skip routing this once and run local rather than route blind.
-    let mut probe = ""
-    if tx == "tailscale" {
-        probe = "tailscale ssh " + _shq(host) + " " + _shq("test -d " + wd_sh)
-    } else {
-        probe = "ssh -o BatchMode=yes -o ConnectTimeout=6 " + _shq(host) + " " + _shq("test -d " + wd_sh)
+    // hexa subverb (kick/drill/loop/cc) gate — script-backed verbs need the
+    // hexa-lang repo + build/hexa_interp on the remote. Cmd-independent of
+    // the picked host, so we compute the subverb (if any) once.
+    let toks_pre = _tokens(cmd)
+    let mut hexa_subverb = ""
+    if len(toks_pre) >= 2 && toks_pre[0] == "hexa" {
+        let sv0 = toks_pre[1]
+        if sv0 == "kick" || sv0 == "drill" || sv0 == "loop" || sv0 == "cc" {
+            hexa_subverb = sv0
+        }
     }
-    let rc = _exec_rc(probe)
-    if rc != 0 { _allow() }
-    let sshc = "ssh"
-    if tx == "tailscale" { let sshc2 = "tailscale ssh"; new_cmd = sshc2 + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
-    else { new_cmd = sshc + " " + _shq(host) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
-    note = "pool-route: routed to " + host + ":" + wd_remote + " via " + tx + " (workdir is user-synced)"
 
-    note = note + " (" + why + sudo_note + "; " + to_string(len(h_name)) + "-host roster)."
-    // append to ~/.pool/route-log.jsonl — visible at next SessionStart
-    _log_route(host, cmd)
-    _emit(ti, new_cmd, note)
+    // ── iterate eligible hosts (round-robin start; wrap once) ────────────
+    //
+    // The user contract is "pool resources only" for heavy-classified cmds
+    // — never silently fall back to local. So probe each eligible host in
+    // turn; first one that passes (workdir present, hexa subverb works if
+    // applicable) gets the route. If ALL fail, emit a `_deny` with a
+    // per-host failure breakdown so the operator can fix the missing host.
+    let mut tried = []
+    let mut reasons = []
+    let mut routed = false
+    let mut li = 0
+    while li < len(elig) {
+        let pick = elig[(n + li) % len(elig)]
+        let host_i = h_name[pick]
+
+        // per-host rcmd (sudo prefix), hexa_env (HEXA_LANG choice), remote
+        let mut rcmd = cmd
+        let mut sudo_note = ""
+        if h_sudo[pick] && needs_sudo && !rcmd.starts_with("sudo ") {
+            rcmd = "sudo " + rcmd
+            sudo_note = ", sudo-prefixed"
+        }
+        let mut hexa_env = ""
+        if _has_word(rcmd, "hexa") || rcmd.contains("hexa ") {
+            let mut hexa_lang = "$PWD"
+            if hexa_subverb != "" { hexa_lang = "$HOME/core/hexa-lang" }
+            hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"" + hexa_lang + "\" && "
+        }
+        let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
+
+        // preflight — workdir + hexa-subverb dispatchability check
+        let mut probe_inner = "test -d " + wd_sh
+        if hexa_subverb != "" {
+            probe_inner = probe_inner + " && PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_LANG=\"$HOME/core/hexa-lang\" hexa " + hexa_subverb + " --help >/dev/null 2>&1"
+        }
+        let mut probe = ""
+        if tx == "tailscale" {
+            probe = "tailscale ssh " + _shq(host_i) + " " + _shq(probe_inner)
+        } else {
+            probe = "ssh -o BatchMode=yes -o ConnectTimeout=6 " + _shq(host_i) + " " + _shq(probe_inner)
+        }
+        let rc = _exec_rc(probe)
+        if rc == 0 {
+            // SUCCESS — emit the rewrite and finish
+            let mut new_cmd = ""
+            let sshc = "ssh"
+            if tx == "tailscale" { let sshc2 = "tailscale ssh"; new_cmd = sshc2 + " " + _shq(host_i) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
+            else { new_cmd = sshc + " " + _shq(host_i) + " " + _shq(_login_wrap(remote)) + "  # " + MARK }
+            let mut note = "pool-route: routed to " + host_i + ":" + wd_remote + " via " + tx + " (workdir is user-synced)"
+            note = note + " (" + why + sudo_note + "; " + to_string(len(h_name)) + "-host roster)."
+            if li > 0 { note = note + " [skipped " + to_string(li) + " host(s) on preflight: " + tried.join(", ") + "]" }
+            _log_route(host_i, cmd)
+            _emit(ti, new_cmd, note)
+            routed = true
+        }
+        // record failure reason for the deny trailer
+        tried.push(host_i)
+        let mut why_fail = "preflight rc=" + to_string(rc) + " (workdir missing"
+        if hexa_subverb != "" { why_fail = why_fail + " or `hexa " + hexa_subverb + "` not dispatchable" }
+        why_fail = why_fail + ")"
+        reasons.push(host_i + ": " + why_fail)
+        li = li + 1
+    }
+    // exhausted — every eligible host failed preflight
+    if !routed {
+        let body = "pool-route: heavy command refused — no eligible pool host passed preflight.\n"
+                 + "  cmd     : " + cmd + "\n"
+                 + "  why     : " + why + " (heavy-classified, must use pool resources)\n"
+                 + "  tried   : " + tried.join(", ") + "\n"
+                 + "  failures:\n    " + reasons.join("\n    ") + "\n"
+                 + "  fix     : ensure each pool host has the hexa-lang repo at ~/core/hexa-lang "
+                 + "+ a built build/hexa_interp (`cd ~/core/hexa-lang && hexa cc --regen`); "
+                 + "for non-hexa commands, ensure the workdir (" + wd_remote + ") exists on at least one host."
+        _deny(body)
+    }
 }

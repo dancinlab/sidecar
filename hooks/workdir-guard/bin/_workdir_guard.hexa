@@ -1,0 +1,94 @@
+// _workdir_guard.hexa — SessionStart advisory for a SHARED git working tree.
+//
+// Fires once per session, and ONLY when the current working tree is shared
+// by >= 2 live `claude` agents — i.e. two or more claude processes whose cwd
+// resolves into the same `git rev-parse --show-toplevel`. A shared working
+// tree means a shared `.git/index` + `HEAD`, so a sibling agent can swap HEAD
+// out from under you, commingle your staged files into its commit, or leave
+// your push landing on a stale, far-behind branch. The advisory steers git
+// landings into an isolated worktree (independent index) before any of that.
+//
+// Detection is one shell round-trip (~0.1s): `lsof -c claude -d cwd` lists the
+// cwd of every claude process; an awk prefix-match counts those at/under this
+// tree's toplevel. Grouped by WORKING TREE (not repo) — agents in separate
+// linked worktrees have independent indexes (the fix), so they don't count,
+// and the moment you move into a worktree your own count drops to 1 and the
+// advisory self-extinguishes. Silent in solo sessions (count 1).
+//
+// Advisory-only — non-blocking additionalContext, never denies (per the
+// guards-narrow-scope policy). NO opt-out by design — no env var, no config,
+// no exception list. Sister/proactive complement of git-guard's reactive
+// stale-base push advisory.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// Value of the first `KEY=...` line in a "KEY=value\n" probe output.
+fn _line_val(out: string, key: string) -> string {
+    let lines = out.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let t = lines[i].trim()
+        if len(t) >= len(key) && t.substring(0, len(key)) == key {
+            return t.substring(len(key), len(t))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+fn main() {
+    let _drain = _read_stdin()   // consume the SessionStart payload; unused
+
+    // One round-trip: REPO=<toplevel> + COUNT=<# claude agents cwd'd in it>.
+    // claude PIDs come from `ps` (comm == "claude") — NOT `lsof -c claude`,
+    // whose command field shows the version string ("2.1.150"), not "claude".
+    // Those PIDs feed one `lsof -a -p <list> -d cwd` (`-a` ANDs the selectors;
+    // without it lsof ORs -p with -d cwd and lists every process's cwd). Each
+    // cwd is prefix-matched against the absolute toplevel (trailing "/" so a
+    // sibling dir like `<top>-other` can't false-match). Count includes self.
+    let probe = "me=$(git rev-parse --show-toplevel 2>/dev/null); [ -z \"$me\" ] && { printf 'COUNT=0\\n'; exit 0; }; pids=$(ps -A -o pid=,comm= | awk '$2 ~ /claude/ {printf \"%s%s\",sep,$1; sep=\",\"}'); [ -z \"$pids\" ] && { printf 'REPO=%s\\nCOUNT=0\\n' \"$me\"; exit 0; }; n=$(lsof -a -p \"$pids\" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p' | awk -v m=\"$me\" 'BEGIN{c=0} $0==m || index($0,m\"/\")==1 {c++} END{print c}'); printf 'REPO=%s\\nCOUNT=%s\\n' \"$me\" \"$n\""
+
+    let mut out = ""
+    try { out = to_string(exec(probe)) } catch e { _allow() }
+
+    let repo = _line_val(out, "REPO=")
+    let cnt_s = _line_val(out, "COUNT=")
+    if cnt_s == "" { _allow() }
+    let mut cnt = 0
+    try { cnt = to_int(cnt_s) } catch e { _allow() }
+    if cnt < 2 { _allow() }
+
+    let msg = "⚠ 공유 워킹트리 — 이 repo(" + repo + ")의 같은 working tree 를 지금 claude 에이전트 " + to_string(cnt) + "개가 동시에 쓰는 중 (= 공유 .git/index · HEAD). git 랜딩(stage/commit/push)은 격리 worktree 에서: `git worktree add -b <br> /tmp/<wt> origin/main` → 그 안에서 stage/commit/push → PR → `git worktree remove`. 다른 에이전트의 활성 브랜치는 reset/switch/delete 금지. (공유 index 면 내 staged 파일이 타 에이전트 커밋에 휩쓸리거나, HEAD swap 으로 push 가 stale 브랜치로 갈 수 있음 — git-guard stale-base 경고가 push 시점 backstop). worktree 로 옮기면 이 경고는 자동으로 사라짐."
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":" + _json_escape(msg) + "}}"
+    println(payload)
+    exit(0)
+}

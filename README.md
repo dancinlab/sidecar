@@ -16,7 +16,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T17:59Z · feat(git-guard 0.5.0): stale-base push 어드바이저리 — 공유 워킹트리 브랜치 swap 방어
+2026-05-24T18:18Z · feat(workdir-guard 0.1.0): 공유 워킹트리 SessionStart 어드바이저리 — git 랜딩 worktree 유도 (예방형 2겹)
 <!-- /LATEST-SHIP -->
 
 ## Install

@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — workdir-guard 0.1.0: 공유 워킹트리 SessionStart 어드바이저리 (예방형 2겹)
+
+- **workdir-guard 0.1.0 (신규 훅) — 세션 시작 시 "이 working tree 를 ≥2 claude 에이전트가 공유 중"이면 worktree 규율 1회 주입** — git-guard 0.5.0(반응형 · push 시점)의 예방형 짝. 공유 인덱스/HEAD 해저드(동시 에이전트가 내 commit↔push 사이 HEAD swap → stale 브랜치 push · commit commingling)를 *랜딩 전에* 회피하도록 세션 시작부터 멘탈모델을 잡아줌.
+  - **탐지(~0.1s · 1 라운드트립)**: `ps -A -o pid=,comm=` 로 claude PID 수집(comm == "claude" — `lsof -c claude` 는 lsof 의 command 필드가 버전문자열 `2.1.150` 이라 0개 매칭이라서 ps 가 정답) → `lsof -a -p <list> -d cwd`(`-a` 필수 · 빼면 `-p` 와 `-d cwd` 가 OR 로 합쳐져 전 프로세스 cwd 를 셈) 로 각 cwd 수집 → `git rev-parse --show-toplevel` 절대경로에 awk prefix-match(trailing `/` 로 형제 디렉터리 오탐 차단). count ≥ 2 면 SessionStart `additionalContext`(non-blocking).
+  - **working tree 기준 그룹핑**(repo 아님): 링크된 worktree 는 인덱스가 독립(= 해결책)이라 안 세고, **worktree 로 옮기면 내 count 가 1 로 떨어져 경고가 자동 소멸**. 솔로 세션(count 1) · 비-repo · lsof 부재 → 전부 무발화(fail-open). opt-out 없음(@D s11).
+- Smoke(3/3): sidecar(공유 claude 3개) → 어드바이저리 · fresh /tmp repo(claude 0개) → allow · /tmp 비-repo → allow. lockstep(@D ship · g22): plugin.json + marketplace 신규 0.1.0.
+
 ## 2026-05-25 — git-guard 0.5.0: stale-base push 어드바이저리 (공유 워킹트리 브랜치 swap 방어)
 
 - **git-guard 0.5.0 — non-force `git push` 에 stale-base 비차단 경고 추가** — 공유 워킹트리(한 repo · 동시 에이전트 다수)에서 sibling 에이전트가 내 commit↔push 사이에 HEAD 를 바꿔치기 → push 가 origin/main 보다 37커밋 뒤처진 stale 브랜치로 가고, 머지 시 그 사이 바뀐 파일을 옛 버전으로 silent-revert 할 뻔한 사고(데미우르고스 동시성 해저드) 방어. 기존 가드는 force-push 만 deny 해 이 "정상 형태" push 는 그냥 통과하던 구멍.

@@ -1,0 +1,9 @@
+{
+  "name": "workdir-guard",
+  "description": "SessionStart advisory that fires once per session, and only when the current git working tree is shared by >= 2 concurrent `claude` agents — detected in ~0.1s via `lsof -c claude -d cwd` + an awk prefix-match on `git rev-parse --show-toplevel`. A shared working tree means a shared `.git/index` + `HEAD`, so a sibling agent can swap HEAD out from under you, commingle your staged files, or leave your push on a stale branch. Injects a one-shot reminder to do git landings (stage/commit/push) in an isolated worktree and never reset/switch/delete another agent's active branch. Grouped by working tree, not repo — silent in solo sessions (count 1) and self-extinguishes once you move into an isolated worktree. Implemented in hexa-lang (`_workdir_guard.hexa`, via `hexa run`). Advisory-only, non-blocking. Proactive complement to git-guard's reactive stale-base push advisory. NO opt-out by design — no env var, no config file, no exception list.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "git", "worktree", "concurrency", "hexa"]
+}

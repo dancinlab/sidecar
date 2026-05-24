@@ -14,6 +14,12 @@
 //
 // Roster source of truth: the `pool` CLI's `~/.pool/pool.json`.
 // NO opt-out by design — no env var, no config file, no exception list.
+//
+// 0.6.1 — zero macOS offload (project.tape @D s12 / pool @D p3): macOS hosts
+// are excluded from the auto-dispatch candidate set entirely. macOS-capable
+// commands (swift build · xcodebuild) run local on the workstation Mac; only
+// Linux hosts receive routed work. Explicit `pool on <macos-host>` is the
+// pool CLI, not this hook, so it is unaffected.
 
 let MARK = "__SIDECAR_POOL__"
 
@@ -370,10 +376,16 @@ fn main() {
                 if tgt == "" {
                     if has_key(h, "name") { if type_of(h["name"]) == "string" { tgt = h["name"] } }
                 }
-                if tgt != "" {
+                let mut pl = "linux"
+                if has_key(h, "os") { if type_of(h["os"]) == "string" { pl = h["os"] } }
+                // macOS hosts are NEVER auto-dispatch candidates (project.tape
+                // @D s12 / pool @D p3 — goal: zero macOS offload). The Mac is
+                // the workstation, not a pool worker; macOS-capable commands
+                // run local on it, never routed to a separate macOS box. An
+                // explicit `pool on <macos-host>` still works (that path is the
+                // pool CLI, not this auto-router).
+                if tgt != "" && pl != "macos" {
                     h_name.push(tgt)
-                    let mut pl = "linux"
-                    if has_key(h, "os") { if type_of(h["os"]) == "string" { pl = h["os"] } }
                     h_plat.push(pl)
                     let mut su = false
                     if has_key(h, "sudo") { if type_of(h["sudo"]) == "bool" { su = h["sudo"] } }

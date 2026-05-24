@@ -51,3 +51,7 @@
 @D s11 := "no opt-out / escape-hatch variables in guards or auto-hooks" :: governance [required active]
   do   = "guards + auto-hooks unconditional · gate only on real preconditions (binary · dirty-tree skip)"
   dont = "env var/config/exception that DISABLES a guard — gets auto-flipped to silence, defeats purpose"
+
+@D s12 := "pool never consumes macOS resources — goal: zero macOS offload" :: governance [required active]
+  do   = "auto-route heavy work to Linux pool hosts only · run macOS-capable cmds local on the workstation"
+  dont = "auto-route any command to a macOS pool host (mini) — macOS compute stays on the local Mac"

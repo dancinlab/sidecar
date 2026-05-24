@@ -97,11 +97,11 @@ TAPE
     # marketplace-clone branch-guard and the PR#9 force-reset itself) never
     # take effect on its own user base until they manually reinstall.
     #
-    # Skipped in three cases:
+    # Skipped only on real preconditions (no opt-out variable — project.tape
+    # @D s11: a disable switch gets auto-flipped to silence the behavior):
     #   - $ROOT is not a git clone (e.g. dev tree without origin)
     #   - the working tree has dirty changes (preserve the dev's edits)
-    #   - the user has set SIDECAR_SYNC_NO_SELF_UPDATE=1 (escape hatch)
-    if [ -d "$ROOT/.git" ] && [ -z "${SIDECAR_SYNC_NO_SELF_UPDATE-}" ]; then
+    if [ -d "$ROOT/.git" ]; then
       if [ -z "$(git -C "$ROOT" status --porcelain 2>/dev/null)" ]; then
         cur=$(git -C "$ROOT" branch --show-current 2>/dev/null || echo "")
         if [ "$cur" != "main" ] && [ -n "$cur" ]; then

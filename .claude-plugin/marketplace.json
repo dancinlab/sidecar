@@ -305,8 +305,8 @@
     {
       "name": "sidecar-auto-sync",
       "source": "./hooks/sidecar-auto-sync",
-      "description": "SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync.hexa`, invoked via `hexa run`). Closes the gap between an upstream `git push` on origin/main and the local plugin cache — no more manual `sidecar sync` between sessions. Silent on success; brief stderr advisory on failure. Skipped silently when the `sidecar` binary is not on PATH (fresh machine without `hx install sidecar` yet) OR `SIDECAR_AUTO_SYNC=0` (escape hatch). Adds ~1-2s to session startup (network pull + cache copy + installed_plugins.json patch). NO opt-out by design beyond the env var — the whole point is invisible freshness; uninstall the plugin for fully manual control.",
-      "version": "0.1.0"
+      "description": "SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync.hexa`, invoked via `hexa run`). Closes the gap between an upstream `git push` on origin/main and the local plugin cache — no more manual `sidecar sync` between sessions. Silent on success; brief stderr advisory on failure. Skipped silently only on a real precondition: the `sidecar` binary not on PATH (fresh machine without `hx install sidecar` yet). Adds ~1-2s to session startup (network pull + cache copy + installed_plugins.json patch). NO opt-out by design (project.tape @D s11) — no env var / config disable switch; uninstall the plugin for manual control.",
+      "version": "0.2.0"
     },
     {
       "name": "s9-guard",

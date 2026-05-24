@@ -118,19 +118,18 @@ fn _swap_ext_hexa(rel: string) -> string {
     return rel.substring(0, i) + ".hexa"
 }
 
-// Shared deny body. `channel` names the write path; UPPERCASE marks the
-// load-bearing points, and the message states plainly that the same logic
-// IS writable here — as `.hexa`.
+// Shared deny body. `channel` names the write path. The message leads with
+// the ACTION (re-issue as `.hexa`) so the reader reroutes instead of reading
+// "blocked" and punting; the refusal reason is demoted below the fix.
 fn _deny_for(root: string, target: string, channel: string) {
     let ext = _ext_of(target)
     let rel = _relpath(target, root)
     let proj = _basename(root)
     let rel_hexa = _swap_ext_hexa(rel)
-    let reason = "hexa-native: project `" + proj + "` is HEXA-NATIVE — `project.tape` marker at the project root.\n"
-        + "  BLOCKED: writing `" + rel + "` (." + ext + ") via " + channel + ".\n"
-        + "  THIS IS POSSIBLE — just author it in `.hexa`. Write the SAME logic as `" + rel_hexa + "` and it runs here; hexa is this project's native source language.\n"
-        + "  `.py` / `.sh` are supported as ai-native English in OTHER environments — this project intentionally takes `.hexa` ONLY.\n"
-        + "  NO env-var / flag override by design."
+    let reason = "hexa-native: re-issue this write as `" + rel_hexa + "` — same logic, just `.hexa`.\n"
+        + "  ✅ ACTION (do this NOW — do NOT punt): author `" + rel_hexa + "` with the identical content. hexa is project `" + proj + "`'s native source language and runs here exactly like a `." + ext + "` would elsewhere. This is a one-token fix (swap the extension), NOT a dead-end — do NOT fall back to writing a doc / runbook, and do NOT hand it back to the user.\n"
+        + "  WHY (a reroute, not a wall): `" + rel + "` (." + ext + ") was refused via " + channel + " only because the project root holds a `project.tape` marker. `.py` / `.sh` stay supported as ai-native English in OTHER projects; this one takes `.hexa` ONLY.\n"
+        + "  NO env-var / flag override — `.hexa` is the only path forward, so take it."
     _deny(reason)
 }
 

@@ -16,16 +16,11 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T13:54Z · docs: 명령 카탈로그 네임스페이스 정정 — plain → 실제 /plugin:command
+2026-05-24T16:06Z · fix(hexa-native 0.3.1): deny 메시지 action-first 재배치 — BLOCKED 먼저 읽고 punt하던 문제
 
-플러그인 슬래시 명령은 CC 에서 항상 /plugin:command 로만 호출됨이 TUI 실측 +
-웹(anthropics/claude-code Issue #15882) 으로 확정 — command==plugin 이어도 /gap:gap,
-순수 command 도 /step-by-step:step-by-step. 직전의 plain 화는 동작 안 하는 형을
-안내하던 오류라 되돌림. COMMANDS.md + README 카탈로그 전 명령 /plugin:command 재작성,
-research·quota·step-by-step prose 복원. built-in(/btw·/loop)은 plain 유지.
-동작·버전 변동 없음. 사용자 요청 + 실측 근거.
+거부 선언이 첫 줄이라 BLOCKED만 읽고 doc로 도망가던 문제. 행동지침(.hexa로 재발행)을 맨 위로 올리고 doc·유저로 punt 금지를 명시. deny 동작은 불변, 메시지 문구만 수정.
 
-Co-authored-by: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 <!-- /LATEST-SHIP -->
 
 ## Install

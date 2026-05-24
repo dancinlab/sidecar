@@ -1,0 +1,49 @@
+// _sidecar_auto_sync.hexa — SessionStart auto-`sidecar sync`.
+//
+// Closes the gap between an upstream `git push` on origin/main and the local
+// plugin cache. Without this hook the user has to remember to run
+// `sidecar sync` between sessions every time a PR lands; with this hook the
+// cache is always fresh on session start.
+//
+// Silent on success (no chat noise). On failure: brief stderr advisory only.
+// Always exits 0 — never blocks SessionStart on a sync failure.
+//
+// Skipped silently when:
+//   - `sidecar` binary not on PATH (fresh machine, `hx install sidecar` not run yet)
+//   - SIDECAR_AUTO_SYNC=0  (escape hatch for users who want manual control)
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _env(name: string) -> string {
+    let r = exec_with_status("printenv " + name)
+    if r[1] != 0 { return "" }
+    return _trim(to_string(r[0]))
+}
+
+fn main() {
+    if _env("SIDECAR_AUTO_SYNC") == "0" { exit(0) }
+    let bin = _trim(to_string(exec("command -v sidecar 2>/dev/null")))
+    if len(bin) == 0 { exit(0) }
+    let r = exec_with_status("sidecar sync 2>&1")
+    if r[1] != 0 {
+        eprintln("sidecar-auto-sync: sync failed (rc=" + to_string(r[1]) + ")")
+        let out = _trim(to_string(r[0]))
+        if len(out) > 0 { eprintln(out) }
+    }
+    exit(0)
+}

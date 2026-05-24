@@ -7,7 +7,8 @@
 //   0.3.0 → /quota add captures creds · /quota switch · /quota remove · /quota refresh
 //   0.4.0 → per-account nicknames (claude1 · claude2 · ...) — refs accept email|nick|index
 //   0.4.1 → per-verb commands/<verb>.md so the picker shows /quota:<verb> entries
-//   0.4.2 → /quota:status renders as markdown table; resets_at trimmed to `YYYY-MM-DD HH:MM UTC`
+//   0.4.2 → /quota:status renders as markdown table (REVERTED in 0.4.3 — CC TUI doesn't render slash-command bash stdout as markdown)
+//   0.4.3 → /quota:status emits Key=Value lines; commands/status.md instructs the agent to render a markdown table in chat (ai-native, so CC actually renders it)
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -412,9 +413,11 @@ fn _join(lines: array) -> string {
     return out
 }
 
-// Markdown-table renderer for /quota:status. Output renders as a real table
-// in the Claude Code chat (CC TUI parses bash stdout as markdown). Plain text
-// is still readable in terminal contexts — pipes + dashes line up.
+// Plain key=value emitter. The slash command file (commands/status.md) uses an
+// ai-native pattern: the agent reads this stdout and re-emits as a markdown
+// table in its chat response, which CC TUI then renders natively. Trying to
+// emit markdown HERE failed — CC TUI shows slash-command bash stdout as raw
+// monospace text, so `|` and `---` came through verbatim instead of rendering.
 fn _status_lines() -> array {
     let oa    = _read_oauth_account()
     let email = _g(oa, "emailAddress")
@@ -427,28 +430,21 @@ fn _status_lines() -> array {
             if len(nick) > 0 { who = nick + " (" + email + ")" }
         }
     }
-    let mut lines = []
+    let mut lines = [ "Account=" + who ]
+    if len(_g(oa, "organizationName")) > 0 { lines.push("Org=" + _g(oa, "organizationName")) }
     let lim = _fetch_limits()
-    // honest-stale banner ABOVE the table so it can't be missed
-    if _envelope_ok(lim) && type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
-        lines.push("⚠ cached " + str(lim["cached_age_s"]) + "s ago (live fetch failed: " + str(lim["fetch_error"]) + ")")
-        lines.push("")
-    }
-    lines.push("| Field | Value |")
-    lines.push("|---|---|")
-    lines.push("| Account | " + who + " |")
-    if len(_g(oa, "organizationName")) > 0 {
-        lines.push("| Org | " + _g(oa, "organizationName") + " |")
-    }
     if _envelope_ok(lim) {
-        lines.push("| 5h | " + _fmt_window(lim["five_hour"]) + " |")
-        lines.push("| 7d | " + _fmt_window(lim["seven_day"]) + " |")
+        if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
+            lines.push("StaleCache=cached " + str(lim["cached_age_s"]) + "s ago; live fetch failed: " + str(lim["fetch_error"]))
+        }
+        lines.push("5h=" + _fmt_window(lim["five_hour"]))
+        lines.push("7d=" + _fmt_window(lim["seven_day"]))
     } else {
-        lines.push("| Limits | (unavailable) " + str(lim["error"]) + " |")
+        lines.push("Limits=(unavailable) " + str(lim["error"]))
     }
-    lines.push("| Agent SDK credit | " + AGENTSDK_STUB + " |")
+    lines.push("AgentSDKCredit=" + AGENTSDK_STUB)
     let reg = _registry_load(_registry_path())
-    lines.push("| Registry | " + str(len(reg["accounts"])) + " account(s) · `/quota:list` |")
+    lines.push("Registry=" + str(len(reg["accounts"])) + " account(s)")
     return lines
 }
 

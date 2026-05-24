@@ -201,14 +201,6 @@ fn _env(name: string) -> string {
     return r[0].trim()
 }
 
-// load-aware escalation: when non-claude CPU usage exceeds threshold, treat as heavy
-// even if the classifier misses. Excludes `claude` PIDs per project.tape @D s9.
-fn _non_claude_load() -> int {
-    let r = exec_with_status("ps -Ao pcpu,comm | awk '$2 !~ /claude/ {s+=$1} END {print int(s)}'")
-    if r[1] != 0 { return 0 }
-    return to_int(r[0].trim())
-}
-
 // emit the updatedInput rewrite — rebuild tool_input with command swapped.
 fn _emit(ti: map, new_cmd: string, note: string) {
     let ks = keys(ti)
@@ -334,6 +326,18 @@ fn main() {
     if cmd.ends_with("&") { _allow() }
     if cmd.starts_with("ssh ") { _allow() }
 
+    // local-bound guard (pool-route 0.6.0): commands inherently tied to THIS
+    // host's filesystem / repo state must NEVER route — they break on a remote
+    // where the path / repo / binary doesn't exist. The recurring failure mode:
+    // `git push` / `hexa run /Users/.../x.hexa` / a `/Users/`-absolute smoke
+    // shipped to a Linux pool host where that path resolves to nothing.
+    //   - git / gh : operate on the local working tree + remotes (cwd repo)
+    //   - /Users/ or /home/ literal : host-specific absolute path
+    // These are read/version-control/local-fs ops, never the heavy compute the
+    // pool exists for, so an early _allow() is always correct.
+    if _has_word(cmd, "git") || _has_word(cmd, "gh") { _allow() }
+    if cmd.contains("/Users/") || cmd.contains("/home/") { _allow() }
+
     let home = _env("HOME")
 
     // roster — the `pool` CLI's single source of truth, ~/.pool/pool.json
@@ -399,20 +403,17 @@ fn main() {
     // installs that lack the tree never match (substring is empty).
     let mut heavy_find_subs = []
     if home != "" { heavy_find_subs.push("find " + home + "/core/anima") }
-    let mut heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
+    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
 
-    // load-aware escalation: promote a non-trivial cmd to heavy when non-claude
-    // CPU usage (per @D s9 — claude PIDs excluded) exceeds the threshold. The
-    // cmd-nontriviality AND-gate avoids penalising cheap `ls` / `cat` over ssh
-    // (routing latency would dominate). Threshold = 150 ≈ 1.5 cores of non-claude
-    // work — conservative so a single chatty terminal does not trip routing.
-    let load_threshold = 150
-    let cmd_nontrivial = len(cmd) > 20 || cmd.contains("|") || cmd.contains(">") || cmd.contains("&&")
-    let mut load_heavy = false
-    if !heavy && cmd_nontrivial {
-        if _non_claude_load() > load_threshold { load_heavy = true }
-    }
-    heavy = heavy || load_heavy
+    // NOTE (pool-route 0.6.0): the load-aware escalation gate (0.5.7 #96) was
+    // REMOVED. It promoted any non-trivial cmd to "heavy" when non-claude CPU
+    // summed > 150% — but on an 8-core Mac WindowServer + browser + build
+    // daemons routinely exceed 150%, so nearly every git / hexa-run / smoke got
+    // shipped to a Linux pool host and broke (Mac-local paths absent there).
+    // "system busy" ≠ "this command should move" — that conflation was the bug.
+    // Storm protection still holds: kick/drill/loop/cc + `find ~/core/anima` are
+    // in the EXPLICIT classifier above, so the real meltdown patterns route on
+    // their own merits, not on a noisy load signal.
 
     // root-needing commands — always routable, and `sudo`-prefixed on a
     // host tagged sudo:true.
@@ -432,7 +433,6 @@ fn main() {
     let is_linux = _any_word(cmd, linux_words) || _any_contains(cmd, linux_subs)
 
     let mut why = "load-balanced"
-    if load_heavy { why = "load-escalated (non-claude load > " + to_string(load_threshold) + "%)" }
     let mut elig = []
     let mut ei = 0
     if is_macos {

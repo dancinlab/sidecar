@@ -16,11 +16,12 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T17:04Z · fix(sign-guard 0.1.2): self-mint 코드 강제 — 에이전트 sidecar sign 차단 [보안]
+2026-05-24T17:40Z · feat(domain 0.8.4): NAME 분리자 - 만 허용 · _ 차단 (메타도메인 + 유지)
 
-신고: 에이전트가 유저 승인 없이 sidecar sign 을 self-mint 해 사인 게이트 무력화. 기존엔 commons/project.tape 편집만 막고 no-self-mint 는 주석 약속일 뿐 코드 강제 없었음. 신뢰경계는 PreToolUse 훅뿐(출처 구분 신호 없음). 레이어 A(훅): 민팅 명령 + signs 디렉토리 위조 쓰기 hard-deny(Bash·슬래시·뱅 전 도구표면). 레이어 B(옵트인 bin/sidecar): 민팅 시 제어터미널 요구로 난독화 우회 차단(SIDECAR_SIGN_REQUIRE_TTY=1·기본 OFF·opt-OUT 아님). Smoke 12/12. lockstep(g22): 0.1.1→0.1.2.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+도메인 NAME 검증에서 언더스코어 거부. TTR-LM / TTR_LM 양쪽을 다 받아
+같은 도메인이 두 갈래로 쪼개지는 걸 막고, 하이픈을 유일한 단어 구분자로
+고정. +는 메타도메인(RTSC+HTS) 합성용으로 유지. 프로젝트 basename
+fallback도 -를 _로 바꾸던 동작을 - 유지로 변경.
 <!-- /LATEST-SHIP -->
 
 ## Install

@@ -222,6 +222,44 @@ fn _env(name: string) -> string {
     return r[0].trim()
 }
 
+// `_local_signed` — fresh `local` sign token (5min). Mirrors sign-guard's
+// TTL contract: the user mints with `! sidecar sign local` in the TUI
+// prompt; the file `~/.sidecar/signs/local.sign` holds the mint epoch.
+// pool-route's local-bound heavy gate (0.6.4) reads it to decide whether
+// to allow hexa/python/sh script invocations through the absolute-path
+// exemption.
+fn _local_signed() -> bool {
+    let path = _env("HOME") + "/.sidecar/signs/local.sign"
+    if !file_exists(path) { return false }
+    let mut raw = ""
+    try { raw = to_string(read_file(path)) } catch e { return false }
+    let mint = to_int(raw.trim())
+    if mint <= 0 { return false }
+    let age = timestamp() - mint
+    if age < 0 { return false }
+    return age <= 300
+}
+
+// `_local_heavy_interp` — heavy interpreter/compiler invocation? These are
+// the canonical mac fork-storm sources when forced local-bound: hexa CLI
+// (any verb), direct hexa.real, python/python3/py, and `bash`/`sh
+// <script>` (positional script arg, not `bash -c "..."` which is the
+// shell wrapper convention). Bare reads (ls/cat/grep/find/...) stay free.
+fn _local_heavy_interp(cmd: string, toks: array) -> bool {
+    if _has_word(cmd, "hexa") { return true }
+    if cmd.contains("hexa.real") { return true }
+    if _any_word(cmd, ["python", "python3", "py"]) { return true }
+    if len(toks) >= 2 {
+        let t0 = toks[0]
+        if t0 == "bash" || t0 == "sh" {
+            let t1 = toks[1]
+            // skip `bash -c "..."` / `sh -c "..."` — those are shell wrappers
+            if len(t1) > 0 && t1.substring(0, 1) != "-" { return true }
+        }
+    }
+    return false
+}
+
 // emit the updatedInput rewrite — rebuild tool_input with command swapped.
 fn _emit(ti: map, new_cmd: string, note: string) {
     let ks = keys(ti)
@@ -357,7 +395,23 @@ fn main() {
     // These are read/version-control/local-fs ops, never the heavy compute the
     // pool exists for, so an early _allow() is always correct.
     if _has_word(cmd, "git") || _has_word(cmd, "gh") { _allow() }
-    if cmd.contains("/Users/") || cmd.contains("/home/") { _allow() }
+    if cmd.contains("/Users/") || cmd.contains("/home/") {
+        // Sign gate (0.6.4): local-bound HEAVY invocations (hexa · python ·
+        // bash/sh <script>) on absolute host paths are the canonical mac
+        // fork-storm trigger — multiple sessions racing dispatch caches +
+        // re-fork on every env-hash miss. Require a fresh user sign-off
+        // (`! sidecar sign local`, 5min token, mints freely from the TUI
+        // bang) before honoring the absolute-path exemption. Bare reads
+        // (ls/cat/grep/find/...) on absolute paths stay free — the gate
+        // narrows to interpreters/compilers only.
+        let toks = _tokens(cmd)
+        if _local_heavy_interp(cmd, toks) {
+            if !_local_signed() {
+                _deny("local-bound heavy invocation (hexa/python/sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.")
+            }
+        }
+        _allow()
+    }
 
     let home = _env("HOME")
 

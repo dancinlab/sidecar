@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pool-route 0.6.4: local-bound sign 게이트 (mac fork-storm 진짜 차단)
+
+- **pool-route 0.6.4 — local-bound 절대경로 안의 HEAVY 호출에 `local` sign 게이트 추가** — 0.6.0 의 absolute-path 면제(`/Users/`·`/home/` literal → 무조건 local 통과)가 mac fork-storm 의 canonical 트리거였음. 다중 세션이 `hexa.real run /Users/.../x.hexa` 류를 동시에 발사할 때마다 dispatch-cache hash-miss → 새 컴파일러 바이너리 fork. 워크스테이션 부하 load 130+ 측정.
+  - **enforcement**: `_pool_route.hexa` 의 local-bound 분기(line ~345) 안에 새 helper `_local_signed()` + `_local_heavy_interp()` 가드 삽입. HEAVY = `hexa` (모든 verb · `hexa.real` 직접 호출 포함) · `python`/`python3`/`py` · `bash`/`sh <script>` (positional script arg — `bash -c "..."` 는 shell wrapper 라 면제). bare reads(ls/cat/grep/find/head/tail/...)는 그대로 통과 — 게이트는 인터프리터/컴파일러만 노림.
+  - **민팅**: 새 sign key `local` · TTL 300s(sign-guard 와 동일) · 토큰 파일 `~/.sidecar/signs/local.sign`. 유저가 TUI 프롬프트에서 `! sidecar sign local` 인라인 민팅 (한 번 받으면 5분 자유 발사). agent self-mint 불가는 sign-guard 의 tool-boundary 강제로 그대로.
+  - **deny 메시지**: 게이트 발동 시 `permissionDecision: deny` + 인스트럭션 trailer ("`! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads ... are unaffected").
+  - **scope**: 외부 다수 유저 기준 — `git`/`gh` 통과 + bare 절대경로 통과 + heavy 인터프리터만 게이트. 일상 명령 영향 0; 진짜 fork-storm 트리거만 차단.
+  - **표면**: `_pool_route.hexa` (helper 2개 + 분기 1곳) · `plugin.json` description+version 0.6.3→0.6.4 · README.md 새 섹션 "Local-bound sign gate (0.6.4)".
+
 ## 2026-05-25 — commons 0.10.4: @D g53 강화 (/easy 7-element required + 인라인 스펙)
 
 - **commons 0.10.4 — @D g53 `[active]` → `[required active]` 승격 + 7요소 인라인 명시** — "/easy 7-element friendly explain"을 설명/보고 턴 기본값으로 required화. do에 7요소(icon·NAME·alias·plain·analogy·ASCII·vs-tool) 직접 열거 → 룰 자기문서화(기존엔 `/easy` 플러그인 의존). canonical 스펙+gold 예시 포인터 = `skills/easy/styles/easy.<lang>.md`. dont에 면제 대상(코드/수식/식별자/경로/SHA · CI machine pipe) 명시. 사용자 요청(친근 설명 패턴 선호 — ⚛️ ELIASHBERG-MOMENTS 류)을 거버넌스로 고정.

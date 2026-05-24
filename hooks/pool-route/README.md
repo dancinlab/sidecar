@@ -18,6 +18,27 @@ The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** wheneve
 
 These run local unconditionally; they're version-control / local-fs ops, never the heavy compute the pool exists for.
 
+## Local-bound sign gate (0.6.4)
+
+The absolute-path exemption above turned out to be the canonical mac fork-storm trigger: when multiple sessions race `hexa.real run /Users/…/x.hexa` (or any heavy interpreter on an absolute host path), each invocation hash-misses the dispatch cache and re-forks a fresh compiler binary on the workstation Mac. Bare reads stay free; the gate narrows to **heavy invocations only**:
+
+| Pattern | Gated? |
+|---|---|
+| `hexa` (any verb · including `hexa.real`) | ✅ sign required |
+| `python` / `python3` / `py` | ✅ sign required |
+| `bash <script>` / `sh <script>` (positional script arg) | ✅ sign required |
+| `bash -c "…"` / `sh -c "…"` (shell wrapper) | ❌ free |
+| `ls` / `cat` / `grep` / `find` / `head` / `tail` / … | ❌ free |
+| `git` / `gh` (already exempt above) | ❌ free |
+
+Within the absolute-path exemption, a gated invocation demands a fresh **`local` sign-off token**:
+
+```
+! sidecar sign local
+```
+
+The `!` bang mints from the TUI prompt (user-only — agents cannot self-mint, by sign-guard's tool-boundary enforcement). The token lasts **5 minutes** and writes `~/.sidecar/signs/local.sign`. Without a fresh token the hook emits `permissionDecision: deny` with the mint instruction inline. Mint once, fire many; the token covers every gated invocation in the window.
+
 ## How it routes
 
 1. **Capability filter** — a macOS-only command (`xcodebuild`, `codesign`, `swift build`, `.dylib`, …) is restricted to `os: macos` hosts; a Linux-only command (`apt`, `dpkg`, `.deb`, …) to `os: linux`. No eligible host → runs local.

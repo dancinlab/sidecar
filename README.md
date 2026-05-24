@@ -59,17 +59,41 @@ The [`project-tape`](hooks/project-tape/) hook re-injects `project.tape` on PreC
 
 ```
 sidecar/
-├── bin/sidecar               # CLI — `sidecar init` scaffolds project.tape + CLAUDE.md + LATTICE_POLICY.md
+├── bin/sidecar               # CLI — init · sync · sign · profile · enable · disable · reset
+├── bin/_overrides.hexa       # per-plugin enable-override store (~/.sidecar/plugin-overrides.json)
+├── install.hexa              # hx build hook — clone marketplace · cache · enable per active profile
 ├── hooks/                    # PreToolUse · SessionStart · PreCompact · PostCompact · LSP plugins
 ├── commands/                 # /slash-command invoked plugins
 ├── skills/                   # Skill tool invocable plugins
+├── mcps/                     # MCP server plugins (pool-mcp)
 ├── project.tape              # sidecar's identity + governance (also linked as CLAUDE.md)
 ├── LATTICE_POLICY.md         # real-limits-first policy (→ hooks/commons/, dropped by `sidecar init`)
-├── DESIGN.md                 # current design rules pointer (live spec)
-├── DESIGN.log.md             # decision audit trail (one decision per gate)
+├── DESIGN.md / DESIGN.log.md # live design-rules pointer + decision audit trail
 ├── CHANGELOG.md              # chronological ship log
-└── .claude-plugin/marketplace.json
+└── .claude-plugin/
+    ├── marketplace.json      # plugin manifest (name · source · version)
+    └── profiles.json         # enable-profile tiers (core · hexa · personal)
 ```
+
+## Profiles
+
+sidecar ships an opinionated stack. A **profile** picks which plugins to enable so you don't inherit the whole personal layer — pick one after install:
+
+| Profile | Enables | For |
+|---|---|---|
+| `minimal` | `core` only | general use — universal safety · QoL · workflow |
+| `hexa` | `core` + `hexa` | + the hexa-lang toolchain (`hexa` CLI · `.hexa` / `.tape`) |
+| `full` *(default)* | everything | the complete dancinlab setup |
+
+```
+sidecar profile minimal     # set the profile (re-applies the install)
+sidecar profile             # show the active profile + any per-plugin overrides
+sidecar enable  <plugin>    # force one plugin ON  — overrides the profile
+sidecar disable <plugin>    # force one plugin OFF
+sidecar reset   <plugin>    # drop the override → follow the profile again
+```
+
+Each plugin's tier is the **Tier** column below; the classification SSOT is [`.claude-plugin/profiles.json`](.claude-plugin/profiles.json). This rides on Claude Code's own plugin enable/disable — **not** an in-guard opt-out — so an enabled guard stays unconditional (`@D s11`). State lives in `~/.sidecar/profile` + `~/.sidecar/plugin-overrides.json`; `sidecar-lint` flags any plugin missing a tier so the classification stays complete (`@D s7`).
 
 ## Commands
 
@@ -97,8 +121,9 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 /domain:domain <task>             <NAME>.md snapshot + <NAME>.log.md checkbox-task log
 #                                 cross-repo handoff → `cd <target> && /domain:domain set INBOX`
 
-# ── Verify / help ───────────────────────────────────────────
+# ── Verify / atlas / help ───────────────────────────────────
 /verify:verify <args>             hexa verify — tier rubric (🔵🟢🟡🟠🔴⚪)
+/atlas:atlas <args>               hexa atlas — SSOT surface (lookup · stats · register, PR-only landing)
 /hexa-help:hexa-help [verb]       hexa --help (top-level catalog or per-verb signature)
 
 # ── Research / generate ─────────────────────────────────────
@@ -107,65 +132,107 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 /imagine:imagine <pf> <out>       AI image gen (fal backend · gpt-image-2 pinned)
 /paper:paper <args>               arxiv LaTeX scaffolder (new·sample·fig·compile·lint·list)
 
+# ── Account / credentials ───────────────────────────────────
+/quota:quota [verb]               Claude 5h/7d usage + multi-account registry · switch · nicknames
+/secret:secret <args>             macOS Keychain-backed credential CLI (dual-channel sync)
+
 # ── Session / meta ──────────────────────────────────────────
 /inject:inject  (/inject:ij)      sidecar sync + inject commons.tape/project.tape THIS turn
 /ship:ship -m "<msg>" …           atomic commit + push + sidecar sync
+/sidecar:sidecar <verb>           marketplace CLI — init · sync · sign · profile · enable · disable · reset
 /prefs:prefs <axis> <lang>        language prefs (code · docs · response)
-/secret:secret <args>             macOS Keychain-backed credential CLI
 /easy:easy                        friendly 7-element response style
 /check:check                      task dashboard (domain log · open PRs · git · merges)
+/end:end                          session-closure safety check (dangling-residue dashboard)
 /question:question (/question:q) <txt>  quick side-question, no task pivot (alias for /btw)
 
-# ── Guard hooks (no command — fire automatically) ───────────
-# hexa-native    .py/.sh write deny in project.tape repos
-# plist-guard    .plist write deny (g37)
-# cloud-guard    runpodctl/vastai exec/ssh deny → hexa cloud (g8)
-# verify-guard   wolframscript / inline-sympy deny → hexa verify (g5)
-# ai-api-guard   curl AI-hostname / inline AI-SDK deny → CLI wrapper (g50)
-# pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47)
-# pool-route     heavy Bash → ssh-route to a pool host
-# git-guard      force-push deny
-# sidecar-lint   git-commit lint (stale-history · hardpath · drift · CHANGELOG)
-# tape-lint      .tape edit lint (fields · length · lang · @I siblings)
-# inbox-log-lint INBOX.log.md pileup advisory (entries/resolved/size → archive)
-# limit-guard    session-limit checkpoint directive
+# ── Auto-fire hooks (no command) ────────────────────────────
+# DENY (hard block):
+#   hexa-native    .py/.sh writes in project.tape repos → re-issue as .hexa
+#   plist-guard    .plist writes
+#   cloud-guard    runpodctl/vastai exec/ssh → hexa cloud (g8)
+#   verify-guard   wolframscript / inline-sympy → hexa verify (g5)
+#   ai-api-guard   curl AI-host / inline AI-SDK → the CLI wrapper (g50)
+#   sign-guard     edits to commons.tape/project.tape until `sidecar sign` (s13)
+#   git-guard      force-push (+ stale-base push advisory)
+#   tape-lint      .tape edits (fields · length · authoring-language)
+# REWRITE / ROUTE:
+#   pool-route     heavy Bash → ssh to a pool host
+#   pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47)
+#   output-trim    >8000-char Bash stdout → dedup + truncate
+# ADVISORY (non-blocking additionalContext):
+#   sidecar-lint   git-commit: stale-history · hardpath · version drift · CHANGELOG · profiles tier
+#   workdir-guard  working tree shared by ≥2 agents → use a worktree (s-shared)
+#   memory-lint    MEMORY.md pileup / long lines → archive
+#   inbox-log-lint INBOX.log.md pileup → archive
+#   limit-guard    subagent session-limit → checkpoint directive
+#   pod-monitor    GPU pod fire → SAVE_POD / detach reminders (g57)
+#   s9-guard       Mac load-check cmds → exclude claude PIDs (s9)
+# SESSION lifecycle:
+#   easy-auto · quota-autoadd · worktree-gc · sidecar-auto-sync · subagent-route[POC]
 ```
 
 ## Plugins
 
-| Name | Kind | Version | Summary |
-|---|---|---|---|
-| [`commons`](hooks/commons/) | hook | 0.9.20 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects a cross-project `do` / `dont` layer (from `commons.tape`, granular `@D g1..g31`) above the per-project context. UserPromptSubmit re-injects every turn so the layer never fades; PostCompact re-injects after the `※ recap` so it survives auto-compaction. Carries [`LATTICE_POLICY.md`](hooks/commons/LATTICE_POLICY.md) (real-limits-first SSOT). hexa-lang (`_commons.hexa`). |
-| [`prefs`](hooks/prefs/) | hook + command | 0.3.0 | User language preferences — 3 axes (`code` authoring · `docs` authoring · `response` to user). UserPromptSubmit (every turn) + SessionStart + PreCompact + PostCompact hook auto-injects. `/prefs show` · `/prefs code <lang>` · `/prefs docs <lang>` · `/prefs response <lang>`. Defaults: code=english, docs=english, response=korean. SSOT for language preferences. hexa-lang (`_prefs.hexa`). |
-| [`project-tape`](hooks/project-tape/) | hook | 0.2.0 | PreCompact + PostCompact hook — re-injects `<project-root>/project.tape` as `additionalContext` so the project's identity + governance survive auto-compaction. No-op when `project.tape` is absent. hexa-lang (`_project_tape.hexa`). |
-| [`git-guard`](hooks/git-guard/) | hook | 0.4.0 | PreToolUse(Bash) deny — blocks force-type git push only: `git push --force` / `-f` · `--force-with-lease` · refspec-level force `+<ref>`. Hook-bypass (`--no-verify`) NOT blocked (left to user discipline). hexa-lang (`_git_guard.hexa`). NO opt-out by design. |
-| [`sidecar-lint`](hooks/sidecar-lint/) | hook | 0.3.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack. Non-blocking findings: stale-history patterns in staged diff (commons `@D g15`) · hardcoded `/Users/` / `/home/` paths in staged diff (commons `@D g13` · sidecar `@D s3`) · `marketplace.json` ↔ each `plugin.json` version drift (commons `@D g22`) · `hooks/*/bin/*.sh` missing user-exec bit. hexa-lang (`_sidecar_lint.hexa`). NO opt-out by design. |
-| [`tape-lint`](hooks/tape-lint/) | hook | 0.4.0 | PreToolUse(Edit\|Write) deny for `.tape` edits, implemented in **hexa-lang** (`_tape_lint.hexa` invoked via `hexa run` — no Python, no shell shim; first sidecar hook to land hexa-native). Three diff-aware checks: **(1) fields** — `@D` blocks accept only `do` / `dont`; new `why` · `tool` · `note` · `ref` · `ex` · ... refused (any `*.tape`). **(2) length cap** — `do` / `dont` value > 100 chars refused (`commons.tape` + `project.tape`). **(3) authoring-language** — when `sidecar prefs` `code` axis is `english`, newly-introduced non-Latin lines (Hangul · CJK · 仮名) refused (`commons.tape` + `project.tape`). Pre-existing violations grandfathered. NO opt-out by design. |
-| [`hexa-native`](hooks/hexa-native/) | hook | 0.2.0 | **PreToolUse(Write\|Edit\|NotebookEdit) hard block** — `.py` / `.sh` writes are **denied** inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file). Reason message redirects the operator to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` unaffected. hexa-lang (`_hexa_native.hexa`). **NO opt-out** by design — no env var, no config file, no exception list, no self-exclusion; uninstall the plugin if you need a way out. |
-| [`pool-route`](hooks/pool-route/) | hook | 0.4.1 | PreToolUse(Bash) auto-router — when the `pool` CLI roster (`~/.pool/pool.json`) has a host and a command matches the heavy classifier (`make` · `cargo` · `pytest` · `go build` · `docker build` · `nvidia-smi` · `train` · …) or a root command, rewrite it via `updatedInput` to run on a pool host over ssh (`ssh <host> 'cd <wd> && <cmd>'`) — transparent dispatch, not a suggestion. OS-capability filter + round-robin; autosync rsync. Passes through when no roster / no match. hexa-lang (`_pool_route.hexa`). NO opt-out by design. |
-| [`limit-guard`](hooks/limit-guard/) | hook | 0.1.1 | PostToolUse(Task) — detects a session/usage-limit signal in a subagent result and injects a checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out. Non-blocking. hexa-lang (`_limit_guard.hexa`). NO opt-out by design. |
-| [`hexa-lsp`](hooks/hexa-lsp/) | hook | 0.1.1 | Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files via plugin-root `.lsp.json` (canonical Claude Code LSP filename, dot-prefixed). |
-| [`tape-lsp`](hooks/tape-lsp/) | hook | 0.1.1 | Wire the `tape-lsp` server (canonical `.tape` v1.2 LSP — diagnostics + hover) for `.tape` files via plugin-root `.lsp.json` (dot-prefixed). Requires `tape-lsp` on PATH (`hx install tape`). |
-| [`all-bg-go`](skills/all-bg-go/) | skill + command |  0.4.1  | Parallel fan-out trigger — "all bg go" → plan table + one background Agent per branch in the same message. **Reactive single fan-out** of what the prior turn offered. For a self-generating repeatable loop, use [`cycle`](skills/cycle/). Also `/all-bg-go`. |
-| [`cycle`](skills/cycle/) | skill + command |  0.3.0  | **Autonomous work-loop driver** — four commands. `/cycle` runs next-list (self-enumerate next viable work from current context) → parallel-plan table → fan-out (one bg Agent per item, same message) → loop. `/cycle-full <seed>` precedes the next-list with a phase-0 depletion brainstorm (one-time per goal; subsequent rounds use plain `/cycle`). `/cycle-loop` hands `/cycle` off to the [`loop`](skills/loop/) skill (dynamic `ScheduleWakeup` pacing) so rounds fire automatically until ideas deplete or user halts. `/cycle-full-loop` runs `/cycle-full` once, then hands off to `/loop /cycle` for subsequent rounds. Distinct from `all-bg-go` (reactive fan-out of prior-turn branches; `/cycle` self-generates each round). NL: *"사이클"* · *"계속 진행"* · *"다음 라운드"* · *"keep cycling"*. |
-| [`kick`](skills/kick/) | skill + command |  0.2.1  | `/kick <natural-language seed>` — wraps `hexa kick --seed "<seed>"` (hexa-lang gap-breakthrough / discovery engine). All args join into the seed. NL trigger (*"돌파해줘"*, *"kick this"*, *"discover for"*). Pairs with `commons g6`. |
-| [`verify`](skills/verify/) | skill + command |  0.2.1  | `/verify <args>` — wraps `hexa verify "$@"` (TECS-L tier rubric — 🔵🟢🟡🟠🔴⚪). Forms: atlas-id · `--expr <fn> <n> <v>` · `--fence "<claim>"` · `rubric` · `list`. NL trigger (*"확인해"*, *"검증해"*, *"맞아?"*). Pairs with `commons g5`. |
-| [`pool`](skills/pool/) | skill + command |  0.2.1  | `/pool <args>` — wraps the `pool` CLI (host roster + remote exec). Verbs: `list` · `add <host>` · `on <host> <cmd>` · `status` · `install tailscale` · `rm <host>`. NL trigger (*"pool 호스트"*, *"다른 호스트에서 돌려"*). Pairs with `commons g9` + `pool-route` hook. |
-| [`cloud`](skills/cloud/) | skill + command |  0.3.1  | `/cloud <args>` — wraps `hexa cloud` (runpod dispatch · canonical subcommand form, structured argv — never raw ssh/scp). Subverbs: `run` · `nohup` · `poll` · `copy-to` · `copy-from`. Upstream gap (subcommand not yet registered — currently a separate `hexa-cloud` binary) tracked at `hexa-lang/INBOX.log.md`. NL trigger (*"GPU pod 에 돌려"*, *"runpod dispatch"*). Pairs with `commons g8` + `g55` (wall-time parallel fan-out). |
-| [`hexa-help`](skills/hexa-help/) | skill + command |  0.2.1  | `/hexa-help [verb]` — wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific). Per `commons g7`. NL trigger (*"hexa 뭐있어"*, *"hexa 사용법"*). |
-| [`secret`](skills/secret/) | skill + command |  0.4.1  | `/secret <args>` — wraps the [`secret`](https://github.com/dancinlab/secret) CLI (macOS Keychain-backed credentials, 0.4.0, dual-channel sync). Verbs: `get` · `set` · `rotate` · `check` · `delete` · `list` · `service` · **`init [icloud\|github <url>]`** · **`backup [enable <url>\|disable\|status]`** · **`sync`** · `migrate`. Two independent sync channels (iCloud Drive primary + optional private GitHub mirror) push the same encrypted blob — master password is the only decryption secret. Auto-push ON by default once `backup enable` runs (opt out via `SECRET_BACKUP_AUTO=0`). High-value protection on `set` (BIP39 wordlist-validated · xprv/WIF/64-hex → refuse without `--allow-mnemonic` + stdin/tty). `rotate` emits sentinel only. ⚠ `/secret get` exposes value in conversation context — prefer inline `$(secret get <k>)`. NL trigger (*"키체인"*, *"토큰 저장"*, *"credential 가져와"*, *"백업 push"*). |
-| [`gap`](commands/gap/) | command | 0.2.0 | `/gap` — multi-axis gap exploration. **42** breakthrough-strategy lenses · 8 families (F4 + F6 each have 6; `occams-razor` lives in both — hypothesis side and design side). Bare `/gap` = inline-triage all 42 + deep-dive only hot families (subagents). `/gap full` = exhaustive 8-subagent fan-out. `/gap <scope>` targets the sweep. `/gap list` prints the catalogue. Surfaces + prioritises gaps; never fixes. |
-| [`step-by-step`](commands/step-by-step:step-by-step/) | command | 0.1.0 | `/step-by-step:step-by-step` (alias `/step-by-step:sbs`) — plan-first sequential runbook. Decomposes the task into a numbered, dependency-ordered plan, then auto-runs every step in order (no gates between steps): `▶ i/N` marker + `✅`/`⚠`/`❌` per step. Halts only on a step failure (reports step + verbatim error + un-run tail) or before an irreversible / outward-facing step (confirm-then-resume, same bar as `bypass`). The deliberate **sequential** counterpart to [`cycle`](skills/cycle/)'s parallel fan-out. |
-| [`inject`](skills/inject/) | skill + command |  0.1.1  | `/inject` — runs `sidecar sync` (marketplace pull + cache copy + `installed_plugins.json` patch) AND prints the latest `commons.tape` + (cwd's) `project.tape` so the model picks them up THIS turn. For mid-session sidecar refresh without restarting Claude Code. |
-| [`ship`](skills/ship/) | skill + command |  0.2.1  | `/ship -m "<msg>" <path>…` — atomic ship tail: stage explicit paths (never `-A`/`-u`) → credential-scan staged diff (`rpa_`·`sk-`·`hf_`·`AKIA`) → commit → push `origin/<branch>` → `sidecar sync`. Mechanical tail of `@D ship` / `commons g27`; the agent owns version bump + surface lockstep + message FIRST (per `g22`). NL trigger (*"ship"*, *"배포"*, *"출시"*). |
-| [`domain`](skills/domain/) | skill + command |  0.4.1  | UPPERCASE `<NAME>.md` (current snapshot) + sister `<NAME>.log.md` (append-only **checkbox-task** log) at project root. **Auto-scaffolds** both; defaults NAME to uppercase basename of git root. Verbs: `/domain` (show) · `/domain <task>` (append `- [x]`) · `/domain todo <task>` (`- [ ]`) · `/domain done <match>` (flip `[ ]`→`[x]`) · `/domain new <header>`. Records progress as work proceeds. |
-| [`bypass`](skills/bypass/) | skill |  0.2.1  | **Default-on anti-punt** — universal self-check before any move that hands control back to the user (interactive input · unauthorized destructive · external visible · explicit user-review request); if all NO, just execute. Extensible catalog of patterns: `next user action:` blocks · `Should I proceed?` · `Want me to check?` · option-trees w/ obvious default · over-clarification · defer-by-waiting · excessive recap. Cross-project always-on guard in `commons.tape` ≥ 0.7.3. |
-| [`brainstorm`](skills/brainstorm/) | skill + command |  0.1.1  | Iterative brainstorming — given a seed, generates ideas in rounds and keeps going until depletion (no new distinct ideas vs prior rounds; hard cap 8 rounds). For breadth over selection. Natural language or `/brainstorm <seed>`. |
-| [`easy`](skills/easy/) | skill + command |  0.1.1  | Friendly response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII diagram · compare). Triggered by natural language ("친근하게" · "easy mode" · multilingual equivalents) or `/easy`. 5 language samples (en · ko · ja · zh · ru). |
-| [`research`](skills/research/) | skill + commands |  0.2.2  | Research-fetch tools — `/research:arxiv <query\|id>` searches the official arXiv API (title · authors · abstract · pdf), `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`hexa run`); HTTP via curl, no API key. |
-| [`gh-stack`](skills/gh-stack/) | skill |  0.1.1  | Stacked-PR workflow — proposes `gh stack` (enabled repos) or the manual `gh pr create --base previous-layer` fallback. Encodes sidecar's <200-lines-per-layer · 1-concern governance. Status in [`gh-stack.md`](gh-stack.md). |
-| [`paper`](skills/paper/) | skill + command |  0.4.0  | `/paper <args>` — arxiv-style LaTeX paper scaffolder. Verbs: `new <slug>` (scaffold the minimal `template/` skeleton at `./<slug>/`), `sample <slug>` (copy the bundled demiurge `sample-nb-bcs-absorbed/` verbatim — ~14-page Nb BCS universal-gap-ratio attestation reference exhibit), `fig <size> <prompt> <out>` (delegates to sister [`imagine`](skills/imagine/) → fal.ai `openai/gpt-image-2`), `compile [dir]` (pdflatex × 3 + bibtex), `list`, `help`. |
-| [`imagine`](skills/imagine/) | skill + command |  0.2.0  | `/imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]` — generic AI image generator. Two backends out of the box: `fal` (queue+poll fal.ai, default · `secret get fal.api_key` · model = `openai/gpt-image-2` firm-pinned) and `openai` (sync `/v1/images/generations` · `secret get openai.api_key` · `gpt-image-1`). Canonical fal-style sizes (`square_hd`/`landscape_16_9`/`portrait_16_9`/`square`) translate per-backend. Prompt always read from a file (provenance); payload JSON via mktemp (no argv leak). Plug in a new backend by dropping `_backends/<name>.hexa`. |
+55 plugins across `{hook · command · skill · mcp}` — one concept each (25 `core` · 13 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+
+| Name | Kind | Tier | Version | Summary |
+|---|---|---|---|---|
+| [`all-bg-go`](skills/all-bg-go/) | command + skill | `core` | 0.4.1 | Parallel fan-out trigger |
+| [`brainstorm`](skills/brainstorm/) | command + skill | `core` | 0.1.1 | Iterative brainstorming |
+| [`bypass`](skills/bypass/) | skill | `core` | 0.2.1 | Anti-punt |
+| [`check`](skills/check/) | command + skill | `core` | 0.1.0 | Task dashboard skill |
+| [`cycle`](skills/cycle/) | command + skill | `core` | 0.5.2 | Autonomous work-loop driver |
+| [`domain`](skills/domain/) | command + skill | `core` | 0.8.4 | Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log… |
+| [`end`](skills/end/) | command + skill | `core` | 0.2.0 | Session closure safety check |
+| [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |
+| [`gh-stack`](skills/gh-stack/) | skill | `core` | 0.1.1 | Stacked-PR workflow skill |
+| [`git-guard`](hooks/git-guard/) | hook | `core` | 0.5.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`) |
+| [`limit-guard`](hooks/limit-guard/) | hook | `core` | 0.1.3 | PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) |
+| [`memory-lint`](hooks/memory-lint/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memo… |
+| [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
+| [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
+| [`pool-mcp`](mcps/pool-mcp/) | mcp | `core` | 0.1.1 | stdio MCP server exposing pool hosts as Claude Code MCP tools |
+| [`prefs`](hooks/prefs/) | hook + command | `core` | 0.3.3 | User language preferences |
+| [`question`](skills/question/) | command + skill | `core` | 0.2.0 | Quick side-question alias for Claude Code's built-in `/btw` |
+| [`quota`](skills/quota/) | command + skill | `core` | 0.10.0 | Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames |
+| [`quota-autoadd`](hooks/quota-autoadd/) | hook | `core` | 0.1.1 | SessionStart hook |
+| [`research`](skills/research/) | command + skill | `core` | 0.2.4 | Research-fetch tools |
+| [`secret`](skills/secret/) | command + skill | `core` | 0.4.1 | wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync) |
+| [`sidecar`](commands/sidecar/) | command | `core` | 0.2.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
+| [`step-by-step`](commands/step-by-step/) | command | `core` | 0.1.0 | plan-first sequential runbook |
+| [`workdir-guard`](hooks/workdir-guard/) | hook | `core` | 0.1.0 | SessionStart advisory (hexa-lang `_workdir_guard.hexa`, via `hexa run`) that fires once per session, and only when the… |
+| [`worktree-gc`](hooks/worktree-gc/) | hook | `core` | 0.1.0 | SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_w… |
+| [`atlas`](skills/atlas/) | command + skill | `hexa` | 0.1.1 | wraps `hexa atlas` (atlas SSOT surface) |
+| [`cloud`](skills/cloud/) | command + skill | `hexa` | 0.3.2 | wraps `hexa cloud` (runpod / vast.ai dispatch · canonical subcommand form, structured argv |
+| [`cloud-guard`](hooks/cloud-guard/) | hook | `hexa` | 0.2.2 | PreToolUse(Bash) hard block for raw rented-GPU pod dispatch (commons @D g8) |
+| [`hexa-help`](skills/hexa-help/) | command + skill | `hexa` | 0.2.1 | wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific) |
+| [`hexa-lsp`](hooks/hexa-lsp/) | hook | `hexa` | 0.1.1 | Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files |
+| [`hexa-native`](hooks/hexa-native/) | hook | `hexa` | 0.3.2 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) hard block for `.py` / `.sh` writes inside any project rooted at a directory… |
+| [`kick`](skills/kick/) | command + skill | `hexa` | 0.2.1 | runs `hexa kick --seed "<seed>"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`) |
+| [`paper`](skills/paper/) | command + skill | `hexa` | 0.5.3 | arxiv-style LaTeX paper scaffolder |
+| [`pod-monitor`](hooks/pod-monitor/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) advisory hook for GPU pod fires (`hexa cloud nohup` / `hexa cloud run`) |
+| [`tape-lint`](hooks/tape-lint/) | hook | `hexa` | 0.5.1 | PreToolUse(Edit\|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` |
+| [`tape-lsp`](hooks/tape-lsp/) | hook | `hexa` | 0.1.1 | Wire `tape-lsp` (canonical .tape v1.2 LSP |
+| [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |
+| [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
+| [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
+| [`commons`](hooks/commons/) | hook | `personal` | 0.10.4 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
+| [`easy`](skills/easy/) | command + skill | `personal` | 0.1.1 | Easy (friendly) response style |
+| [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
+| [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
+| [`inbox-log-lint`](hooks/inbox-log-lint/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the INBOX domain log (`INBOX.log.md`) |
+| [`inject`](skills/inject/) | command + skill | `personal` | 0.2.0 | Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install… |
+| [`plist-guard`](hooks/plist-guard/) | hook | `personal` | 0.1.2 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, inv… |
+| [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.6.3 | PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, i… |
+| [`pr-cycle`](hooks/pr-cycle/) | hook + command | `personal` | 0.3.6 | PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hex… |
+| [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |
+| [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
+| [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |
+| [`sidecar-auto-sync`](hooks/sidecar-auto-sync/) | hook | `personal` | 0.2.0 | SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync… |
+| [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.5.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |
+| [`sign-guard`](hooks/sign-guard/) | hook | `personal` | 0.1.4 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) sign-gate for governance-SSOT files, implemented in hexa-lang (`_sign_guard.h… |
+| [`subagent-route`](hooks/subagent-route/) | hook | `personal` | 0.1.0 | [POC] PreToolUse(Task\|Agent) observation hook + SessionStart observation-log snapshot, implemented in hexa-lang (`_sub… |
 
 ## Governance
 

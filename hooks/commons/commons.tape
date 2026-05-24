@@ -218,3 +218,9 @@
 @D g60 := "upstream INBOX reflex — aggressive, same-turn, over-file (g11/g59 generalization)" :: governance [required active]
   do   = "cross-repo gap / fix / idea → file that repo's INBOX same-turn · stub-first · dedup-check first"
   dont = "defer · gate on full repro · chat-only downgrade · assume another session will file it"
+
+@D g61 := "hexa-lang stdlib is the SSOT for general primitives" :: governance [required active]
+  do   = "promote reusable general primitives (math/info/signal/bitops/stats) to hexa-lang `stdlib/`"
+  do   = "stdlib modules = plain `.hexa` (regen-free) · caller repos import-only · keep byte-equal"
+  dont = "duplicate a primitive across repos · add it as a compiler builtin when stdlib fits"
+  dont = "hand-edit `hexa_cc.c`/`hexa_v2` — regen via `hexa cc --regen` (SSOT `self/codegen.hexa`)"

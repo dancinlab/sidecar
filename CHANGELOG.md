@@ -6,6 +6,11 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — commons 0.10.3: @D g61 hexa-lang stdlib SSOT
+
+- **commons 0.10.3 — @D g61 신규: "hexa-lang stdlib is the SSOT for general primitives"** — 재사용 general primitive(math/info/signal/bitops/stats)는 hexa-lang `stdlib/`로 promote(plain `.hexa` · regen-free) · caller repos import-only · byte-equal 보존. dont: repo간 helper 중복 · stdlib 적합한데 컴파일러 builtin으로 추가 · 생성물 `hexa_cc.c`/`hexa_v2` 직접편집(→ `hexa cc --regen`, live SSOT `self/codegen.hexa`). anima STDLIB 도메인 migration + hexa-lang 컴파일러 fix 세션 경험을 거버넌스로 고정해 재발 방지.
+  - marketplace 설명 `@D g0..g60` → `g0..g61` lockstep.
+
 ## 2026-05-25 — sign-guard 0.1.4 · sidecar(command) 0.1.1: 사인 토큰 TTL 15분 → 5분 축소
 
 - **sign-guard 0.1.4 · sidecar 0.1.1 — 유저 사인 토큰 유효기간 900s(15분) → 300s(5분)** — 유저 요청. 거버넌스 SSOT(commons.tape·project.tape) 편집을 여는 사인 토큰의 유효창을 좁혀, 토큰이 떠 있는 시간을 줄임(공유 워킹트리 등에서 잊고 방치되는 창 최소화).

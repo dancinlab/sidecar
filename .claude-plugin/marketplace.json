@@ -41,8 +41,8 @@
     {
       "name": "git-guard",
       "source": "./hooks/git-guard",
-      "description": "PreToolUse(Bash) deny for force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run`) \u2014 `git push --force` / `-f` \u00b7 `git push --force-with-lease` \u00b7 `git push <remote> +<refspec>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked (left to user discipline). NO opt-out by design.",
-      "version": "0.4.1"
+      "description": "PreToolUse(Bash) deny for force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run`) \u2014 `git push --force` / `-f` \u00b7 `git push --force-with-lease` \u00b7 `git push <remote> +<refspec>` (refspec-level force). Quotes are stripped before tokenizing (0.4.2) so a quoted flag like `'--force-with-lease=x'` or `+\"refspec\"` can't slip past the matcher. Hook-bypass (--no-verify) NOT blocked (left to user discipline). NO opt-out by design.",
+      "version": "0.4.2"
     },
     {
       "name": "memory-lint",

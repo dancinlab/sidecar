@@ -51,6 +51,22 @@ fn _starts_with(s: string, prefix: string) -> bool {
     return s.substring(0, len(prefix)) == prefix
 }
 
+// strip ' and " so a quoted flag (e.g. `'--force-with-lease=x'` or `+"refspec"`)
+// still tokenizes to its bare form and the force-push matcher can see it.
+// Quoted whitespace then splits into separate tokens — harmless for flag /
+// refspec detection (we only key off `--force*` tokens and a leading `+`).
+fn _strip_quotes(s: string) -> string {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c != "'" && c != "\"" { out.push(c) }
+        i = i + 1
+    }
+    return out.join("")
+}
+
 // whitespace-split into tokens
 fn _tokens(s: string) -> array {
     let mut out = []
@@ -85,7 +101,7 @@ fn main() {
     let cmd = ti["command"]
     if cmd == "" { _allow() }
 
-    let toks = _tokens(cmd)
+    let toks = _tokens(_strip_quotes(cmd))
     let n = len(toks)
 
     // first `git push` token adjacency

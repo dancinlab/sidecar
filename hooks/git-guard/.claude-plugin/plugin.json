@@ -1,7 +1,7 @@
 {
   "name": "git-guard",
   "description": "PreToolUse(Bash) guard that denies force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run` — no Python, no shell shim). Catches `git push --force`, `git push -f`, `git push --force-with-lease`, and `git push <remote> +<ref>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked — left to user discipline. NO opt-out by design — no env var, no config file, no exception list.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

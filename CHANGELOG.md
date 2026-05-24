@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — git-guard 0.4.2: 따옴표로 감싼 force 플래그 우회 차단 [약점분석 #4]
+
+- **git-guard 0.4.2 — 토큰화 전 따옴표 strip 으로 quoted force-flag 우회 차단** — 약점 분석에서, `_tokens` 가 whitespace-split 만 해서 `git push origin '--force-with-lease=x'` 처럼 **따옴표로 감싼 force 플래그**가 토큰에 따옴표를 달고 남아 `--force*` 매칭을 비껴가 force-push deny 를 우회하던 약점 발견(refspec-level `+\"refspec\"` 도 동일). 신규 `_strip_quotes` 가 `'`/`\"` 를 제거한 뒤 토큰화 — quoted flag 가 bare 형태로 환원돼 매처가 본다. Smoke: `'--force-with-lease=…'` · `--force` · `+\"refs/heads/main\"` 전부 deny · 정상 push(`git push origin main` · `--set-upstream` · `\"release\"` 브랜치) 전부 allow(오탐 0). lockstep(@D ship · g22): plugin.json + marketplace 0.4.1 → 0.4.2.
+
 ## 2026-05-25 — limit-guard 0.1.3: 세션-한도 신호 매칭 case-insensitive [약점분석 #3]
 
 - **limit-guard 0.1.3 — 한도 신호 매칭을 case-insensitive 로** — 약점 분석에서, limit-guard 의 `_contains` substring 매칭이 case-sensitive 라 실제 한도 메시지의 대소문자/구두점 변형 시 **silent miss**(advisory 발행 안 함 → subagent 가 mid-work 중단했는데 체크포인트 지시 누락)하던 약점 발견. `raw.to_lower()` 후 매칭으로 변형 흡수. 본질적 한계 주석 명시: substring 매칭은 진짜 신호와 그 신호의 **verbatim 인용**(이 가드 자체를 분석한 Agent result 등 — 이번 세션에서 실제 false-positive 발생)을 구분 못 함 → self-referential false-positive 가능하나, hook 이 advisory-only(never deny)이고 **실제 한도 miss(작업 손실) > 헛경보** 라 수용. Smoke: `"HIT YOUR SESSION LIMIT, resets at 3pm"`(대문자) → 감지 · `"build completed"` → silent. lockstep(@D ship · g22): plugin.json + marketplace 0.1.2 → 0.1.3.

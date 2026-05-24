@@ -6,6 +6,11 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — quota 0.8.2: 통합 표 행 정렬(닉네임>이메일) + `quota:quota` 경로 오염 정정
+
+- **quota 0.8.2 — 통합 표 행을 닉네임(없으면 이메일)순으로 정렬** — `_unified_lines` 가 행을 출력 전에 `_sort_accounts`(selection sort · 계정 수 적어 O(n²) 무관 · 인덱스 안전)로 정렬. 정렬 키 `_sort_key` = 닉네임이 있으면 닉네임, 없으면 이메일, `.to_lower()` 로 대소문자 무시. 사용자 요청 "표 정렬: 닉네임이름순 || 이메일이름순". Smoke: 닉네임 전무 → 이메일순(mk55911·mk911tb·mkgt3rs·search5599) · 혼합(alpha·…·zebra) → 정렬 키 알파벳순 정확 · 활성 ★ 행도 정렬에 포함.
+- **`quota:quota` 파일시스템 경로 오염 정정** — 직전 `72982db`(#15882 슬래시 명령 표기 plain→`/plugin:command` 복원)가 `quota` → `quota:quota` 과치환으로 **파일시스템 경로까지** 바꿔 `commands/quota.md` fallback resolver(`cache/sidecar/quota:quota` — 실제 디렉터리는 `quota` → fallback 깨짐) · `README.md` 데이터 경로(`~/.sidecar/quota:quota/…`) · `quota-autoadd` desc 가 오염됐던 것을, 경로 문맥(`[a-z]/quota:quota`)만 골라 `quota` 로 정정. 슬래시 명령 표기 `/quota:quota`(앞이 `/`·백틱)는 보존 — #15882 대로 맞음. research 경로는 오염 없음 확인. 표면 lockstep(@D ship · g22): quota plugin.json + marketplace.json 0.8.1 → 0.8.2 · quota-autoadd 는 desc 경로 정정만(버전 0.1.1 유지).
+
 ## 2026-05-24 — sign-guard 0.1.0 · sidecar(command) 0.1.0 · `sidecar sign` verb: governance SSOT 유저 사인 게이트
 
 - **sign-guard 0.1.0 (신규 훅) — commons.tape · project.tape 편집을 유저 사인 게이트화** — 거버넌스 SSOT 파일(현재 `commons.tape` cross-project do/dont 레이어 + `project.tape` per-project 정체성·거버넌스)은 **신선한 유저 사인 토큰이 있을 때만** 에이전트가 편집 가능. PreToolUse(Write/Edit/NotebookEdit/Bash) 가드가 두 쓰기 채널(구조화 도구 + Bash 리다이렉트, hexa-native 스캐너 재사용) 모두에서 게이트 대상 경로를 잡아, 토큰이 없거나 만료(>900s)면 hard-deny. 게이트 목록은 `GATED` 배열 — `[["commons","/commons.tape"],["project","/project.tape"]]` — 한 줄 추가 + reship 로 확장(유저: "계속 추가될 것"). 토큰은 유일한 precondition(@D s11: opt-out 스위치 아님 · 실제 precondition 게이팅). `sidecar init` 같은 CLI 내부의 리다이렉트는 top-level 커맨드 문자열에 안 보이므로 스캐폴더는 영향 없음 — 에이전트의 직접 쓰기만 게이트.

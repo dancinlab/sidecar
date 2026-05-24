@@ -9,8 +9,8 @@ Run the bash command below via the Bash tool. `$ARGUMENTS` carries the verb + ar
 ```bash
 H="$CLAUDE_PLUGIN_ROOT/bin/_quota.hexa"
 if [ ! -f "$H" ]; then
-    V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/quota:quota" 2>/dev/null | sort -V | tail -1)"
-    [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/quota:quota/$V/bin/_quota.hexa"
+    V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/quota" 2>/dev/null | sort -V | tail -1)"
+    [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/quota/$V/bin/_quota.hexa"
 fi
 [ -f "$H" ] || { echo "✗ _quota.hexa not found — run /reload-plugins or hx install sidecar" >&2; exit 1; }
 hexa run "$H" $ARGUMENTS

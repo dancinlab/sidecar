@@ -15,6 +15,7 @@
 //   0.7.0 → `autoadd` verb (silent · always exit 0) — registers the active account iff not yet in the registry; driven by the `quota-autoadd` SessionStart hook plugin so a fresh `claude /login` self-registers on the next session.
 //   0.8.0 → status·list·bare UNIFIED into one all-accounts table (`_unified_lines`): active account = ★ + live (_fetch_limits), every other account = its per-account cache (`—` if never fetched). `_status_lines`/`_registry_text` removed. `all` verb fetches every account live in one shot (easy toggle). Active account auto-registered on view (autoadd parity).
 //   0.8.1 → command-surface fix: commands/quota.md table headers → English (Nickname · Email · Session Used/Reset · Weekly Used/Reset); cache-binary resolver `ls -1t | head -1` (mtime, picked a STALE version) → `ls -1 | sort -V | tail -1` (semver). help version string only — binary logic unchanged. (quota-autoadd hook got the same sort -V fix.)
+//   0.8.2 → table rows sorted by `_sort_key` (nickname when set, else email; lowercased — case-insensitive) via `_sort_accounts` (selection sort). Slash-command surface restored to `/quota:quota` form (CC plugin commands are namespaced — issue #15882); the over-broad rename had also corrupted filesystem paths (`cache/sidecar/quota:quota`), fixed back to `quota`.
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -503,6 +504,36 @@ fn _join(lines: array) -> string {
     return out
 }
 
+// Table sort key: nickname when set, else email — lowercased so the order is
+// case-insensitive. `_unified_lines` sorts rows by this before rendering.
+fn _sort_key(e: any) -> string {
+    let nick = _g(e, "nickname")
+    let base = if len(nick) > 0 { nick } else { _g(e, "email") }
+    return base.to_lower()
+}
+
+// selection sort (account count is tiny; index-safe, no short-circuit needed).
+fn _sort_accounts(accts: any) -> any {
+    let mut arr = accts
+    let n = len(arr)
+    let mut i = 0
+    while i < n {
+        let mut min_j = i
+        let mut j = i + 1
+        while j < n {
+            if _sort_key(arr[j]) < _sort_key(arr[min_j]) { min_j = j }
+            j = j + 1
+        }
+        if min_j != i {
+            let tmp = arr[i]
+            arr[i] = arr[min_j]
+            arr[min_j] = tmp
+        }
+        i = i + 1
+    }
+    return arr
+}
+
 // Unified registry view (0.8.0): one `Row=` line per REGISTERED account —
 //   nick | email | session-bar | session-time-left | week-bar | week-time-left
 // The live ~/.claude.json account (matched by uuid) is fetched LIVE
@@ -524,7 +555,7 @@ fn _unified_lines(all_live: bool) -> array {
         if _find_account(reg0, _g(oa0, "emailAddress")) == -1 { let _a = _cli_add("") }
     }
     let reg = _registry_load(_registry_path())
-    let accts = reg["accounts"]
+    let accts = _sort_accounts(reg["accounts"])   // nickname || email, case-insensitive
     let n = len(accts)
     let mut lines = []
     if n == 0 {
@@ -1060,7 +1091,7 @@ fn _cli_refresh(ref: string) -> any {
 
 fn _help_text() -> string {
     return _join([
-        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.8.1)",
+        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.8.2)",
         "",
         "  /quota                       bare → all-accounts table (★ = active, live; rest cached)",
         "  /quota list                  same table (status is an alias of list)",

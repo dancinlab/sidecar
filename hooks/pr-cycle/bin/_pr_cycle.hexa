@@ -194,6 +194,19 @@ fn _worktree_cleanup_tail() -> string {
     return " && (cd " + p_main + " && git worktree remove " + p_wt + " --force 2>/dev/null && git branch -D " + p_br + " 2>/dev/null || true)"
 }
 
+// `--repo <X>` value if the create targets another repo (cross-repo PR).
+// `--repo=X` not handled (gh's canonical form is space-separated). Used to
+// route the appended merge to the SAME repo as the create (INBOX #4: a
+// cross-repo create otherwise got a merge against the cwd repo).
+fn _repo_flag(toks: array) -> string {
+    let mut i = 0
+    while i + 1 < len(toks) {
+        if toks[i] == "--repo" { return toks[i + 1] }
+        i = i + 1
+    }
+    return ""
+}
+
 // rebuild tool_input with command swapped, emit updatedInput JSON.
 fn _emit(ti: map, new_cmd: string, note: string) {
     let ks = keys(ti)
@@ -245,6 +258,17 @@ fn main() {
 
     // skip — draft PR (user wants review, not immediate merge)
     if cmd.contains("--draft") { _allow() }
+
+    // cross-repo create (`--repo X`): merge THAT repo's PR, and do NOT touch
+    // the local (cwd) worktree — it belongs to a different repo than the PR
+    // (INBOX #4 from anima: a `--repo kosmos` create got ` && gh pr merge` run
+    // against the cwd repo's main, fetching/merging the wrong repo).
+    let repo = _repo_flag(toks)
+    if repo != "" {
+        let xcmd = cmd + " && gh pr merge --repo " + repo + " --squash --admin --delete-branch" + "  # " + MARK
+        let xnote = "pr-cycle: cross-repo (--repo " + repo + ") — appended `gh pr merge --repo " + repo + "`; no local worktree cleanup (cwd repo ≠ PR repo)."
+        _emit(ti, xcmd, xnote)
+    }
 
     let wt_tail = _worktree_cleanup_tail()
     let tail = MERGE_TAIL + wt_tail

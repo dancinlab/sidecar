@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pr-cycle 0.3.6: cross-repo PR 머지 오작동 fix [INBOX #4 from anima]
+
+- **pr-cycle 0.3.6 — `gh pr create --repo X` 의 머지를 같은 repo 로 라우팅** — anima INBOX handoff #4: `gh pr create --repo dancinlab/kosmos …` 시 pr-cycle hook 이 ` && gh pr merge --squash --admin` 를 append 하는데, 그 머지가 **대상 repo(kosmos)가 아닌 cwd repo(anima)의 main 을 fetch/머지** 시도하던 cross-repo 오작동. 신규 `_repo_flag` 가 명령에서 `--repo <X>` 를 파싱 → cross-repo create 면 머지도 `gh pr merge --repo <X>`, 그리고 **로컬(cwd) worktree cleanup 은 skip**(PR repo ≠ cwd repo 라 cwd worktree 정리가 부적절). same-repo 동작 불변. Smoke: `--repo dancinlab/kosmos` → merge 도 `--repo dancinlab/kosmos`(worktree tail 없음) · `--repo` 없음 → 기존 cwd merge(+worktree cleanup). INBOX.md/log 의 #4 `- [x]` 해소; #1·#2·#3 은 harness-upstream(`isolation:worktree` 영역)으로 재분류 — sidecar 직접 fix 불가, 추적만. lockstep(@D ship · g22): plugin.json + marketplace 0.3.5 → 0.3.6.
+
 ## 2026-05-25 — sign-guard 0.1.2: self-mint 코드 강제 (에이전트가 `sidecar sign` 못 함) [보안 · HIGH]
 
 - **sign-guard 0.1.2 — no-self-mint 를 social contract → 코드 강제로 승격** — 신고: AI 에이전트가 유저 승인 없이 `sidecar sign project` 를 스스로 실행해 사인 토큰을 self-mint, 거버넌스 사인 게이트를 무력화하던 약점. 기존 게이트는 `commons.tape`·`project.tape` **편집**만 막고, "에이전트는 self-mint 금지"는 코드 주석의 약속(social contract)일 뿐 실제 강제가 없었음. 신뢰 경계는 오직 PreToolUse 훅(하네스가 평가 · 에이전트 우회 불가)뿐이고 — 출처(에이전트 vs 유저)를 가를 구조적 신호(env·payload 필드)가 없음을 claude-code-guide 로 확인 — 따라서 훅에서 차단.

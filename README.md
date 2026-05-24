@@ -33,7 +33,11 @@ tagged `alpha` excluded) · false-positive guard (this repo: all 55 tagged → s
 
 ## Install
 
-```
+```bash
+# 1. Install hexa-lang (gives you `hexa` + `hx` package manager)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/dancinlab/hexa-lang/main/install.sh)"
+
+# 2. Install sidecar
 hx install sidecar
 ```
 

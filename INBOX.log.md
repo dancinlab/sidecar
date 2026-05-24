@@ -2,6 +2,36 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-25T22:00Z — `/micro-exp` slash command + commons.tape 거버넌스 (from: demiurge RTSC)
+
+**Motivation** — 이번 세션(demiurge RTSC)에서 입증된 inverse 패턴: 1-big-run 대신 **검증가능한 작은 실험 N개를 동시에** 던져 monitor + agent-parse + atlas-direct-fold 으로 닫는 closed loop. 인프라는 이미 사이드카 + hexa-lang에 다 깔림 (hexa-lang #846 atlas SSOT inversion + #859 generic verify-delegation + hexa cloud rent/down/list #798 + sidecar pr-cycle 0.3.6 + Monitor closed-loop). **빠진 것 = 사이클을 한 줄로 묶는 슬래시 표면**.
+
+**Proposed slash command: `/micro-exp <manifest>` (or `/sweep`)** — one-shot 후보-리스트 sweep 오케스트레이터:
+  1. manifest 파싱 (YAML/JSON · 항목당 `{candidate_id, kind, inputs_dir, pseudo_dir, host_class, parser_template}`)
+  2. 각 후보 per: stage inputs → `hexa cloud rent` pod → copy-to → run → 🛰️ Monitor 무장 → JOB DONE 시 auto harvest+down → parse 에이전트 dispatch (manifest의 `parser_template` 사용) → 🟢 시 atlas register (generic verify-delegation, #859)
+  3. **pod 예산 게이트**: ≤N concurrent (manifest 선언) · 초과분은 queue
+  4. **aggregate** → `exports/sweep/<batch>/ledger.json` (manifest + per-candidate 결과 + 통합 패턴)
+
+**Concrete unlocked use-cases** (이 세션이 직접 만난 것들): H₃X 전 가족 sweep (group 13-17 × 4 구조 × 압력 ≈ 80–100 micro-exps · ~$100/wk vast 예산) · SSCHA 양자보정 sweep (unstable 후보 일괄) · ML→DFT funnel (ALIGNN 10k 후보 → top-100 DFT). **현재 수동 비용**: ~30 min 인간시간/후보 × 100 = 50h. **자동화 시**: ~5h 셋업 + monitor.
+
+**commons.tape 거버넌스 갭 (제안 @D)**:
+- `@D g_micro_exp_honest_sweep` — sweep 내 모든 실험은 verify tier(🔵/🟢/🟠/🔴) 도달 필수 · silent drop 금지 · FALSIFIED는 CLOSED negative로 기록(스킵 아님). 이 세션의 RbTlH₃·h3as·SrAuH₃ 정직-FAIL 패턴이 sweep mode에서도 보존되도록.
+- `@D g_sweep_budget_cap` — sweep manifest는 upfront `$_max/wk + pod_concurrent_max` 선언 의무 · 초과 시 dispatch halt. upstream `hexa cloud --max-price` TODO와 짝(이미 별도 INBOX 추적 중).
+- `@D g_sweep_aggregation` — 모든 sweep batch는 typed ledger(manifest + verdicts + 통합 패턴 ASCII)를 `exports/sweep/<batch>/`에 출력. 사람이 한 번에 sweep 전체를 읽을 수 있도록.
+- `@D g_sweep_pod_vs_agent_cap` — 현 `parallel-agent-cap=2-3`은 *AGENT* 캡 (rate-limit-kill 회피). sweep mode는 *POD* 캡 8(또는 manifest 선언) + *AGENT* 캡은 parse 단계만. 두 캡 의미 명확화 필요.
+
+**Related upstream items (cross-ref)**:
+- hexa-lang RFC 091 (preflight DFT/HPC) — sweep launch 전 budget/feasibility 게이트
+- hexa-lang INBOX `hexa cloud 개선 4건` (`vast --max-price` 등) — sweep 예산 가드 의존성
+- sidecar 기존 `/cycle` (active-domain 다음 라운드) — `/micro-exp`는 *manifest-driven sweep*, `/cycle`은 *milestone-driven loop*; 보완 관계
+
+**Status**: stub — 구체 설계 pass + prototype 필요. g60 (cross-repo gap reflex) 따라 same-turn 제출. demiurge RTSC + TTR-* 도메인이 직접 소비.
+
+- [ ] design draft: `/micro-exp` slash command (`sidecar/skills/micro-exp/`) + manifest schema YAML
+- [ ] propose commons.tape additions: `g_micro_exp_honest_sweep · g_sweep_budget_cap · g_sweep_aggregation · g_sweep_pod_vs_agent_cap`
+- [ ] prototype with H₃X N5 funnel manifest (~10 후보 first sweep)
+- [ ] cross-ref hexa-lang RFC 091 + `hexa cloud --max-price` 의존 추적
+
 ## 2026-05-25 — worktree/branch 하네스 4-gap (from anima)
 
 > anima 세션 (PURE Phase D + kosmos 단일 SSOT 이관) 중 `isolation:worktree` agent 6개 + closure agent 를 fan-out 하며 반복 발생. 기존 `hooks/worktree-gc`(merged prune)와 별개 — 이쪽은 격리 누수 + ref 유실 + PR 정합성.

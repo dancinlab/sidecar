@@ -16,18 +16,19 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T19:10Z · feat(sidecar-lint 0.5.0): profiles.json tier 누락 검사 — s7 갭 닫음 (PR3)
+2026-05-24T19:10Z · feat(sidecar-lint 0.5.0): profiles.json tier-coverage check — closes the s7 gap (PR3)
 
-프로파일(PR1·PR2)의 enforcement. 검사 (6): .claude-plugin/profiles.json이
-있는 레포에서 marketplace.json 플러그인이 tiers에 미분류면 non-blocking
-finding. 미분류 플러그인은 조용히 personal로 빠져 minimal/hexa에서 사라지므로
-(s7: 거버넌스는 enforcement와 함께 ship), 태깅하라고 advisory로 알림.
+Enforcement for the profiles feature (PR1·PR2). Check (6): when a repo carries
+.claude-plugin/profiles.json, any marketplace plugin missing a tier there produces a
+non-blocking finding. An untagged plugin silently defaults to `personal` and disappears
+from the minimal/hexa profiles (s7: governance ships with its enforcement), so the
+advisory nudges you to tag it.
 
-sidecar 전용: profiles.json 없는 타 플러그인팩은 skip. guards-narrow-scope
-원칙대로 deny 아닌 advisory.
+sidecar-specific: other plugin packs without profiles.json are skipped. Advisory
+rather than deny, per guards-narrow-scope.
 
-검증: hexa parse · true-positive(temp 레포 미분류 beta만 플래그, tagged alpha
-제외) · false-positive 가드(이 레포 55개 전부 tagged → 무음).
+Verified: `hexa parse` · true-positive (temp repo: only the untagged `beta` flagged,
+tagged `alpha` excluded) · false-positive guard (this repo: all 55 tagged → silent).
 <!-- /LATEST-SHIP -->
 
 ## Install

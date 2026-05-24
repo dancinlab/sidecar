@@ -1,0 +1,54 @@
+// _overrides.hexa — manage ~/.sidecar/plugin-overrides.json: per-plugin enable
+// overrides that WIN over the active profile (see install.hexa's _should_enable
+// path). The `sidecar enable / disable / reset` verbs write this file through
+// here; install.hexa reads it on every sync, so a per-plugin choice survives.
+// usage: hexa run _overrides.hexa { set <name> <true|false> | clear <name> | show }
+
+fn _home() -> string { return env_var("HOME") }
+fn _opath() -> string { return _home() + "/.sidecar/plugin-overrides.json" }
+
+fn _read() -> map {
+    let mut m = json_parse("{}")
+    try { m = json_parse(to_string(read_file(_opath()))) } catch e { m = json_parse("{}") }
+    if type_of(m) != "map" { return json_parse("{}") }
+    return m
+}
+
+fn _save(m: map) {
+    let _mk = exec("mkdir -p " + _home() + "/.sidecar")
+    write_file(_opath(), json_stringify(m) + "\n")
+}
+
+fn main() {
+    let a = argv()
+    let verb = if len(a) > 1 { a[1] } else { "show" }
+    let m = _read()
+
+    if verb == "set" {
+        if len(a) < 4 { eprintln("usage: set <name> <true|false>"); exit(1) }
+        m[a[2]] = a[3] == "true"
+        _save(m)
+        return
+    }
+    if verb == "clear" {
+        if len(a) < 3 { eprintln("usage: clear <name>"); exit(1) }
+        let ks = keys(m)
+        let mut out = json_parse("{}")
+        let mut i = 0
+        while i < len(ks) {
+            if ks[i] != a[2] { out[ks[i]] = m[ks[i]] }
+            i = i + 1
+        }
+        _save(out)
+        return
+    }
+    // show
+    let ks = keys(m)
+    if len(ks) == 0 { println("  (no per-plugin overrides — following the profile)"); return }
+    let mut i = 0
+    while i < len(ks) {
+        let state = if m[ks[i]] == true { "enabled" } else { "disabled" }
+        println("  " + ks[i] + " → " + state + " (override)")
+        i = i + 1
+    }
+}

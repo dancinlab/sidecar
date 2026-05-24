@@ -16,21 +16,23 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T19:02Z · feat(install): 다수 사용자용 enable 프로파일 — minimal·hexa·full (PR1 기반)
+2026-05-24T19:06Z · feat(sidecar 0.2.0): profile·enable·disable·reset CLI (PR2 — 프로파일 토글)
 
-sidecar를 일반 사용자가 쓸 수 있게, 플러그인을 tier로 분류하고 프로파일로
-on/off. .claude-plugin/profiles.json = 분류 SSOT (core=범용 안전/QoL/워크플로
-25 · hexa=hexa CLI/.hexa·.tape 의존 13 · personal=dancinlab 거버넌스/인프라/
-스타일 17). install.hexa가 ~/.sidecar/profile(기본 full) + plugin-overrides.json을
-읽어 플러그인별 enable 결정: override 우선 → tier∈active_tiers → 아니면 true.
+PR1 기반(profiles.json + install.hexa) 위에 사용자 인터페이스. bin/sidecar에
+verbs 추가:
+  sidecar profile [minimal|hexa|full]  현재 프로파일 표시 / 설정 후 재적용
+  sidecar enable  <plugin>             프로파일 무시 강제 ON (per-plugin override)
+  sidecar disable <plugin>             강제 OFF
+  sidecar reset   <plugin>             override 제거 → 프로파일 추종
 
-핵심 안전장치: 비-full 프로파일 + 읽기가능 설정일 때만 필터. full(기본)·설정
-누락·깨짐은 전부 enable-everything으로 fallback → 기존 설치 무변화, 전체 로스터를
-조용히 disable하는 일 절대 없음. 이건 플러그인 enable/disable(CC 네이티브)이지
-가드 안 env opt-out이 아님 — s11 안 건드림.
+상태: ~/.sidecar/profile(한 단어) + ~/.sidecar/plugin-overrides.json. 후자는
+bin/_overrides.hexa(set/clear/show)가 JSON read-modify-write. 각 verb는 상태
+기록 후 install.hexa 재실행으로 enabledPlugins 재계산. 플러그인 disable 방식이라
+가드 안 env opt-out 아님 — @D s11 안 건드림.
 
-검증: hexa parse 통과 · 결정 로직 하니스 5케이스 통과(minimal=core만·hexa·full
-전체·override 우선·미분류=personal 제외). CLI verbs(profile·enable·disable)는 PR2.
+검증: sh -n · hexa parse · override set/show/clear 격리 · help/profile-show 출력.
+일반 사용자: hx install sidecar 후 sidecar profile minimal → hexa/dancinlab
+전용 ~30개 꺼지고 범용 안전·워크플로만 남음.
 <!-- /LATEST-SHIP -->
 
 ## Install

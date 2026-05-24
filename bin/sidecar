@@ -5,12 +5,16 @@
 #   sidecar init        Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
 #   sidecar sync        Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
 #   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated SSOT file (commons · project) for 5 min.
+#   sidecar profile [<name>]  Show, or set, the enable profile (minimal · hexa · full). Set re-applies the install.
+#   sidecar enable <plugin>   Force-enable one plugin regardless of profile (per-plugin override). Re-applies.
+#   sidecar disable <plugin>  Force-disable one plugin regardless of profile (per-plugin override). Re-applies.
+#   sidecar reset <plugin>    Drop a plugin's override so it follows the profile again. Re-applies.
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,8p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,12p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Sign-off token store: `sidecar sign <key>` mints ~/.sidecar/signs/<key>.sign
@@ -32,6 +36,18 @@ sidecar_root() {
     esac
   done
   CDPATH='' cd -- "$(dirname "$self")/.." && pwd
+}
+
+# re-apply the local install (recomputes enabledPlugins from the active profile
+# + per-plugin overrides). Used by the profile / enable / disable / reset verbs.
+apply_install() {
+  _root=$(sidecar_root)
+  if ! command -v hexa >/dev/null 2>&1; then
+    echo "sidecar: hexa not on PATH — choice saved; run 'sidecar sync' to apply it" >&2
+    exit 1
+  fi
+  [ -f "$_root/install.hexa" ] || { echo "sidecar: install.hexa not found at $_root" >&2; exit 1; }
+  exec hexa run "$_root/install.hexa"
 }
 
 case "${1:-}" in
@@ -221,9 +237,54 @@ TAPE
         ;;
     esac
     ;;
+  profile)
+    # multi-user enable profile. install.hexa reads ~/.sidecar/profile (default
+    # full = everything) and enables a plugin iff its tier is in the profile.
+    PROF_FILE="$HOME/.sidecar/profile"
+    SUB="${1:-}"
+    if [ -z "$SUB" ]; then
+      cur=$(cat "$PROF_FILE" 2>/dev/null || echo "full")
+      echo "sidecar profile: ${cur:-full}"
+      echo "  available: minimal (core only) · hexa (core + hexa-lang) · full (everything)"
+      echo "  set: sidecar profile <name>   ·   per-plugin: sidecar enable|disable|reset <plugin>"
+      _root=$(sidecar_root)
+      if command -v hexa >/dev/null 2>&1 && [ -f "$_root/bin/_overrides.hexa" ]; then
+        echo "  per-plugin overrides:"
+        hexa run "$_root/bin/_overrides.hexa" show 2>/dev/null
+      fi
+      exit 0
+    fi
+    case "$SUB" in
+      minimal|hexa|full) ;;
+      *) echo "sidecar profile: unknown '$SUB' — pick: minimal · hexa · full" >&2; exit 1 ;;
+    esac
+    mkdir -p "$HOME/.sidecar"
+    printf '%s\n' "$SUB" > "$PROF_FILE"
+    echo "sidecar profile → $SUB · applying…"
+    apply_install
+    ;;
+  enable|disable)
+    PLUG="${1:-}"
+    [ -n "$PLUG" ] || { echo "usage: sidecar $VERB <plugin>" >&2; exit 1; }
+    _root=$(sidecar_root)
+    command -v hexa >/dev/null 2>&1 || { echo "sidecar: hexa not on PATH" >&2; exit 1; }
+    val=true; [ "$VERB" = disable ] && val=false
+    hexa run "$_root/bin/_overrides.hexa" set "$PLUG" "$val" || exit 1
+    echo "sidecar $VERB: $PLUG (per-plugin override) · applying…"
+    apply_install
+    ;;
+  reset)
+    PLUG="${1:-}"
+    [ -n "$PLUG" ] || { echo "usage: sidecar reset <plugin>" >&2; exit 1; }
+    _root=$(sidecar_root)
+    command -v hexa >/dev/null 2>&1 || { echo "sidecar: hexa not on PATH" >&2; exit 1; }
+    hexa run "$_root/bin/_overrides.hexa" clear "$PLUG" || exit 1
+    echo "sidecar reset: $PLUG → follows the profile · applying…"
+    apply_install
+    ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · sign" >&2
+    echo "  valid verbs: init · sync · sign · profile · enable · disable · reset" >&2
     exit 1
     ;;
 esac

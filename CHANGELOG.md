@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — fix: step-by-step marketplace source 경로 오염 수정 (`:step-by-step` 군더더기 제거 → 플러그인 로드 에러 해소)
+
+- **marketplace.json step-by-step `source` `./commands/step-by-step:step-by-step` → `./commands/step-by-step`** — 이전 over-broad 네임스페이스 rename(quota `:quota` 오염과 동일 패턴)이 step-by-step 의 source 경로에도 `:step-by-step` 을 붙여, Claude Code 가 marketplace clone 에서 플러그인 디렉터리를 못 찾아 `/doctor` 에 "Plugin directory not found" 로드 에러를 냈다. quota 는 0.8.2 에서 이미 `./skills/quota` 로 복구됐으나 step-by-step 은 누락됐던 것. 폴더는 `commands/step-by-step` 이므로 군더더기 제거. 전 플러그인 source 경로 전수 검사 결과 잔여 오염은 이 1건뿐 — 수정 후 0건. 버전 변동 없음(경로 메타 수정 · marketplace ↔ plugin.json 0.1.0 유지).
+
 ## 2026-05-24 — quota 0.8.2: 통합 표 행 정렬(닉네임>이메일) + `quota:quota` 경로 오염 정정
 
 - **quota 0.8.2 — 통합 표 행을 닉네임(없으면 이메일)순으로 정렬** — `_unified_lines` 가 행을 출력 전에 `_sort_accounts`(selection sort · 계정 수 적어 O(n²) 무관 · 인덱스 안전)로 정렬. 정렬 키 `_sort_key` = 닉네임이 있으면 닉네임, 없으면 이메일, `.to_lower()` 로 대소문자 무시. 사용자 요청 "표 정렬: 닉네임이름순 || 이메일이름순". Smoke: 닉네임 전무 → 이메일순(mk55911·mk911tb·mkgt3rs·search5599) · 혼합(alpha·…·zebra) → 정렬 키 알파벳순 정확 · 활성 ★ 행도 정렬에 포함.

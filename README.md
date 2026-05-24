@@ -16,13 +16,7 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T17:46Z · fix(quota 0.8.3): 캐시 만료된 리셋시각 0m → — (모름) 표시
-
-비활성 계정은 캐시값을 보여주는데, 캐시에 박힌 리셋시각이 이미 과거면
-남은시간이 음수 → 0m 으로 깎여 '곧 리셋'처럼 오해됐음. 실제로는 5h/7d
-창이 이미 굴러갔는데 캐시만 옛날 걸 들고 있는 stale 상태. delta<=0 이면
-— (정직한 모름, 갱신 필요)로 바꿔 라이브 0m 과 구분. 라이브 계정은
-resets_at 이 항상 미래라 영향 없음.
+2026-05-24T17:59Z · feat(git-guard 0.5.0): stale-base push 어드바이저리 — 공유 워킹트리 브랜치 swap 방어
 <!-- /LATEST-SHIP -->
 
 ## Install

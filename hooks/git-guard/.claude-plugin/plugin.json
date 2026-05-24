@@ -1,7 +1,7 @@
 {
   "name": "git-guard",
-  "description": "PreToolUse(Bash) guard that denies force-type git push operations only, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run` — no Python, no shell shim). Catches `git push --force`, `git push -f`, `git push --force-with-lease`, and `git push <remote> +<ref>` (refspec-level force). Hook-bypass (--no-verify) NOT blocked — left to user discipline. NO opt-out by design — no env var, no config file, no exception list.",
-  "version": "0.4.2",
+  "description": "PreToolUse(Bash) git-push safety guard, implemented in hexa-lang (`_git_guard.hexa`, invoked via `hexa run` — no Python, no shell shim). (1) DENIES force-type push: `git push --force` / `-f` · `--force-with-lease` · `git push <remote> +<ref>` (refspec-level force); quotes stripped before tokenizing (0.4.2). (2) Non-blocking STALE-BASE advisory (0.5.0): for a non-force push, emits additionalContext when the current branch trails the remote default base (origin/HEAD, else origin/main) by >= 20 commits — the shared-workdir branch-swap / silent-revert fingerprint; push still proceeds. Hook-bypass (--no-verify) NOT blocked — left to user discipline. NO opt-out by design — no env var, no config file, no exception list.",
+  "version": "0.5.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

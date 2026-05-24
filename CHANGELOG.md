@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — git-guard 0.5.0: stale-base push 어드바이저리 (공유 워킹트리 브랜치 swap 방어)
+
+- **git-guard 0.5.0 — non-force `git push` 에 stale-base 비차단 경고 추가** — 공유 워킹트리(한 repo · 동시 에이전트 다수)에서 sibling 에이전트가 내 commit↔push 사이에 HEAD 를 바꿔치기 → push 가 origin/main 보다 37커밋 뒤처진 stale 브랜치로 가고, 머지 시 그 사이 바뀐 파일을 옛 버전으로 silent-revert 할 뻔한 사고(데미우르고스 동시성 해저드) 방어. 기존 가드는 force-push 만 deny 해 이 "정상 형태" push 는 그냥 통과하던 구멍.
+  - **동작**: force 가 아닌 `git push` 에서 `git rev-list --left-right --count <base>...HEAD` (base = `origin/HEAD`, 없으면 `origin/main`) 1회 read-only 라운드트립으로 현재 브랜치의 behind/ahead 계산. behind ≥ **20** 이면 PreToolUse `additionalContext`(non-blocking)로 브랜치명 · behind · ahead · 재작업 경로(base 에서 격리 worktree 재컷) 안내 — **push 는 그대로 진행** (deny 아님 · guards-narrow-scope: 위생은 advisory > deny).
+  - **타겟 repo 해석**: 명령의 `cd <dir> && git push` 에서 마지막 cd 디렉터리를 파싱해 그 repo 에서 probe(없으면 훅 cwd). 임계치 20 은 하드코딩(env/config opt-out 없음 · @D s11) — 단명 stacked PR 의 정상 drift 보다 훨씬 위라 진짜 stale 베이스에만 발화. base 브랜치 자신을 push 할 땐 skip · 비-repo/detached 면 fail-open(무발화). force-push deny 경로 · 따옴표 strip(0.4.2) 전부 무회귀.
+- Smoke(4/4): force-push → DENY · 25-behind 브랜치 push → STALE-BASE 경고 · main(behind 0) bare push → allow · 5-behind(<20) → allow. lockstep(@D ship · g22): plugin.json + marketplace 0.4.2 → 0.5.0.
+
 ## 2026-05-25 — ship 0.3.2: bare `/ship` 헬퍼 모드 (usage 에러 → 상태+템플릿)
 
 - **ship 0.3.2 — 인자 없는 `/ship` 이 usage 에러 대신 상태+템플릿 출력** — 인자 없이 `/ship` 을 치면 매번 usage 만 뱉어 불편하던 점 개선. `_ship.hexa` 의 no-args 분기가 이제 (a) `git status --porcelain` 의 미커밋 변경을 후보 목록으로 나열하고 (b) 바로 붙여쓸 `/ship -m "<commit message>" <변경파일들>` 템플릿을 출력한 뒤 **exit 0**(에러 아님·헬퍼 모드). 신규 `_changed_paths` 가 porcelain 을 파싱(rename `old -> new` 는 new 채택). **@D ship 불변 준수**: 여전히 자동 스테이징/커밋 안 함 — 명시 경로 + 에이전트 작성 메시지가 필수라는 규율은 그대로, bare 폼은 "무엇을 어떻게 올릴지" 템플릿만 제공. Smoke: 깨끗한 트리 → "nothing to ship" · 변경 있을 때 → 후보 목록 + 채워진 템플릿(exit 0). ship.md argument-hint/description 에 bare 폼 명시. lockstep(@D ship · g22): plugin.json + marketplace 0.3.1 → 0.3.2.

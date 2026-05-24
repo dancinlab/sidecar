@@ -1,13 +1,28 @@
-// _git_guard.hexa — PreToolUse(Bash) deny for force-type git push only.
+// _git_guard.hexa — PreToolUse(Bash) git-push safety guard.
 //
-// Blocked:
+// (1) DENY — force-type push (rewrites / bypasses shared history):
 //   git push --force / -f
 //   git push --force-with-lease
 //   git push <remote> +<refspec>   (refspec-level force)
 //
+// (2) ADVISORY (non-blocking) — stale-base push. For a non-force
+// `git push`, compute the current branch's divergence from the remote
+// default branch (origin/HEAD, else origin/main). When the branch is
+// >= STALE_BEHIND commits BEHIND that base, emit additionalContext: the
+// base is stale, so files changed on the base since the cut may be
+// silently reverted by this PR — and in a shared working dir this is
+// the fingerprint of a concurrent agent swapping HEAD out from under
+// you. Push still proceeds; this only surfaces the risk.
+//
 // NO opt-out by design — no env var, no config file, no exception
 // list. A guard you can switch off is a guard you will switch off;
 // a mis-firing guard is fixed at the guard.
+
+// Branch is flagged stale when it trails the remote default base by at
+// least this many commits. Short-lived stacked PRs (the family norm)
+// are cut fresh from main, so a branch this far behind is anomalous —
+// the 37-behind/1-ahead branch-swap incident sits well above it.
+let STALE_BEHIND = 20
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -42,6 +57,14 @@ fn _json_escape(s: string) -> string {
 
 fn _deny(reason: string) {
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// Non-blocking advisory — additionalContext only, NO permissionDecision,
+// so the push still flows through its normal permission path.
+fn _emit_advisory(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
     println(payload)
     exit(0)
 }
@@ -84,6 +107,58 @@ fn _tokens(s: string) -> array {
     }
     if len(cur) > 0 { out.push(cur) }
     return out
+}
+
+// Last `cd <dir>` target appearing before the `git push` token, so the
+// divergence probe runs in the repo the push will actually target
+// (e.g. `cd ~/core/demiurge && git push`). Empty when the push has no
+// leading cd — the probe then runs in the hook's own cwd.
+fn _cd_dir_before(toks: array, gp: int) -> string {
+    let mut dir = ""
+    let mut i = 0
+    while i + 1 < gp {
+        if toks[i] == "cd" { dir = toks[i + 1] }
+        i = i + 1
+    }
+    return dir
+}
+
+// Non-blocking stale-base check for a non-force `git push`. Probes the
+// target repo for branch + remote-default base + behind/ahead counts in
+// a single shell round-trip; emits an advisory when behind >= STALE_BEHIND.
+fn _stale_base_advisory(toks: array, gp: int) {
+    let dir = _cd_dir_before(toks, gp)
+    let mut prefix = ""
+    if dir != "" { prefix = "cd " + dir + " 2>/dev/null && " }
+    let body = "{ b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); d=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main); c=$(git rev-list --left-right --count \"$d\"...HEAD 2>/dev/null); printf '%s\\n%s\\n%s\\n' \"$b\" \"$d\" \"$c\"; }"
+
+    let mut out = ""
+    try { out = to_string(exec(prefix + body)) } catch e { return }
+    let lines = out.split("\n")
+    if len(lines) < 3 { return }
+
+    let branch = lines[0].trim()
+    let base = lines[1].trim()       // e.g. "origin/main"
+    let counts = lines[2].trim()     // "<behind>\t<ahead>"
+    if branch == "" || branch == "HEAD" { return }   // no repo / detached
+    if counts == "" { return }
+
+    // remote-default short name — skip when we're pushing the base itself
+    let mut base_name = base
+    let slash = base.index_of("/")
+    if slash >= 0 { base_name = base.substring(slash + 1, len(base)) }
+    if branch == base_name { return }
+
+    let parts = _tokens(counts)
+    if len(parts) < 2 { return }
+    let mut behind = 0
+    let mut ahead = 0
+    try { behind = to_int(parts[0]) } catch e { return }
+    try { ahead = to_int(parts[1]) } catch e { ahead = 0 }
+    if behind < STALE_BEHIND { return }
+
+    let msg = "⚠ STALE-BASE PUSH — 현재 브랜치 '" + branch + "'는 " + base + "보다 " + to_string(behind) + "커밋 뒤처짐 (ahead " + to_string(ahead) + "). 베이스가 stale — " + base + "에서 그 이후 바뀐 파일은 이 PR 머지 시 옛 버전으로 덮여(silent revert) 되돌아갈 수 있음. 공유 워킹트리에서 동시 에이전트가 HEAD를 바꿔치기한 정황일 수 있으니 의도한 브랜치가 맞는지 확인하고 — 맞다면 " + base + "에서 격리 worktree로 새로 잘라 작업하세요. (non-blocking · push는 진행됨)"
+    _emit_advisory(msg)
 }
 
 fn main() {
@@ -139,9 +214,13 @@ fn main() {
         }
     }
 
-    if label == "" { _allow() }
+    if label != "" {
+        let mut snippet = cmd
+        if len(cmd) > 180 { snippet = cmd.substring(0, 177) + "..." }
+        _deny("GIT_GUARD_BLOCK { pattern: " + label + ", command: " + snippet + ", action: blocked — this operation rewrites or bypasses safety. No override; if a force-push is genuinely required, do it outside Claude Code. }")
+    }
 
-    let mut snippet = cmd
-    if len(cmd) > 180 { snippet = cmd.substring(0, 177) + "..." }
-    _deny("GIT_GUARD_BLOCK { pattern: " + label + ", command: " + snippet + ", action: blocked — this operation rewrites or bypasses safety. No override; if a force-push is genuinely required, do it outside Claude Code. }")
+    // Not a force push — non-blocking stale-base advisory, then allow.
+    _stale_base_advisory(toks, gp)
+    _allow()
 }

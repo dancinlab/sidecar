@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pr-cycle 0.3.5: `updatedInput` 재작성에 `permissionDecision:allow` 누락 fix (PR 생성되나 머지 안 됨)
+
+- **pr-cycle 0.3.5 — `updatedInput` 옆에 `permissionDecision: "allow"` 추가** — 증상: `/pr-cycle`(또는 임의 `gh pr create`)에서 **PR 은 생성되는데 자동 머지 tail(`&& gh pr merge`)이 안 붙음**. 원인: PreToolUse(Bash) 훅이 `hookSpecificOutput.updatedInput` 으로 명령을 재작성할 때, **같은 `hookSpecificOutput` 에 `permissionDecision: "allow"` 가 함께 있어야** Claude Code 가 재작성을 적용한다(공식 hooks 문서 확인). 그 sibling 필드가 빠져 있어 Claude Code 가 `updatedInput` 을 무시 → 원본 명령(머지 tail 없음)이 실행돼 PR 만 생성되고 머지 누락. `_emit` 의 출력 JSON 에 `"permissionDecision":"allow"` 추가(`exit(0)` 은 이미 충족하던 또 다른 조건). Smoke: emit JSON 이 `permissionDecision:allow` + `updatedInput` + `additionalContext` 공존하는 유효 JSON. 헤더 주석 + plugin.json/marketplace desc 에 "permissionDecision 필수" 명시. 표면 lockstep(@D ship · g22): pr-cycle plugin.json + marketplace.json 0.3.4 → 0.3.5.
+
 ## 2026-05-24 — fix: step-by-step marketplace source 경로 오염 수정 (`:step-by-step` 군더더기 제거 → 플러그인 로드 에러 해소)
 
 - **marketplace.json step-by-step `source` `./commands/step-by-step:step-by-step` → `./commands/step-by-step`** — 이전 over-broad 네임스페이스 rename(quota `:quota` 오염과 동일 패턴)이 step-by-step 의 source 경로에도 `:step-by-step` 을 붙여, Claude Code 가 marketplace clone 에서 플러그인 디렉터리를 못 찾아 `/doctor` 에 "Plugin directory not found" 로드 에러를 냈다. quota 는 0.8.2 에서 이미 `./skills/quota` 로 복구됐으나 step-by-step 은 누락됐던 것. 폴더는 `commands/step-by-step` 이므로 군더더기 제거. 전 플러그인 source 경로 전수 검사 결과 잔여 오염은 이 1건뿐 — 수정 후 0건. 버전 변동 없음(경로 메타 수정 · marketplace ↔ plugin.json 0.1.0 유지).

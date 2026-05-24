@@ -11,7 +11,10 @@
 //
 // Skip if: `--draft` flag present · `gh pr merge` already in the command.
 //
-// Rewrite tail (appended via the hook `updatedInput` field):
+// Rewrite tail (appended via the hook `updatedInput` field — emitted ALONGSIDE
+// `permissionDecision: "allow"` in the same hookSpecificOutput; without that
+// sibling field Claude Code IGNORES updatedInput and runs the original command,
+// so the PR is created but never merged — the 0.3.5 fix):
 //   1) ` && gh pr merge --squash --admin --delete-branch` (always —
 //      `--admin` lets the create→merge cycle complete over branch
 //      protection without a separate human approval step)
@@ -206,7 +209,7 @@ fn _emit(ti: map, new_cmd: string, note: string) {
         i = i + 1
     }
     let updated = "{" + parts.join(",") + "}"
-    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
     println(out)
     exit(0)
 }

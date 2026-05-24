@@ -11,12 +11,13 @@ The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** wheneve
 
 > **0.6.0 — load-escalation removed.** A prior gate (`0.5.7`) promoted any non-trivial cmd to heavy when the non-claude CPU sum exceeded 150%. On a multi-core Mac that threshold trips constantly (WindowServer + browser + build daemons), so nearly every `git` / `hexa run /Users/...` / smoke got shipped to a Linux pool host where the Mac-local path doesn't exist — and broke. "system busy" ≠ "this command should move"; that conflation was the bug. Storm protection still holds — the real meltdown patterns (`hexa kick`/`drill`/`loop`/`cc`, `find ~/core/anima`) are in the explicit classifier above.
 
-## Never routes (local-bound guard, 0.6.0)
+## Never routes (local-bound guard)
 
 - `git` / `gh` commands — operate on the local working tree + remotes
 - any command containing a `/Users/` or `/home/` absolute-path literal — host-specific
+- any command containing `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` literals — resolve via the dispatching bash to the workstation's plugin cache, which only exists on the local Mac (sidecar slash commands like `/quota:quota`, `/pool:pool`, … all match)
 
-These run local unconditionally; they're version-control / local-fs ops, never the heavy compute the pool exists for.
+These run local unconditionally; they're version-control / local-fs / trusted-plugin ops, never the heavy compute the pool exists for.
 
 ## Local-bound sign gate (0.6.4)
 

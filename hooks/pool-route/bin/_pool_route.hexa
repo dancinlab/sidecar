@@ -20,6 +20,14 @@
 // commands (swift build · xcodebuild) run local on the workstation Mac; only
 // Linux hosts receive routed work. Explicit `pool on <macos-host>` is the
 // pool CLI, not this hook, so it is unaffected.
+//
+// Sidecar plugin pin: cmds carrying `$CLAUDE_PLUGIN_ROOT` or
+// `$CLAUDE_PLUGIN_DATA` (literals expanded by the local bash on dispatch)
+// resolve to LOCAL plugin cache paths — routing them to a pool host breaks
+// because the cache lives only on the workstation. Treat the literals as
+// local-bound, alongside `/Users/`/`/home/`. No sign gate: sidecar slash
+// commands are a trusted, single-shot surface (not the multi-session
+// dispatch-cache race the sign gate was designed to catch).
 
 let MARK = "__SIDECAR_POOL__"
 
@@ -411,6 +419,11 @@ fn main() {
     // These are read/version-control/local-fs ops, never the heavy compute the
     // pool exists for, so an early _allow() is always correct.
     if _has_word(cmd, "git") || _has_word(cmd, "gh") { _allow() }
+    // sidecar plugin pin (0.6.8): `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA`
+    // literals always resolve to the LOCAL plugin cache — routing them to a
+    // pool host fails because the cache lives only on the workstation. Trusted
+    // surface (sidecar slash commands), so no sign gate.
+    if cmd.contains("$CLAUDE_PLUGIN_ROOT") || cmd.contains("$CLAUDE_PLUGIN_DATA") { _allow() }
     if cmd.contains("/Users/") || cmd.contains("/home/") {
         // Sign gate (0.6.4): local-bound HEAVY invocations (hexa · python ·
         // bash/sh <script>) on absolute host paths are the canonical mac

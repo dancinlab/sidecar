@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pool-route 0.6.8: 사이드카 플러그인 변수(`$CLAUDE_PLUGIN_ROOT`/`$CLAUDE_PLUGIN_DATA`) local pin
+
+- **pool-route 0.6.8 — 사이드카 슬래시 명령 local 고정** — `/quota:quota` · `/pool:pool` 등 모든 sidecar 슬래시가 emit 하는 bash 의 `H="$CLAUDE_PLUGIN_ROOT/bin/_X.hexa"; hexa run "$H" ...` 패턴이 ubu-1/2 로 라우팅 → 원격엔 sidecar 캐시가 없어 `✗ _quota.hexa not found` 로 실패하는 현상 사용자 보고.
+  - **원인**: 0.6.7 까지의 local-bound 가드는 `/Users/`/`/home/` 리터럴만 인식. cmd 문자열에 `$CLAUDE_PLUGIN_ROOT` 는 **셸 변수 리터럴** 그대로 남아있고 절대경로 형태로 안 풀려서 가드 미통과 → `hexa run` heavy_pair 매칭으로 pool 라우팅 → 실패.
+  - **fix**: local-bound 분기 직전에 `cmd.contains("$CLAUDE_PLUGIN_ROOT") || cmd.contains("$CLAUDE_PLUGIN_DATA")` 면제 추가. 두 변수는 dispatching bash 가 항상 워크스테이션 plugin cache 로 해석하므로 본질적으로 host-bound. sign 게이트 없음 — sidecar 슬래시 명령은 trusted single-shot 표면이라 multi-session dispatch race 가 아님.
+  - **scope**: 모든 sidecar 슬래시(`/quota:quota`, `/pool:pool`, `/check`, `/end`, `/ship`, `/inject`, `/secret`, …)가 작성 컨벤션상 `$CLAUDE_PLUGIN_ROOT` 를 통해 자기 바이너리를 호출(@D s3 portable plugin scripts) → 이번 fix 로 모두 local 통과.
+  - **표면**: `_pool_route.hexa` (local-bound 분기 직전 면제 추가 + 헤더 코멘트 한 절) · `plugin.json` 0.6.7 → 0.6.8 + description 에 0.6.8 절 splice · `marketplace.json` 0.6.6 → 0.6.8 + description 동기화 · README "Never routes" 섹션에 새 항목.
+
 ## 2026-05-25 — pool-route 0.6.7: aprime_cc (hexa-lang in-tree native codegen) 라우팅
 
 - **pool-route 0.6.7 — `aprime_cc` heavy + macos classifier 양쪽 추가** — 사용자 escalation: build/aprime_cc 호출도 자원에서 돌아야. aprime_cc = hexa-lang in-tree self-host native codegen (Mach-O arm64 ~1.2MB · `./build/aprime_cc <x>.hexa --emit=asm --target=arm64-apple-darwin -o out.s`). 측정: workstation 85%+ CPU × 분 단위로 mac에서 도는 중 (다른 세션 발사).

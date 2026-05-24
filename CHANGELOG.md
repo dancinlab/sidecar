@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — sign-guard 0.1.0 · sidecar(command) 0.1.0 · `sidecar sign` verb: governance SSOT 유저 사인 게이트
+
+- **sign-guard 0.1.0 (신규 훅) — commons.tape · project.tape 편집을 유저 사인 게이트화** — 거버넌스 SSOT 파일(현재 `commons.tape` cross-project do/dont 레이어 + `project.tape` per-project 정체성·거버넌스)은 **신선한 유저 사인 토큰이 있을 때만** 에이전트가 편집 가능. PreToolUse(Write/Edit/NotebookEdit/Bash) 가드가 두 쓰기 채널(구조화 도구 + Bash 리다이렉트, hexa-native 스캐너 재사용) 모두에서 게이트 대상 경로를 잡아, 토큰이 없거나 만료(>900s)면 hard-deny. 게이트 목록은 `GATED` 배열 — `[["commons","/commons.tape"],["project","/project.tape"]]` — 한 줄 추가 + reship 로 확장(유저: "계속 추가될 것"). 토큰은 유일한 precondition(@D s11: opt-out 스위치 아님 · 실제 precondition 게이팅). `sidecar init` 같은 CLI 내부의 리다이렉트는 top-level 커맨드 문자열에 안 보이므로 스캐폴더는 영향 없음 — 에이전트의 직접 쓰기만 게이트.
+- **`sidecar sign <key>` verb (bin/sidecar) — 토큰 mint/list/clear** — `sidecar sign commons` / `sidecar sign project` → `~/.sidecar/signs/<key>.sign` 에 현재 epoch 기록(15분 유효). 인자 없음 / `--list` → 활성 토큰 + 잔여 유효시간 표시. `sign clear [<key>]` → 토큰 제거. SIGN_TTL=900 은 가드의 `TTL` 과 lockstep. help / unknown-verb 목록에 `sign` 반영.
+- **사인은 USER 로부터 — 에이전트 self-mint 금지(@D s13 신규)** — deny 메시지가 "유저에게 `sidecar sign <key>` 실행을 요청하고 retry · 직접 사인 금지"를 UPPERCASE 강조로 명시. 강제력 = hard-deny(토큰 없으면 편집 불가) + `sidecar sign` 호출이 트랜스크립트에 가시·감사 가능 + 거버넌스 룰(@D s13). project.tape 의 기존 "user-request only" 관례를 하드 게이트로 승격.
+- **/sidecar 커맨드(신규, commands/sidecar) — CLI 씬 래퍼** — `/sidecar:sidecar <args>` → `sidecar "$@"` (pool·secret 래퍼와 동형). `/sidecar:sidecar sign commons` 형태로 사인 가능.
+- 표면 lockstep(g22): sign-guard plugin.json + marketplace.json 0.1.0 · sidecar(command) plugin.json + marketplace.json 0.1.0 · bin/sidecar(sign verb) · project.tape(@D s13). enabledPlugins 는 sync 로 활성.
+
 ## 2026-05-24 — hexa-native 0.3.0: Bash 리다이렉트 채널 차단 (`.py`/`.sh` 우회 구멍 봉인)
 
 - **hexa-native 0.3.0 — matcher `Write|Edit|NotebookEdit` → `Write|Edit|NotebookEdit|Bash`, Bash 쓰기 채널 hard-deny 추가** — 기존 hook 은 구조화 파일 도구(Write/Edit/NotebookEdit)로 들어오는 `.py`/`.sh` 쓰기만 막았다. 그래서 모델이 `cat > foo.py << EOF` · `echo … >> bin/x.sh` · `echo … | tee foo.py` 같은 **Bash 리다이렉트**로 파일을 만들면 문지기를 안 거치고 통과 — "hexa 작성이 자꾸 안 지켜지던" 정확한 원인. `_hexa_native.hexa` 에 Bash 브랜치를 추가해 봉인. 따옴표-aware 스캐너로 `>`·`>>`·heredoc 리다이렉트 타겟 + `tee [-a]` 파일 인자를 추출, 상대경로는 payload `cwd` 기준으로 절대화 후 `project.tape` 루트를 탐색해 `.py`/`.sh` 면 deny. **명백한 쓰기만** 차단 — `python foo.py`(실행)·`cat foo.py`(읽기)·`chmod x.sh`·`2>&1`(fd-dup)·비-py/sh 타겟은 통과(오탐 거의 0). @D s7(governance+enforcement 동반)의 enforcement 구멍 메움.

@@ -1,0 +1,270 @@
+// _sign_guard.hexa — PreToolUse(Write|Edit|NotebookEdit|Bash) sign-gate.
+//
+// A small registry of governance-SSOT files (GATED below) may be edited by
+// the agent ONLY while a fresh user sign-off token exists. The user mints a
+// token with `sidecar sign <key>`, which writes the current epoch to
+// `~/.sidecar/signs/<key>.sign`. A token is valid for TTL seconds.
+//
+// Covers both write channels (mirrors hexa-native):
+//   1. Write / Edit / NotebookEdit  (file_path / notebook_path)
+//   2. Bash redirect channel — `> X`, `>> X`, heredoc-to-redirect, `tee X`
+//      (relative targets resolved against payload `cwd`). Writes buried
+//      inside an invoked CLI/script (e.g. `sidecar init`'s own redirect) are
+//      not visible at the top-level command string, so the official
+//      scaffolder is unaffected — only the agent's own direct writes gate.
+//
+// The token is the gate's single precondition (project.tape @D s11: gate on a
+// real precondition, never an opt-out switch). The sign must come FROM the
+// user — the agent must not self-mint; that social contract + the visible,
+// auditable `sidecar sign` call is the enforcement, on top of the hard deny.
+//
+// To gate another file: add one `["key", "/suffix"]` row to GATED and reship.
+
+let TTL = 900   // s — sign-off window (keep in lockstep with `bin/sidecar` sign)
+
+// sign-gated targets — { key, path-suffix }. Grows as more SSOT files are added.
+fn _gated() -> array {
+    return [
+        ["commons", "/commons.tape"],
+        ["project", "/project.tape"],
+    ]
+}
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let ne = len(suffix)
+    if ne > ns { return false }
+    return s.substring(ns - ne, ns) == suffix
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _basename(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return path }
+    return path.substring(i + 1, len(path))
+}
+
+fn _gated_key(target: string) -> string {
+    let g = _gated()
+    let mut i = 0
+    while i < len(g) {
+        let entry = g[i]
+        if _ends_with(target, entry[1]) { return entry[0] }
+        i = i + 1
+    }
+    return ""
+}
+
+// Fresh sign token for `key`? Reads ~/.sidecar/signs/<key>.sign (epoch secs).
+fn _signed(key: string) -> bool {
+    let path = env_var("HOME") + "/.sidecar/signs/" + key + ".sign"
+    if !file_exists(path) { return false }
+    let mut raw = ""
+    try { raw = to_string(read_file(path)) } catch e { return false }
+    let mint = to_int(raw.trim())
+    if mint <= 0 { return false }
+    let age = timestamp() - mint
+    if age < 0 { return false }
+    return age <= TTL
+}
+
+fn _deny_for(target: string, key: string) {
+    let base = _basename(target)
+    let reason = "sign-guard: `" + base + "` is SIGN-GATED governance SSOT (sign key: `" + key + "`).\n"
+        + "  BLOCKED — this file needs the USER's explicit sign-off before any edit.\n"
+        + "  Ask the user to run  `sidecar sign " + key + "`  (or `/sidecar:sidecar sign " + key + "`), THEN retry.\n"
+        + "  Do NOT run `sidecar sign` yourself — the sign must come FROM the user; that is the whole point of this gate.\n"
+        + "  A sign-off is valid for 15 minutes. NO env-var / flag override by design."
+    _deny(reason)
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _is_meta(c: string) -> bool {
+    return c == " " || c == "\t" || c == "\n" || c == "\r" || c == ";" || c == "|" || c == "&" || c == "<" || c == ">" || c == "(" || c == ")"
+}
+
+// Quote-aware scan for `>` / `>>` redirect targets (mirrors hexa-native).
+fn _redirect_targets(cmd: string) -> array {
+    let n = len(cmd)
+    let mut i = 0
+    let mut out = []
+    let mut q = ""
+    while i < n {
+        let c = cmd[i]
+        if q != "" {
+            if c == q { q = "" }
+            i = i + 1
+            continue
+        }
+        if c == "\"" || c == "'" {
+            q = c
+            i = i + 1
+            continue
+        }
+        if c == ">" {
+            i = i + 1
+            while i < n && (cmd[i] == ">" || cmd[i] == "|") { i = i + 1 }
+            while i < n && (cmd[i] == " " || cmd[i] == "\t") { i = i + 1 }
+            if i < n && cmd[i] == "&" { continue }
+            let mut tok = ""
+            let mut tq = ""
+            while i < n {
+                let d = cmd[i]
+                if tq != "" {
+                    if d == tq { tq = "" } else { tok = tok + d }
+                    i = i + 1
+                    continue
+                }
+                if d == "\"" || d == "'" { tq = d; i = i + 1; continue }
+                if _is_meta(d) { break }
+                tok = tok + d
+                i = i + 1
+            }
+            if len(tok) > 0 { out.push(tok) }
+            continue
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// `tee [-flags] FILE...` — file args until a pipe / terminator token.
+fn _tee_targets(toks: array) -> array {
+    let n = len(toks)
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        if toks[i] == "tee" {
+            let mut j = i + 1
+            while j < n {
+                let t = toks[j]
+                if t == "|" || t == ";" || t == "&" || t == "&&" || t == "||" { break }
+                if !_starts_with(t, "-") { out.push(t) }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn _resolve(cwd: string, target: string) -> string {
+    if _starts_with(target, "/") { return target }
+    if _starts_with(target, "~") {
+        return env_var("HOME") + target.substring(1, len(target))
+    }
+    let mut t = target
+    if _starts_with(t, "./") { t = t.substring(2, len(t)) }
+    if cwd == "" { return t }
+    return cwd + "/" + t
+}
+
+fn _handle_bash(payload: map, ti: map) {
+    if !has_key(ti, "command") { _allow() }
+    let cmd = ti["command"]
+    if cmd == "" { _allow() }
+    let mut cwd = ""
+    if has_key(payload, "cwd") { cwd = payload["cwd"] }
+
+    let mut cands = _redirect_targets(cmd)
+    let tees = _tee_targets(_tokens(cmd))
+    let mut b = 0
+    while b < len(tees) { cands.push(tees[b]); b = b + 1 }
+
+    let mut k = 0
+    while k < len(cands) {
+        let abs = _resolve(cwd, cands[k])
+        let key = _gated_key(abs)
+        if key != "" && !_signed(key) { _deny_for(abs, key) }
+        k = k + 1
+    }
+    _allow()
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    let tool = payload["tool_name"]
+    if tool != "Write" && tool != "Edit" && tool != "NotebookEdit" && tool != "Bash" { _allow() }
+
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    if tool == "Bash" { _handle_bash(payload, ti) }
+
+    let mut target = ""
+    if has_key(ti, "file_path") { target = ti["file_path"] }
+    if target == "" {
+        if has_key(ti, "notebook_path") { target = ti["notebook_path"] }
+    }
+    if target == "" { _allow() }
+
+    let key = _gated_key(target)
+    if key == "" { _allow() }
+    if _signed(key) { _allow() }
+    _deny_for(target, key)
+}

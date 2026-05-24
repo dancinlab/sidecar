@@ -2,15 +2,23 @@
 # sidecar — CLI for the sidecar Claude Code marketplace.
 #
 # usage:
-#   sidecar init      Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
-#   sidecar sync      Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
-#   sidecar --help    Show this help.
+#   sidecar init        Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
+#   sidecar sync        Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
+#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated SSOT file (commons · project) for 15 min.
+#   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,7p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,8p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
+
+# Sign-off token store: `sidecar sign <key>` mints ~/.sidecar/signs/<key>.sign
+# (current epoch); the sign-guard hook denies agent edits to a gated governance
+# file unless a token < SIGN_TTL seconds old exists. Keep SIGN_TTL in lockstep
+# with `TTL` in hooks/sign-guard/bin/_sign_guard.hexa.
+SIGN_DIR="$HOME/.sidecar/signs"
+SIGN_TTL=900
 
 # Absolute path of the sidecar repo root (this script lives in <root>/bin/sidecar,
 # follow symlinks so it works when `sidecar` is symlinked onto PATH).
@@ -125,9 +133,61 @@ TAPE
     fi
     exec hexa run "$ROOT/install.hexa"
     ;;
+  sign)
+    # User sign-off gate. The sign-guard hook hard-denies agent edits to a
+    # gated governance SSOT file (commons.tape · project.tape) unless a fresh
+    # token exists. This mints / lists / clears those tokens.
+    #
+    #   sidecar sign <key>          mint a 15-min token for <key>  (commons · project)
+    #   sidecar sign  | --list      show active tokens + remaining validity
+    #   sidecar sign clear [<key>]  remove one / all tokens
+    SUB="${1:-}"
+    case "$SUB" in
+      ""|--list|list|status)
+        echo "sidecar sign — gated governance files need YOUR sign-off before the agent may edit them."
+        echo "  mint:   sidecar sign <key>       (keys: commons · project)"
+        echo "  clear:  sidecar sign clear [<key>]"
+        now=$(date +%s)
+        found=0
+        if [ -d "$SIGN_DIR" ]; then
+          for f in "$SIGN_DIR"/*.sign; do
+            [ -e "$f" ] || continue
+            found=1
+            k=$(basename "$f" .sign)
+            mint=$(cat "$f" 2>/dev/null || echo 0)
+            : "${mint:=0}"
+            left=$((SIGN_TTL - (now - mint)))
+            if [ "$left" -gt 0 ]; then
+              echo "  active: $k — valid ${left}s"
+            else
+              echo "  active: $k — EXPIRED"
+            fi
+          done
+        fi
+        [ "$found" -eq 0 ] && echo "  active: (none)"
+        ;;
+      clear)
+        KEY="${2:-}"
+        if [ -n "$KEY" ]; then
+          rm -f "$SIGN_DIR/$KEY.sign"
+          echo "sidecar sign: cleared token '$KEY'"
+        else
+          rm -f "$SIGN_DIR"/*.sign 2>/dev/null || true
+          echo "sidecar sign: cleared all tokens"
+        fi
+        ;;
+      *)
+        KEY="$SUB"
+        mkdir -p "$SIGN_DIR"
+        date +%s > "$SIGN_DIR/$KEY.sign"
+        echo "sidecar sign: ✅ signed '$KEY' — the agent may edit the file gated under '$KEY' for the next 15 minutes."
+        echo "  (sign-guard will allow it until the token expires; clear early with: sidecar sign clear $KEY)"
+        ;;
+    esac
+    ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync" >&2
+    echo "  valid verbs: init · sync · sign" >&2
     exit 1
     ;;
 esac

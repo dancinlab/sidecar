@@ -69,6 +69,12 @@
       "version": "0.3.0"
     },
     {
+      "name": "sign-guard",
+      "source": "./hooks/sign-guard",
+      "description": "PreToolUse(Write|Edit|NotebookEdit|Bash) sign-gate for governance-SSOT files, implemented in hexa-lang (`_sign_guard.hexa`, invoked via `hexa run`). A small registry (GATED) of high-stakes files — currently `commons.tape` (cross-project do/dont layer) and `project.tape` (per-project identity + governance) — may be edited by the agent ONLY while a fresh user sign-off token exists. The user mints one with `sidecar sign <key>` (`commons` · `project`), writing the current epoch to `~/.sidecar/signs/<key>.sign`; a token is valid for 900s (15 min). Covers both write channels (mirrors hexa-native): structured file tools and the Bash redirect channel (`> X`, `>> X`, heredoc, `tee X`, relative targets resolved against `cwd`). Writes buried inside an invoked CLI (e.g. `sidecar init`) are not visible at the top-level command string, so the official scaffolder is unaffected — only the agent's own direct writes gate. The fresh token is the sole precondition (project.tape @D s11: gate on a real precondition, not an opt-out switch); the sign must come FROM the user — the agent must not self-mint, and the visible `sidecar sign` call plus the hard deny are the enforcement (project.tape @D s13). To gate another file: add one row to GATED and reship. NO env-var / flag override by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "plist-guard",
       "source": "./hooks/plist-guard",
       "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, invoked via `hexa run`). Any target file ending in `.plist` (LaunchAgents \u00b7 LaunchDaemons \u00b7 Info.plist \u00b7 UserDefaults) is denied with a redirecting message \u2014 the agent cannot distinguish user-explicit from model-autonomous intent, so all .plist writes are refused globally; if the user truly wants one, they run the command themselves outside the agent path. LaunchAgents / LaunchDaemons are persistence surfaces (auto-launch on login / boot), so silent writes risk installing daemons the user did not ask for. Enforces commons @D g37 (plist user-request only). NO opt-out by design.",
@@ -223,6 +229,12 @@
       "source": "./commands/gap",
       "description": "/gap \u2014 multi-axis gap exploration. 42 breakthrough-strategy lenses \u00b7 8 families (F4 + F6 each have 6 lenses; `occams-razor` lives in both \u2014 hypothesis side and design side). Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",
       "version": "0.2.0"
+    },
+    {
+      "name": "sidecar",
+      "source": "./commands/sidecar",
+      "description": "/sidecar <args> \u2014 thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`). Verbs \u2014 init (scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md) \u00b7 sync (pull marketplace + refresh cache + installed_plugins.json + enable plugins) \u00b7 sign (user sign-off gate). `sign <key>` mints a 15-min token at ~/.sidecar/signs/<key>.sign unlocking agent edits to a sign-gated governance SSOT file \u2014 the sign-guard hook hard-denies those edits until a fresh token exists; keys are `commons` (commons.tape) and `project` (project.tape). Bare `sign` / `sign --list` shows active tokens; `sign clear [<key>]` removes them. Args pass through unchanged.",
+      "version": "0.1.0"
     },
     {
       "name": "inject",

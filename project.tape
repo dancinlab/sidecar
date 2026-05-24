@@ -55,3 +55,7 @@
 @D s12 := "pool never consumes macOS resources — goal: zero macOS offload" :: governance [required active]
   do   = "auto-route heavy work to Linux pool hosts only · run macOS-capable cmds local on the workstation"
   dont = "auto-route any command to a macOS pool host (mini) — macOS compute stays on the local Mac"
+
+@D s13 := "governance SSOT files are sign-gated — user sign-off before agent edits" :: governance [required active]
+  do   = "edit commons.tape · project.tape ONLY after the USER runs `sidecar sign <key>` · obey the deny"
+  dont = "self-mint the sign · edit a sign-gated file without a fresh user token · add an opt-out"

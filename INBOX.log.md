@@ -2,6 +2,83 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-25T07:50Z — skill family context-awareness audit + fallback chain proposal (from: demiurge user-feedback)
+
+**사용자 피드백 인용** (2026-05-25T07:30Z, demiurge 세션):
+> "sidecar 도 개선필요할듯 다른명령어 처럼 맥락따라 작동하게 지정안하면" → (정정) "아니다 inbox"
+
+즉 **다른 sidecar skill 들 (`/cycle` · `/domain` · `/check` · `/end`) 은 args 없으면 active domain / cwd / 직전 turn 컨텍스트로 graceful fallback 하는데, args-required skill 들 (`/micro-exp` · `/imagine` · `/paper`) 은 args 없으면 stuck/fail — 일관성 부족**. INBOX 에 audit + propose 만 던지고 fix 는 사용자가 review 후 driven.
+
+### Audit (24 skills · context-aware ✓ 9 · mixed 6 · args-required ✗ 9)
+
+| skill | 분류 | 현재 args-handling 패턴 |
+|---|---|---|
+| `/check` | ✓ context-aware | bare = cwd 의 `*.log.md` checkbox + git status + gh PRs (zero-arg dashboard) |
+| `/end` | ✓ context-aware | bare = cwd repo 의 uncommitted/unpushed/stash/PR/version-drift 진단 |
+| `/cycle` | ✓ context-aware | bare = active `<DOMAIN>.md` 의 `- [ ]` milestone 자동 열거 + 1a 라운드 auto-seed (직전 turn 시그널) |
+| `/cycle-loop` | ✓ context-aware | bare = `/cycle` wrapper (active domain) + loop 페이싱 |
+| `/all-bg-go` | ✓ context-aware | bare = 직전 assistant turn 이 제안한 모든 branch fan-out (REACTIVE) |
+| `/inject`, `/ij` | ✓ context-aware | bare = cwd `project.tape` + sidecar commons.tape 자동 주입 (zero-arg) |
+| `/quota` | ✓ context-aware | bare = unified all-accounts table (default verb = `list`) |
+| `/hexa-help` | ✓ context-aware | bare = `hexa --help` top-level catalog (verb optional) |
+| `/easy` | ✓ context-aware | bare = 직전 user message 의 language auto-detect → styles/easy.<lang>.md |
+| `/ship` | mixed | bare = uncommitted status + 편집 가능한 template 표시 (never auto-stages); `-m <msg> <path>...` 강제 |
+| `/atlas` | mixed | read verbs (hash · stats · lookup · dump) 일부 bare OK; write verbs (register · export) args 강제 |
+| `/domain` | mixed | bare = active + @goal + progress bar + lint; init/set/goal/milestone/done args 강제 |
+| `/secret` | mixed | bare = top-level usage; 모든 실 verb (get/set/...) args 강제 |
+| `/pool` | mixed | bare = usage; `list`/`status` 는 zero-arg, `on/add/rm` 은 args 강제 |
+| `/verify` | mixed | bare = usage; `rubric` 은 zero-arg, `<id>`/`--expr`/`--fence` 는 args 강제 |
+| `/cycle-full`, `/cycle-full-loop` | ✗ args-required | `<seed-or-goal>` 강제 (depletion brainstorm 의 시작점) — bare fallback 없음 |
+| `/micro-exp` | ✗ args-required | `<manifest.yaml>` 강제 — 없으면 stage 1 에서 stuck (정확히 사용자가 만난 케이스) |
+| `/imagine` | ✗ args-required | `<prompt-file> <out.png>` 강제 — `list` · `help` 만 zero-arg |
+| `/paper` | ✗ args-required | verb 자체가 강제 (new/sample/fig/compile/lint/list/help); cwd 가 paper-dir 이면 `compile`/`lint` 추론 가능한데 안 함 |
+| `/cloud` | ✗ args-required | subverb (preflight/run/nohup/...) 강제 — bare fallback 없음 |
+| `/kick` | ✗ args-required | `<seed>` 강제 (자연어 발산 입력 필요) |
+| `/brainstorm` | ✗ args-required | `<seed>` 강제 — 직전 turn 의 topic 으로 fallback 안 함 |
+| `/research:arxiv` | ✗ args-required | `<query | arxiv-id>` 강제 |
+| `/research:yt` | ✗ args-required | `<url-or-id>` 강제 — 직전 turn 의 URL 추출 가능한데 안 함 |
+| `/question`, `/q` | ✗ args-required | `<question>` 강제 (built-in `/btw` alias 의 본질이라 적절) |
+
+### 제안: 5-step generic fallback chain (args-required skill 들에 적용)
+
+```
+1. args 명시           → use as-is (no fallback needed)
+2. active <DOMAIN>.md  → grep skill-specific hint field (예: `@micro-exp: <manifest>`, `@paper: <slug>`, `@imagine: <prompt-file>`)  → use
+3. cwd convention      → conventional filename probe (manifest.yaml · main.tex · prompt.txt · etc.) → use 첫 hit
+4. 직전 turn context   → last-mentioned candidate 추출 (assistant 이전 turn 의 file path / URL / slug) → use
+5. graceful diagnose   → 가능한 default 들 list + 사용자 선택지 surface (현재 `/micro-exp` stage 1 의 invalid-manifest 진단 패턴 그대로) — NEVER silently stuck
+```
+
+핵심 원칙: **stuck 금지** — 5번째 단계까지 와도 항상 사용자가 다음에 뭘 할지 명확한 명령어 한 줄 제시. `/cycle` 의 "🛑 no open milestones + no seed signal — choose: …" 패턴이 모범.
+
+### 우선 개선 top-3 (사용자가 자주 잊는 명령어 순)
+
+1. **`/micro-exp`** (highest impact — 사용자가 실제로 만난 케이스)
+   - **fallback chain**: (2) active domain 의 `@micro-exp:` hint field → (3) `cwd/manifest.yaml` → (3') `cwd/*.manifest.yaml` 또는 `exports/sweep/*/manifest.json` → (5) diagnose + `Found these manifest candidates: …  · choose:` surface
+   - 사용자 quote ("지정안하면 [stuck]") 의 직접적 대상이므로 가장 먼저.
+
+2. **`/paper`** (next — verb 강제가 가장 부담)
+   - **fallback chain**: (3) cwd 가 paper-dir 이면 (main.tex 존재) → default verb = `compile`; cwd 가 paper-dir 인데 `main.tex` 없으면 → `lint`; cwd 가 빈 dir → `list` (templates) → (5) diagnose
+   - 즉 bare `/paper` 가 cwd 에서 가장 합리적인 verb 자동 선택.
+
+3. **`/imagine`** (third — prompt-file convention)
+   - **fallback chain**: (3) `cwd/prompt.txt` 또는 `cwd/prompts/<latest>.txt` → out.png 도 `cwd/out-<timestamp>.png` 자동 → (4) 직전 turn 의 image-request 문구를 mktemp 으로 prompt-file 화 → (5) diagnose + `list` 으로 fallback
+
+이 셋이 정착되면 나머지 args-required skill (`/cloud` · `/kick` · `/brainstorm` · `/research:*` · `/cycle-full`) 도 같은 5-step 패턴으로 일반화 가능.
+
+### 추가 관찰
+
+- `/cycle` 의 **1a auto-seed** 메커니즘 (직전 turn 시그널 → ≤3 milestone seed → 재열거) 이 정확히 이 패턴의 **이미 구현된 reference implementation**. 다른 args-required skill 들도 같은 정신을 적용하면 일관성 확보.
+- mixed skill 들 (`/domain` · `/atlas` · `/verify` 등) 의 bare-fallback 도 같은 패턴으로 통일하면 사용자 mental model 단순화 (`bare = read/show · args = write/act`).
+- skill-specific hint field 를 `<DOMAIN>.md` 헤더에 추가하는 안은 `domain` skill 의 lint 도 같이 업데이트 필요 (별 PR).
+
+**Status**: open · proposed-by:agent · awaits:user-review-and-fix · source:user-feedback-2026-05-25T07:30Z
+
+- [ ] 사용자 review: 5-step fallback chain 패턴 채택 여부
+- [ ] 사용자 review: 우선 개선 top-3 (`/micro-exp` · `/paper` · `/imagine`) 순서 동의 여부
+- [ ] 사용자 review: `<DOMAIN>.md` 의 skill-specific hint field (`@micro-exp:` · `@paper:` · `@imagine:`) 도입 여부
+- [ ] fix PR (사용자 driven · 본 INBOX 는 audit + proposal 만)
+
 ## 2026-05-25T22:00Z — `/micro-exp` slash command + commons.tape 거버넌스 (from: demiurge RTSC)
 
 **Motivation** — 이번 세션(demiurge RTSC)에서 입증된 inverse 패턴: 1-big-run 대신 **검증가능한 작은 실험 N개를 동시에** 던져 monitor + agent-parse + atlas-direct-fold 으로 닫는 closed loop. 인프라는 이미 사이드카 + hexa-lang에 다 깔림 (hexa-lang #846 atlas SSOT inversion + #859 generic verify-delegation + hexa cloud rent/down/list #798 + sidecar pr-cycle 0.3.6 + Monitor closed-loop). **빠진 것 = 사이클을 한 줄로 묶는 슬래시 표면**.

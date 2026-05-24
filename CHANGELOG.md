@@ -6,6 +6,25 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pool-route 0.6.6: macOS pool-host 활성화 (컴파일도 자원에서)
+
+- **pool-route 0.6.6 — Zero-macOS-offload (0.6.1) 정책 폐기 · macOS pool host 자동 라우팅 활성** — 사용자 escalation: "컴파일도 자원에서 돌아야". 0.6.1 의 blanket exclusion 이 너무 거칠어서 `swift build`/`xcodebuild` 같은 macOS-only 컴파일이 enabled `mini` (mac arm64 pool host) 가 idle 한 상태에도 워크스테이션 mac 에 갇혀있었음. 측정: swift-frontend 85% CPU × 분 단위 (demiurge cockpit 빌드 사례).
+  - **enforcement**:
+    - `_pool_route.hexa` line 472 — 후보 등록 조건 `if tgt != "" && pl != "macos"` → `if tgt != ""` (mac host 도 후보로). 단 capability filter 가 plat 기준으로 좁힘.
+    - `_pool_route.hexa` line 552 — general-heavy (`else` 분기) 의 round-robin 이 모든 host 대상이었음 → **Linux only 로 제한**. workstation Mac 은 macOS-capability marker 명시한 명령일 때만 도달.
+  - **결과 매트릭스**:
+
+  | 명령 타입 | 0.6.1 | 0.6.6 |
+  |---|---|---|
+  | macOS-only (swift build · xcodebuild · codesign · …) | 항상 local | → macOS pool host (mini) |
+  | Linux-only (apt · dpkg · .deb · …) | → Linux hosts | → Linux hosts (변화 없음) |
+  | general-heavy (make · cargo · hexa run/build · pytest · …) | 모든 host round-robin | **Linux hosts only** round-robin (Mac 보호) |
+  | 명시적 `pool on <macos-host>` | 작동 | 작동 (변화 없음) |
+
+  - **scope**: 사용자 가이드 "macOS only 는 mini 로 보내야지" + "컴파일도 자원에서 돌아야" 정확히 충족. swift build → mini 로 라우팅되면 그 sub-process (swift-frontend) 도 mini ssh 컨텍스트 안에서 spawn 되어 mac 부담 0.
+  - **표면**: `_pool_route.hexa` (line 472 + 552 · 2곳) · `plugin.json` 0.6.5 → 0.6.6 + description 의 0.6.1 절을 0.6.6 정책으로 교체 · README 새 "0.6.6 — macOS pool-host enable" 섹션 + 기존 "Capability filter" 행 갱신.
+  - **참고**: 캐시 폭증 추가 fix 는 *불필요* — dispatch shim 캐시 키 = `sha256(source) + version_str()` (env 무관) 이미 안정. 14개 binary 누적은 *서로 다른 14개 source* (corpus_quality_probe · bitnet_m1_accuracy_floor · …) 의 정상 source-only cache. 진짜 폭증 원인 = pool-route 가 그 14개 script 를 mac 에 가둠 (0.6.5 + 0.6.6 으로 원인적 해결).
+
 ## 2026-05-25 — pool-route 0.6.5 HOTFIX: 0.6.4 의 false-positive + false-negative 경로 동시 차단
 
 - **pool-route 0.6.5 — HOTFIX 2건 동시 패치** — 0.6.4 ship 직후 발견된 두 버그를 같은 PR 로 해소.

@@ -39,6 +39,21 @@ Within the absolute-path exemption, a gated invocation demands a fresh **`local`
 
 The `!` bang mints from the TUI prompt (user-only — agents cannot self-mint, by sign-guard's tool-boundary enforcement). The token lasts **5 minutes** and writes `~/.sidecar/signs/local.sign`. Without a fresh token the hook emits `permissionDecision: deny` with the mint instruction inline. Mint once, fire many; the token covers every gated invocation in the window.
 
+### 0.6.6 — macOS pool-host enable (compile work routes off the workstation)
+
+0.6.1 set a blanket "Zero-macOS-offload" policy — macOS pool hosts were never auto-dispatch candidates, even for `swift build` / `xcodebuild` that **must** run on macOS. The result: a `swift-frontend` compile drove 85% CPU on the workstation Mac for minutes at a time, even when an enabled `mini` (also `os: macos`) sat idle in the pool roster. The user request: *"compile work should run on the pool, not the workstation"*.
+
+0.6.6 supersedes that policy:
+
+| Command type | 0.6.1 | 0.6.6 |
+|---|---|---|
+| macOS-only (`swift build`, `xcodebuild`, `codesign`, …) | always local | → macOS pool hosts (e.g. `mini`) |
+| Linux-only (`apt`, `dpkg`, `.deb`, …) | → Linux hosts | → Linux hosts (unchanged) |
+| general-heavy (`make`, `cargo`, `hexa run/build`, `pytest`, …) | round-robin **all** hosts | round-robin **Linux** hosts only (Mac protected) |
+| explicit `pool on <macos-host>` | always works | always works (unchanged) |
+
+The workstation Mac is reached only when a macOS-capability marker explicitly demands it; generic build/test fan-out stays on Linux pool hosts.
+
 ### Hotfix 0.6.5 — false-positive + false-negative paths closed
 
 0.6.4 had two bugs that 0.6.5 patches together:
@@ -49,7 +64,7 @@ The `!` bang mints from the TUI prompt (user-only — agents cannot self-mint, b
 
 ## How it routes
 
-1. **Capability filter** — a macOS-only command (`xcodebuild`, `codesign`, `swift build`, `.dylib`, …) is restricted to `os: macos` hosts; a Linux-only command (`apt`, `dpkg`, `.deb`, …) to `os: linux`. No eligible host → runs local.
+1. **Capability filter** — a macOS-only command (`xcodebuild`, `codesign`, `swift build`, `.dylib`, …) is restricted to `os: macos` hosts (e.g. `mini`); a Linux-only command (`apt`, `dpkg`, `.deb`, …) to `os: linux` hosts. A general-heavy command (make/cargo/hexa run/…) round-robins across `os: linux` hosts only — the workstation Mac is reached **only** when a macOS-capability marker explicitly demands it. No eligible host → runs local.
 2. **Round-robin** — picks one eligible host, spreading load across calls.
 3. **Workdir** — the local path under `$HOME` is mirrored to the remote `~/`. A cwd outside `$HOME` runs local.
 4. **Sync** — `autosync` rsyncs the project to the host before the command, so the remote workdir need not pre-exist.

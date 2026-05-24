@@ -29,7 +29,7 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 | `/pool` | mixed | bare = usage; `list`/`status` 는 zero-arg, `on/add/rm` 은 args 강제 |
 | `/verify` | mixed | bare = usage; `rubric` 은 zero-arg, `<id>`/`--expr`/`--fence` 는 args 강제 |
 | `/cycle-full`, `/cycle-full-loop` | ✗ args-required | `<seed-or-goal>` 강제 (depletion brainstorm 의 시작점) — bare fallback 없음 |
-| `/micro-exp` | ✗ args-required | `<manifest.yaml>` 강제 — 없으면 stage 1 에서 stuck (정확히 사용자가 만난 케이스) |
+| `/micro-exp` | ✅ context-aware (0.2.0) | ~~`<manifest.yaml>` 강제~~ → **manifest 폐기**: 바 `/micro-exp`=대화/active-domain 맥락 self-enumerate · 인자=스코프 (이 audit 직후 land · 아래 top-3 #1 참고) |
 | `/imagine` | ✗ args-required | `<prompt-file> <out.png>` 강제 — `list` · `help` 만 zero-arg |
 | `/paper` | ✗ args-required | verb 자체가 강제 (new/sample/fig/compile/lint/list/help); cwd 가 paper-dir 이면 `compile`/`lint` 추론 가능한데 안 함 |
 | `/cloud` | ✗ args-required | subverb (preflight/run/nohup/...) 강제 — bare fallback 없음 |
@@ -53,9 +53,8 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 
 ### 우선 개선 top-3 (사용자가 자주 잊는 명령어 순)
 
-1. **`/micro-exp`** (highest impact — 사용자가 실제로 만난 케이스)
-   - **fallback chain**: (2) active domain 의 `@micro-exp:` hint field → (3) `cwd/manifest.yaml` → (3') `cwd/*.manifest.yaml` 또는 `exports/sweep/*/manifest.json` → (5) diagnose + `Found these manifest candidates: …  · choose:` surface
-   - 사용자 quote ("지정안하면 [stuck]") 의 직접적 대상이므로 가장 먼저.
+1. **`/micro-exp`** ✅ **RESOLVED (0.2.0, 2026-05-25)** — 제안된 manifest-fallback-chain 대신 **더 강한 해법 채택**: manifest 파일 자체를 폐기하고 `/cycle` 처럼 맥락에서 candidate self-enumerate (바=현재 맥락 · 인자=스코프 · no-signal 시 steer-options 정지). commons `g63-g66` 동반 land. → fallback-chain 단계 1~5 불요(맥락 self-enumerate 가 그 정신을 직접 구현). 나머지 top-3(`/paper`·`/imagine`)는 아래 그대로 open.
+   - (원 제안 보존) fallback chain: (2) active domain `@micro-exp:` hint → (3) `cwd/manifest.yaml` → (5) diagnose. 0.2.0 이 이를 manifest-free 로 넘어섬.
 
 2. **`/paper`** (next — verb 강제가 가장 부담)
    - **fallback chain**: (3) cwd 가 paper-dir 이면 (main.tex 존재) → default verb = `compile`; cwd 가 paper-dir 인데 `main.tex` 없으면 → `lint`; cwd 가 빈 dir → `list` (templates) → (5) diagnose
@@ -72,10 +71,10 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 - mixed skill 들 (`/domain` · `/atlas` · `/verify` 등) 의 bare-fallback 도 같은 패턴으로 통일하면 사용자 mental model 단순화 (`bare = read/show · args = write/act`).
 - skill-specific hint field 를 `<DOMAIN>.md` 헤더에 추가하는 안은 `domain` skill 의 lint 도 같이 업데이트 필요 (별 PR).
 
-**Status**: open · proposed-by:agent · awaits:user-review-and-fix · source:user-feedback-2026-05-25T07:30Z
+**Status**: partial · `/micro-exp` ✅ resolved (0.2.0 context-driven · commons g63-g66 · 2026-05-25) · `/paper`+`/imagine`+일반화는 awaits:user-review · source:user-feedback-2026-05-25T07:30Z
 
-- [ ] 사용자 review: 5-step fallback chain 패턴 채택 여부
-- [ ] 사용자 review: 우선 개선 top-3 (`/micro-exp` · `/paper` · `/imagine`) 순서 동의 여부
+- [ ] 사용자 review: 5-step fallback chain 패턴 채택 여부 (`/micro-exp` 은 manifest-free 로 선례 land — 나머지 args-required skill 에 일반화할지)
+- [x] ~~우선 개선 top-3 `/micro-exp`~~ ✅ land (0.2.0 manifest 폐기 · context self-enumerate) · 남은 `/paper`·`/imagine` 은 사용자 review 대기
 - [ ] 사용자 review: `<DOMAIN>.md` 의 skill-specific hint field (`@micro-exp:` · `@paper:` · `@imagine:`) 도입 여부
 - [ ] fix PR (사용자 driven · 본 INBOX 는 audit + proposal 만)
 

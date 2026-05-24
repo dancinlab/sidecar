@@ -1,7 +1,7 @@
 {
   "name": "quota",
-  "description": "/quota <args> — Claude account 5h/7d usage limits (read-only). Verbs: status (default · current account + live 5h/7d) · list (registered accounts) · help. Live fetch via OAuth usage endpoint with 45s cache (429 throttle). Multi-account registry at $HOME/.sidecar/quota/accounts.json — PR#2 adds /quota add, PR#3 adds /quota switch. ⚠ depends on Anthropic's non-public oauth/usage + oauth/token endpoints (ccmon idiom) — may break if Anthropic rotates them.",
-  "version": "0.1.0",
+  "description": "/quota <args> — Claude account 5h/7d usage limits + multi-account registry. Verbs: status (default · current account + live 5h/7d) · list (registered accounts) · add (snapshot live account into registry, metadata-only) · help. Live fetch via OAuth usage endpoint with 45s cache (429 throttle). Multi-account registry at $HOME/.sidecar/quota/accounts.json. PR#3 adds /quota switch + remove + refresh (cred-store + live swap). ⚠ depends on Anthropic's non-public oauth/usage + oauth/token endpoints (ccmon idiom) — may break if Anthropic rotates them.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

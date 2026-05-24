@@ -36,7 +36,7 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 /ship -m "<msg>" …    atomic commit + push + sidecar sync
 /prefs <axis> <lang>  language prefs (code · docs · response)
 /secret <args>        macOS Keychain-backed credential CLI
-/quota [status|list]  Claude 5h/7d limits + multi-account registry (view-only 0.1.0)
+/quota [status|list|add]  Claude 5h/7d limits + multi-account registry
 /easy                 friendly 7-element response style
 /check                task dashboard (domain log · open PRs · git · merges)
 /question (/q) <txt>  quick side-question, no task pivot (alias for /btw)

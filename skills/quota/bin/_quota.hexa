@@ -1,8 +1,10 @@
-// _quota.hexa — Claude account 5h/7d limits + multi-account registry (view-only, 0.1.0).
+// _quota.hexa — Claude account 5h/7d limits + multi-account registry (0.2.0).
 //
-// Ported from dancinlab/wilson plugins/quota/main.hexa (Phase 1 view path; Phase 3
-// add/switch/cred-store land in 0.2.0 / 0.3.0). Wilson harness coupling stripped —
-// this binary is invoked directly via `hexa run` from commands/quota.md.
+// Ported from dancinlab/wilson plugins/quota/main.hexa. Wilson harness coupling
+// stripped — this binary is invoked directly via `hexa run` from commands/quota.md.
+//   0.1.0 → view-only (status · list · help)
+//   0.2.0 → /quota add (registry write, metadata-only — no cred capture yet)
+//   0.3.0 → /quota switch + remove + refresh (cred-store + live swap)
 //
 // Locked data sources (wilson RESEARCH.tape c_endpoints, 12-repo survey):
 //   5h/7d limits : GET https://api.anthropic.com/api/oauth/usage
@@ -286,7 +288,7 @@ fn _win_util(w: any) -> string {
     return str(w["utilization"]) + "%"
 }
 
-// ── registry view (PR#2 adds the write path) ─────────────────────────
+// ── registry (read + write) ──────────────────────────────────────────
 fn _registry_load(path: string) -> any {
     let empty = #{ "active": 0, "accounts": [] }
     if !file_exists(path) { return empty }
@@ -297,6 +299,42 @@ fn _registry_load(path: string) -> any {
     let accts = if has_key(v, "accounts") && _is_array(v["accounts"]) { v["accounts"] } else { [] }
     let act   = if has_key(v, "active")   && type_of(v["active"]) == "int" { v["active"] } else { 0 }
     return #{ "active": act, "accounts": accts }
+}
+
+fn _registry_save(path: string, reg: any) -> bool {
+    return write_file(path, json_stringify(reg))
+}
+
+// append a new account_rec, deduped by account_uuid (no-op if already present).
+fn _registry_add(reg: any, rec: any) -> any {
+    let src = reg["accounts"]
+    let mut na = []
+    let mut i = 0
+    let n = len(src)
+    let rec_uuid = _g(rec, "account_uuid")
+    while i < n {
+        let e = src[i]
+        let dup = type_of(e) == "map" && len(rec_uuid) > 0 && _g(e, "account_uuid") == rec_uuid
+        if dup { return reg }
+        na.push(e)
+        i = i + 1
+    }
+    na.push(rec)
+    return #{ "active": reg["active"], "accounts": na }
+}
+
+// build an account record from the live ~/.claude.json oauthAccount block.
+// `oauth_account` carries the full identity object so PR#3's `switch` can
+// restore it verbatim onto ~/.claude.json without re-deriving fields.
+fn _account_rec(oa: any) -> any {
+    return #{
+        "email":         _g(oa, "emailAddress"),
+        "account_uuid":  _g(oa, "accountUuid"),
+        "org_uuid":      _g(oa, "organizationUuid"),
+        "org_name":      _g(oa, "organizationName"),
+        "oauth_account": oa,
+        "added":         str(timestamp())
+    }
 }
 
 // per-account cached util — no network. Used by `quota list` to render rows.
@@ -389,16 +427,44 @@ fn _registry_text() -> string {
     return _join(lines)
 }
 
+// ── /quota add (PR#2: registry write, metadata-only) ─────────────────
+// The full wilson `add` also captures the live OAuth blob into a per-account
+// backup store so a later `switch` has something to swap in. That cred-capture
+// path lands in PR#3 alongside `quota switch`. For PR#2, registering an account
+// is purely a metadata snapshot — no secrets touched.
+fn _cli_add() -> any {
+    let oa = _read_oauth_account()
+    let email = _g(oa, "emailAddress")
+    if len(email) == 0 && len(_g(oa, "accountUuid")) == 0 {
+        return #{ "ok": false, "error": "no current account in ~/.claude.json (run `claude /login` first)" }
+    }
+    let path = _registry_path()
+    let reg  = _registry_load(path)
+    let rec  = _account_rec(oa)
+    let next = _registry_add(reg, rec)
+    let dup  = len(next["accounts"]) == len(reg["accounts"])
+    if !dup {
+        if !_registry_save(path, next) {
+            return #{ "ok": false, "error": "failed to write registry: " + path }
+        }
+    }
+    let head = if dup { "already registered: " + _g(rec, "email") }
+               else { "registered " + _g(rec, "email") + "  → " + path }
+    let tail = "  (metadata-only — /quota switch + cred-capture land in 0.3.0)"
+    return #{ "ok": true, "text": head + tail }
+}
+
 fn _help_text() -> string {
     return _join([
-        "/quota — Claude account 5h/7d usage limits (read-only, 0.1.0)",
+        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.2.0)",
         "",
         "  /quota              this text's status form (bare → status)",
         "  /quota status       current account + live 5h/7d (45s cache)",
         "  /quota list         registered accounts (* = active; cached util)",
+        "  /quota add          register the live ~/.claude.json account (metadata-only)",
         "  /quota help         this text",
         "",
-        "  add / switch / remove / refresh land in 0.2.0 + 0.3.0.",
+        "  switch / remove / refresh land in 0.3.0 (alongside per-account cred-store).",
         "  Live numbers come from api.anthropic.com/api/oauth/usage (non-public);",
         "  cached values are labelled `(stale ...)` when the live fetch fails — honest, never faked."
     ])
@@ -419,9 +485,15 @@ fn main() {
         println(_join(_status_lines()))
         exit(0)
     }
-    if verb == "add" || verb == "switch" || verb == "remove" || verb == "rm" || verb == "delete" || verb == "del" || verb == "refresh" {
-        eprintln("/quota " + verb + " — not in 0.1.0 (PR#2 adds add; PR#3 adds switch/remove/refresh).")
-        eprintln("Try `/quota status` or `/quota list`.")
+    if verb == "add" {
+        let r = _cli_add()
+        if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
+        eprintln("✗ " + str(r["error"]))
+        exit(1)
+    }
+    if verb == "switch" || verb == "remove" || verb == "rm" || verb == "delete" || verb == "del" || verb == "refresh" {
+        eprintln("/quota " + verb + " — not in 0.2.0 (PR#3 adds switch/remove/refresh + cred-store).")
+        eprintln("Try `/quota status` · `/quota list` · `/quota add`.")
         exit(2)
     }
     eprintln("unknown verb: " + verb)

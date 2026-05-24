@@ -4,17 +4,18 @@ Claude 계정 5시간 / 7일 사용 한도 조회 — read-only.
 
 ## 무엇
 
-`/quota` 슬래시 명령. 현재 활성 계정(`~/.claude.json`)의 라이브 5h/7d util %와 reset 시각을 비공식 OAuth usage endpoint에서 가져와 표시. 등록된 계정이 여러 개면 각 계정의 마지막 캐시된 util도 함께 본다.
+`/quota` 슬래시 명령. **등록된 모든 계정**을 6컬럼 표 하나로 보여준다 — 현재 활성 계정(`~/.claude.json`)은 `★` + 비공식 OAuth usage endpoint 라이브 5h/7d(45초 캐시), 나머지 계정은 각자 마지막 캐시값(`—` = 미조회, 절대 가짜값 안 씀).
 
 ## 명령 — `/quota <verb>` 단일 디스패처
 
-단일 디스패처 `/quota <verb>` — 동사는 인자로 전달 (`/quota status` · `/quota add` …). bare `/quota` 는 기본 status.
+단일 디스패처 `/quota <verb>` — 동사는 인자로 전달 (`/quota list` · `/quota add` …). bare `/quota` 는 통합 표.
 
 | 동사 | 호출 | 결과 |
 |---|---|---|
-| (bare) | `/quota` | 기본 → status |
-| status | `/quota status` | 활성 계정 + 라이브 5h/7d (45초 캐시). 닉네임 등록되어 있으면 `nick (email)` 형태 |
-| list | `/quota list` | 등록된 계정 목록. 닉네임 있는 행만 닉네임 표시 |
+| (bare) | `/quota` | 통합 표 (= list) |
+| list | `/quota list` | **전체 계정 통합 표** — 활성 `★` + 라이브, 나머지 캐시. `status` 는 이 명령의 별칭 |
+| status | `/quota status` | `list` 의 별칭 — 동일한 통합 표 |
+| all | `/quota all` | 같은 표지만 **모든 계정을 라이브 fetch** (느림 · rate 제한 · "전부 갱신" 1-shot 토글) |
 | add | `/quota add [<nick>]` | 현재 계정 등록 + 자격증명 백업 캡처. 닉네임은 **옵션** |
 | nick | `/quota nick <ref> [<nick>]` | 기존 계정의 닉네임 설정/해제. 빈 인자 = 해제 |
 | switch | `/quota switch <ref>` | 라이브 계정 전환 (검증 + 실패시 rollback) |
@@ -59,7 +60,7 @@ Claude 계정 5시간 / 7일 사용 한도 조회 — read-only.
 ## 캐시 동작 (45초 TTL)
 
 ```
-첫 /quota status        →  endpoint 호출  →  캐시 write  →  표시
+첫 /quota (활성 계정)     →  endpoint 호출  →  캐시 write  →  표시
 0~44초 내 재호출         →  캐시 hit (network skip)  →  표시
 45초+                  →  endpoint 재호출
 endpoint 실패 + 캐시 있음 →  "(stale Xs ago, fetch failed: ...)" 라벨로 캐시 반환

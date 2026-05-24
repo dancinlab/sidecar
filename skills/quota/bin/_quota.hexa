@@ -13,6 +13,7 @@
 //   0.5.1 → Row column reorder — bar BEFORE time (nick · email · session-bar · session-time · week-bar · week-time); chat headers in Korean (닉네임 · 이메일 · 세션 사용량 · 세션 리밋 · 주간 사용량 · 주간 리밋)
 //   0.6.0 → drop per-verb commands/<verb>.md files (status/list/add/nick/switch/remove/refresh/help — added in 0.4.1) — commands/quota.md single-dispatch is the only surface. Picker shows only `/quota:quota`; all verbs reached as `/quota:quota <verb>`.
 //   0.7.0 → `autoadd` verb (silent · always exit 0) — registers the active account iff not yet in the registry; driven by the `quota-autoadd` SessionStart hook plugin so a fresh `claude /login` self-registers on the next session.
+//   0.8.0 → status·list·bare UNIFIED into one all-accounts table (`_unified_lines`): active account = ★ + live (_fetch_limits), every other account = its per-account cache (`—` if never fetched). `_status_lines`/`_registry_text` removed. `all` verb fetches every account live in one shot (easy toggle). Active account auto-registered on view (autoadd parity).
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -483,7 +484,9 @@ fn _cached_util(uuid: string) -> any {
     return #{ "ok": true,
               "age_s": timestamp() - to_int(str(cj["ts"])),
               "five_hour": _win_util(cl["five_hour"]),
-              "seven_day": _win_util(cl["seven_day"]) }
+              "seven_day": _win_util(cl["seven_day"]),
+              "five_hour_w": cl["five_hour"],
+              "seven_day_w": cl["seven_day"] }
 }
 
 // ── renderers ────────────────────────────────────────────────────────
@@ -499,92 +502,86 @@ fn _join(lines: array) -> string {
     return out
 }
 
-// Per-account `Row=` line emitter — 6 pipe-separated cells:
+// Unified registry view (0.8.0): one `Row=` line per REGISTERED account —
 //   nick | email | session-bar | session-time-left | week-bar | week-time-left
-// commands/status.md reads each `Row=...` line and renders a markdown table
-// with one row per account, headers in Korean. Empty nick is emitted as `—` so
-// the col always has content. Bar = ▓▓▓░░ NN% (5-slot, 20% per slot).
+// The live ~/.claude.json account (matched by uuid) is fetched LIVE
+// (_fetch_limits, 45s cache) and marked with ★ in the nick cell; every other
+// account reads its per-account cache (`—` cells when never fetched — honest,
+// never faked). all_live=true first refreshes each non-active account (live
+// fetch + cache write via _cli_refresh) so the whole table shows fresh numbers.
+// Bar = ▓▓▓░░ NN% (5-slot, 20% per slot); empty nick rendered as `—`.
 //
-// `/quota status` emits one Row (the live ~/.claude.json account). `/quota list`
-// (see _registry_text) emits one Row per registered account.
-fn _status_lines() -> array {
-    let oa    = _read_oauth_account()
-    let email = _g(oa, "emailAddress")
-    let mut nick = ""
-    if len(email) > 0 {
-        let reg = _registry_load(_registry_path())
-        let idx = _find_account(reg, email)
-        if idx > -1 { nick = _g(reg["accounts"][idx], "nickname") }
+// commands/quota.md reads each Row + StaleCache/AgentSDKCredit/Registry/Empty
+// footer and renders a markdown table, one row per account, headers in Korean.
+// `status`/`list`/bare all call this with all_live=false; `all` passes true.
+fn _unified_lines(all_live: bool) -> array {
+    // autoadd parity: a fresh login that hasn't hit a SessionStart yet still
+    // shows up — register the live account if it isn't tracked.
+    let oa0 = _read_oauth_account()
+    if len(_g(oa0, "accountUuid")) > 0 {
+        let reg0 = _registry_load(_registry_path())
+        if _find_account(reg0, _g(oa0, "emailAddress")) == -1 { let _a = _cli_add("") }
     }
-    let mut lines = []
-    if len(email) == 0 {
-        lines.push("Error=no ~/.claude.json oauthAccount — run `claude /login`")
-        return lines
-    }
-    let lim = _fetch_limits()
-    if !_envelope_ok(lim) {
-        lines.push("Error=" + str(lim["error"]))
-        return lines
-    }
-    if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
-        lines.push("StaleCache=cached " + str(lim["cached_age_s"]) + "s ago; live fetch failed: " + str(lim["fetch_error"]))
-    }
-    let u5 = _util_int(lim["five_hour"])
-    let u7 = _util_int(lim["seven_day"])
-    let t5 = _fmt_remaining(lim["five_hour"])
-    let t7 = _fmt_remaining(lim["seven_day"])
-    let nick_cell = if len(nick) > 0 { nick } else { "—" }
-    lines.push("Row=" + nick_cell + "|" + email + "|" + _bar(u5) + "|" + t5 + "|" + _bar(u7) + "|" + t7)
-    lines.push("AgentSDKCredit=" + AGENTSDK_STUB)
-    let reg = _registry_load(_registry_path())
-    lines.push("Registry=" + str(len(reg["accounts"])) + " account(s)")
-    return lines
-}
-
-fn _registry_text() -> string {
     let reg = _registry_load(_registry_path())
     let accts = reg["accounts"]
     let n = len(accts)
-    if n == 0 { return "(no registered accounts — `/quota add` in 0.2.0 will snapshot the current ~/.claude.json account)" }
-    // `*` marks the account currently live in ~/.claude.json — matched by accountUuid,
-    // NOT the registry's `active` int. A `claude /login` that bypasses `quota switch`
-    // leaves the int stale; the uuid never lies.
+    let mut lines = []
+    if n == 0 {
+        lines.push("Empty=no registered accounts — `claude /login` then `/quota add` (or quota-autoadd on next session) populates this")
+        return lines
+    }
     let active_uuid = _active_uuid()
-    let mut lines = [ "Registered accounts (" + str(n) + "):" ]
-    let mut any_uncached = false
-    let mut active_seen = false
-    let mut any_nick = false
+    if all_live {
+        let mut k = 0
+        while k < n {
+            let euuid = _g(accts[k], "account_uuid")
+            if len(active_uuid) == 0 || euuid != active_uuid {
+                let _r = _cli_refresh(_g(accts[k], "email"))   // best-effort live fetch + cache write
+            }
+            k = k + 1
+        }
+    }
     let mut i = 0
     while i < n {
         let e = accts[i]
-        let e_uuid = _g(e, "account_uuid")
-        let is_active = len(active_uuid) > 0 && e_uuid == active_uuid
-        if is_active { active_seen = true }
-        let mark = if is_active { "* " } else { "  " }
-        let nick = _g(e, "nickname")
-        if len(nick) > 0 { any_nick = true }
-        let nick_col = if len(nick) > 0 { nick + "  " } else { "" }
-        let cu = _cached_util(e_uuid)
-        let lim = if cu["ok"] { "5h:" + str(cu["five_hour"]) + "  7d:" + str(cu["seven_day"]) }
-                  else { any_uncached = true ; "5h:—  7d:—" }
-        lines.push(mark + str(i) + "  " + nick_col + _g(e, "email") + "  " + _g(e, "org_name") + "  " + lim)
+        let euuid = _g(e, "account_uuid")
+        let email = _g(e, "email")
+        let nick  = _g(e, "nickname")
+        let is_active = len(active_uuid) > 0 && euuid == active_uuid
+        let mut u5 = -1
+        let mut u7 = -1
+        let mut t5 = "—"
+        let mut t7 = "—"
+        if is_active {
+            let lim = _fetch_limits()
+            if _envelope_ok(lim) {
+                if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
+                    lines.push("StaleCache=" + email + " cached " + str(lim["cached_age_s"]) + "s ago; live fetch failed: " + str(lim["fetch_error"]))
+                }
+                u5 = _util_int(lim["five_hour"])
+                u7 = _util_int(lim["seven_day"])
+                t5 = _fmt_remaining(lim["five_hour"])
+                t7 = _fmt_remaining(lim["seven_day"])
+            }
+        } else {
+            let cu = _cached_util(euuid)
+            if cu["ok"] {
+                u5 = _util_int(cu["five_hour_w"])
+                u7 = _util_int(cu["seven_day_w"])
+                t5 = _fmt_remaining(cu["five_hour_w"])
+                t7 = _fmt_remaining(cu["seven_day_w"])
+            }
+        }
+        let base_nick = if len(nick) > 0 { nick } else { "—" }
+        let nick_cell = if is_active { "★ " + base_nick } else { base_nick }
+        let bar5 = if u5 >= 0 { _bar(u5) } else { "—" }
+        let bar7 = if u7 >= 0 { _bar(u7) } else { "—" }
+        lines.push("Row=" + nick_cell + "|" + email + "|" + bar5 + "|" + t5 + "|" + bar7 + "|" + t7)
         i = i + 1
     }
-    if any_nick {
-        lines.push("")
-        lines.push("(refs accept: numeric index · nickname · email — pick any for /quota switch/remove/refresh)")
-    }
-    if !active_seen {
-        lines.push("")
-        lines.push("(no `*` — the live ~/.claude.json account is not registered;")
-        lines.push(" `/quota add` (0.2.0) snapshots it into the registry)")
-    }
-    if any_uncached {
-        lines.push("")
-        lines.push("(5h/7d = last cached per account; `—` = never fetched —")
-        lines.push(" `/quota switch <acct>` (0.3.0) then `/quota status` refreshes that account)")
-    }
-    return _join(lines)
+    lines.push("AgentSDKCredit=" + AGENTSDK_STUB)
+    lines.push("Registry=" + str(n) + " account(s)")
+    return lines
 }
 
 // ── per-account backup secret store (macOS keychain / linux 0600 file) ──
@@ -1062,21 +1059,23 @@ fn _cli_refresh(ref: string) -> any {
 
 fn _help_text() -> string {
     return _join([
-        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.5.0)",
+        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.8.0)",
         "",
-        "  /quota:quota                       bare → status (6-col table in chat)",
-        "  /quota:quota status                current account + live 5h/7d (45s cache)",
-        "  /quota:quota list                  registered accounts (* = active; cached util)",
-        "  /quota:quota add [<nick>]          register current account + capture credentials",
-        "  /quota:quota nick <ref> [<nick>]   set or clear a nickname (omit = clear)",
-        "  /quota:quota switch <ref>          switch the live account (ref = nick · email · index)",
-        "  /quota:quota remove <ref>          unregister + drop backup creds (alias: rm)",
-        "  /quota:quota refresh [<ref>]       re-fetch 5h/7d into the per-account cache",
-        "                                     (active account if no arg; renews expired tokens)",
-        "  /quota:quota autoadd               silent — register active account iff new (SessionStart hook)",
-        "  /quota:quota help                  this text",
+        "  /quota                       bare → all-accounts table (★ = active, live; rest cached)",
+        "  /quota list                  same table (status is an alias of list)",
+        "  /quota status                alias of list — the unified table",
+        "  /quota all                   same table, every account fetched LIVE (slower, rate-bound)",
+        "  /quota add [<nick>]          register current account + capture credentials",
+        "  /quota nick <ref> [<nick>]   set or clear a nickname (omit = clear)",
+        "  /quota switch <ref>          switch the live account (ref = nick · email · index)",
+        "  /quota remove <ref>          unregister + drop backup creds (alias: rm)",
+        "  /quota refresh [<ref>]       re-fetch 5h/7d into the per-account cache",
+        "                               (active account if no arg; renews expired tokens)",
+        "  /quota autoadd               silent — register active account iff new (SessionStart hook)",
+        "  /quota help                  this text",
         "",
-        "  Each verb also reachable as its own picker entry: /quota:status · /quota:list · ...",
+        "  Table fills the active account LIVE (45s cache); other accounts show their last",
+        "  cached 5h/7d (`—` = never fetched). `all` fetches every account live in one shot.",
         "  <ref> = nickname (e.g. claude1) · email · numeric index. Bare `add` keeps the",
         "  pre-0.4.0 behaviour (no nickname, identified by email only).",
         "  switch = live cred swap, verified + rollback. own-accounts-serial only.",
@@ -1092,12 +1091,15 @@ fn main() {
         println(_help_text())
         exit(0)
     }
-    if verb == "list" || verb == "ls" {
-        println(_registry_text())
+    // unified registry view (0.8.0): status · list · bare all render the SAME
+    // all-accounts table (active = ★ + live; rest = cache). `all` fetches every
+    // account live (slower, rate-bound) — the easy 1-shot "refresh everything".
+    if verb == "status" || verb == "show" || verb == "" || verb == "list" || verb == "ls" {
+        println(_join(_unified_lines(false)))
         exit(0)
     }
-    if verb == "status" || verb == "show" || verb == "" {
-        println(_join(_status_lines()))
+    if verb == "all" || verb == "all-live" {
+        println(_join(_unified_lines(true)))
         exit(0)
     }
     if verb == "add" {

@@ -11,6 +11,7 @@
 //   0.4.3 → /quota:status emits Key=Value lines; commands/status.md instructs the agent to render a markdown table in chat (ai-native, so CC actually renders it)
 //   0.5.0 → /quota status emits per-account `Row=` line (6 cols); progress bar ▓▓▓░░ NN%; time-to-reset humanized; help text now points at `/quota:quota <verb>` unified form
 //   0.5.1 → Row column reorder — bar BEFORE time (nick · email · session-bar · session-time · week-bar · week-time); chat headers in Korean (닉네임 · 이메일 · 세션 사용량 · 세션 리밋 · 주간 사용량 · 주간 리밋)
+//   0.6.0 → drop per-verb commands/<verb>.md files (status/list/add/nick/switch/remove/refresh/help — added in 0.4.1) — commands/quota.md single-dispatch is the only surface. Picker shows only `/quota:quota`; all verbs reached as `/quota:quota <verb>`.
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.

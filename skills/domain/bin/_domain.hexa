@@ -142,9 +142,30 @@ fn _iso_ts() -> string {
 // The log path follows the snapshot's directory so the pair never splits.
 // Fixes the folder-nested regression where every verb regenerated an empty
 // root scaffold for a domain that actually lives in `<NAME>/` (INBOX #120).
+
+// A nested `<name>/<name>.md` counts as a domain snapshot ONLY if its first
+// non-empty line is the domain header `# <name> …` (the scaffold convention).
+// Guards the folder-nested fallback against false-matching an unrelated
+// same-named file (e.g. a digest `<name>/<NAME>.md` that is not a domain) —
+// critical on case-insensitive filesystems where `inbox/INBOX.md` collides
+// with an `INBOX` domain lookup (0.8.0 → 0.8.1 fix).
+fn _is_domain_snapshot(path: string, name: string) -> bool {
+    let body = _read_file_safe(path)
+    if body == "" { return false }
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let t = _trim(lines[i])
+        if t != "" { return _starts_with(t, "# " + name) }
+        i = i + 1
+    }
+    return false
+}
+
 fn _domain_dir(root: string, name: string) -> string {
     if file_exists(root + "/" + name + ".md") { return root }
-    if file_exists(root + "/" + name + "/" + name + ".md") { return root + "/" + name }
+    let nested = root + "/" + name + "/" + name + ".md"
+    if file_exists(nested) && _is_domain_snapshot(nested, name) { return root + "/" + name }
     return root
 }
 

@@ -13,24 +13,6 @@
 
 A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, and skills onto the host harness without modifying it. Strict concept separation: one plugin = one of `{hook, command, skill}`, no mixing. Project-level identity + governance lives in a single `project.tape` at the repo root (symlinked as `CLAUDE.md`); the cross-project `do` / `dont` layer rides inside the `commons` hook plugin.
 
-## Latest ship
-
-<!-- LATEST-SHIP -->
-2026-05-24T19:10Z · feat(sidecar-lint 0.5.0): profiles.json tier-coverage check — closes the s7 gap (PR3)
-
-Enforcement for the profiles feature (PR1·PR2). Check (6): when a repo carries
-.claude-plugin/profiles.json, any marketplace plugin missing a tier there produces a
-non-blocking finding. An untagged plugin silently defaults to `personal` and disappears
-from the minimal/hexa profiles (s7: governance ships with its enforcement), so the
-advisory nudges you to tag it.
-
-sidecar-specific: other plugin packs without profiles.json are skipped. Advisory
-rather than deny, per guards-narrow-scope.
-
-Verified: `hexa parse` · true-positive (temp repo: only the untagged `beta` flagged,
-tagged `alpha` excluded) · false-positive guard (this repo: all 55 tagged → silent).
-<!-- /LATEST-SHIP -->
-
 ## Install
 
 ```

@@ -189,6 +189,12 @@
       "version": "0.4.1"
     },
     {
+      "name": "quota",
+      "source": "./skills/quota",
+      "description": "/quota <args> — Claude account 5h/7d usage limits (read-only, view-only in 0.1.0). Verbs: status (default · current account + live 5h/7d) · list (registered accounts, last-cached util) · help. Live fetch via OAuth usage endpoint (api.anthropic.com/api/oauth/usage) + auto refresh-token grant (platform.claude.com/v1/oauth/token); 45s per-account cache stops repeat /quota repaints from self-inflicting a 429. On live failure serves labelled-stale cache — honest, never faked. Multi-account registry at $HOME/.sidecar/quota/accounts.json (PR#2 adds add; PR#3 adds switch/remove/refresh). ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.",
+      "version": "0.1.0"
+    },
+    {
       "name": "kick",
       "source": "./skills/kick",
       "description": "/kick <natural-language seed> \u2014 runs `hexa kick --seed \"<seed>\"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`). All args join into the seed. NL trigger via skill (`kick this`, `\ub3cc\ud30c\ud574\uc918`, `discover for`). Pairs with commons g6.",

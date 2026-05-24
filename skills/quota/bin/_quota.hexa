@@ -1,0 +1,430 @@
+// _quota.hexa — Claude account 5h/7d limits + multi-account registry (view-only, 0.1.0).
+//
+// Ported from dancinlab/wilson plugins/quota/main.hexa (Phase 1 view path; Phase 3
+// add/switch/cred-store land in 0.2.0 / 0.3.0). Wilson harness coupling stripped —
+// this binary is invoked directly via `hexa run` from commands/quota.md.
+//
+// Locked data sources (wilson RESEARCH.tape c_endpoints, 12-repo survey):
+//   5h/7d limits : GET https://api.anthropic.com/api/oauth/usage
+//                  Authorization: Bearer <accessToken>
+//                  anthropic-beta: oauth-2025-04-20
+//                  → JSON five_hour / seven_day { utilization 0..1, resets_at ISO }
+//   token refresh: POST https://platform.claude.com/v1/oauth/token
+//                  { grant_type:refresh_token, refresh_token, client_id }
+//   access token : ~/.claude/.credentials.json → .claudeAiOauth.accessToken
+//                  (linux) | macOS keychain svc "Claude Code-credentials" (blob)
+//   account id   : ~/.claude.json → .oauthAccount.{emailAddress, accountUuid,
+//                  organizationUuid, organizationName}
+//   registry     : $HOME/.sidecar/quota/accounts.json (PR#2 populates; PR#1 read-only)
+//
+// usage: hexa run _quota.hexa [status | list | help]   (bare → status)
+
+// ── constants ────────────────────────────────────────────────────────
+let OAUTH_URL        = "https://api.anthropic.com/api/oauth/usage"
+let OAUTH_BETA       = "oauth-2025-04-20"
+let TOKEN_URL        = "https://platform.claude.com/v1/oauth/token"
+let CLIENT_ID        = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+let KEYCHAIN_SVC     = "Claude Code-credentials"
+let CACHE_TTL        = 45    // s — fresh-cache window; throttles repeat status repaints away from the 429 source
+let AGENTSDK_STUB    = "not_implemented:agent-sdk-credit — post-2026-06-15 source unknown"
+
+// ── small helpers ────────────────────────────────────────────────────
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _clip(s: string, n: int) -> string {
+    if len(s) <= n { return s }
+    return s.substring(0, n) + "…"
+}
+
+fn _g(m: any, k: string) -> string {
+    if type_of(m) == "map" && has_key(m, k) { return str(m[k]) }
+    return ""
+}
+
+fn _envelope_ok(m: any) -> bool {
+    return type_of(m) == "map" && has_key(m, "ok") && m["ok"] == true
+}
+
+fn _is_array(v: any) -> bool {
+    let t = type_of(v)
+    return t == "array" || t == "list"
+}
+
+fn _read_text(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _is_macos() -> bool {
+    let r = exec_with_status("uname 2>/dev/null")
+    return to_string(r[0]).index_of("Darwin") >= 0
+}
+
+// ── state-dir layout ($HOME/.sidecar/quota) ──────────────────────────
+fn _home() -> string { return env("HOME") }
+fn _claude_json() -> string { return _home() + "/.claude.json" }
+fn _linux_creds() -> string { return _home() + "/.claude/.credentials.json" }
+
+fn _state_dir() -> string {
+    let d = _home() + "/.sidecar/quota"
+    let _m = exec_with_status("mkdir -p " + _shq(d) + " 2>/dev/null")
+    return d
+}
+fn _registry_path() -> string { return _state_dir() + "/accounts.json" }
+fn _cache_path_for(uuid: string) -> string {
+    if len(uuid) == 0 { return _state_dir() + "/usage_cache.json" }
+    return _state_dir() + "/usage_cache_" + uuid + ".json"
+}
+
+// ── ~/.claude.json :: oauthAccount ───────────────────────────────────
+fn _read_oauth_account() -> any {
+    let raw = _read_text(_claude_json())
+    if len(raw) == 0 { return json_parse("{}") }
+    let mut v = json_parse("{}")
+    try { v = json_parse(raw) } catch e { return json_parse("{}") }
+    if type_of(v) != "map" { return json_parse("{}") }
+    if has_key(v, "oauthAccount") && type_of(v["oauthAccount"]) == "map" { return v["oauthAccount"] }
+    return json_parse("{}")
+}
+
+fn _active_uuid() -> string { return _g(_read_oauth_account(), "accountUuid") }
+
+// ── credentials blob: linux file → macOS keychain ────────────────────
+fn _read_creds_json() -> string {
+    let lp = _linux_creds()
+    if file_exists(lp) {
+        let s = _read_text(lp)
+        if len(s) > 0 { return s }
+    }
+    // macOS keychain fallback — body re-validated by JSON parse downstream (rc untrusted).
+    let outf = "/tmp/sidecar-quota-kc-" + str(timestamp()) + ".out"
+    let cmd  = "security find-generic-password -s " + _shq(KEYCHAIN_SVC) + " -w > " + _shq(outf) + " 2>/dev/null"
+    let r    = exec_with_status(cmd)
+    let mut out = ""
+    if file_exists(outf) { out = _read_text(outf) }
+    let _c = exec_with_status("rm -f " + _shq(outf) + " ; true")
+    if r[1] != 0 { return "" }
+    return out
+}
+
+// ── live limits via the OAuth usage endpoint ─────────────────────────
+fn _parse_limits(body: string) -> any {
+    let mut v = json_parse("{}")
+    try { v = json_parse(body) } catch e {
+        return #{ "ok": false, "error": "usage endpoint body not JSON: " + _clip(body, 160) }
+    }
+    if type_of(v) != "map" {
+        return #{ "ok": false, "error": "usage endpoint body not a JSON object: " + _clip(body, 160) }
+    }
+    let fh = if has_key(v, "five_hour") && type_of(v["five_hour"]) == "map" { v["five_hour"] } else { json_parse("{}") }
+    let sd = if has_key(v, "seven_day") && type_of(v["seven_day"]) == "map" { v["seven_day"] } else { json_parse("{}") }
+    return #{ "ok": true, "five_hour": fh, "seven_day": sd }
+}
+
+// POST refresh-token grant — lets quota fetch usage for an account whose accessToken
+// has expired. The live `claude` keeps the ACTIVE account fresh on its own.
+fn _refresh_access_token(refresh_token: string) -> any {
+    if len(refresh_token) == 0 { return #{ "ok": false, "error": "no refreshToken in credentials" } }
+    let body = json_stringify(#{ "grant_type": "refresh_token", "refresh_token": refresh_token, "client_id": CLIENT_ID })
+    let cmd = "curl -sS --max-time 15 --retry 2 --retry-delay 5"
+        + " -H " + _shq("Content-Type: application/json")
+        + " -d " + _shq(body)
+        + " " + _shq(TOKEN_URL) + " 2>&1"
+    let r = exec_with_status(cmd)
+    if r[1] != 0 {
+        return #{ "ok": false, "error": "token refresh curl failed (rc=" + str(r[1]) + "): " + _clip(to_string(r[0]), 160) }
+    }
+    let mut v = json_parse("{}")
+    try { v = json_parse(to_string(r[0])) } catch e {
+        return #{ "ok": false, "error": "token refresh response not JSON: " + _clip(to_string(r[0]), 160) }
+    }
+    if type_of(v) != "map" || !has_key(v, "access_token") {
+        return #{ "ok": false, "error": "token refresh response had no access_token: " + _clip(to_string(r[0]), 160) }
+    }
+    let new_refresh = if has_key(v, "refresh_token") { str(v["refresh_token"]) } else { refresh_token }
+    let exp_in = if has_key(v, "expires_in") { to_int(str(v["expires_in"])) } else { 0 }
+    return #{ "ok": true, "access_token": str(v["access_token"]), "refresh_token": new_refresh, "expires_in": exp_in }
+}
+
+// extract a USABLE access token from a creds blob, refreshing it first if
+// `expiresAt` (epoch-millis) is within 60s of now.
+fn _token_from_blob(blob: string) -> any {
+    let mut v = json_parse("{}")
+    try { v = json_parse(blob) } catch e {
+        return #{ "ok": false, "error": "credentials blob not JSON" }
+    }
+    if type_of(v) != "map" || !has_key(v, "claudeAiOauth") {
+        return #{ "ok": false, "error": "credentials not in {claudeAiOauth:{accessToken}} shape" }
+    }
+    let oauth = v["claudeAiOauth"]
+    if type_of(oauth) != "map" { return #{ "ok": false, "error": "claudeAiOauth is not an object" } }
+    let token = if has_key(oauth, "accessToken") { str(oauth["accessToken"]) } else { "" }
+    if len(token) == 0 { return #{ "ok": false, "error": "accessToken missing in credentials" } }
+    let exp_ms = if has_key(oauth, "expiresAt") { to_int(str(oauth["expiresAt"])) } else { 0 }
+    let now_s  = timestamp()
+    if exp_ms == 0 || exp_ms / 1000 > now_s + 60 {
+        return #{ "ok": true, "token": token, "refreshed": false }
+    }
+    let refresh = if has_key(oauth, "refreshToken") { str(oauth["refreshToken"]) } else { "" }
+    let rr = _refresh_access_token(refresh)
+    if !_envelope_ok(rr) { return #{ "ok": false, "error": "token expired — " + str(rr["error"]) } }
+    oauth["accessToken"]  = rr["access_token"]
+    oauth["refreshToken"] = rr["refresh_token"]
+    oauth["expiresAt"]    = (now_s + to_int(str(rr["expires_in"]))) * 1000
+    v["claudeAiOauth"]    = oauth
+    return #{ "ok": true, "token": str(rr["access_token"]), "refreshed": true, "blob": json_stringify(v) }
+}
+
+// hit the OAuth usage endpoint with an explicit bearer token. curl's --retry backs
+// off transient HTTP (429 + 5xx) before -f fails.
+fn _fetch_usage_with_token(token: string) -> any {
+    if len(token) == 0 { return #{ "ok": false, "error": "empty access token" } }
+    let cmd = "curl -sS -f --max-time 20 --retry 3 --retry-delay 2 --retry-max-time 40"
+        + " -H " + _shq("Authorization: Bearer " + token)
+        + " -H " + _shq("anthropic-beta: " + OAUTH_BETA)
+        + " " + _shq(OAUTH_URL) + " 2>&1"
+    let r    = exec_with_status(cmd)
+    let body = to_string(r[0])
+    if r[1] != 0 {
+        return #{ "ok": false, "error": "OAuth usage fetch failed (curl rc=" + str(r[1]) + "): " + _clip(body, 200) }
+    }
+    if len(body) == 0 { return #{ "ok": false, "error": "OAuth usage endpoint returned empty body (rc=0)" } }
+    return _parse_limits(body)
+}
+
+// raw single fetch for the ACTIVE account — reads creds, auto-refreshes expired
+// token in-memory (not persisted; the live `claude` owns that store), then fetches.
+fn _fetch_limits_raw() -> any {
+    let creds_raw = _read_creds_json()
+    if len(creds_raw) == 0 {
+        return #{ "ok": false, "error": "no Claude credentials (looked: ~/.claude/.credentials.json + keychain '" + KEYCHAIN_SVC + "') — run `claude /login`" }
+    }
+    let tk = _token_from_blob(creds_raw)
+    if !_envelope_ok(tk) { return #{ "ok": false, "error": str(tk["error"]) } }
+    return _fetch_usage_with_token(str(tk["token"]))
+}
+
+// cache wrapper: fresh cache (< CACHE_TTL) short-circuits the endpoint entirely
+// (this is what stops repeat /quota repaints from self-inflicting a 429). On a
+// live failure, a still-readable cache is returned LABELLED stale — honest (real
+// data, marked), never faked.
+fn _fetch_limits() -> any {
+    let cp = _cache_path_for(_active_uuid())
+    let now = timestamp()
+    let mut cache_ok = false
+    let mut cache_age = 0
+    let mut cache_lim: any = json_parse("{}")
+    if file_exists(cp) {
+        let raw = _read_text(cp)
+        let mut cj = json_parse("{}")
+        try { cj = json_parse(raw) } catch e { cj = json_parse("{}") }
+        if type_of(cj) == "map" && has_key(cj, "ts") && has_key(cj, "lim") {
+            let cl = cj["lim"]
+            if type_of(cl) == "map" && has_key(cl, "ok") && cl["ok"] == true {
+                cache_ok  = true
+                cache_age = now - to_int(str(cj["ts"]))
+                cache_lim = cl
+            }
+        }
+    }
+    if cache_ok && cache_age < CACHE_TTL { return cache_lim }
+    let live = _fetch_limits_raw()
+    if _envelope_ok(live) {
+        let row = "{\"ts\":" + str(now) + ",\"lim\":" + json_stringify(live) + "}"
+        let _w  = write_file(cp, row)
+        return live
+    }
+    if cache_ok {
+        let le = if type_of(live) == "map" && has_key(live, "error") { str(live["error"]) } else { "live fetch failed" }
+        return #{ "ok": true, "stale": true, "cached_age_s": cache_age,
+                  "fetch_error": le,
+                  "five_hour": cache_lim["five_hour"], "seven_day": cache_lim["seven_day"] }
+    }
+    return live
+}
+
+// ── window formatting ────────────────────────────────────────────────
+fn _fmt_window(w: any) -> string {
+    if type_of(w) != "map" { return "(unavailable)" }
+    let u = if has_key(w, "utilization") { str(w["utilization"]) } else { "?" }
+    let t = if has_key(w, "resets_at") { str(w["resets_at"]) } else { "?" }
+    return "util=" + u + "  resets=" + t
+}
+
+fn _win_util(w: any) -> string {
+    if type_of(w) != "map" || !has_key(w, "utilization") { return "?" }
+    return str(w["utilization"]) + "%"
+}
+
+// ── registry view (PR#2 adds the write path) ─────────────────────────
+fn _registry_load(path: string) -> any {
+    let empty = #{ "active": 0, "accounts": [] }
+    if !file_exists(path) { return empty }
+    let raw = _read_text(path)
+    let mut v = json_parse("{}")
+    try { v = json_parse(raw) } catch e { return empty }
+    if type_of(v) != "map" { return empty }
+    let accts = if has_key(v, "accounts") && _is_array(v["accounts"]) { v["accounts"] } else { [] }
+    let act   = if has_key(v, "active")   && type_of(v["active"]) == "int" { v["active"] } else { 0 }
+    return #{ "active": act, "accounts": accts }
+}
+
+// per-account cached util — no network. Used by `quota list` to render rows.
+// Missing/garbage cache returns ok:false so the row honestly shows `—` (never faked).
+fn _cached_util(uuid: string) -> any {
+    if len(uuid) == 0 { return #{ "ok": false } }
+    let cp = _cache_path_for(uuid)
+    if !file_exists(cp) { return #{ "ok": false } }
+    let mut cj = json_parse("{}")
+    try { cj = json_parse(_read_text(cp)) } catch e { return #{ "ok": false } }
+    if type_of(cj) != "map" || !has_key(cj, "lim") || !has_key(cj, "ts") { return #{ "ok": false } }
+    let cl = cj["lim"]
+    if type_of(cl) != "map" || !has_key(cl, "ok") || cl["ok"] != true { return #{ "ok": false } }
+    return #{ "ok": true,
+              "age_s": timestamp() - to_int(str(cj["ts"])),
+              "five_hour": _win_util(cl["five_hour"]),
+              "seven_day": _win_util(cl["seven_day"]) }
+}
+
+// ── renderers ────────────────────────────────────────────────────────
+fn _join(lines: array) -> string {
+    let mut out = ""
+    let mut i = 0
+    let n = len(lines)
+    while i < n {
+        out = out + lines[i]
+        if i < n - 1 { out = out + "\n" }
+        i = i + 1
+    }
+    return out
+}
+
+fn _status_lines() -> array {
+    let oa    = _read_oauth_account()
+    let email = _g(oa, "emailAddress")
+    let who   = if len(email) > 0 { email } else { "(no ~/.claude.json oauthAccount — run `claude /login`)" }
+    let mut lines = [ "Account:  " + who ]
+    if len(_g(oa, "organizationName")) > 0 { lines.push("Org:      " + _g(oa, "organizationName")) }
+    let lim = _fetch_limits()
+    if _envelope_ok(lim) {
+        if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
+            lines.push("Limits:   ⚠ cached " + str(lim["cached_age_s"]) + "s ago (live fetch failed: " + str(lim["fetch_error"]) + ")")
+        }
+        lines.push("5h:       " + _fmt_window(lim["five_hour"]))
+        lines.push("7d:       " + _fmt_window(lim["seven_day"]))
+    } else {
+        lines.push("Limits:   (unavailable) " + str(lim["error"]))
+    }
+    lines.push("Agent SDK credit:  " + AGENTSDK_STUB)
+    let reg = _registry_load(_registry_path())
+    lines.push("Registry: " + str(len(reg["accounts"])) + " account(s)  (`/quota list`)")
+    return lines
+}
+
+fn _registry_text() -> string {
+    let reg = _registry_load(_registry_path())
+    let accts = reg["accounts"]
+    let n = len(accts)
+    if n == 0 { return "(no registered accounts — `/quota add` in 0.2.0 will snapshot the current ~/.claude.json account)" }
+    // `*` marks the account currently live in ~/.claude.json — matched by accountUuid,
+    // NOT the registry's `active` int. A `claude /login` that bypasses `quota switch`
+    // leaves the int stale; the uuid never lies.
+    let active_uuid = _active_uuid()
+    let mut lines = [ "Registered accounts (" + str(n) + "):" ]
+    let mut any_uncached = false
+    let mut active_seen = false
+    let mut i = 0
+    while i < n {
+        let e = accts[i]
+        let e_uuid = _g(e, "account_uuid")
+        let is_active = len(active_uuid) > 0 && e_uuid == active_uuid
+        if is_active { active_seen = true }
+        let mark = if is_active { "* " } else { "  " }
+        let cu = _cached_util(e_uuid)
+        let lim = if cu["ok"] { "5h:" + str(cu["five_hour"]) + "  7d:" + str(cu["seven_day"]) }
+                  else { any_uncached = true ; "5h:—  7d:—" }
+        lines.push(mark + str(i) + "  " + _g(e, "email") + "  " + _g(e, "org_name") + "  " + lim)
+        i = i + 1
+    }
+    if !active_seen {
+        lines.push("")
+        lines.push("(no `*` — the live ~/.claude.json account is not registered;")
+        lines.push(" `/quota add` (0.2.0) snapshots it into the registry)")
+    }
+    if any_uncached {
+        lines.push("")
+        lines.push("(5h/7d = last cached per account; `—` = never fetched —")
+        lines.push(" `/quota switch <acct>` (0.3.0) then `/quota status` refreshes that account)")
+    }
+    return _join(lines)
+}
+
+fn _help_text() -> string {
+    return _join([
+        "/quota — Claude account 5h/7d usage limits (read-only, 0.1.0)",
+        "",
+        "  /quota              this text's status form (bare → status)",
+        "  /quota status       current account + live 5h/7d (45s cache)",
+        "  /quota list         registered accounts (* = active; cached util)",
+        "  /quota help         this text",
+        "",
+        "  add / switch / remove / refresh land in 0.2.0 + 0.3.0.",
+        "  Live numbers come from api.anthropic.com/api/oauth/usage (non-public);",
+        "  cached values are labelled `(stale ...)` when the live fetch fails — honest, never faked."
+    ])
+}
+
+fn main() {
+    let a = argv()
+    let verb = if len(a) > 1 { a[1] } else { "status" }
+    if verb == "help" || verb == "-h" || verb == "--help" {
+        println(_help_text())
+        exit(0)
+    }
+    if verb == "list" || verb == "ls" {
+        println(_registry_text())
+        exit(0)
+    }
+    if verb == "status" || verb == "show" || verb == "" {
+        println(_join(_status_lines()))
+        exit(0)
+    }
+    if verb == "add" || verb == "switch" || verb == "remove" || verb == "rm" || verb == "delete" || verb == "del" || verb == "refresh" {
+        eprintln("/quota " + verb + " — not in 0.1.0 (PR#2 adds add; PR#3 adds switch/remove/refresh).")
+        eprintln("Try `/quota status` or `/quota list`.")
+        exit(2)
+    }
+    eprintln("unknown verb: " + verb)
+    eprintln(_help_text())
+    exit(2)
+}

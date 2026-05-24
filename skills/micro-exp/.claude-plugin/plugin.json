@@ -1,0 +1,9 @@
+{
+  "name": "micro-exp",
+  "description": "/micro-exp <manifest> — manifest-driven micro-experiment sweep orchestrator. Parse manifest → rent pods (≤budget) → copy inputs → run → 🛰️ Monitor (pw.x|ph.x alive-check) → on JOB DONE harvest+down + dispatch parse Agent → atlas register on 🟢 (generic verify-delegation per #859, folds direct to embedded.gen.hexa per #846) → aggregate ledger at exports/sweep/<batch>/. The inverse of 1-big-run: N small verify-able experiments in parallel, atlas auto-folds. Honest sweep — FALSIFIED is CLOSED negative, not skipped (per proposed @D g_micro_exp_honest_sweep). Distinct from /cycle (milestone-driven loop) and /all-bg-go (reactive single fan-out). Manifest schema: batch_id · host_class · budget.{pod_concurrent_max, usd_max_per_week} · candidates[{id, kind, inputs_dir, pseudo_dir, parser_template}]. Triggers — '/micro-exp', '스윕 던져', '수십개 동시', 'micro experiment fan-out', 'sweep this batch', 'verify-driven sweep'.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "sweep", "micro-experiment", "atlas", "verify", "fan-out", "manifest-driven"]
+}

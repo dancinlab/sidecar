@@ -133,6 +133,29 @@ fn _iso_ts() -> string {
 
 // ── global root + default name (set in main, passed explicitly) ──
 
+// Domain path resolution: a domain pair lives EITHER at the repo root
+// (`<NAME>.md` + `<NAME>.log.md`) OR in a self-contained folder
+// (`<NAME>/<NAME>.md` + `<NAME>/<NAME>.log.md`). Resolve order:
+//   (1) an existing root-level `<NAME>.md` wins
+//   (2) else an existing folder-nested `<NAME>/<NAME>.md`
+//   (3) else default to root (fresh scaffold)
+// The log path follows the snapshot's directory so the pair never splits.
+// Fixes the folder-nested regression where every verb regenerated an empty
+// root scaffold for a domain that actually lives in `<NAME>/` (INBOX #120).
+fn _domain_dir(root: string, name: string) -> string {
+    if file_exists(root + "/" + name + ".md") { return root }
+    if file_exists(root + "/" + name + "/" + name + ".md") { return root + "/" + name }
+    return root
+}
+
+fn _snap_path(root: string, name: string) -> string {
+    return _domain_dir(root, name) + "/" + name + ".md"
+}
+
+fn _log_path(root: string, name: string) -> string {
+    return _domain_dir(root, name) + "/" + name + ".log.md"
+}
+
 fn _scaffold_snapshot(path: string, name: string) {
     write_file(path, "# " + name + " — current state\n\n(edit me — describe current state in completed-form; no history, no changelog inside this file)\n")
 }
@@ -142,8 +165,8 @@ fn _scaffold_log(path: string, name: string) {
 }
 
 fn _ensure_files(root: string, name: string) {
-    let snap = root + "/" + name + ".md"
-    let log = root + "/" + name + ".log.md"
+    let snap = _snap_path(root, name)
+    let log = _log_path(root, name)
     if !file_exists(snap) { _scaffold_snapshot(snap, name) }
     if !file_exists(log) { _scaffold_log(log, name) }
 }
@@ -161,7 +184,7 @@ fn _first_header(lines: array) -> int {
 
 fn _append_task(root: string, name: string, mark: string, text: string) {
     _ensure_files(root, name)
-    let log = root + "/" + name + ".log.md"
+    let log = _log_path(root, name)
     let ts = _iso_ts()
     let body = _read_file_safe(log)
     let lines = body.split("\n")
@@ -188,7 +211,7 @@ fn _append_task(root: string, name: string, mark: string, text: string) {
 // this is what progress % counts against. `done <match>` flips it to `[x]`.
 fn _append_goal(root: string, name: string, text: string) {
     _ensure_files(root, name)
-    let snap = root + "/" + name + ".md"
+    let snap = _snap_path(root, name)
     let body = _read_file_safe(snap)
     let mut sep = "\n"
     if len(body) > 0 && body.substring(len(body) - 1, len(body)) == "\n" { sep = "" }
@@ -208,7 +231,7 @@ fn _append_goal(root: string, name: string, text: string) {
 //   * 0 anywhere           → return false (caller falls back to _flip_done)
 fn _flip_goal(root: string, name: string, term: string) -> bool {
     _ensure_files(root, name)
-    let snap = root + "/" + name + ".md"
+    let snap = _snap_path(root, name)
     let body = _read_file_safe(snap)
     let lines = body.split("\n")
     let mut opens = []
@@ -250,7 +273,7 @@ fn _flip_goal(root: string, name: string, term: string) -> bool {
 
 fn _new_entry(root: string, name: string, header: string) {
     _ensure_files(root, name)
-    let log = root + "/" + name + ".log.md"
+    let log = _log_path(root, name)
     let ts = _iso_ts()
     let body = _read_file_safe(log)
     let lines = body.split("\n")
@@ -279,7 +302,7 @@ fn _new_entry(root: string, name: string, header: string) {
 // there has already been printed.
 fn _flip_done(root: string, name: string, term: string) {
     _ensure_files(root, name)
-    let log = root + "/" + name + ".log.md"
+    let log = _log_path(root, name)
     let body = _read_file_safe(log)
     let lines = body.split("\n")
     let mut opens = []
@@ -414,7 +437,7 @@ fn _get_active(root: string) -> string {
 // board (RTSC.md pattern: milestones live in the snapshot, not the log). Progress
 // = goal completion, so it doesn't drift as the append-only log grows.
 fn _count_tasks(root: string, name: string) -> array {
-    let body = _read_file_safe(root + "/" + name + ".md")
+    let body = _read_file_safe(_snap_path(root, name))
     let lines = body.split("\n")
     let mut done = 0
     let mut todo = 0
@@ -446,7 +469,7 @@ fn _progress_bar(done: int, total: int) -> string {
 // domain's north star — distinct from `- [ ]` milestones, which are progress
 // units). Empty string when none declared.
 fn _get_goal(root: string, name: string) -> string {
-    let body = _read_file_safe(root + "/" + name + ".md")
+    let body = _read_file_safe(_snap_path(root, name))
     let lines = body.split("\n")
     let mut i = 0
     while i < len(lines) {
@@ -461,7 +484,7 @@ fn _get_goal(root: string, name: string) -> string {
 // set/replace the `@goal:` line — inserted right after the first `# ` heading.
 fn _set_goal(root: string, name: string, text: string) {
     _ensure_files(root, name)
-    let snap = root + "/" + name + ".md"
+    let snap = _snap_path(root, name)
     let body = _read_file_safe(snap)
     let lines = body.split("\n")
     let mut out = []
@@ -499,8 +522,8 @@ fn _lint(root: string, name: string) {
 
 fn _show(root: string, name: string) {
     _ensure_files(root, name)
-    let snap = root + "/" + name + ".md"
-    let log = root + "/" + name + ".log.md"
+    let snap = _snap_path(root, name)
+    let log = _log_path(root, name)
     let goal = _get_goal(root, name)
     let c = _count_tasks(root, name)
     // progress is reported ONLY when an `@goal:` is declared — the goal is
@@ -567,7 +590,7 @@ fn main() {
             exit(1)
         }
         _ensure_files(root, args[1])
-        println("✓ initialized · " + root + "/" + args[1] + ".md + " + args[1] + ".log.md")
+        println("✓ initialized · " + _snap_path(root, args[1]) + " + " + args[1] + ".log.md")
         return
     }
 

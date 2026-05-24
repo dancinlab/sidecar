@@ -191,9 +191,11 @@
   do   = "every task done / decision made → `/domain <text>` log immediately · don't batch · per-step"
   dont = "batch-log at session end · skip routine progress · only log major events (g39 enforcement)"
 
-@D g53 := "/easy 7-element by default — explain/report turns" :: governance [active]
-  do   = "explain/report response → `/easy` 7-element format default · session-wide ON · no manual toggle"
-  dont = "skip /easy in explanatory turns · trivial yes/no may stay terse (judgment call only)"
+@D g53 := "/easy 7-element friendly explain — explain/report turns by default" :: governance [required active]
+  do   = "non-trivial concept → 7-el: icon·NAME·alias·plain·analogy·ASCII·vs-tool"
+  do   = "session-wide ON · no toggle · spec+gold = sidecar skills/easy/styles/easy.<lang>.md"
+  dont = "skip in explanatory turns · jargon-dump w/o analogy · trivial yes/no may stay terse"
+  dont = "exempt: code / math / identifiers / paths / SHA · CI machine pipes (json|jsonl)"
 
 @D g55 := "wall-time first — minimize elapsed time, parallel / distributed over serial" :: governance [required active]
   do   = "fan out independent work across hosts/GPUs/pods (≤8) · many cheap-parallel beat 1 slow-serial"

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — commons 0.10.4: @D g53 강화 (/easy 7-element required + 인라인 스펙)
+
+- **commons 0.10.4 — @D g53 `[active]` → `[required active]` 승격 + 7요소 인라인 명시** — "/easy 7-element friendly explain"을 설명/보고 턴 기본값으로 required화. do에 7요소(icon·NAME·alias·plain·analogy·ASCII·vs-tool) 직접 열거 → 룰 자기문서화(기존엔 `/easy` 플러그인 의존). canonical 스펙+gold 예시 포인터 = `skills/easy/styles/easy.<lang>.md`. dont에 면제 대상(코드/수식/식별자/경로/SHA · CI machine pipe) 명시. 사용자 요청(친근 설명 패턴 선호 — ⚛️ ELIASHBERG-MOMENTS 류)을 거버넌스로 고정.
+
 ## 2026-05-25 — commons 0.10.3: @D g61 hexa-lang stdlib SSOT
 
 - **commons 0.10.3 — @D g61 신규: "hexa-lang stdlib is the SSOT for general primitives"** — 재사용 general primitive(math/info/signal/bitops/stats)는 hexa-lang `stdlib/`로 promote(plain `.hexa` · regen-free) · caller repos import-only · byte-equal 보존. dont: repo간 helper 중복 · stdlib 적합한데 컴파일러 builtin으로 추가 · 생성물 `hexa_cc.c`/`hexa_v2` 직접편집(→ `hexa cc --regen`, live SSOT `self/codegen.hexa`). anima STDLIB 도메인 migration + hexa-lang 컴파일러 fix 세션 경험을 거버넌스로 고정해 재발 방지.

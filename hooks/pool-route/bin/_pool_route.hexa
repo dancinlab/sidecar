@@ -491,7 +491,12 @@ fn main() {
     let toks = _tokens(stripped)   // classifier tokens are quote-stripped
 
     // heavy classifier — build / test / package / train commands
-    let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train"]
+    // 0.6.7 — `aprime_cc` added: hexa-lang's in-tree self-host native codegen
+    // (build/aprime_cc, Mach-O arm64 ~1.2MB · invoked as `./build/aprime_cc <x>.hexa
+    // --emit=asm`). User-reported workstation load 85%+ when invoked directly on
+    // mac. Same workstation-protection rationale as swift build (0.6.6) — route
+    // to a mac pool host (mini) where the binary can also execute.
+    let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc"]
     // hexa-native heavy subverbs (kick-storm 2026-05-23 Mac kill: /kick = `hexa kick --seed`,
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)
@@ -527,7 +532,10 @@ fn main() {
     if !heavy && !needs_sudo { _allow() }
 
     // capability filter — restrict to a platform when the command demands one
-    let macos_words = ["xcodebuild", "xcrun", "xcode-select", "codesign", "notarytool", "stapler", "pkgbuild", "productbuild", "hdiutil", "lipo", "otool", "install_name_tool", "vtool", "swiftc", "sw_vers", "osascript", "launchctl", "diskutil", "caffeinate", "sips", "plutil"]
+    // 0.6.7 — `aprime_cc` also added to macos_words: the in-tree binary is
+    // built Mach-O arm64 only, so it must run on a mac pool host (mini).
+    // Linux pool hosts (ubu) would refuse to exec the Mach-O binary.
+    let macos_words = ["xcodebuild", "xcrun", "xcode-select", "codesign", "notarytool", "stapler", "pkgbuild", "productbuild", "hdiutil", "lipo", "otool", "install_name_tool", "vtool", "swiftc", "sw_vers", "osascript", "launchctl", "diskutil", "caffeinate", "sips", "plutil", "aprime_cc"]
     let macos_pairs = ["swift", "build", "swift", "test", "swift", "run", "swift", "package"]
     let macos_subs = ["apple-darwin", "apple-macos", "apple-ios", "Mach-O", ".dylib", ".dmg"]
     let is_macos = _any_word(stripped, macos_words) || _any_adjacent(toks, macos_pairs) || _any_contains(cmd, macos_subs)

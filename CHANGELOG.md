@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pool-route 0.6.7: aprime_cc (hexa-lang in-tree native codegen) 라우팅
+
+- **pool-route 0.6.7 — `aprime_cc` heavy + macos classifier 양쪽 추가** — 사용자 escalation: build/aprime_cc 호출도 자원에서 돌아야. aprime_cc = hexa-lang in-tree self-host native codegen (Mach-O arm64 ~1.2MB · `./build/aprime_cc <x>.hexa --emit=asm --target=arm64-apple-darwin -o out.s`). 측정: workstation 85%+ CPU × 분 단위로 mac에서 도는 중 (다른 세션 발사).
+  - **enforcement**: heavy_words 에 `aprime_cc` 추가 (라우팅 활성) + macos_words 에도 추가 (Mach-O arm64 only 라 mini 전용 라우팅 강제 · Linux pool host 는 exec 불가).
+  - **결과**: `./build/aprime_cc x.hexa --emit=asm` → heavy=true + is_macos=true → mini 로 ssh dispatch. workstation mac 부담 0.
+  - **scope**: 0.6.6 의 swift build / xcodebuild 와 동일 패턴 — *호스트 종속 컴파일러 binary* 는 macos pool host 로. 향후 다른 in-tree hexa-lang native compiler 발견 시 동일 패턴 추가 (occam g0 — 사용자 escalation 기준).
+  - **표면**: `_pool_route.hexa` (heavy_words + macos_words 2곳) · `plugin.json` 0.6.6 → 0.6.7 + description heavy classifier 예시 갱신.
+
 ## 2026-05-25 — pool-route 0.6.6: macOS pool-host 활성화 (컴파일도 자원에서)
 
 - **pool-route 0.6.6 — Zero-macOS-offload (0.6.1) 정책 폐기 · macOS pool host 자동 라우팅 활성** — 사용자 escalation: "컴파일도 자원에서 돌아야". 0.6.1 의 blanket exclusion 이 너무 거칠어서 `swift build`/`xcodebuild` 같은 macOS-only 컴파일이 enabled `mini` (mac arm64 pool host) 가 idle 한 상태에도 워크스테이션 mac 에 갇혀있었음. 측정: swift-frontend 85% CPU × 분 단위 (demiurge cockpit 빌드 사례).

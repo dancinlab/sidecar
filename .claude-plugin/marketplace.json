@@ -12,7 +12,7 @@
       "name": "commons",
       "source": "./hooks/commons",
       "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g61` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.10.3"
+      "version": "0.10.4"
     },
     {
       "name": "prefs",
@@ -221,8 +221,8 @@
     {
       "name": "atlas",
       "source": "./skills/atlas",
-      "description": "/atlas <args> \u2014 wraps `hexa atlas` (atlas SSOT surface, PR-only landing per @D g_atlas_binary_builtin). Read verbs: hash \u00b7 stats [--audit] \u00b7 lookup [K] <id> \u00b7 dump [K] [--json] \u2014 all resolve against compile-time embedded static_atlas() (zero fs read, ~6594 P/C/L nodes). Write verbs: append-witness --kind <P|C|L|E> --id <id> {--raw <body> | --stdin} (staging shard for merger.hexa::_discover) \u00b7 register --from-{verify,drill,check} [--auto-pr] (multi-verb DIRECT in-memory node-gen \u2014 builds AtlasNode struct-literal IN MEMORY, folds into compiler/atlas/embedded.gen.hexa via DiscoveryEvent \u2192 register_from_event sink; no .n6, no markdown intermediate; honest degrade) \u00b7 pr --staging <file.n6> (the sole landing verb under PR-only policy). NL trigger via skill (`atlas lookup`, `atlas stats`, `\uc544\ud2c0\ub77c\uc2a4 \uc870\ud68c`, `\uc544\ud2c0\ub77c\uc2a4 \ub4f1\ub85d`, `register from drill`).",
-      "version": "0.1.0"
+      "description": "/atlas <args> \u2014 wraps `hexa atlas` (atlas SSOT surface). SSOT = `compiler/atlas/embedded.gen.hexa` (binary-builtin atlas, ~16088 nodes), served at runtime by static_atlas via TEXT-parse of embedded.gen.hexa. Read verbs: hash \u00b7 stats [--audit [--scope=rodata|overlay|merged] [--format=json]] \u00b7 lookup [K] <id> / lookup --prefix=<p> (K \u2208 P|C|L|E|F|R|S|X|Q) \u00b7 dump [K] [--json]. Write verb (ONE): register --from-verify <fn> <n> <v> (or <fn> <a> <b> <v> 2-op) \u00b7 register --from-drill --seed \"<text>\" [--rounds N] [--engine mk9|mk10] \u2014 runs the verb in-process and on \ud83d\udd35/\ud83d\udfe2 folds the verified AtlasNode DIRECTLY into compiler/atlas/embedded.gen.hexa, visible to the next lookup with NO rebuild, NO staging shard, NO intermediate file (commit embedded.gen.hexa with normal git to share). Export verb (NEW): export [--out PATH] \u2014 writes the live atlas out as a portable .n6 file (default n6/atlas.n6, an export artifact only, NOT the runtime SSOT). NL trigger via skill (`atlas lookup`, `atlas stats`, `\uc544\ud2c0\ub77c\uc2a4 \uc870\ud68c`, `\uc544\ud2c0\ub77c\uc2a4 \ub4f1\ub85d`, `register from drill`, `atlas absorb`).",
+      "version": "0.1.1"
     },
     {
       "name": "domain",

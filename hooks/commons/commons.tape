@@ -226,3 +226,7 @@
   do   = "stdlib modules = plain `.hexa` (regen-free) · caller repos import-only · keep byte-equal"
   dont = "duplicate a primitive across repos · add it as a compiler builtin when stdlib fits"
   dont = "hand-edit `hexa_cc.c`/`hexa_v2` — regen via `hexa cc --regen` (SSOT `self/codegen.hexa`)"
+
+@D g62 := "atlas register at checkpoints — session · domain · discovery · post-brainstorm" :: governance [required active]
+  do   = "on a checkpoint, hexa atlas register the verified closed-forms/discoveries of that scope"
+  dont = "let a closed-form decay unregistered · skip atlas at session/domain/brainstorm close"

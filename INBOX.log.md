@@ -2,6 +2,16 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-25 — worktree/branch 하네스 4-gap (from anima)
+
+> anima 세션 (PURE Phase D + kosmos 단일 SSOT 이관) 중 `isolation:worktree` agent 6개 + closure agent 를 fan-out 하며 반복 발생. 기존 `hooks/worktree-gc`(merged prune)와 별개 — 이쪽은 격리 누수 + ref 유실 + PR 정합성.
+
+- [ ] **#1 worktree agent 가 공유 .git HEAD 를 이동 (격리 누수)** — `isolation:worktree` 인데도 작업 후 메인 작업트리(anima)의 체크아웃 브랜치가 세션 브랜치(`feat/stdlib-…`)→`main` 으로 바뀜. agent 들이 "main worktree checkout 했다"고 보고. 세션 연속성 깨져 매번 수동 `git checkout <session-br>` 원복 (이번 세션 3회). 추정: gh pr create/merge 의 `git fetch` + worktree 생성/제거가 공유 HEAD 를 건드림. **harness(Anthropic) 영역** — sidecar 는 hook 으로 감지/경고 or upstream 보고.
+- [ ] **#2 로컬 브랜치 ref 유실** — agent/gh 작업 후 로컬 feat 브랜치 ref 가 사라짐 (`git log <br>` → `unknown revision`). origin 엔 안전했으나 로컬 소실로 **커밋 유실 오인** (a_kosmos directive 가 사라진 듯 보임). 복구: `git checkout -B <br> origin/<br>`. **harness 영역** — 최소한 ref 삭제 전 경고.
+- [ ] **#3 worktree agent PR 무관파일 bundle (sidecar-fixable)** — `isolation:worktree` 가 worktree 를 **부모 세션 feature-branch HEAD** 기준 생성 → 그 브랜치 in-flight 변경이 agent PR 에 딸려감 (PR #418: manifest 1파일 의도인데 CHANGELOG/INBOX/STDLIB/inbox-patches 등 11파일 동봉). g34(surgical) 위반. **fix 후보**: worktree agent base 를 항상 `origin/main` 강제(또는 agent 디스패치 시 base 명시 컨벤션 + git-guard 가 PR 파일수 ≫ 의도 시 경고).
+- [ ] **#4 pr-cycle hook 의 `gh pr merge` cross-repo 오작동 (sidecar-fixable)** — `gh pr create --repo dancinlab/kosmos …` 시 pr-cycle PreToolUse hook 이 ` && gh pr merge --squash --admin` auto-append. 그 머지가 **대상 repo(kosmos) 아닌 현재 cwd repo(anima)의 main 을 fetch/머지 시도** (`anima#416 diverged`·`fetch origin main`). cross-repo PR 작업 시 엉뚱한 repo 건드림. **fix 후보**: pr-cycle hook 이 `--repo <X>` 를 파싱해 머지도 동일 `--repo <X>` 로 (현재 cwd 가정 제거).
+- 출처: anima 세션 2026-05-25 (kosmos migration PR #3 + cycle-full 6-agent fan-out). #1·#2 harness-upstream · #3·#4 sidecar hook 으로 완화 가능.
+
 ## 2026-05-25 — `/domain` folder-nested domain 미지원 (from demiurge CARDIO+)
 - [x] **gap**: `skills/domain` 의 `/domain set <NAME>` 이 `<NAME>.md` 를 **repo-root 에서만** resolve. 도메인 SSOT 가 self-contained 폴더로 중첩된 경우(`<NAME>/<NAME>.md`) root 에 빈 스캐폴드(`<NAME>.md` 127B + `<NAME>.log.md` 196B)를 매번 재생성.
 - [x] **reproduction**: demiurge `CARDIO+` 는 `CARDIO+/CARDIO+.md` (+ `CARDIO+/CARDIO+.log.md`) self-contained 메타도메인. `/domain set CARDIO+` 호출마다 repo-root 에 빈 `CARDIO+.md`/`CARDIO+.log.md` 생성 → 매번 수동 `rm` 필요 (이번 세션 2회 재발).

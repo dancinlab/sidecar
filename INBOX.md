@@ -4,4 +4,4 @@
 
 (현재 상태만 기록 — 열린 handoff는 `- [ ]` 로, 처리 이력은 `INBOX.log.md` 로)
 
-열린 handoff 없음 — 최근 처리: demiurge CARDIO+ #120 (`/domain` folder-nested 지원, domain 0.8.0). 처리 이력은 `INBOX.log.md`.
+- [ ] **worktree/branch 하네스 4-gap** (from anima 2026-05-25) — `isolation:worktree` agent 가 공유 .git HEAD 를 main 으로 이동 + 로컬 브랜치 ref 유실 + PR 무관파일 bundle + pr-cycle hook cross-repo 오작동. 상세 → `INBOX.log.md`.

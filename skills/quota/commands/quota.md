@@ -34,7 +34,7 @@ If `Error=`, report the error. Otherwise render exactly this shape:
 |---|---|---|---|---|---|
 | <nick> | <email> | <session-bar> | <session-time-left> | <week-bar> | <week-time-left> |
 
-_레지스트리: N개 계정 · `/quota:quota list`_
+_레지스트리: N개 계정 · `/quota list`_
 _Agent SDK credit: <AgentSDKCredit value>_
 ```
 

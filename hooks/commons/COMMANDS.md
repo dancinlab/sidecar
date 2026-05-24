@@ -27,8 +27,8 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 /hexa-help [verb]     hexa --help (top-level catalog or per-verb signature)
 
 # ── Research / generate ─────────────────────────────────────
-/research:arxiv <q>   arXiv API search / id lookup
-/research:yt <url>    YouTube caption transcript extract
+/arxiv <q>            arXiv API search / id lookup
+/yt <url>             YouTube caption transcript extract
 /imagine <pf> <out>   AI image gen (fal backend · gpt-image-2 pinned)
 /paper <args>         arxiv LaTeX scaffolder (new·sample·fig·compile·lint·list)
 
@@ -37,7 +37,7 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 /ship -m "<msg>" …    atomic commit + push + sidecar sync
 /prefs <axis> <lang>  language prefs (code · docs · response)
 /secret <args>        macOS Keychain-backed credential CLI
-/quota:quota [status|list|add|nick|switch|remove|refresh]  Claude 5h/7d limits + multi-account registry + cred swap + nicks
+/quota [status|list|add|nick|switch|remove|refresh]  Claude 5h/7d limits + multi-account registry + cred swap + nicks
 /easy                 friendly 7-element response style
 /check                task dashboard (domain log · open PRs · git · merges)
 /question (/q) <txt>  quick side-question, no task pivot (alias for /btw)

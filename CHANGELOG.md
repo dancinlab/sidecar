@@ -6,6 +6,12 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — 슬래시 명령 표기 네임스페이스 제거 + README backfill (문서 위생 · 버전 변동 없음)
+
+- **네임스페이스 표기 전면 제거 — 모든 명령어를 plain `/이름` 으로 통일** — 사용자 요청 "모든 명령어를 네임스페이스 없이". 배경: 플러그인 **command**(`commands/*.md`)는 유저 타이핑 시 항상 plain `/이름` (충돌 시에만 `/plugin:cmd`); 네임스페이스는 모델의 Skill-도구 호출(`plugin:skill`) + 자연어 트리거 표면에만 존재. 이 레포 skill 플러그인은 전부 자매 `commands/*.md` 동봉(@D s1)이라 `/ship`·`/quota`·`/arxiv`·`/yt` 등 이미 plain 작동 — 문서만 `/research:arxiv`·`/research:yt`·`/quota:quota`(+`/quota:status` 등)로 적어 불일치였음. 32개 명령 전부 이름 유일(충돌 0) 확인 후 표기 일괄 정정: `/research:arxiv`→`/arxiv` · `/research:yt`→`/yt` · `/quota:quota`→`/quota` · `/quota:<verb>`→`/quota <verb>`(단일 디스패처). 대상: `hooks/commons/COMMANDS.md`·`commons.tape`(g43 do) · 루트 `README.md` · `.claude-plugin/marketplace.json`(research·quota·quota-autoadd 설명) · `skills/research/{plugin.json,SKILL.md}` · `skills/quota/{SKILL.md,README.md,commands/quota.md}` · `hooks/quota-autoadd/{plugin.json,README.md}`. CHANGELOG 과거 항목은 history 로 보존. 동작·버전 변동 없음 — marketplace↔plugin.json 정합 유지.
+
+- **README backfill — step-by-step 누락 보완** — 직전 step-by-step 0.1.0 ship 이 루트 `README.md` 에 빠졌던 것 보완: 명령 카탈로그 Fan-out/loop 에 `/step-by-step <task>` 추가 + 플러그인 표 `gap` 다음에 `step-by-step` 행 추가. research 행 낡은 버전(0.2.0→0.2.2) 정정. quota README 단일-디스패처 현행화(0.4.1 picker 잔재 일부) — "× 8 command files" lineage 등 깊은 staleness 는 별도 정리 대상으로 flag.
+
 ## 2026-05-24 — quota-autoadd 0.1.0: 새 계정 로그인 자동 등록 (신규 hook plugin · quota 0.6.0 → 0.7.0)
 
 - **quota-autoadd 0.1.0 — `claude /login` 새 계정 SessionStart 자동 등록 (신규 hook plugin)** — 신규 `hooks/quota-autoadd/` plugin (3-파일: `plugin.json` + `hooks/hooks.json` + 한글 README). 새 이메일로 `claude /login` 한 뒤 첫 세션의 `SessionStart` 에서, 아직 quota 레지스트리에 없는 활성 계정을 자동 등록한다. Claude Code 에 로그인 이벤트 훅이 없으므로 "다음 세션 시작 시 등록" 형태 — `prefs`/`easy-auto` 와 동일한 SessionStart 패턴. 훅 command 는 quota skill 바이너리를 `$HOME/.claude/plugins/cache/sidecar/quota/<version>/bin/_quota.hexa autoadd` 로 해석 (commands/quota.md 와 동일 캐시 탐색 idiom, $HOME 기반이라 @D s3 portable). hexa 부재(`$HEXA`→`~/.hx/bin/hexa`→`command -v hexa` fallback) 또는 quota 캐시 부재 시 `exit 0` (silent). **concept separation (@D s1)** — 자동 트리거는 skill 에 끼울 수 없어 별도 hook plugin 으로 분리. NO opt-out by design (commons g11).

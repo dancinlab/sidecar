@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — research 0.2.3: `_yt`·`_arxiv` 에러 경로 silent-success(exit 0) → exit(1) [약점분석 #2]
+
+- **research 0.2.3 — `_yt.hexa`·`_arxiv.hexa` 의 모든 에러 조기종료를 `exit(1)` 로** — 약점 분석에서, 두 바이너리가 네트워크 실패·파싱 실패·재생불가·자막없음·잘못된 id·빈 결과에서 메시지만 출력하고 `return`(=exit 0)으로 끝나, **호출자/에이전트가 실패를 정상 결과와 구분 못 하던** 데이터-무결성 약점 발견(`"transcript not available"` 를 진짜 transcript 로 오인 가능). main 의 bare `return` 9개(`_yt`) + 4개(`_arxiv`)를 `exit(1)` 로 교체 — 함수 본문의 `return <expr>`(값 반환) 33개는 8칸/4칸 들여쓰기·inline 구분으로 무영향. 정상 경로(transcript/논문 출력)만 exit 0. Smoke: bare return 0 잔존 · `return <expr>` 유지 · 두 바이너리 컴파일+usage 정상. lockstep(@D ship · g22): plugin.json + marketplace 0.2.2 → 0.2.3.
+
 ## 2026-05-25 — easy-auto 0.1.2: `EASY_LANG=off` opt-out 제거(@D s11) + 미존재-lang fallback 버그 fix [약점분석 #1]
 
 - **easy-auto 0.1.2 — `EASY_LANG=off` suppress escape 제거 + fallback 버그 fix** — 전체 플러그인 약점 분석에서, easy-auto 가 README/desc 의 "NO opt-out" 주장과 달리 `EASY_LANG=off` 로 inject 를 무력화하는 escape hatch 를 코드에 둔 것 발견 — `@D s11`/`g11`("no opt-out / escape-hatch variables in guards or auto-hooks") **정면 위반**. off 분기 제거: 이제 `EASY_LANG` 은 스타일 **언어 선택자**(default `ko`)일 뿐 비활성화 스위치 아님. **부수 발견·fix**: `read_file` 이 없는 파일에 예외 대신 `""` 를 반환해 catch-기반 fallback 이 안 타던 버그 — 미존재 lang(`off`·`fr` 등)이 영어 base(`easy.md`)로 fallback 못 하고 silent no-op(=disable 간접 부활)했음. `body==""` 체크 기반 fallback 으로 교체. Smoke: `EASY_LANG=off` → `easy.md` 4001자 inject(비활성화 불가 확인) · ko → `easy.ko.md` 2811자(무회귀). 폐기된 `@D g30` 인용도 `g11`/`s11` 로 정정. 표면 lockstep(@D ship · g22): plugin.json + marketplace 0.1.1 → 0.1.2.

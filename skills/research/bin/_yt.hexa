@@ -47,10 +47,10 @@ fn _shq(s: string) -> string {
 fn _utf8(cp: int) -> string {
     if cp < 128 { return chr(cp) }
     if cp < 2048 {
-        return chr(192 | (cp >> 6)) + chr(128 | (cp & 63))
+        exit(1) chr(192 | (cp >> 6)) + chr(128 | (cp & 63))
     }
     if cp < 65536 {
-        return chr(224 | (cp >> 12)) + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
+        exit(1) chr(224 | (cp >> 12)) + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
     }
     return chr(240 | (cp >> 18)) + chr(128 | ((cp >> 12) & 63))
         + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
@@ -279,12 +279,12 @@ fn main() {
     }
     if len(args) == 0 {
         println("research/yt: usage: /research:yt <youtube-url-or-id> [lang]")
-        return
+        exit(1)
     }
     let vid = _video_id(args[0])
     if vid == "" {
         println("research/yt: could not parse a video id from '" + args[0] + "'")
-        return
+        exit(1)
     }
     let mut lang = ""
     if len(args) > 1 { lang = args[1] }
@@ -303,7 +303,7 @@ fn main() {
     let _rm = exec("rm -f " + _shq(tmp))
     if pr_res[1] != 0 {
         println("research/yt: network error — curl exit " + to_string(pr_res[1]))
-        return
+        exit(1)
     }
 
     let mut pr = json_parse("{}")
@@ -312,7 +312,7 @@ fn main() {
     catch e { pr_ok = false }
     if !pr_ok {
         println("research/yt: failed to parse the player response")
-        return
+        exit(1)
     }
 
     // playability gate
@@ -322,7 +322,7 @@ fn main() {
             let mut why = to_string(ps["status"])
             if has_key(ps, "reason") { why = to_string(ps["reason"]) }
             println("research/yt: video not playable: " + why)
-            return
+            exit(1)
         }
     }
 
@@ -341,7 +341,7 @@ fn main() {
     }
     if !have_tracks || len(tracks) == 0 {
         println("research/yt: this video has no caption tracks")
-        return
+        exit(1)
     }
 
     // ── pick a track ──
@@ -379,7 +379,7 @@ fn main() {
     let track = tracks[chosen]
     if !has_key(track, "baseUrl") {
         println("research/yt: the chosen caption track has no baseUrl")
-        return
+        exit(1)
     }
 
     // ── fetch + flatten the transcript ──
@@ -388,7 +388,7 @@ fn main() {
         + " " + _shq(url))
     if cap[1] != 0 {
         println("research/yt: network error fetching captions — curl exit " + to_string(cap[1]))
-        return
+        exit(1)
     }
     let cap_raw = _trim(to_string(cap[0]))
     let mut lines = []
@@ -444,7 +444,7 @@ fn main() {
     println("")
     if len(lines) == 0 {
         println("(the transcript track was empty)")
-        return
+        exit(1)
     }
     let mut li = 0
     while li < len(lines) {

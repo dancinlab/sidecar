@@ -1,7 +1,7 @@
 {
   "name": "research",
   "description": "Research-fetch tools — `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title · authors · abstract · pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`_arxiv.hexa` / `_yt.hexa`, invoked via `hexa run`); HTTP via curl, no API key.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

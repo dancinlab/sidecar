@@ -57,10 +57,10 @@ fn _all_digits(s: string) -> bool {
 fn _utf8(cp: int) -> string {
     if cp < 128 { return chr(cp) }
     if cp < 2048 {
-        return chr(192 | (cp >> 6)) + chr(128 | (cp & 63))
+        exit(1) chr(192 | (cp >> 6)) + chr(128 | (cp & 63))
     }
     if cp < 65536 {
-        return chr(224 | (cp >> 12)) + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
+        exit(1) chr(224 | (cp >> 12)) + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
     }
     return chr(240 | (cp >> 18)) + chr(128 | ((cp >> 12) & 63))
         + chr(128 | ((cp >> 6) & 63)) + chr(128 | (cp & 63))
@@ -363,12 +363,12 @@ fn main() {
 
     if len(terms) == 0 {
         println("research/arxiv: usage: /research:arxiv <query | arxiv-id> [--n N]")
-        return
+        exit(1)
     }
     let q = _trim(_join(terms, " "))
     if q == "" {
         println("research/arxiv: empty query")
-        return
+        exit(1)
     }
 
     // arxiv-id?  strip an optional case-insensitive `arxiv:` prefix, then
@@ -394,13 +394,13 @@ fn main() {
     let r = exec_with_status(cmd)
     if r[1] != 0 {
         println("research/arxiv: network error — curl exit " + to_string(r[1]))
-        return
+        exit(1)
     }
     let body = to_string(r[0])
     let entries = _entries(body)
     if len(entries) == 0 {
         println("research/arxiv: no results")
-        return
+        exit(1)
     }
     println("# arXiv — " + to_string(len(entries)) + " result(s)")
     let mut e = 0

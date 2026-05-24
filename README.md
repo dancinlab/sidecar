@@ -16,23 +16,18 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T19:06Z · feat(sidecar 0.2.0): profile·enable·disable·reset CLI (PR2 — 프로파일 토글)
+2026-05-24T19:10Z · feat(sidecar-lint 0.5.0): profiles.json tier 누락 검사 — s7 갭 닫음 (PR3)
 
-PR1 기반(profiles.json + install.hexa) 위에 사용자 인터페이스. bin/sidecar에
-verbs 추가:
-  sidecar profile [minimal|hexa|full]  현재 프로파일 표시 / 설정 후 재적용
-  sidecar enable  <plugin>             프로파일 무시 강제 ON (per-plugin override)
-  sidecar disable <plugin>             강제 OFF
-  sidecar reset   <plugin>             override 제거 → 프로파일 추종
+프로파일(PR1·PR2)의 enforcement. 검사 (6): .claude-plugin/profiles.json이
+있는 레포에서 marketplace.json 플러그인이 tiers에 미분류면 non-blocking
+finding. 미분류 플러그인은 조용히 personal로 빠져 minimal/hexa에서 사라지므로
+(s7: 거버넌스는 enforcement와 함께 ship), 태깅하라고 advisory로 알림.
 
-상태: ~/.sidecar/profile(한 단어) + ~/.sidecar/plugin-overrides.json. 후자는
-bin/_overrides.hexa(set/clear/show)가 JSON read-modify-write. 각 verb는 상태
-기록 후 install.hexa 재실행으로 enabledPlugins 재계산. 플러그인 disable 방식이라
-가드 안 env opt-out 아님 — @D s11 안 건드림.
+sidecar 전용: profiles.json 없는 타 플러그인팩은 skip. guards-narrow-scope
+원칙대로 deny 아닌 advisory.
 
-검증: sh -n · hexa parse · override set/show/clear 격리 · help/profile-show 출력.
-일반 사용자: hx install sidecar 후 sidecar profile minimal → hexa/dancinlab
-전용 ~30개 꺼지고 범용 안전·워크플로만 남음.
+검증: hexa parse · true-positive(temp 레포 미분류 beta만 플래그, tagged alpha
+제외) · false-positive 가드(이 레포 55개 전부 tagged → 무음).
 <!-- /LATEST-SHIP -->
 
 ## Install

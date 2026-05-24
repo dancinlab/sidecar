@@ -10,6 +10,9 @@
 //   2. staged diff added lines — hardcoded /Users//home/ paths (g13 / s3)
 //   3. marketplace.json plugin entry vs each plugin.json — version drift
 //   4. hooks/*/bin/*.sh missing user-exec bit
+//   5. no CHANGELOG.md at repo root (commons @D g29)
+//   6. plugin missing a profiles.json tier (sidecar @D s7) — only when the
+//      repo has .claude-plugin/profiles.json (sidecar's multi-user profiles)
 //
 // Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
 // NO opt-out by design — no env var, no config file, no exception
@@ -405,6 +408,37 @@ fn main() {
     let mut nochangelog = false
     if !file_exists(root + "/CHANGELOG.md") { nochangelog = true }
 
+    // (6) profiles.json tier coverage (sidecar @D s7 — classification ships
+    // with its enforcement). Only when the repo carries the multi-user profiles
+    // file; an untagged plugin silently defaults to 'personal' (hidden from the
+    // minimal / hexa profiles), so flag it for tagging in profiles.json.
+    let mut untagged = []
+    let profpath = root + "/.claude-plugin/profiles.json"
+    if file_exists(profpath) && mraw != "" {
+        try {
+            let pc = json_parse(_read_file_safe(profpath))
+            let m2 = json_parse(mraw)
+            if type_of(pc) == "map" && has_key(pc, "tiers") && type_of(m2) == "map" && has_key(m2, "plugins") {
+                let tmap = pc["tiers"]
+                let plugs2 = m2["plugins"]
+                if type_of(tmap) == "map" && type_of(plugs2) == "array" {
+                    let pn2 = len(plugs2)
+                    let mut q = 0
+                    while q < pn2 && len(untagged) < 10 {
+                        let e2 = plugs2[q]
+                        if type_of(e2) == "map" && has_key(e2, "name") {
+                            let nm = to_string(e2["name"])
+                            if !has_key(tmap, nm) {
+                                untagged.push("  " + nm + ": no tier in profiles.json (defaults to 'personal' → hidden from the minimal/hexa profiles)")
+                            }
+                        }
+                        q = q + 1
+                    }
+                }
+            }
+        } catch e { untagged = untagged }
+    }
+
     let mut sections = []
     if nochangelog {
         sections.push("no CHANGELOG.md at repo root (commons @D g29 — create + maintain CHANGELOG.md as the chronological history surface)")
@@ -420,6 +454,9 @@ fn main() {
     }
     if len(noexec) > 0 {
         sections.push("hook .sh missing user-exec bit (PreToolUse / SessionStart fires die with Permission denied):\n" + noexec.join("\n"))
+    }
+    if len(untagged) > 0 {
+        sections.push("plugins missing a profiles.json tier (sidecar @D s7 — tag a tier {core·hexa·personal} so the multi-user profiles can place it; untagged defaults to 'personal'):\n" + untagged.join("\n"))
     }
 
     if len(sections) == 0 { _allow() }

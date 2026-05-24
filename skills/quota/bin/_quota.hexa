@@ -1,10 +1,13 @@
-// _quota.hexa — Claude account 5h/7d limits + multi-account registry (0.2.0).
+// _quota.hexa — Claude account 5h/7d limits + multi-account registry (0.3.0).
 //
 // Ported from dancinlab/wilson plugins/quota/main.hexa. Wilson harness coupling
 // stripped — this binary is invoked directly via `hexa run` from commands/quota.md.
 //   0.1.0 → view-only (status · list · help)
-//   0.2.0 → /quota add (registry write, metadata-only — no cred capture yet)
-//   0.3.0 → /quota switch + remove + refresh (cred-store + live swap)
+//   0.2.0 → /quota add (registry write, metadata-only)
+//   0.3.0 → /quota add captures creds · /quota switch · /quota remove · /quota refresh
+//
+// ToS: own-accounts-serial only. Single user, single account active at a time.
+// NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
 //
 // Locked data sources (wilson RESEARCH.tape c_endpoints, 12-repo survey):
 //   5h/7d limits : GET https://api.anthropic.com/api/oauth/usage
@@ -27,6 +30,7 @@ let OAUTH_BETA       = "oauth-2025-04-20"
 let TOKEN_URL        = "https://platform.claude.com/v1/oauth/token"
 let CLIENT_ID        = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 let KEYCHAIN_SVC     = "Claude Code-credentials"
+let BACKUP_SVC       = "sidecar-quota"   // sidecar's per-account backup keychain svc (macOS) — distinct from the live "Claude Code-credentials"
 let CACHE_TTL        = 45    // s — fresh-cache window; throttles repeat status repaints away from the 429 source
 let AGENTSDK_STUB    = "not_implemented:agent-sdk-credit — post-2026-06-15 source unknown"
 
@@ -427,11 +431,202 @@ fn _registry_text() -> string {
     return _join(lines)
 }
 
-// ── /quota add (PR#2: registry write, metadata-only) ─────────────────
-// The full wilson `add` also captures the live OAuth blob into a per-account
-// backup store so a later `switch` has something to swap in. That cred-capture
-// path lands in PR#3 alongside `quota switch`. For PR#2, registering an account
-// is purely a metadata snapshot — no secrets touched.
+// ── per-account backup secret store (macOS keychain / linux 0600 file) ──
+// Per-account OAuth blobs live in sidecar's backup secret store: macOS login
+// keychain svc "sidecar-quota" / linux 0600 files under ~/.sidecar/quota/creds/.
+// Mirrors the live store's mechanism. Decision parallels wilson 1-B (2026-05-16)
+// — 7-repo survey showed claude-swap + cux both use keychain-mac / file-linux
+// with atomic write + rollback.
+fn _creds_dir() -> string {
+    let d = _state_dir() + "/creds"
+    let _m = exec_with_status("mkdir -p " + _shq(d) + " 2>/dev/null")
+    return d
+}
+fn _creds_file(email: string) -> string {
+    return _creds_dir() + "/" + email.replace("/", "_") + ".json"
+}
+
+// extract accessToken from a creds blob — used to verify a switch landed
+// correctly (re-read the live store, compare bytes-for-bytes against target).
+fn _creds_token(blob: string) -> string {
+    let mut v = json_parse("{}")
+    try { v = json_parse(blob) } catch e { return "" }
+    if type_of(v) != "map" || !has_key(v, "claudeAiOauth") { return "" }
+    let o = v["claudeAiOauth"]
+    if type_of(o) == "map" && has_key(o, "accessToken") { return str(o["accessToken"]) }
+    return ""
+}
+
+fn _store_creds(email: string, blob: string) -> any {
+    if len(blob) == 0 { return #{ "ok": false, "error": "empty credentials blob — nothing to store" } }
+    if _is_macos() {
+        let cmd = "security add-generic-password -U -s " + _shq(BACKUP_SVC)
+            + " -a " + _shq(email) + " -w " + _shq(blob) + " 2>&1"
+        let r = exec_with_status(cmd)
+        if r[1] != 0 { return #{ "ok": false, "error": "keychain store failed (rc=" + str(r[1]) + "): " + _clip(to_string(r[0]), 140) } }
+        return #{ "ok": true }
+    }
+    let fp = _creds_file(email)
+    if !write_file(fp, blob) { return #{ "ok": false, "error": "failed to write " + fp } }
+    let cr = exec_with_status("chmod 600 " + _shq(fp) + " 2>&1")
+    if cr[1] != 0 { return #{ "ok": false, "error": "chmod 600 failed on " + fp } }
+    return #{ "ok": true }
+}
+
+fn _load_creds(email: string) -> string {
+    if _is_macos() {
+        let outf = "/tmp/sidecar-quota-bk-" + str(timestamp()) + ".out"
+        let cmd = "security find-generic-password -s " + _shq(BACKUP_SVC)
+            + " -a " + _shq(email) + " -w > " + _shq(outf) + " 2>/dev/null"
+        let r = exec_with_status(cmd)
+        let mut out = ""
+        if file_exists(outf) { out = _read_text(outf) }
+        let _c = exec_with_status("rm -f " + _shq(outf) + " ; true")
+        if r[1] != 0 { return "" }
+        return out
+    }
+    let fp = _creds_file(email)
+    if file_exists(fp) { return _read_text(fp) }
+    return ""
+}
+
+// idempotent: a missing item is treated as success — nothing left to remove.
+fn _delete_creds(email: string) -> bool {
+    if len(email) == 0 { return true }
+    if _is_macos() {
+        let cmd = "security delete-generic-password -s " + _shq(BACKUP_SVC)
+            + " -a " + _shq(email) + " 2>/dev/null"
+        let r = exec_with_status(cmd)
+        return r[1] == 0 || r[1] == 44
+    }
+    let fp = _creds_file(email)
+    if !file_exists(fp) { return true }
+    let r = exec_with_status("rm -f " + _shq(fp) + " 2>&1")
+    return r[1] == 0
+}
+
+fn _delete_cache(uuid: string) -> bool {
+    if len(uuid) == 0 { return true }
+    let cp = _cache_path_for(uuid)
+    if !file_exists(cp) { return true }
+    let r = exec_with_status("rm -f " + _shq(cp) + " 2>&1")
+    return r[1] == 0
+}
+
+// write a blob to the LIVE Claude credential store (atomic where possible).
+// macOS: `security add-generic-password -U` updates the existing item in place.
+// linux: temp-write + chmod 600 + atomic rename over ~/.claude/.credentials.json.
+fn _write_live_creds(blob: string) -> any {
+    if len(blob) == 0 { return #{ "ok": false, "error": "refusing to write empty credentials to the live store" } }
+    if _is_macos() {
+        let user = env("USER")
+        if len(user) == 0 { return #{ "ok": false, "error": "$USER unset — cannot address the login keychain item" } }
+        let cmd = "security add-generic-password -U -s " + _shq(KEYCHAIN_SVC)
+            + " -a " + _shq(user) + " -w " + _shq(blob) + " 2>&1"
+        let r = exec_with_status(cmd)
+        if r[1] != 0 { return #{ "ok": false, "error": "live keychain write failed (rc=" + str(r[1]) + "): " + _clip(to_string(r[0]), 140) } }
+        return #{ "ok": true }
+    }
+    let fp  = _linux_creds()
+    let tmp = fp + ".sidecar-tmp-" + str(timestamp())
+    if !write_file(tmp, blob) { return #{ "ok": false, "error": "failed to write temp creds " + tmp } }
+    let c1 = exec_with_status("chmod 600 " + _shq(tmp) + " 2>&1")
+    if c1[1] != 0 {
+        let _x = exec_with_status("rm -f " + _shq(tmp) + " ; true")
+        return #{ "ok": false, "error": "chmod 600 failed on temp creds" }
+    }
+    let c2 = exec_with_status("mv -f " + _shq(tmp) + " " + _shq(fp) + " 2>&1")
+    if c2[1] != 0 {
+        let _x = exec_with_status("rm -f " + _shq(tmp) + " ; true")
+        return #{ "ok": false, "error": "atomic rename failed: " + _clip(to_string(c2[0]), 120) }
+    }
+    return #{ "ok": true }
+}
+
+// ── identity-block helpers (~/.claude.json :: oauthAccount rewrite) ──
+fn _rec_oauth_account(rec: any) -> any {
+    if type_of(rec) == "map" && has_key(rec, "oauth_account") && type_of(rec["oauth_account"]) == "map" {
+        return rec["oauth_account"]
+    }
+    // fallback for pre-0.2.0 registry entries (metadata-only, no oauth_account).
+    return #{
+        "emailAddress":     _g(rec, "email"),
+        "accountUuid":      _g(rec, "account_uuid"),
+        "organizationUuid": _g(rec, "org_uuid"),
+        "organizationName": _g(rec, "org_name")
+    }
+}
+
+// rewrite ONLY the oauthAccount block of ~/.claude.json (other keys preserved).
+fn _apply_oauth_account(oa: any) -> any {
+    let p = _claude_json()
+    if !file_exists(p) { return #{ "ok": true, "skipped": true } }
+    let raw = _read_text(p)
+    let mut v = json_parse("{}")
+    try { v = json_parse(raw) } catch e {
+        return #{ "ok": false, "error": "~/.claude.json is not parseable JSON — refusing to rewrite" }
+    }
+    if type_of(v) != "map" { return #{ "ok": false, "error": "~/.claude.json is not a JSON object — refusing to rewrite" } }
+    v["oauthAccount"] = oa
+    if !write_file(p, json_stringify(v)) { return #{ "ok": false, "error": "failed to write ~/.claude.json" } }
+    return #{ "ok": true }
+}
+
+// ── registry remove + account lookup ─────────────────────────────────
+fn _registry_remove(reg: any, idx: int) -> any {
+    let src = reg["accounts"]
+    let mut na = []
+    let mut i = 0
+    let n = len(src)
+    while i < n {
+        if i != idx { na.push(src[i]) }
+        i = i + 1
+    }
+    let mut act = reg["active"]
+    if act > idx { act = act - 1 }
+    if act > len(na) - 1 { act = 0 }
+    return #{ "active": act, "accounts": na }
+}
+
+// all-digits guard — `to_int` aborts on non-numeric input, so a ref must be
+// proven numeric before it is parsed as a list index.
+fn _is_digit(c: string) -> bool {
+    return c == "0" || c == "1" || c == "2" || c == "3" || c == "4"
+        || c == "5" || c == "6" || c == "7" || c == "8" || c == "9"
+}
+fn _is_digits(s: string) -> bool {
+    let n = len(s)
+    if n == 0 { return false }
+    let mut i = 0
+    let mut ok = true
+    while i < n {
+        if !_is_digit(s[i]) { ok = false }
+        i = i + 1
+    }
+    return ok
+}
+
+// resolve a registry account by email or numeric index → index, or -1.
+fn _find_account(reg: any, ref: string) -> int {
+    let accts = reg["accounts"]
+    let n = len(accts)
+    if _is_digits(ref) {
+        let as_int = to_int(ref)
+        if as_int > -1 && as_int < n { return as_int }
+    }
+    let mut idx = -1
+    let mut i = 0
+    while i < n {
+        if idx == -1 && _g(accts[i], "email") == ref { idx = i }
+        i = i + 1
+    }
+    return idx
+}
+
+// ── /quota add — registry write + live-cred capture ──────────────────
+// 0.2.0 was metadata-only. 0.3.0 also captures the live OAuth blob into
+// sidecar's per-account backup store, so a later `/quota switch` has
+// something to swap in (decision 1-B). Refreshed every add — tokens rotate.
 fn _cli_add() -> any {
     let oa = _read_oauth_account()
     let email = _g(oa, "emailAddress")
@@ -448,23 +643,195 @@ fn _cli_add() -> any {
             return #{ "ok": false, "error": "failed to write registry: " + path }
         }
     }
+    let mut cred_note = ""
+    if len(email) > 0 {
+        let blob = _trim(_read_creds_json())
+        if len(blob) > 0 {
+            let st = _store_creds(email, blob)
+            cred_note = if _envelope_ok(st) { "  · credentials captured" }
+                        else { "  · ⚠ credentials NOT captured: " + str(st["error"]) }
+        } else {
+            cred_note = "  · ⚠ no live credentials to capture (switch unavailable for this account)"
+        }
+    }
     let head = if dup { "already registered: " + _g(rec, "email") }
                else { "registered " + _g(rec, "email") + "  → " + path }
-    let tail = "  (metadata-only — /quota switch + cred-capture land in 0.3.0)"
-    return #{ "ok": true, "text": head + tail }
+    return #{ "ok": true, "text": head + cred_note }
+}
+
+// ── /quota switch — live credential swap, verified + rollback ────────
+// snapshot OUTGOING → write live → verify → ~/.claude.json identity → rollback-on-fail.
+fn _cli_switch(ref: string) -> any {
+    if len(ref) == 0 {
+        return #{ "ok": false, "error": "usage: /quota switch <email|index>   (`/quota list` shows registered accounts)" }
+    }
+    let path = _registry_path()
+    let mut reg = _registry_load(path)
+    if len(reg["accounts"]) == 0 {
+        return #{ "ok": false, "error": "no registered accounts — `/quota add` (while logged in) first" }
+    }
+    let idx = _find_account(reg, ref)
+    if idx == -1 {
+        return #{ "ok": false, "error": "no registered account matching '" + ref + "' — see `/quota list`" }
+    }
+    let accts     = reg["accounts"]
+    let target    = accts[idx]
+    let tgt_email = _g(target, "email")
+
+    let prev_blob = _trim(_read_creds_json())
+    if len(prev_blob) == 0 {
+        return #{ "ok": false, "error": "cannot read current live credentials — refusing to switch blind" }
+    }
+    let cur_email = _g(_read_oauth_account(), "emailAddress")
+    if cur_email == tgt_email {
+        return #{ "ok": true, "text": "already on " + tgt_email + " — no switch needed" }
+    }
+
+    let tgt_blob = _trim(_load_creds(tgt_email))
+    if len(tgt_blob) == 0 {
+        return #{ "ok": false, "error": "'" + tgt_email + "' has no stored credentials — log into it (`claude /login`) then `/quota add`" }
+    }
+    let tgt_token = _creds_token(tgt_blob)
+    if len(tgt_token) == 0 {
+        return #{ "ok": false, "error": "stored credentials for '" + tgt_email + "' are not in {claudeAiOauth:{accessToken}} shape" }
+    }
+
+    // snapshot the OUTGOING account so a switch-back works.
+    if len(cur_email) > 0 {
+        let bk = _store_creds(cur_email, prev_blob)
+        if !_envelope_ok(bk) {
+            return #{ "ok": false, "error": "could not back up the current account before switching: " + str(bk["error"]) }
+        }
+    }
+    // recovery insurance for the ~/.claude.json rewrite.
+    let cj = _claude_json()
+    if file_exists(cj) {
+        let _b = exec_with_status("cp " + _shq(cj) + " " + _shq(_state_dir() + "/claude.json.bak") + " 2>/dev/null ; true")
+    }
+
+    let w = _write_live_creds(tgt_blob)
+    if !_envelope_ok(w) {
+        return #{ "ok": false, "error": "live credential write failed (no change applied): " + str(w["error"]) }
+    }
+    // verify — re-read the live store, compare the access token.
+    let chk = _creds_token(_trim(_read_creds_json()))
+    if chk != tgt_token {
+        let rb = _write_live_creds(prev_blob)
+        let tail = if _envelope_ok(rb) { "rolled back to the previous account" }
+                   else { "ROLLBACK ALSO FAILED — run `claude /login`" }
+        return #{ "ok": false, "error": "switch verification failed (live token != target) — " + tail }
+    }
+    // update the ~/.claude.json identity block.
+    let ap = _apply_oauth_account(_rec_oauth_account(target))
+    if !_envelope_ok(ap) {
+        let rb = _write_live_creds(prev_blob)
+        let tail = if _envelope_ok(rb) { "credentials rolled back" }
+                   else { "CREDENTIAL ROLLBACK FAILED — run `claude /login`" }
+        return #{ "ok": false, "error": "could not update ~/.claude.json identity (" + str(ap["error"]) + ") — " + tail }
+    }
+    // commit — registry active pointer.
+    reg["active"] = idx
+    let _s = _registry_save(path, reg)
+    let from = if len(cur_email) > 0 { cur_email } else { "(unknown)" }
+    return #{ "ok": true, "text": "switched → " + tgt_email + "   (was " + from + ")\n"
+        + "  live credentials + ~/.claude.json identity updated · registry active=" + str(idx) + "\n"
+        + "  restart `claude` for the new account to take effect" }
+}
+
+// ── /quota remove — drop registry row + backup creds (not a logout) ──
+// The LIVE ~/.claude.json is deliberately untouched. Removing the currently-
+// live account just means sidecar stops tracking it; the session keeps working.
+fn _cli_remove(ref: string) -> any {
+    if len(ref) == 0 {
+        return #{ "ok": false, "error": "usage: /quota remove <email|index>   (`/quota list` shows accounts)" }
+    }
+    let path = _registry_path()
+    let reg  = _registry_load(path)
+    if len(reg["accounts"]) == 0 {
+        return #{ "ok": false, "error": "no registered accounts — nothing to remove" }
+    }
+    let idx = _find_account(reg, ref)
+    if idx == -1 {
+        return #{ "ok": false, "error": "no registered account matching '" + ref + "' — see `/quota list`" }
+    }
+    let target = reg["accounts"][idx]
+    let email  = _g(target, "email")
+    let uuid   = _g(target, "account_uuid")
+    let next   = _registry_remove(reg, idx)
+    if !_registry_save(path, next) {
+        return #{ "ok": false, "error": "failed to write registry: " + path }
+    }
+    let cred_gone = _delete_creds(email)
+    let _ch       = _delete_cache(uuid)
+    let note = if cred_gone { "" } else { "  · ⚠ keychain creds not removed (svc '" + BACKUP_SVC + "')" }
+    return #{ "ok": true, "text": "removed " + email + "  (" + str(len(next["accounts"])) + " account(s) left)" + note }
+}
+
+// ── /quota refresh — re-fetch usage into the per-account cache ───────
+// Empty ref → the live ~/.claude.json account. Set ref → a registered account
+// (creds pulled from the backup store). Expired token → renewed via refreshToken.
+// For a backup account the renewed blob is written back so the next refresh
+// still has a valid refreshToken (tokens rotate on each grant).
+fn _cli_refresh(ref: string) -> any {
+    let mut email = ""
+    let mut uuid  = ""
+    let mut blob  = ""
+    let mut from_backup = false
+    if len(ref) > 0 {
+        let reg = _registry_load(_registry_path())
+        let idx = _find_account(reg, ref)
+        if idx == -1 {
+            return #{ "ok": false, "error": "no registered account matching '" + ref + "' — see `/quota list`" }
+        }
+        let rec = reg["accounts"][idx]
+        email = _g(rec, "email")
+        uuid  = _g(rec, "account_uuid")
+        blob  = _trim(_load_creds(email))
+        from_backup = true
+        if len(blob) == 0 {
+            return #{ "ok": false, "error": "no backup credentials for " + email + " — `/quota add` while logged into that account captures them" }
+        }
+    } else {
+        let oa = _read_oauth_account()
+        email = _g(oa, "emailAddress")
+        uuid  = _g(oa, "accountUuid")
+        blob  = _trim(_read_creds_json())
+        if len(blob) == 0 {
+            return #{ "ok": false, "error": "no current credentials — run `claude /login`" }
+        }
+    }
+    let tk = _token_from_blob(blob)
+    if !_envelope_ok(tk) { return #{ "ok": false, "error": str(tk["error"]) } }
+    let did_refresh = type_of(tk) == "map" && has_key(tk, "refreshed") && tk["refreshed"] == true
+    if from_backup && did_refresh && has_key(tk, "blob") {
+        let _s = _store_creds(email, str(tk["blob"]))
+    }
+    let lim = _fetch_usage_with_token(str(tk["token"]))
+    if !_envelope_ok(lim) { return #{ "ok": false, "error": "usage fetch failed for " + email + ": " + str(lim["error"]) } }
+    if len(uuid) > 0 {
+        let row = "{\"ts\":" + str(timestamp()) + ",\"lim\":" + json_stringify(lim) + "}"
+        let _w  = write_file(_cache_path_for(uuid), row)
+    }
+    let tag = if did_refresh { "  (token refreshed)" } else { "" }
+    return #{ "ok": true, "text": "refreshed " + email + tag
+        + "  —  5h:" + _win_util(lim["five_hour"]) + "  7d:" + _win_util(lim["seven_day"]) }
 }
 
 fn _help_text() -> string {
     return _join([
-        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.2.0)",
+        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.3.0)",
         "",
-        "  /quota              this text's status form (bare → status)",
-        "  /quota status       current account + live 5h/7d (45s cache)",
-        "  /quota list         registered accounts (* = active; cached util)",
-        "  /quota add          register the live ~/.claude.json account (metadata-only)",
-        "  /quota help         this text",
+        "  /quota                    this text's status form (bare → status)",
+        "  /quota status             current account + live 5h/7d (45s cache)",
+        "  /quota list               registered accounts (* = active; cached util)",
+        "  /quota add                register current account + capture its credentials",
+        "  /quota switch <acct>      switch the live account (email or list index)",
+        "  /quota remove <acct>      unregister + drop backup creds (alias: rm)",
+        "  /quota refresh [<acct>]   re-fetch 5h/7d into the per-account cache",
+        "                            (active account if no arg; renews expired tokens)",
+        "  /quota help               this text",
         "",
-        "  switch / remove / refresh land in 0.3.0 (alongside per-account cred-store).",
+        "  switch = live cred swap, verified + rollback. own-accounts-serial only.",
         "  Live numbers come from api.anthropic.com/api/oauth/usage (non-public);",
         "  cached values are labelled `(stale ...)` when the live fetch fails — honest, never faked."
     ])
@@ -491,10 +858,26 @@ fn main() {
         eprintln("✗ " + str(r["error"]))
         exit(1)
     }
-    if verb == "switch" || verb == "remove" || verb == "rm" || verb == "delete" || verb == "del" || verb == "refresh" {
-        eprintln("/quota " + verb + " — not in 0.2.0 (PR#3 adds switch/remove/refresh + cred-store).")
-        eprintln("Try `/quota status` · `/quota list` · `/quota add`.")
-        exit(2)
+    if verb == "switch" {
+        let ref = if len(a) > 2 { a[2] } else { "" }
+        let r = _cli_switch(ref)
+        if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
+        eprintln("✗ " + str(r["error"]))
+        exit(1)
+    }
+    if verb == "remove" || verb == "rm" || verb == "delete" || verb == "del" {
+        let ref = if len(a) > 2 { a[2] } else { "" }
+        let r = _cli_remove(ref)
+        if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
+        eprintln("✗ " + str(r["error"]))
+        exit(1)
+    }
+    if verb == "refresh" {
+        let ref = if len(a) > 2 { a[2] } else { "" }
+        let r = _cli_refresh(ref)
+        if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
+        eprintln("✗ " + str(r["error"]))
+        exit(1)
     }
     eprintln("unknown verb: " + verb)
     eprintln(_help_text())

@@ -6,6 +6,8 @@
 //   0.2.0 → /quota add (registry write, metadata-only)
 //   0.3.0 → /quota add captures creds · /quota switch · /quota remove · /quota refresh
 //   0.4.0 → per-account nicknames (claude1 · claude2 · ...) — refs accept email|nick|index
+//   0.4.1 → per-verb commands/<verb>.md so the picker shows /quota:<verb> entries
+//   0.4.2 → /quota:status renders as markdown table; resets_at trimmed to `YYYY-MM-DD HH:MM UTC`
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -281,11 +283,36 @@ fn _fetch_limits() -> any {
 }
 
 // ── window formatting ────────────────────────────────────────────────
+
+// Trim a usage-endpoint ISO timestamp like `2026-05-24T11:20:00.145030+00:00`
+// down to `2026-05-24 11:20 UTC` for chat-readable display. Best-effort —
+// strings that don't match the shape are returned verbatim (never faked).
+fn _fmt_resets(iso: string) -> string {
+    let n = len(iso)
+    if n < 16 { return iso }
+    let t_at = iso.index_of("T")
+    if t_at < 0 { return iso }
+    let date = iso.substring(0, t_at)
+    let after_t = iso.substring(t_at + 1, n)
+    let hhmm_end = if len(after_t) >= 5 { 5 } else { len(after_t) }
+    let hhmm = after_t.substring(0, hhmm_end)
+    let mut zone = "UTC"
+    // `+00:00` suffix → UTC; anything else → strip to a short tail
+    let plus_at = iso.last_index_of("+")
+    let minus_at = iso.last_index_of("-")
+    let off_at  = if plus_at > t_at { plus_at } else if minus_at > t_at { minus_at } else { -1 }
+    if off_at > 0 {
+        let off = iso.substring(off_at, n)
+        if off != "+00:00" && off != "-00:00" { zone = off }
+    }
+    return date + " " + hhmm + " " + zone
+}
+
 fn _fmt_window(w: any) -> string {
     if type_of(w) != "map" { return "(unavailable)" }
-    let u = if has_key(w, "utilization") { str(w["utilization"]) } else { "?" }
-    let t = if has_key(w, "resets_at") { str(w["resets_at"]) } else { "?" }
-    return "util=" + u + "  resets=" + t
+    let u = if has_key(w, "utilization") { str(w["utilization"]) + "%" } else { "?" }
+    let t = if has_key(w, "resets_at") { _fmt_resets(str(w["resets_at"])) } else { "?" }
+    return u + " · resets " + t
 }
 
 fn _win_util(w: any) -> string {
@@ -385,11 +412,13 @@ fn _join(lines: array) -> string {
     return out
 }
 
+// Markdown-table renderer for /quota:status. Output renders as a real table
+// in the Claude Code chat (CC TUI parses bash stdout as markdown). Plain text
+// is still readable in terminal contexts — pipes + dashes line up.
 fn _status_lines() -> array {
     let oa    = _read_oauth_account()
     let email = _g(oa, "emailAddress")
     let mut who = if len(email) > 0 { email } else { "(no ~/.claude.json oauthAccount — run `claude /login`)" }
-    // if the live account is registered AND has a nickname, surface it here too.
     if len(email) > 0 {
         let reg = _registry_load(_registry_path())
         let idx = _find_account(reg, email)
@@ -398,21 +427,28 @@ fn _status_lines() -> array {
             if len(nick) > 0 { who = nick + " (" + email + ")" }
         }
     }
-    let mut lines = [ "Account:  " + who ]
-    if len(_g(oa, "organizationName")) > 0 { lines.push("Org:      " + _g(oa, "organizationName")) }
+    let mut lines = []
     let lim = _fetch_limits()
-    if _envelope_ok(lim) {
-        if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
-            lines.push("Limits:   ⚠ cached " + str(lim["cached_age_s"]) + "s ago (live fetch failed: " + str(lim["fetch_error"]) + ")")
-        }
-        lines.push("5h:       " + _fmt_window(lim["five_hour"]))
-        lines.push("7d:       " + _fmt_window(lim["seven_day"]))
-    } else {
-        lines.push("Limits:   (unavailable) " + str(lim["error"]))
+    // honest-stale banner ABOVE the table so it can't be missed
+    if _envelope_ok(lim) && type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
+        lines.push("⚠ cached " + str(lim["cached_age_s"]) + "s ago (live fetch failed: " + str(lim["fetch_error"]) + ")")
+        lines.push("")
     }
-    lines.push("Agent SDK credit:  " + AGENTSDK_STUB)
+    lines.push("| Field | Value |")
+    lines.push("|---|---|")
+    lines.push("| Account | " + who + " |")
+    if len(_g(oa, "organizationName")) > 0 {
+        lines.push("| Org | " + _g(oa, "organizationName") + " |")
+    }
+    if _envelope_ok(lim) {
+        lines.push("| 5h | " + _fmt_window(lim["five_hour"]) + " |")
+        lines.push("| 7d | " + _fmt_window(lim["seven_day"]) + " |")
+    } else {
+        lines.push("| Limits | (unavailable) " + str(lim["error"]) + " |")
+    }
+    lines.push("| Agent SDK credit | " + AGENTSDK_STUB + " |")
     let reg = _registry_load(_registry_path())
-    lines.push("Registry: " + str(len(reg["accounts"])) + " account(s)  (`/quota list`)")
+    lines.push("| Registry | " + str(len(reg["accounts"])) + " account(s) · `/quota:list` |")
     return lines
 }
 

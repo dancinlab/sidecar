@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pool-route 0.6.5 HOTFIX: 0.6.4 의 false-positive + false-negative 경로 동시 차단
+
+- **pool-route 0.6.5 — HOTFIX 2건 동시 패치** — 0.6.4 ship 직후 발견된 두 버그를 같은 PR 로 해소.
+
+  **버그 1 (false-positive · bare reads 가 sign 게이트 발동)**:
+  - `_local_heavy_interp` 가 `_has_word(cmd, "hexa")` 로 hexa 호출 감지했는데, `_has_word` 가 `-` 를 word boundary 로 처리 → `cat /Users/.../hexa-lang/foo.txt` 의 *경로 안 "hexa"* 가 verb 로 오인식 → 단순 `cat`/`ls`/`grep` 도 sign 게이트 발동.
+  - 다른 세션에서 `cat` 명령이 deny 됨을 보고받음 (사용자 confirmed).
+  - **fix**: 첫 토큰(`toks[0]`) basename 매칭으로 전환 — `hexa`/`hexa.real`/`hexac`/`hexadrv`/`hxv2`/`python*`/`bash`/`sh` 이 *호출 verb 로서* 첫 토큰일 때만 매칭. 경로 내부 "hexa" 무시. 첫 토큰이 호출 verb 라는 사실은 sound.
+
+  **버그 2 (false-negative · `hexa run`/`build` 가 mac local 로 실행)**:
+  - 0.6.x heavy classifier 가 `hexa kick/drill/loop/cc` 만 포함, `hexa run` 과 `hexa build` 누락. 그런데 그 둘이 dispatch-cache miss → re-fork 의 canonical mac fork-storm 트리거.
+  - 다른 세션이 `hexa run build_curriculum_corpus.hexa` 같은 명령을 mac 에서 도는 현상 보고 (사용자 escalation).
+  - **fix**: `heavy_pairs` 에 `hexa run` + `hexa build` 추가 → pool 자동 라우팅. sign 게이트는 local-bound 분기의 좁은 보조 가드로 남음.
+
+  **scope**: false-positive 닫음 → 일상 명령 영향 0 복원. false-negative 닫음 → `hexa run/build` 도 무조건 자원 라우팅 (사용자 가이드 "atlas/heavy verb 는 자원에서 무조건" 충족).
+
+  **표면**: `_pool_route.hexa` (`_local_heavy_interp` rewrite + `_basename` helper 추가 · heavy_pairs 확장) · `plugin.json` 0.6.4 → 0.6.5 + description hotfix 절 · README "Hotfix 0.6.5" 섹션.
+
 ## 2026-05-25 — pool-route 0.6.4: local-bound sign 게이트 (mac fork-storm 진짜 차단)
 
 - **pool-route 0.6.4 — local-bound 절대경로 안의 HEAVY 호출에 `local` sign 게이트 추가** — 0.6.0 의 absolute-path 면제(`/Users/`·`/home/` literal → 무조건 local 통과)가 mac fork-storm 의 canonical 트리거였음. 다중 세션이 `hexa.real run /Users/.../x.hexa` 류를 동시에 발사할 때마다 dispatch-cache hash-miss → 새 컴파일러 바이너리 fork. 워크스테이션 부하 load 130+ 측정.

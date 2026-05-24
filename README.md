@@ -115,6 +115,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 # git-guard      force-push deny
 # sidecar-lint   git-commit lint (stale-history · hardpath · drift · CHANGELOG)
 # tape-lint      .tape edit lint (fields · length · lang · @I siblings)
+# inbox-log-lint INBOX.log.md pileup advisory (entries/resolved/size → archive)
 # limit-guard    session-limit checkpoint directive
 ```
 

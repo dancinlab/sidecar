@@ -51,6 +51,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "inbox-log-lint",
+      "source": "./hooks/inbox-log-lint",
+      "description": "PostToolUse(Write|Edit) advisory for the INBOX domain log (`INBOX.log.md`). Fires when tool_input.file_path ends in `INBOX.log.md` and reads the post-write file to emit non-blocking additionalContext when the cross-project handoff log piles up: entry count (`## ` headers) > 20 (soft cap) · fully-resolved entries (>=1 `- [x]`, zero `- [ ]`) > 12 · non-blank lines > 250 — each suggests moving closed handoffs to a sibling `INBOX.archive.log.md` so the active log stays open + recent. Implemented in hexa-lang (`_inbox_log_lint.hexa`, invoked via `hexa run`). Advisory-only by design (per the guards-narrow-scope policy: non-blocking additionalContext > deny for hygiene). Sister of memory-lint (same pattern for memory/MEMORY.md).",
+      "version": "0.1.0"
+    },
+    {
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
       "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit \u00b7 missing CHANGELOG.md at repo root (commons @D g29). NO opt-out by design.",

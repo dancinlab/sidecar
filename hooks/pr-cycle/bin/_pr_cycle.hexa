@@ -10,8 +10,8 @@
 // chained forms like `git push && gh pr create …` (the common case).
 //
 // Skip if: `--draft` flag present · `gh pr merge` already in the command ·
-// branch diff scoped entirely to `inbox/patches/**` (commons @D g54 —
-// cross-project handoff entries are maintainer review-only).
+// branch diff scoped entirely to `INBOX.md` / `INBOX.log.md` (commons
+// @D g54 — cross-project handoff entries are maintainer review-only).
 //
 // Rewrite tail (appended via the hook `updatedInput` field):
 //   1) ` && gh pr merge --squash --admin --delete-branch` (always —
@@ -135,11 +135,12 @@ fn _shell_sq(s: string) -> string {
     return out + "'"
 }
 
-// inbox-only diff detection: every changed file under inbox/patches/**.
-// Uses `git diff --name-only origin/main...HEAD` to read the branch's
-// proposed change set. Returns false on any git error (fail-open: the
-// auto-merge tail still gets appended — safer than silently skipping).
-fn _is_inbox_patches_only() -> bool {
+// INBOX-handoff-only diff detection: every changed file is the repo-root
+// INBOX domain pair (`INBOX.md` / `INBOX.log.md`). Uses
+// `git diff --name-only origin/main...HEAD` to read the branch's proposed
+// change set. Returns false on any git error (fail-open: the auto-merge
+// tail still gets appended — safer than silently skipping).
+fn _is_inbox_handoff_only() -> bool {
     let raw = to_string(exec("git diff --name-only origin/main...HEAD 2>/dev/null"))
     if len(raw) == 0 { return false }
     let n = len(raw)
@@ -152,7 +153,7 @@ fn _is_inbox_patches_only() -> bool {
         if c == "\n" {
             if len(cur) > 0 {
                 any = true
-                if !_starts_with(cur, "inbox/patches/") { return false }
+                if cur != "INBOX.md" && cur != "INBOX.log.md" { return false }
             }
             cur = ""
         } else {
@@ -273,8 +274,8 @@ fn main() {
     // skip — draft PR (user wants review, not immediate merge)
     if cmd.contains("--draft") { _allow() }
 
-    // skip — inbox/patches/** -only branch (commons @D g54: maintainer review)
-    if _is_inbox_patches_only() { _allow() }
+    // skip — INBOX-handoff-only branch (commons @D g54: maintainer review)
+    if _is_inbox_handoff_only() { _allow() }
 
     let wt_tail = _worktree_cleanup_tail()
     let tail = MERGE_TAIL + wt_tail

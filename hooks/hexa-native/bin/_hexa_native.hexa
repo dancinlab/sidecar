@@ -1,8 +1,15 @@
-// _hexa_native.hexa — PreToolUse(Write|Edit|NotebookEdit) hard block.
+// _hexa_native.hexa — PreToolUse(Write|Edit|NotebookEdit|Bash) hard block.
 //
 // If the target file's enclosing project (any ancestor dir holding a
 // `project.tape` marker) exists AND the target ends in `.py` / `.sh`,
 // deny the write with a fixed message redirecting to `.hexa`.
+//
+// Two write channels are covered:
+//   1. Structured file tools — Write / Edit / NotebookEdit (file_path).
+//   2. Bash redirect channel — `> X.py`, `>> X.sh`, heredoc-to-redirect
+//      (`cat > X.py << EOF`), and `tee [-a] X.py`. Relative targets are
+//      resolved against the payload `cwd`. `python X.py` / `cat X.py` /
+//      `chmod X.sh` (non-write commands) pass through untouched.
 //
 // DESIGN NOTE — explicitly no opt-out: no env-var bypass, no
 // ~/.claude/sidecar/disabled.json honoring, no per-project exception
@@ -104,6 +111,155 @@ fn _relpath(target: string, root: string) -> string {
     return _basename(target)
 }
 
+// Same relative path but with the `.py` / `.sh` extension swapped to `.hexa`.
+fn _swap_ext_hexa(rel: string) -> string {
+    let i = rel.last_index_of(".")
+    if i < 0 { return rel + ".hexa" }
+    return rel.substring(0, i) + ".hexa"
+}
+
+// Shared deny body. `channel` names the write path; UPPERCASE marks the
+// load-bearing points, and the message states plainly that the same logic
+// IS writable here — as `.hexa`.
+fn _deny_for(root: string, target: string, channel: string) {
+    let ext = _ext_of(target)
+    let rel = _relpath(target, root)
+    let proj = _basename(root)
+    let rel_hexa = _swap_ext_hexa(rel)
+    let reason = "hexa-native: project `" + proj + "` is HEXA-NATIVE — `project.tape` marker at the project root.\n"
+        + "  BLOCKED: writing `" + rel + "` (." + ext + ") via " + channel + ".\n"
+        + "  THIS IS POSSIBLE — just author it in `.hexa`. Write the SAME logic as `" + rel_hexa + "` and it runs here; hexa is this project's native source language.\n"
+        + "  `.py` / `.sh` are supported as ai-native English in OTHER environments — this project intentionally takes `.hexa` ONLY.\n"
+        + "  NO env-var / flag override by design."
+    _deny(reason)
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+fn _is_meta(c: string) -> bool {
+    return c == " " || c == "\t" || c == "\n" || c == "\r" || c == ";" || c == "|" || c == "&" || c == "<" || c == ">" || c == "(" || c == ")"
+}
+
+// Quote-aware scan for `>` / `>>` redirect targets. fd-dup (`>&1`) yields
+// no file target. Quotes around the target are stripped.
+fn _redirect_targets(cmd: string) -> array {
+    let n = len(cmd)
+    let mut i = 0
+    let mut out = []
+    let mut q = ""
+    while i < n {
+        let c = cmd[i]
+        if q != "" {
+            if c == q { q = "" }
+            i = i + 1
+            continue
+        }
+        if c == "\"" || c == "'" {
+            q = c
+            i = i + 1
+            continue
+        }
+        if c == ">" {
+            i = i + 1
+            while i < n && (cmd[i] == ">" || cmd[i] == "|") { i = i + 1 }
+            while i < n && (cmd[i] == " " || cmd[i] == "\t") { i = i + 1 }
+            if i < n && cmd[i] == "&" { continue }
+            let mut tok = ""
+            let mut tq = ""
+            while i < n {
+                let d = cmd[i]
+                if tq != "" {
+                    if d == tq { tq = "" } else { tok = tok + d }
+                    i = i + 1
+                    continue
+                }
+                if d == "\"" || d == "'" { tq = d; i = i + 1; continue }
+                if _is_meta(d) { break }
+                tok = tok + d
+                i = i + 1
+            }
+            if len(tok) > 0 { out.push(tok) }
+            continue
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// `tee [-flags] FILE...` — file args until a pipe / terminator token.
+fn _tee_targets(toks: array) -> array {
+    let n = len(toks)
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        if toks[i] == "tee" {
+            let mut j = i + 1
+            while j < n {
+                let t = toks[j]
+                if t == "|" || t == ";" || t == "&" || t == "&&" || t == "||" { break }
+                if !_starts_with(t, "-") { out.push(t) }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// Resolve a redirect target to an absolute path using the payload `cwd`.
+fn _resolve(cwd: string, target: string) -> string {
+    if _starts_with(target, "/") { return target }
+    if _starts_with(target, "~") {
+        return env_var("HOME") + target.substring(1, len(target))
+    }
+    let mut t = target
+    if _starts_with(t, "./") { t = t.substring(2, len(t)) }
+    if cwd == "" { return t }
+    return cwd + "/" + t
+}
+
+fn _handle_bash(payload: map, ti: map) {
+    if !has_key(ti, "command") { _allow() }
+    let cmd = ti["command"]
+    if cmd == "" { _allow() }
+    let mut cwd = ""
+    if has_key(payload, "cwd") { cwd = payload["cwd"] }
+
+    let mut cands = _redirect_targets(cmd)
+    let tees = _tee_targets(_tokens(cmd))
+    let mut b = 0
+    while b < len(tees) { cands.push(tees[b]); b = b + 1 }
+
+    let mut k = 0
+    while k < len(cands) {
+        let tgt = cands[k]
+        if _ends_with(tgt, ".py") || _ends_with(tgt, ".sh") {
+            let abs = _resolve(cwd, tgt)
+            let root = _find_project_root(abs)
+            if root != "" { _deny_for(root, abs, "a Bash redirect (>, >>, tee)") }
+        }
+        k = k + 1
+    }
+    _allow()
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -112,11 +268,13 @@ fn main() {
     if type_of(payload) != "map" { _allow() }
     if !has_key(payload, "tool_name") { _allow() }
     let tool = payload["tool_name"]
-    if tool != "Write" && tool != "Edit" && tool != "NotebookEdit" { _allow() }
+    if tool != "Write" && tool != "Edit" && tool != "NotebookEdit" && tool != "Bash" { _allow() }
 
     if !has_key(payload, "tool_input") { _allow() }
     let ti = payload["tool_input"]
     if type_of(ti) != "map" { _allow() }
+
+    if tool == "Bash" { _handle_bash(payload, ti) }
 
     let mut target = ""
     if has_key(ti, "file_path") { target = ti["file_path"] }
@@ -130,9 +288,5 @@ fn main() {
     let root = _find_project_root(target)
     if root == "" { _allow() }
 
-    let ext = _ext_of(target)
-    let rel = _relpath(target, root)
-    let proj = _basename(root)
-    let reason = "hexa-native: this project (" + proj + ") is hexa-native — `project.tape` marker found at the project root.\n  Refusing to write `" + rel + "` (." + ext + ").\n  `.py` / `.sh` are already supported as ai-native (English) in other environments — this project intentionally only accepts `.hexa` source.\n  Write your logic in `.hexa` instead. There is no env-var / flag override by design."
-    _deny(reason)
+    _deny_for(root, target, "the Write/Edit tool")
 }

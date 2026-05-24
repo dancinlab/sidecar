@@ -6,6 +6,12 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — hexa-native 0.3.0: Bash 리다이렉트 채널 차단 (`.py`/`.sh` 우회 구멍 봉인)
+
+- **hexa-native 0.3.0 — matcher `Write|Edit|NotebookEdit` → `Write|Edit|NotebookEdit|Bash`, Bash 쓰기 채널 hard-deny 추가** — 기존 hook 은 구조화 파일 도구(Write/Edit/NotebookEdit)로 들어오는 `.py`/`.sh` 쓰기만 막았다. 그래서 모델이 `cat > foo.py << EOF` · `echo … >> bin/x.sh` · `echo … | tee foo.py` 같은 **Bash 리다이렉트**로 파일을 만들면 문지기를 안 거치고 통과 — "hexa 작성이 자꾸 안 지켜지던" 정확한 원인. `_hexa_native.hexa` 에 Bash 브랜치를 추가해 봉인. 따옴표-aware 스캐너로 `>`·`>>`·heredoc 리다이렉트 타겟 + `tee [-a]` 파일 인자를 추출, 상대경로는 payload `cwd` 기준으로 절대화 후 `project.tape` 루트를 탐색해 `.py`/`.sh` 면 deny. **명백한 쓰기만** 차단 — `python foo.py`(실행)·`cat foo.py`(읽기)·`chmod x.sh`·`2>&1`(fd-dup)·비-py/sh 타겟은 통과(오탐 거의 0). @D s7(governance+enforcement 동반)의 enforcement 구멍 메움.
+- **deny 메시지 공통화 + 강조 + "hexa 로 가능" 명시** — Write/Edit·Bash 양 채널이 `_deny_for()` 한 빌더를 공유. 메시지에서 load-bearing 포인트를 UPPERCASE 로 적당히 강조(`HEXA-NATIVE`·`BLOCKED`·`THIS IS POSSIBLE`·`ONLY`·`NO … override`)하고, 막힌 `.py`/`.sh` 의 `.hexa` 등가 파일명(`foo.py`→`foo.hexa`)을 제시하며 "같은 로직을 `.hexa` 로 쓰면 여기서 실행된다"를 명시 — 거부가 아니라 리다이렉트임을 분명히. opt-out 부재 설계(@D s11) 유지.
+- 표면 lockstep(g22): hexa-native plugin.json + marketplace.json + hooks.json(matcher) 0.2.1 → 0.3.0. 13개 케이스 직접 검증(쓰기 6 deny · 읽기·실행·외부repo 7 allow · Write/Edit 회귀 2).
+
 ## 2026-05-24 — 명령 카탈로그 네임스페이스 정정: plain → 실제 `/plugin:command` (직전 denamespace 되돌림)
 
 - **명령 표기 전면 `/plugin:command` 화 — 직전 "네임스페이스 제거"가 틀렸음을 정정** — 플러그인 슬래시 명령은 Claude Code 에서 **항상 `/plugin:command`** 로만 호출됨이 TUI 실측 + 웹(anthropics/claude-code **Issue #15882**: "plugin commands are always namespaced") 으로 확정. command==plugin 이어도 `/gap:gap`, SKILL.md 없는 순수 command 도 `/step-by-step:step-by-step`. plain `/이름` 은 built-in(`/btw`)·비-plugin(`.claude/commands/`)만. 따라서 직전 커밋의 "plain 화"는 잘못 — 동작 안 하는 plain 형을 안내하던 문서를 실제 형으로 되돌림. `hooks/commons/COMMANDS.md` + 루트 `README.md` 카탈로그를 전 명령 `/plugin:command` 로 재작성(정렬 포함 · 강제-네임스페이스 NOTE 추가) · `/research:arxiv`·`/research:yt`·`/quota:quota`·`/step-by-step:step-by-step` prose(SKILL.md·plugin.json·marketplace 설명·commons.tape g43·quota README) 복원. built-in `/btw`·`/loop` 은 plain 유지. 동작·버전 변동 없음(lockstep 유지). 사용자 요청 + 실측 근거.

@@ -65,8 +65,8 @@
     {
       "name": "hexa-native",
       "source": "./hooks/hexa-native",
-      "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for `.py` / `.sh` writes inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file), implemented in hexa-lang (`_hexa_native.hexa`, invoked via `hexa run`). Walks up parent dirs of the target file; if a `project.tape` is found, the write is denied with a message redirecting to `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). NO opt-out: no env var, no config file, no exception list, no self-exclusion \u2014 hard-coded by design. Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` are unaffected.",
-      "version": "0.2.1"
+      "description": "PreToolUse(Write|Edit|NotebookEdit|Bash) hard block for `.py` / `.sh` writes inside any project rooted at a directory containing a `project.tape` marker (sidecar's canonical project identity file), implemented in hexa-lang (`_hexa_native.hexa`, invoked via `hexa run`). Covers BOTH write channels: structured file tools (Write/Edit/NotebookEdit) and the Bash redirect channel \u2014 `> X.py`, `>> X.sh`, heredoc-to-redirect (`cat > X.py << EOF`), and `tee [-a] X.py`, relative targets resolved against the payload `cwd`. Quote-aware; fd-dup (`2>&1`) yields no target; non-write Bash (`python X.py`, `cat X.py`, `chmod X.sh`) passes through. Walks up parent dirs of the target; if a `project.tape` is found, the write is denied with a message stating the same logic IS writable here as `.hexa` (since `.py` / `.sh` are already supported as ai-native English elsewhere). NO opt-out: no env var, no config file, no exception list, no self-exclusion \u2014 hard-coded by design. Targets only `.py` / `.sh`; other extensions pass through. Projects without `project.tape` are unaffected.",
+      "version": "0.3.0"
     },
     {
       "name": "plist-guard",

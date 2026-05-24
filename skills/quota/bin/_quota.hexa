@@ -16,6 +16,7 @@
 //   0.8.0 → status·list·bare UNIFIED into one all-accounts table (`_unified_lines`): active account = ★ + live (_fetch_limits), every other account = its per-account cache (`—` if never fetched). `_status_lines`/`_registry_text` removed. `all` verb fetches every account live in one shot (easy toggle). Active account auto-registered on view (autoadd parity).
 //   0.8.1 → command-surface fix: commands/quota.md table headers → English (Nickname · Email · Session Used/Reset · Weekly Used/Reset); cache-binary resolver `ls -1t | head -1` (mtime, picked a STALE version) → `ls -1 | sort -V | tail -1` (semver). help version string only — binary logic unchanged. (quota-autoadd hook got the same sort -V fix.)
 //   0.8.2 → table rows sorted by `_sort_key` (nickname when set, else email; lowercased — case-insensitive) via `_sort_accounts` (selection sort). Slash-command surface restored to `/quota:quota` form (CC plugin commands are namespaced — issue #15882); the over-broad rename had also corrupted filesystem paths (`cache/sidecar/quota:quota`), fixed back to `quota`.
+//   0.8.3 → `_fmt_remaining`: a reset time already in the past (delta <= 0) → `—` (stale cache, refresh needed) instead of a misleading `0m` that read like an imminent reset. Live accounts (resets_at always future) unaffected; only stale per-account cache rows change.
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -403,10 +404,17 @@ fn _humanize_delta(secs: int) -> string {
 
 // time-to-reset for a window — `_fmt_remaining({utilization, resets_at})` →
 // `1h 20m` etc. Returns `—` when resets_at missing or parse fails.
+//
+// A reset time already in the PAST (delta <= 0) means the cached window has
+// rolled over since the snapshot — the value is stale, not "resets now". For a
+// freshly-fetched (live) account resets_at is always in the future, so this
+// only fires on stale per-account cache. Show `—` (honest unknown → refresh
+// needed) instead of a misleading `0m` that reads like an imminent reset.
 fn _fmt_remaining(w: any) -> string {
     if type_of(w) != "map" || !has_key(w, "resets_at") { return "—" }
     let epoch = _epoch_of(str(w["resets_at"]))
     if epoch == 0 { return "—" }
+    if epoch - timestamp() <= 0 { return "—" }
     return _humanize_delta(epoch - timestamp())
 }
 

@@ -16,11 +16,13 @@ A **Claude Code marketplace repo** that side-mounts guardrails, slash commands, 
 ## Latest ship
 
 <!-- LATEST-SHIP -->
-2026-05-24T17:44Z · fix(ship 0.3.2): bare /ship 헬퍼 모드 — usage 에러 대신 상태+템플릿
+2026-05-24T17:46Z · fix(quota 0.8.3): 캐시 만료된 리셋시각 0m → — (모름) 표시
 
-인자 없는 /ship 이 매번 usage 만 뱉던 불편 개선. no-args 분기가 (a) git status porcelain 의 미커밋 변경을 후보 목록으로 나열하고 (b) 붙여쓸 /ship -m <msg> <paths> 템플릿을 출력한 뒤 exit 0(에러 아님·헬퍼 모드). 신규 _changed_paths 가 porcelain 파싱(rename old->new 는 new 채택). @D ship 불변 준수: 여전히 자동 스테이징/커밋 안 함 — 명시 경로+에이전트 메시지 규율 그대로. Smoke: clean→nothing to ship, 변경→후보+템플릿(exit 0). lockstep(g22): 0.3.1→0.3.2.
-
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
+비활성 계정은 캐시값을 보여주는데, 캐시에 박힌 리셋시각이 이미 과거면
+남은시간이 음수 → 0m 으로 깎여 '곧 리셋'처럼 오해됐음. 실제로는 5h/7d
+창이 이미 굴러갔는데 캐시만 옛날 걸 들고 있는 stale 상태. delta<=0 이면
+— (정직한 모름, 갱신 필요)로 바꿔 라이브 0m 과 구분. 라이브 계정은
+resets_at 이 항상 미래라 영향 없음.
 <!-- /LATEST-SHIP -->
 
 ## Install

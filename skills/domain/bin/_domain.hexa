@@ -376,6 +376,14 @@ fn _env(name: string) -> string {
 // One `<root>\t<sid>\t<NAME>` line per (project root × terminal session) — two
 // claude sessions in the same repo each get an independent active domain.
 //
+// Cross-session persistence (0.8.3): a fresh session has a NEW <sid>, so the
+// exact (root, sid) row never matches → pre-0.8.3 it fell straight back to the
+// project-basename default, FORGETTING the repo's last-set domain every new
+// session. `_get_active` now falls back to the most-recent ANY-session row for
+// the same root when no exact (root, sid) row exists. Net effect: a session
+// that explicitly `set`s a domain keeps its own (independence preserved), while
+// a fresh session inherits the repo's last-set domain (persistence restored).
+//
 // `<sid>` fallback chain (most-specific → least):
 //   1. CLAUDE_CODE_SESSION_ID env (UUID, per-Claude-Code-session — the dominant
 //      case, since Claude Code's Bash tool runs commands without a tty)
@@ -441,17 +449,34 @@ fn _set_active(root: string, name: string) {
     try { write_file(path, out.join("\n") + "\n") } catch e { }
 }
 
+// Resolve the active domain for `root` with a two-tier policy:
+//   1. exact (root, this-session) row → return it (this session's own choice).
+//   2. else the most-recent ANY-session row for `root` → cross-session default
+//      (later rows win; `_set_active` re-pushes the touched row to the end, so
+//      the last `<root>\t…` line in the file is the most recently set).
+// Legacy pre-0.7.7 2-field rows (`<root>\t<NAME>`, no second tab) are ignored
+// by the fallback — `rest` has no tab to split, so they never set `fallback`.
+// The trailing `\t` on both prefixes is a field boundary: `…/sidecar\t` does
+// not match `…/sidecar-x\t…`, so a root that is a string-prefix of another
+// root never bleeds across.
 fn _get_active(root: string) -> string {
     let body = _read_file_safe(_active_store())
     let lines = body.split("\n")
-    let pfx = _active_key(root) + "\t"
+    let exact = _active_key(root) + "\t"
+    let rootpfx = root + "\t"
+    let mut fallback = ""
     let mut i = 0
     while i < len(lines) {
         let ln = lines[i]
-        if _starts_with(ln, pfx) { return ln.substring(len(pfx), len(ln)) }
+        if _starts_with(ln, exact) { return ln.substring(len(exact), len(ln)) }
+        if _starts_with(ln, rootpfx) {
+            let rest = ln.substring(len(rootpfx), len(ln))
+            let tab = rest.index_of("\t")
+            if tab >= 0 { fallback = rest.substring(tab + 1, len(rest)) }
+        }
         i = i + 1
     }
-    return ""
+    return fallback
 }
 
 // [done, todo] checkbox counts across the SNAPSHOT (<NAME>.md) — the final-goal

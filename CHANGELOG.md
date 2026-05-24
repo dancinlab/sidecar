@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — hexa-native 0.3.2 · sign-guard 0.1.1: 비-리다이렉트 쓰기 채널(dd of=·cp/mv) 커버 [약점분석 #5]
+
+- **hexa-native 0.3.2 · sign-guard 0.1.1 — `dd of=` + `cp`/`mv` 목적지 쓰기 채널 추가 커버** — 약점 분석에서, 두 가드가 `>`/`>>`/`tee` 리다이렉트만 스캔하고 **비-리다이렉트 쓰기 채널**(`dd of=X`·`cp src X`·`mv src X`)을 놓쳐 `.py`/`.sh`(hexa-native) · `commons.tape`/`project.tape`(sign-guard) 쓰기 가드를 우회할 수 있던 약점 발견. 신규 `_dd_targets`(of= 명시 추출, 오탐 0) + `_cp_mv_dest`(마지막 비-flag 인자 = 목적지)를 후보에 합침 — 기존 게이트(.py/.sh 확장자 · gated SSOT 경로)가 비-대상 목적지를 자동 통과시켜 **오탐은 실제 gated 쓰기에 한정**. Smoke: hexa-native — `dd of=evil.py`·`cp t evil.py`·`mv a evil.sh` deny / `cp a.py /tmp/`·`python s.py`·`mv old.txt new.txt`·`cat x.py` allow(오탐0); sign-guard — `dd of=project.tape`·`cp x project.tape`·`mv x commons.tape` deny / 일반 cp·mv allow. **한계 명시**: `python -c open(...)`·`sed -i`·`perl -e`·`install -t`·`ln` 등 무한 채널은 미커버 — 가드는 흔한 경로를 좁힐 뿐 sandbox 아님(agent self-discipline 보조). 두 hook 의 `_redirect_targets` 로직은 여전히 복제(향후 공유 검토). lockstep(@D ship · g22): hexa-native 0.3.1→0.3.2 · sign-guard 0.1.0→0.1.1.
+
 ## 2026-05-25 — git-guard 0.4.2: 따옴표로 감싼 force 플래그 우회 차단 [약점분석 #4]
 
 - **git-guard 0.4.2 — 토큰화 전 따옴표 strip 으로 quoted force-flag 우회 차단** — 약점 분석에서, `_tokens` 가 whitespace-split 만 해서 `git push origin '--force-with-lease=x'` 처럼 **따옴표로 감싼 force 플래그**가 토큰에 따옴표를 달고 남아 `--force*` 매칭을 비껴가 force-push deny 를 우회하던 약점 발견(refspec-level `+\"refspec\"` 도 동일). 신규 `_strip_quotes` 가 `'`/`\"` 를 제거한 뒤 토큰화 — quoted flag 가 bare 형태로 환원돼 매처가 본다. Smoke: `'--force-with-lease=…'` · `--force` · `+\"refs/heads/main\"` 전부 deny · 정상 push(`git push origin main` · `--set-upstream` · `\"release\"` 브랜치) 전부 allow(오탐 0). lockstep(@D ship · g22): plugin.json + marketplace 0.4.1 → 0.4.2.

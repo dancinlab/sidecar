@@ -207,6 +207,36 @@ fn _tee_targets(toks: array) -> array {
     return out
 }
 
+// `dd ... of=<file>` — explicit non-redirect write channel (no false-positive).
+fn _dd_targets(toks: array) -> array {
+    let mut out = []
+    let mut i = 0
+    while i < len(toks) {
+        let t = toks[i]
+        if _starts_with(t, "of=") { out.push(t.substring(3, len(t))) }
+        i = i + 1
+    }
+    return out
+}
+
+// `cp`/`mv` DEST — last non-flag arg. Conservative: the _gated_key gate (caller)
+// only denies when the dest is a gated SSOT path, so a non-gated dest passes.
+// `install -t`/`ln` out of scope; `python -c open(...)`/`sed -i`/`perl` unbounded
+// and NOT covered — this narrows the common channels, not a sandbox.
+fn _cp_mv_dest(toks: array) -> array {
+    let mut out = []
+    if len(toks) < 3 { return out }
+    let c0 = toks[0]
+    if c0 != "cp" && c0 != "mv" { return out }
+    let mut i = len(toks) - 1
+    while i > 0 {
+        let t = toks[i]
+        if !_starts_with(t, "-") { out.push(t); return out }
+        i = i - 1
+    }
+    return out
+}
+
 fn _resolve(cwd: string, target: string) -> string {
     if _starts_with(target, "/") { return target }
     if _starts_with(target, "~") {
@@ -225,10 +255,17 @@ fn _handle_bash(payload: map, ti: map) {
     let mut cwd = ""
     if has_key(payload, "cwd") { cwd = payload["cwd"] }
 
+    let toks = _tokens(cmd)
     let mut cands = _redirect_targets(cmd)
-    let tees = _tee_targets(_tokens(cmd))
+    let tees = _tee_targets(toks)
     let mut b = 0
     while b < len(tees) { cands.push(tees[b]); b = b + 1 }
+    let dds = _dd_targets(toks)
+    let mut d = 0
+    while d < len(dds) { cands.push(dds[d]); d = d + 1 }
+    let cps = _cp_mv_dest(toks)
+    let mut e = 0
+    while e < len(cps) { cands.push(cps[e]); e = e + 1 }
 
     let mut k = 0
     while k < len(cands) {

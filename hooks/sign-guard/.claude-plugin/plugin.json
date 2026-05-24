@@ -1,7 +1,7 @@
 {
   "name": "sign-guard",
   "description": "PreToolUse(Write|Edit|NotebookEdit|Bash) sign-gate for governance-SSOT files, implemented in hexa-lang (`_sign_guard.hexa`, invoked via `hexa run`). A small registry (GATED) of high-stakes files — currently `commons.tape` (cross-project do/dont layer) and `project.tape` (per-project identity + governance) — may be edited by the agent ONLY while a fresh user sign-off token exists. The user mints one with `sidecar sign <key>` (`commons` · `project`), which writes the current epoch to `~/.sidecar/signs/<key>.sign`; a token is valid for 900s (15 min). Covers both write channels (mirrors hexa-native): structured file tools (Write/Edit/NotebookEdit) and the Bash redirect channel (`> X`, `>> X`, heredoc, `tee X`, relative targets resolved against `cwd`). Writes buried inside an invoked CLI (e.g. `sidecar init`'s own redirect) are not visible at the top-level command string, so the official scaffolder is unaffected — only the agent's own direct writes gate. The fresh token is the sole precondition (project.tape @D s11: gate on a real precondition, never an opt-out switch); the sign must come FROM the user — the agent must not self-mint, and the visible, auditable `sidecar sign` call plus the hard deny are the enforcement. To gate another file: add one `[\"key\", \"/suffix\"]` row to GATED and reship. NO env-var / flag override by design.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

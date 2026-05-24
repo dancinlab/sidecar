@@ -222,6 +222,38 @@ fn _tee_targets(toks: array) -> array {
     return out
 }
 
+// `dd ... of=<file>` — explicit, no false-positive (of= names the write target).
+fn _dd_targets(toks: array) -> array {
+    let mut out = []
+    let mut i = 0
+    while i < len(toks) {
+        let t = toks[i]
+        if _starts_with(t, "of=") { out.push(t.substring(3, len(t))) }
+        i = i + 1
+    }
+    return out
+}
+
+// `cp`/`mv` DEST — last non-flag arg is the destination. Conservative: only the
+// destination is collected, and the caller's .py/.sh gate lets a non-gated dest
+// pass, so the only denials are real .py/.sh creations. `install -t` / `ln` are
+// intentionally out of scope (dest position varies); other write channels
+// (`python -c open(...)`, `sed -i`, `perl -e`, …) are unbounded and NOT covered —
+// this hook narrows the common channels, not a sandbox.
+fn _cp_mv_dest(toks: array) -> array {
+    let mut out = []
+    if len(toks) < 3 { return out }
+    let c0 = toks[0]
+    if c0 != "cp" && c0 != "mv" { return out }
+    let mut i = len(toks) - 1
+    while i > 0 {
+        let t = toks[i]
+        if !_starts_with(t, "-") { out.push(t); return out }
+        i = i - 1
+    }
+    return out
+}
+
 // Resolve a redirect target to an absolute path using the payload `cwd`.
 fn _resolve(cwd: string, target: string) -> string {
     if _starts_with(target, "/") { return target }
@@ -241,10 +273,17 @@ fn _handle_bash(payload: map, ti: map) {
     let mut cwd = ""
     if has_key(payload, "cwd") { cwd = payload["cwd"] }
 
+    let toks = _tokens(cmd)
     let mut cands = _redirect_targets(cmd)
-    let tees = _tee_targets(_tokens(cmd))
+    let tees = _tee_targets(toks)
     let mut b = 0
     while b < len(tees) { cands.push(tees[b]); b = b + 1 }
+    let dds = _dd_targets(toks)
+    let mut d = 0
+    while d < len(dds) { cands.push(dds[d]); d = d + 1 }
+    let cps = _cp_mv_dest(toks)
+    let mut e = 0
+    while e < len(cps) { cands.push(cps[e]); e = e + 1 }
 
     let mut k = 0
     while k < len(cands) {
@@ -252,7 +291,7 @@ fn _handle_bash(payload: map, ti: map) {
         if _ends_with(tgt, ".py") || _ends_with(tgt, ".sh") {
             let abs = _resolve(cwd, tgt)
             let root = _find_project_root(abs)
-            if root != "" { _deny_for(root, abs, "a Bash redirect (>, >>, tee)") }
+            if root != "" { _deny_for(root, abs, "a Bash write channel (>, >>, tee, dd of=, cp/mv)") }
         }
         k = k + 1
     }

@@ -86,9 +86,11 @@ fn main() {
         try {
             let m = json_parse(_read_file_safe(file))
             if type_of(m) == "map" {
-                if has_key(m, "code") { code = m["code"] }
-                if has_key(m, "docs") { docs = m["docs"] }
-                if has_key(m, "response") { response = m["response"] }
+                // type-gate each field — a non-string prefs value (e.g. a
+                // number) would otherwise break later string concatenation.
+                if has_key(m, "code") && type_of(m["code"]) == "string" { code = m["code"] }
+                if has_key(m, "docs") && type_of(m["docs"]) == "string" { docs = m["docs"] }
+                if has_key(m, "response") && type_of(m["response"]) == "string" { response = m["response"] }
             }
         } catch e { }
     } else {

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — prefs 0.3.3: prefs.json 필드 타입 게이트 [약점분석 #9 · MED]
+
+- **prefs 0.3.3 — `prefs.json` 각 필드 읽기에 타입 게이트** — 약점 분석에서, `has_key(m,"code")` 후 타입 검증 없이 `code = m["code"]` 해서, `prefs.json` 에 비-string 값(예: `{"code": 123}`)이 들어오면 이후 string 연결에서 깨지던 약점 발견. 각 분기에 `&& type_of(m[k]) == "string"` 추가 — 비-string 이면 기본값 유지. Smoke: `{"code":123,...}` → 크래시 없이 code=기본값(english) 으로 정상 inject. lockstep(@D ship · g22): plugin.json + marketplace 0.3.2 → 0.3.3.
+
 ## 2026-05-25 — hexa-native 0.3.2 · sign-guard 0.1.1: 비-리다이렉트 쓰기 채널(dd of=·cp/mv) 커버 [약점분석 #5]
 
 - **hexa-native 0.3.2 · sign-guard 0.1.1 — `dd of=` + `cp`/`mv` 목적지 쓰기 채널 추가 커버** — 약점 분석에서, 두 가드가 `>`/`>>`/`tee` 리다이렉트만 스캔하고 **비-리다이렉트 쓰기 채널**(`dd of=X`·`cp src X`·`mv src X`)을 놓쳐 `.py`/`.sh`(hexa-native) · `commons.tape`/`project.tape`(sign-guard) 쓰기 가드를 우회할 수 있던 약점 발견. 신규 `_dd_targets`(of= 명시 추출, 오탐 0) + `_cp_mv_dest`(마지막 비-flag 인자 = 목적지)를 후보에 합침 — 기존 게이트(.py/.sh 확장자 · gated SSOT 경로)가 비-대상 목적지를 자동 통과시켜 **오탐은 실제 gated 쓰기에 한정**. Smoke: hexa-native — `dd of=evil.py`·`cp t evil.py`·`mv a evil.sh` deny / `cp a.py /tmp/`·`python s.py`·`mv old.txt new.txt`·`cat x.py` allow(오탐0); sign-guard — `dd of=project.tape`·`cp x project.tape`·`mv x commons.tape` deny / 일반 cp·mv allow. **한계 명시**: `python -c open(...)`·`sed -i`·`perl -e`·`install -t`·`ln` 등 무한 채널은 미커버 — 가드는 흔한 경로를 좁힐 뿐 sandbox 아님(agent self-discipline 보조). 두 hook 의 `_redirect_targets` 로직은 여전히 복제(향후 공유 검토). lockstep(@D ship · g22): hexa-native 0.3.1→0.3.2 · sign-guard 0.1.0→0.1.1.

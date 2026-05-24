@@ -113,8 +113,18 @@ fn main() {
     let _mk = exec("mkdir -p " + _shq(cache) + " " + _shq(plugins_dir + "/marketplaces"))
 
     // ── 1. marketplace clone / pull ──────────────────────────────────
+    // Branch-guard: if a prior session left the clone on a feature branch
+    // (e.g. `fix/...`), `pull --ff-only origin main` would silent-no-op
+    // and the cache would stay stale forever. Force-checkout `main` (or
+    // recreate it tracking origin/main) before pulling.
     println("sidecar install: setting up the Claude Code marketplace…")
     if _is_dir(mp + "/.git") {
+        let cur = _trim(to_string(exec("git -C " + _shq(mp) + " branch --show-current 2>/dev/null")))
+        if cur != "main" {
+            let _f  = exec("git -C " + _shq(mp) + " fetch origin main 2>/dev/null")
+            let _co = exec("git -C " + _shq(mp) + " checkout main 2>/dev/null || git -C " + _shq(mp) + " checkout -B main origin/main 2>/dev/null")
+            println("  marketplace · realigned " + cur + " → main")
+        }
         let _p = exec("git -C " + _shq(mp) + " pull --ff-only origin main 2>/dev/null")
         println("  marketplace · pulled latest main")
     } else {

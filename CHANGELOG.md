@@ -6,6 +6,12 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-24 — quota-autoadd 0.1.0: 새 계정 로그인 자동 등록 (신규 hook plugin · quota 0.6.0 → 0.7.0)
+
+- **quota-autoadd 0.1.0 — `claude /login` 새 계정 SessionStart 자동 등록 (신규 hook plugin)** — 신규 `hooks/quota-autoadd/` plugin (3-파일: `plugin.json` + `hooks/hooks.json` + 한글 README). 새 이메일로 `claude /login` 한 뒤 첫 세션의 `SessionStart` 에서, 아직 quota 레지스트리에 없는 활성 계정을 자동 등록한다. Claude Code 에 로그인 이벤트 훅이 없으므로 "다음 세션 시작 시 등록" 형태 — `prefs`/`easy-auto` 와 동일한 SessionStart 패턴. 훅 command 는 quota skill 바이너리를 `$HOME/.claude/plugins/cache/sidecar/quota/<version>/bin/_quota.hexa autoadd` 로 해석 (commands/quota.md 와 동일 캐시 탐색 idiom, $HOME 기반이라 @D s3 portable). hexa 부재(`$HEXA`→`~/.hx/bin/hexa`→`command -v hexa` fallback) 또는 quota 캐시 부재 시 `exit 0` (silent). **concept separation (@D s1)** — 자동 트리거는 skill 에 끼울 수 없어 별도 hook plugin 으로 분리. NO opt-out by design (commons g11).
+
+- **quota 0.7.0 — `autoadd` verb (silent · 멱등 · always exit 0)** — `_quota.hexa` main 디스패치에 `autoadd` 추가. 활성 `~/.claude.json` 의 `oauthAccount` 를 읽어 (1) `accountUuid` 없으면 silent exit 0 · (2) 그 uuid 가 레지스트리에 이미 있으면(`_registry_add` dup 선판정) silent exit 0 · (3) 없을 때만 `_cli_add("")` 로 메타데이터 등록 + OAuth blob 백업 캡처(→ 등록 즉시 `/quota:quota switch` 가능) 후 한 줄 알림(`ℹ️ quota-autoadd: 새 계정 자동 등록됨 — <email>`). **항상 exit 0** — SessionStart 를 절대 깨지 않음. help 텍스트 + 헤더 버전 히스토리에 0.7.0 라인 반영. Smoke: 미등록이던 활성계정 첫 autoadd → 등록 1줄(레지스트리 2→3) · 재호출 → 무출력 exit 0(멱등 확인). 표면 lockstep(@D ship · g22): quota plugin.json + marketplace.json quota entry 0.6.0 → 0.7.0 · 신규 quota-autoadd marketplace entry (quota 다음). 동기 — 사용자 요청 "새 이메일 로그인되면 자동으로 quota add".
+
 ## 2026-05-24 — step-by-step 0.1.0: 계획 우선 순차 런북 command (신규 plugin)
 
 - **step-by-step 0.1.0 — `/step-by-step` (별칭 `/sbs`) 신규 command plugin** — `commands/step-by-step/` (gap 에 이은 두 번째 순수 command 패밀리, SKILL.md 없음 · @D s1). 작업을 의존성 순 번호 단계로 분해 → 계획을 보여주되 승인 게이트 없이 → 위→아래 한 번에 한 단계씩 직렬 자동 실행, 단계마다 `▶ i/N` 마커 + `✅`/`⚠`/`❌` 결과. **`/cycle`(병렬 fan-out)의 직렬 정반대**. 멈춤 조건은 단계 실패(`❌` → 단계+에러 원문+안 돌린 나머지 보고) 또는 비가역·파괴적·외부 노출 단계 직전(확인 후 재개, `bypass` self-check 기준)뿐. `commands/step-by-step.md` + 별칭 `sbs.md`(`/question`→`/q` 선례) + 한글 README. marketplace.json + commons/COMMANDS.md(Fan-out/loop 섹션) 등록.

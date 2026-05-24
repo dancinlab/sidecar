@@ -1,0 +1,7 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; Q=\"$HOME/.claude/plugins/cache/sidecar/quota\"; V=$(ls -1t \"$Q\" 2>/dev/null | head -1); [ -n \"$V\" ] || exit 0; exec \"$H\" run \"$Q/$V/bin/_quota.hexa\" autoadd' _" } ] }
+    ]
+  }
+}

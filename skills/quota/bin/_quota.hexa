@@ -12,6 +12,7 @@
 //   0.5.0 → /quota status emits per-account `Row=` line (6 cols); progress bar ▓▓▓░░ NN%; time-to-reset humanized; help text now points at `/quota:quota <verb>` unified form
 //   0.5.1 → Row column reorder — bar BEFORE time (nick · email · session-bar · session-time · week-bar · week-time); chat headers in Korean (닉네임 · 이메일 · 세션 사용량 · 세션 리밋 · 주간 사용량 · 주간 리밋)
 //   0.6.0 → drop per-verb commands/<verb>.md files (status/list/add/nick/switch/remove/refresh/help — added in 0.4.1) — commands/quota.md single-dispatch is the only surface. Picker shows only `/quota:quota`; all verbs reached as `/quota:quota <verb>`.
+//   0.7.0 → `autoadd` verb (silent · always exit 0) — registers the active account iff not yet in the registry; driven by the `quota-autoadd` SessionStart hook plugin so a fresh `claude /login` self-registers on the next session.
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -1072,6 +1073,7 @@ fn _help_text() -> string {
         "  /quota:quota remove <ref>          unregister + drop backup creds (alias: rm)",
         "  /quota:quota refresh [<ref>]       re-fetch 5h/7d into the per-account cache",
         "                                     (active account if no arg; renews expired tokens)",
+        "  /quota:quota autoadd               silent — register active account iff new (SessionStart hook)",
         "  /quota:quota help                  this text",
         "",
         "  Each verb also reachable as its own picker entry: /quota:status · /quota:list · ...",
@@ -1133,6 +1135,22 @@ fn main() {
         if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
         eprintln("✗ " + str(r["error"]))
         exit(1)
+    }
+    if verb == "autoadd" {
+        // SessionStart auto-hook (quota-autoadd plugin): silently register the
+        // active account when it is not yet in the registry. ALWAYS exit 0 —
+        // never break a session start. Emits ONE line only when a NEW account
+        // lands; already-registered / no-active-account paths are fully silent.
+        let oa = _read_oauth_account()
+        if len(_g(oa, "accountUuid")) == 0 { exit(0) }          // no active account → silent
+        let reg = _registry_load(_registry_path())
+        let probe = _registry_add(reg, _account_rec(oa, ""))
+        if len(probe["accounts"]) == len(reg["accounts"]) { exit(0) }   // already registered → silent
+        let r = _cli_add("")                                    // new account → register + capture creds
+        if _envelope_ok(r) {
+            println("ℹ️ quota-autoadd: 새 계정 자동 등록됨 — " + _g(oa, "emailAddress"))
+        }
+        exit(0)                                                 // never fail the session start
     }
     eprintln("unknown verb: " + verb)
     eprintln(_help_text())

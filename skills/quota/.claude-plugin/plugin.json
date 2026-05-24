@@ -1,7 +1,7 @@
 {
   "name": "quota",
   "description": "/quota <args> — Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames. Verbs: status (default · current account + live 5h/7d) · list (registered accounts) · add [<nick>] (snapshot account + capture creds; optional nickname) · nick <ref> [<nick>] (set/clear nickname; aliases name · rename) · switch <ref> (live cred swap, verified + rollback) · remove <ref> · refresh [<ref>] (re-fetch usage into per-account cache; renews expired tokens) · help. <ref> = nickname (e.g. claude1) · email · numeric index — pick any. 45s per-account cache (429 throttle). Per-account OAuth blob backup in macOS keychain svc 'sidecar-quota' / linux ~/.sidecar/quota/creds/<email>.json (0600). own-accounts-serial only (ToS — never multi-tenant). ⚠ depends on Anthropic's non-public oauth/usage + oauth/token endpoints (ccmon idiom) — may break if rotated.",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

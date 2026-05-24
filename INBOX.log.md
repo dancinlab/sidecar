@@ -102,12 +102,12 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 - hexa-lang INBOX `hexa cloud 개선 4건` (`vast --max-price` 등) — sweep 예산 가드 의존성
 - sidecar 기존 `/cycle` (active-domain 다음 라운드) — `/micro-exp`는 *manifest-driven sweep*, `/cycle`은 *milestone-driven loop*; 보완 관계
 
-**Status**: stub — 구체 설계 pass + prototype 필요. g60 (cross-repo gap reflex) 따라 same-turn 제출. demiurge RTSC + TTR-* 도메인이 직접 소비.
+**Status** (2026-05-25 ✅ resolved): 4 sub-task 전부 closed. skill `skills/micro-exp/` 0.2.0 **context-driven 재설계** (manifest 파일 폐기 → `/cycle`처럼 맥락에서 candidate self-enumerate · 바=현재 맥락·인자=스코프) + commons.tape **g63-g66** land (유저 `sidecar sign commons` 후). 남은 의존 없음 — demiurge RTSC + TTR-* 도메인이 바로 `/micro-exp [scope]` 로 소비 가능. INBOX.md row closed.
 
-- [ ] design draft: `/micro-exp` slash command (`sidecar/skills/micro-exp/`) + manifest schema YAML
-- [ ] propose commons.tape additions: `g_micro_exp_honest_sweep · g_sweep_budget_cap · g_sweep_aggregation · g_sweep_pod_vs_agent_cap`
-- [ ] prototype with H₃X N5 funnel manifest (~10 후보 first sweep)
-- [ ] cross-ref hexa-lang RFC 091 + `hexa cloud --max-price` 의존 추적
+- [x] design draft: `/micro-exp` slash command — **land** (0.2.0, **context-driven 재설계**): manifest 파일 요구 폐기 → `/cycle` 패턴대로 대화/active-domain 맥락에서 candidate matrix self-enumerate (바=현재 맥락 · `$ARGUMENTS`=스코프 필터 · no-signal 시 fabricate 금지·steer-options 정지). per-candidate `{id·kind·inputs_dir·pseudo_dir·parser_template}` 는 도메인 컨벤션에서 추론 · `batch_id` 자동 도출 · budget 은 dispatch 전 선언. 표면: `SKILL.md`(단일 @D + 5-stage 주석) · `commands/micro-exp.md`(Stage 1 = self-enumerate) · `plugin.json` · `marketplace.json`(line 342). `examples/h3x-sample.yaml` 제거(맥락 입력으로 대체).
+- [x] propose commons.tape additions: `g63 micro-exp-honest-sweep · g64 sweep-budget-cap · g65 sweep-aggregation · g66 sweep-pod≠agent-cap` — **land** (유저 `sidecar sign commons` 5-min 토큰 후): commons.tape g63-g66 추가(do/dont만 · `@D tape-d-do-dont` 준수 · g63 do 는 100-char cap 맞춰 tier-이모지 목록 제거). commons hook 0.10.4→0.10.5 + marketplace 동기화(description `g0..g61`→`g0..g66`). `@V tape` spec 은 1.2 유지(스펙 미변경).
+- [x] prototype 후보 matrix — **재설계로 manifest 파일 불요**: 후보는 호출 시 맥락(active domain · 대화 candidate matrix)에서 열거. 실제 sweep 실행(pod rent + ph.x 측정)은 입력파일(`~/etc/rtsc-results/`)을 가진 **demiurge RTSC 도메인 소관** — sidecar 는 표면만 제공.
+- [x] cross-ref hexa-lang RFC 091 + `hexa cloud --max-price` 의존 추적 — command.md preflight(`RFC 091 stub` deferred 분기) + budget 선언(`usd_max_per_week` ↔ upstream `--max-price` TODO 짝) 인라인 cross-ref. 의존 자체는 hexa-lang INBOX(`hexa cloud 개선 4건`)에서 별도 추적.
 
 ## 2026-05-25 — worktree/branch 하네스 4-gap (from anima)
 

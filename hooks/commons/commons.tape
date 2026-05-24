@@ -230,3 +230,19 @@
 @D g62 := "atlas register at checkpoints — session · domain · discovery · post-brainstorm" :: governance [required active]
   do   = "on a checkpoint, hexa atlas register the verified closed-forms/discoveries of that scope"
   dont = "let a closed-form decay unregistered · skip atlas at session/domain/brainstorm close"
+
+@D g63 := "micro-exp honest sweep — every candidate reaches a verify tier" :: governance [required active]
+  do   = "every /micro-exp candidate reaches a verify tier · record FALSIFIED as a CLOSED negative"
+  dont = "silent-drop a candidate · cherry-pick passes · treat FALSIFIED as skip (it is a closed result)"
+
+@D g64 := "sweep budget cap — declare budget before dispatch, halt on breach" :: governance [required active]
+  do   = "declare `pod_concurrent_max` (+ usd_max_per_week when known) before sweep dispatch · halt at cap"
+  dont = "exceed the declared pod/usd budget silently · dispatch a wave past pod_concurrent_max"
+
+@D g65 := "sweep aggregation — typed ledger per batch" :: governance [required active]
+  do   = "every sweep batch writes `exports/sweep/<batch>/ledger.json` (manifest + verdicts + pattern)"
+  dont = "let the ledger drift from atlas state · leave a batch with no aggregate surface"
+
+@D g66 := "sweep pod-cap ≠ agent-cap — distinct semantics" :: governance [required active]
+  do   = "keep pod_concurrent_max (rent budget) and parallel-agent-cap (≤3 · rate-limit) separate"
+  dont = "conflate the two caps · apply the agent-cap to pod dispatch · the pod-cap to parse Agents"

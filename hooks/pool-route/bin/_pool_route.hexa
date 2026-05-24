@@ -115,6 +115,21 @@ fn _tokens(s: string) -> array {
     return out
 }
 
+// strip ' and " so a quoted heavy subverb (e.g. `hexa 'kick'`) tokenizes to its
+// bare form for the adjacency / pair-substring classifier. Classification only —
+// the rewrite (ssh) always uses the original command verbatim.
+fn _strip_quotes(s: string) -> string {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c != "'" && c != "\"" { out.push(c) }
+        i = i + 1
+    }
+    return out.join("")
+}
+
 // adjacency: token a immediately followed by token b
 fn _has_adjacent(toks: array, a: string, b: string) -> bool {
     let n = len(toks)
@@ -400,7 +415,8 @@ fn main() {
     // pool.json is roster-only — workdir mirrors the local cwd by default.
     let workdir = "auto"
 
-    let toks = _tokens(cmd)
+    let stripped = _strip_quotes(cmd)
+    let toks = _tokens(stripped)   // classifier tokens are quote-stripped
 
     // heavy classifier — build / test / package / train commands
     let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train"]
@@ -415,7 +431,7 @@ fn main() {
     // installs that lack the tree never match (substring is empty).
     let mut heavy_find_subs = []
     if home != "" { heavy_find_subs.push("find " + home + "/core/anima") }
-    let heavy = _any_word(cmd, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(cmd, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
+    let heavy = _any_word(stripped, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(stripped, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
 
     // NOTE (pool-route 0.6.0): the load-aware escalation gate (0.5.7 #96) was
     // REMOVED. It promoted any non-trivial cmd to "heavy" when non-claude CPU
@@ -438,7 +454,7 @@ fn main() {
     let macos_words = ["xcodebuild", "xcrun", "xcode-select", "codesign", "notarytool", "stapler", "pkgbuild", "productbuild", "hdiutil", "lipo", "otool", "install_name_tool", "vtool", "swiftc", "sw_vers", "osascript", "launchctl", "diskutil", "caffeinate", "sips", "plutil"]
     let macos_pairs = ["swift", "build", "swift", "test", "swift", "run", "swift", "package"]
     let macos_subs = ["apple-darwin", "apple-macos", "apple-ios", "Mach-O", ".dylib", ".dmg"]
-    let is_macos = _any_word(cmd, macos_words) || _any_adjacent(toks, macos_pairs) || _any_contains(cmd, macos_subs)
+    let is_macos = _any_word(stripped, macos_words) || _any_adjacent(toks, macos_pairs) || _any_contains(cmd, macos_subs)
 
     let linux_words = ["apt", "apt-get", "dpkg", "dpkg-deb", "add-apt-repository", "yum", "dnf", "rpm", "pacman", "systemctl", "journalctl", "ldconfig", "setcap", "update-alternatives"]
     let linux_subs = ["linux-gnu", "linux-musl", ".deb", ".rpm"]

@@ -269,8 +269,8 @@
     {
       "name": "easy-auto",
       "source": "./hooks/easy-auto",
-      "description": "SessionStart + UserPromptSubmit + PreCompact + PostCompact hook \u2014 auto-injects the `easy` (friendly) 7-element response style as additionalContext so the pattern is active from turn 0 without the user calling /easy. Reads ${CLAUDE_PLUGIN_ROOT}/styles/easy.<lang>.md (env `EASY_LANG` override, default `ko`); falls back to easy.md (English base) when the lang variant is missing. UserPromptSubmit re-injects every turn so the style never fades; PreCompact + PostCompact survive auto-compaction. Implemented in hexa-lang (`_easy_auto.hexa`, invoked via `hexa run`). Pairs with the `easy` skill (manual /easy trigger remains \u2014 easy-auto is the default-on layer). Emergency escape: `EASY_LANG=off`. NO opt-out by design.",
-      "version": "0.1.1"
+      "description": "SessionStart + UserPromptSubmit + PreCompact + PostCompact hook \u2014 auto-injects the `easy` (friendly) 7-element response style as additionalContext so the pattern is active from turn 0 without the user calling /easy. Reads ${CLAUDE_PLUGIN_ROOT}/styles/easy.<lang>.md (env `EASY_LANG` override, default `ko`); falls back to easy.md (English base) when the lang variant is missing. UserPromptSubmit re-injects every turn so the style never fades; PreCompact + PostCompact survive auto-compaction. Implemented in hexa-lang (`_easy_auto.hexa`, invoked via `hexa run`). Pairs with the `easy` skill (manual /easy trigger remains \u2014 easy-auto is the default-on layer). `EASY_LANG` only SELECTS the style language (default `ko`) \u2014 not a disable switch. NO opt-out by design (commons @D g11 / sidecar @D s11); 0.1.2 removed the `EASY_LANG=off` suppress path.",
+      "version": "0.1.2"
     },
     {
       "name": "research",

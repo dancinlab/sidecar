@@ -5,8 +5,9 @@
 // language (env EASY_LANG override, default `ko`) and emits the body as
 // additionalContext so the 7-element friendly pattern is active from turn 0
 // without the user having to call `/easy`. Falls back to easy.md (English
-// base) when the lang variant is missing. No opt-out by design —
-// emergency escape: EASY_LANG=off env to suppress this turn's inject.
+// base) when the lang variant is missing. NO opt-out by design — EASY_LANG
+// only SELECTS the style language (default `ko`); there is no disable/suppress
+// escape (commons @D g11 / sidecar @D s11). 0.1.2 removed the EASY_LANG=off path.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -60,9 +61,9 @@ fn main() {
     let event = _event_of(payload)
     if event == "" { _allow() }
 
-    // emergency escape — EASY_LANG=off suppresses inject for this turn
+    // EASY_LANG selects the style LANGUAGE (default ko); it is NOT a disable
+    // switch — there is no suppress escape (commons @D g11 / sidecar @D s11).
     let lang_env = _env("EASY_LANG")
-    if lang_env == "off" { _allow() }
 
     let plugin_root = _env("CLAUDE_PLUGIN_ROOT")
     if plugin_root == "" { _allow() }
@@ -76,8 +77,13 @@ fn main() {
     let fallback = plugin_root + "/styles/easy.md"
     let mut body = ""
     let mut src = ""
-    try { body = read_file(primary); src = primary } catch e1 {
-        try { body = read_file(fallback); src = fallback } catch e2 { _allow() }
+    // Gate on body=="" (not just catch): read_file may return "" for a missing
+    // file instead of throwing, so a non-existent lang (e.g. EASY_LANG=off) must
+    // still fall back to the English base — otherwise the fallback silently
+    // no-ops, resurrecting a disable path (commons @D g11 / sidecar @D s11).
+    try { let b = read_file(primary); if b != "" { body = b; src = primary } } catch e1 { }
+    if body == "" {
+        try { let b = read_file(fallback); if b != "" { body = b; src = fallback } } catch e2 { }
     }
     if body == "" { _allow() }
 

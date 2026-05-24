@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — easy-auto 0.1.2: `EASY_LANG=off` opt-out 제거(@D s11) + 미존재-lang fallback 버그 fix [약점분석 #1]
+
+- **easy-auto 0.1.2 — `EASY_LANG=off` suppress escape 제거 + fallback 버그 fix** — 전체 플러그인 약점 분석에서, easy-auto 가 README/desc 의 "NO opt-out" 주장과 달리 `EASY_LANG=off` 로 inject 를 무력화하는 escape hatch 를 코드에 둔 것 발견 — `@D s11`/`g11`("no opt-out / escape-hatch variables in guards or auto-hooks") **정면 위반**. off 분기 제거: 이제 `EASY_LANG` 은 스타일 **언어 선택자**(default `ko`)일 뿐 비활성화 스위치 아님. **부수 발견·fix**: `read_file` 이 없는 파일에 예외 대신 `""` 를 반환해 catch-기반 fallback 이 안 타던 버그 — 미존재 lang(`off`·`fr` 등)이 영어 base(`easy.md`)로 fallback 못 하고 silent no-op(=disable 간접 부활)했음. `body==""` 체크 기반 fallback 으로 교체. Smoke: `EASY_LANG=off` → `easy.md` 4001자 inject(비활성화 불가 확인) · ko → `easy.ko.md` 2811자(무회귀). 폐기된 `@D g30` 인용도 `g11`/`s11` 로 정정. 표면 lockstep(@D ship · g22): plugin.json + marketplace 0.1.1 → 0.1.2.
+
 ## 2026-05-25 — output-trim 0.1.3 · pool-route 0.6.2: `updatedInput` 재작성에 `permissionDecision:allow` 누락 fix (pr-cycle 0.3.5 동일 버그 · 전수 점검)
 
 - **output-trim 0.1.3 · pool-route 0.6.2 — `updatedInput` 재작성 hook 전수 점검 후 누락된 `permissionDecision:"allow"` 추가** — 전체 플러그인 약점 분석 중, PreToolUse(Bash) `updatedInput` 으로 명령을 재작성하는 hook 3개(pr-cycle · output-trim · pool-route) 중 pr-cycle(0.3.5)만 `permissionDecision:"allow"` 를 동봉하고 **나머지 둘은 누락** → Claude Code 가 재작성을 무시하고 원본 명령을 실행하던 것 발견. 임팩트: (1) **output-trim** — stdout 압축 wrapper 재작성이 안 먹혀 >8000자 출력이 **트리밍 안 됨**(additionalContext 만 떴을 뿐 실제 파이프 미적용); (2) **pool-route** — heavy 명령의 ssh 재작성이 안 먹혀 **pool 로 안 가고 Mac 로컬 실행** → `@D s12`(zero macOS offload) 정면 위반. 둘 다 `_emit` 출력 JSON 에 `"permissionDecision":"allow"` 추가로 해결(pr-cycle 0.3.5 와 동일 fix; `exit(0)` 은 이미 충족하던 조건). Smoke: 두 hook 모두 emit JSON 이 `permissionDecision:allow` + `updatedInput` 공존 확인(pool-route=`pytest` heavy cmd · output-trim=`ls -la` 단순 cmd + `CLAUDE_PLUGIN_ROOT` 설정 시). 표면 lockstep(@D ship · g22): output-trim plugin.json+marketplace 0.1.2→0.1.3 · pool-route 0.6.1→0.6.2. [[pretooluse-updatedinput-needs-allow]] 의 cross-cutting 적용 — 이제 sidecar 의 updatedInput-재작성 hook 3개 전부 정상.

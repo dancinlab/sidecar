@@ -195,10 +195,6 @@
   do   = "explain/report response → `/easy` 7-element format default · session-wide ON · no manual toggle"
   dont = "skip /easy in explanatory turns · trivial yes/no may stay terse (judgment call only)"
 
-@D g54 := "g47 exemption — INBOX handoff PRs are review-only, never auto-merged" :: governance [required active]
-  do   = "PR scoped to INBOX.md/INBOX.log.md → skip g47 tail · maintainer reviews + merges manually"
-  dont = "auto-append `gh pr merge --squash` to INBOX-only PRs — bypasses cross-project handoff review"
-
 @D g55 := "wall-time first — minimize elapsed time, parallel / distributed over serial" :: governance [required active]
   do   = "fan out independent work across hosts/GPUs/pods (≤8) · many cheap-parallel beat 1 slow-serial"
   dont = "serialize embarrassingly-parallel work · 1 big slow unit when many small parallel are faster"

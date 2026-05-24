@@ -43,3 +43,11 @@
 @D s9 := "claude sessions exempt from local load assessment" :: governance [required active]
   do   = "exclude `claude` PIDs from CPU/load attribution · attribute load to non-claude consumers only"
   dont = "count `claude` toward 'Mac overloaded → pool' · suggest killing claude as load remedy unasked"
+
+@D s10 := "pool-route routes on explicit classifier only — never on load" :: governance [required active]
+  do   = "route to pool only on explicit heavy classifier · git/gh/abs-path/local-fs cmds stay local"
+  dont = "route on high system load — 'busy' ≠ 'portable'; local-bound cmds break on the wrong host"
+
+@D s11 := "no opt-out / escape-hatch variables in guards or auto-hooks" :: governance [required active]
+  do   = "guards + auto-hooks unconditional · gate only on real preconditions (binary · dirty-tree skip)"
+  dont = "env var/config/exception that DISABLES a guard — gets auto-flipped to silence, defeats purpose"

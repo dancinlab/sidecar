@@ -8,9 +8,10 @@
 // Silent on success (no chat noise). On failure: brief stderr advisory only.
 // Always exits 0 — never blocks SessionStart on a sync failure.
 //
-// Skipped silently when:
-//   - `sidecar` binary not on PATH (fresh machine, `hx install sidecar` not run yet)
-//   - SIDECAR_AUTO_SYNC=0  (escape hatch for users who want manual control)
+// Skipped silently only on a real precondition: `sidecar` binary not on PATH
+// (fresh machine, `hx install sidecar` not run yet). NO opt-out variable — per
+// project.tape @D s11, a guard/auto-hook carries no disable switch (it would
+// just get auto-flipped to silence the behavior). Uninstall the plugin to opt out.
 
 fn _trim(s: string) -> string {
     let n = len(s)
@@ -29,14 +30,7 @@ fn _trim(s: string) -> string {
     return s.substring(a, b)
 }
 
-fn _env(name: string) -> string {
-    let r = exec_with_status("printenv " + name)
-    if r[1] != 0 { return "" }
-    return _trim(to_string(r[0]))
-}
-
 fn main() {
-    if _env("SIDECAR_AUTO_SYNC") == "0" { exit(0) }
     let bin = _trim(to_string(exec("command -v sidecar 2>/dev/null")))
     if len(bin) == 0 { exit(0) }
     let r = exec_with_status("sidecar sync 2>&1")

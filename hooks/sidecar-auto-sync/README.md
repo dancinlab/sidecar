@@ -17,8 +17,7 @@ SessionStart 훅 발화
     ▼
 _sidecar_auto_sync.hexa
     │
-    ├─ SIDECAR_AUTO_SYNC=0 ? → exit (escape hatch)
-    ├─ sidecar binary 없음 ? → exit (fresh machine)
+    ├─ sidecar binary 없음 ? → exit (fresh machine — 실제 precondition)
     └─ sidecar sync 실행 → 성공 시 silent · 실패 시 stderr advisory
 ```
 
@@ -39,15 +38,12 @@ _sidecar_auto_sync.hexa
 
 ## 끄는 법
 
-```sh
-export SIDECAR_AUTO_SYNC=0
-```
-
-또는 `~/.claude/plugins/installed_plugins.json`에서 `sidecar-auto-sync` 항목 제거.
+**우회 변수 없음** (@D s11). disable 스위치를 두면 자동으로 켜져 룰을 무력화하므로 의도적으로 안 만듦. 끄려면 `~/.claude/plugins/installed_plugins.json`에서 `sidecar-auto-sync` 항목을 제거 (= plugin uninstall).
 
 ## 거버넌스
 
 - @D s1 (concept separation): 1 plugin = 1 hook (SessionStart 하나만)
 - @D s3 (portable paths): `$CLAUDE_PLUGIN_ROOT`, `$HOME`, `$PATH` 만 사용
 - @D s7 (governance + enforcement together): "stale lock 풀라"는 별도 룰이 아니라 plugin 자체가 실행
+- @D s11 (no opt-out): 우회 env var 없음 — precondition(binary 부재)에서만 skip
 - 실패 시 fail-loud (stderr) but non-blocking — SessionStart는 무조건 진행

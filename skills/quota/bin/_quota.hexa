@@ -1,10 +1,11 @@
-// _quota.hexa — Claude account 5h/7d limits + multi-account registry (0.3.0).
+// _quota.hexa — Claude account 5h/7d limits + multi-account registry (0.4.0).
 //
 // Ported from dancinlab/wilson plugins/quota/main.hexa. Wilson harness coupling
 // stripped — this binary is invoked directly via `hexa run` from commands/quota.md.
 //   0.1.0 → view-only (status · list · help)
 //   0.2.0 → /quota add (registry write, metadata-only)
 //   0.3.0 → /quota add captures creds · /quota switch · /quota remove · /quota refresh
+//   0.4.0 → per-account nicknames (claude1 · claude2 · ...) — refs accept email|nick|index
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -32,7 +33,7 @@ let CLIENT_ID        = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 let KEYCHAIN_SVC     = "Claude Code-credentials"
 let BACKUP_SVC       = "sidecar-quota"   // sidecar's per-account backup keychain svc (macOS) — distinct from the live "Claude Code-credentials"
 let CACHE_TTL        = 45    // s — fresh-cache window; throttles repeat status repaints away from the 429 source
-let AGENTSDK_STUB    = "not_implemented:agent-sdk-credit — post-2026-06-15 source unknown"
+let AGENTSDK_STUB    = "future:agent-sdk-credit — source known (Agent SDK result.total_cost_usd · dual-bucket since 2026-06-15) · integration deferred to next release"
 
 // ── small helpers ────────────────────────────────────────────────────
 fn _trim(s: string) -> string {
@@ -328,10 +329,13 @@ fn _registry_add(reg: any, rec: any) -> any {
 }
 
 // build an account record from the live ~/.claude.json oauthAccount block.
-// `oauth_account` carries the full identity object so PR#3's `switch` can
-// restore it verbatim onto ~/.claude.json without re-deriving fields.
-fn _account_rec(oa: any) -> any {
+// `oauth_account` carries the full identity object so /quota switch can restore
+// it verbatim onto ~/.claude.json without re-deriving fields.
+// `nickname` (0.4.0): optional short label like `claude1` — when set it's
+// accepted as a /quota switch/remove/refresh ref alongside email + numeric index.
+fn _account_rec(oa: any, nickname: string) -> any {
     return #{
+        "nickname":      nickname,
         "email":         _g(oa, "emailAddress"),
         "account_uuid":  _g(oa, "accountUuid"),
         "org_uuid":      _g(oa, "organizationUuid"),
@@ -339,6 +343,16 @@ fn _account_rec(oa: any) -> any {
         "oauth_account": oa,
         "added":         str(timestamp())
     }
+}
+
+// human-facing label for a registry row: "<nick> (<email>)" when a nickname
+// is set, just "<email>" when not. Empty email falls back to "(unknown)".
+fn _who(rec: any) -> string {
+    let nick = _g(rec, "nickname")
+    let email = _g(rec, "email")
+    if len(email) == 0 { return if len(nick) > 0 { nick + " (no-email)" } else { "(unknown)" } }
+    if len(nick) > 0 { return nick + " (" + email + ")" }
+    return email
 }
 
 // per-account cached util — no network. Used by `quota list` to render rows.
@@ -374,7 +388,16 @@ fn _join(lines: array) -> string {
 fn _status_lines() -> array {
     let oa    = _read_oauth_account()
     let email = _g(oa, "emailAddress")
-    let who   = if len(email) > 0 { email } else { "(no ~/.claude.json oauthAccount — run `claude /login`)" }
+    let mut who = if len(email) > 0 { email } else { "(no ~/.claude.json oauthAccount — run `claude /login`)" }
+    // if the live account is registered AND has a nickname, surface it here too.
+    if len(email) > 0 {
+        let reg = _registry_load(_registry_path())
+        let idx = _find_account(reg, email)
+        if idx > -1 {
+            let nick = _g(reg["accounts"][idx], "nickname")
+            if len(nick) > 0 { who = nick + " (" + email + ")" }
+        }
+    }
     let mut lines = [ "Account:  " + who ]
     if len(_g(oa, "organizationName")) > 0 { lines.push("Org:      " + _g(oa, "organizationName")) }
     let lim = _fetch_limits()
@@ -405,6 +428,7 @@ fn _registry_text() -> string {
     let mut lines = [ "Registered accounts (" + str(n) + "):" ]
     let mut any_uncached = false
     let mut active_seen = false
+    let mut any_nick = false
     let mut i = 0
     while i < n {
         let e = accts[i]
@@ -412,11 +436,18 @@ fn _registry_text() -> string {
         let is_active = len(active_uuid) > 0 && e_uuid == active_uuid
         if is_active { active_seen = true }
         let mark = if is_active { "* " } else { "  " }
+        let nick = _g(e, "nickname")
+        if len(nick) > 0 { any_nick = true }
+        let nick_col = if len(nick) > 0 { nick + "  " } else { "" }
         let cu = _cached_util(e_uuid)
         let lim = if cu["ok"] { "5h:" + str(cu["five_hour"]) + "  7d:" + str(cu["seven_day"]) }
                   else { any_uncached = true ; "5h:—  7d:—" }
-        lines.push(mark + str(i) + "  " + _g(e, "email") + "  " + _g(e, "org_name") + "  " + lim)
+        lines.push(mark + str(i) + "  " + nick_col + _g(e, "email") + "  " + _g(e, "org_name") + "  " + lim)
         i = i + 1
+    }
+    if any_nick {
+        lines.push("")
+        lines.push("(refs accept: numeric index · nickname · email — pick any for /quota switch/remove/refresh)")
     }
     if !active_seen {
         lines.push("")
@@ -606,7 +637,10 @@ fn _is_digits(s: string) -> bool {
     return ok
 }
 
-// resolve a registry account by email or numeric index → index, or -1.
+// resolve a registry account by email, nickname (0.4.0), or numeric index → index, or -1.
+// Lookup order: numeric index → exact nickname match → exact email match.
+// A `ref` that's purely digits AND in range hits as an index even if it
+// happens to also be a (digit-only) nickname — pick non-digit nicknames.
 fn _find_account(reg: any, ref: string) -> int {
     let accts = reg["accounts"]
     let n = len(accts)
@@ -617,34 +651,69 @@ fn _find_account(reg: any, ref: string) -> int {
     let mut idx = -1
     let mut i = 0
     while i < n {
-        if idx == -1 && _g(accts[i], "email") == ref { idx = i }
+        let nk = _g(accts[i], "nickname")
+        if idx == -1 && len(nk) > 0 && nk == ref { idx = i }
         i = i + 1
+    }
+    if idx > -1 { return idx }
+    let mut j = 0
+    while j < n {
+        if idx == -1 && _g(accts[j], "email") == ref { idx = j }
+        j = j + 1
     }
     return idx
 }
 
-// ── /quota add — registry write + live-cred capture ──────────────────
-// 0.2.0 was metadata-only. 0.3.0 also captures the live OAuth blob into
-// sidecar's per-account backup store, so a later `/quota switch` has
-// something to swap in (decision 1-B). Refreshed every add — tokens rotate.
-fn _cli_add() -> any {
+// ── /quota add [nickname] — registry write + live-cred capture ───────
+// 0.4.0: optional nickname arg. Bare `/quota add` keeps the prior behaviour
+// (no nick, identified by email only). `/quota add claude1` tags the row so
+// later `/quota switch claude1` etc. work. Re-adding the same account with
+// a new nick UPDATES the nick in place (no duplicate row, no cred re-capture
+// since the blob is the same).
+fn _cli_add(nickname: string) -> any {
     let oa = _read_oauth_account()
     let email = _g(oa, "emailAddress")
     if len(email) == 0 && len(_g(oa, "accountUuid")) == 0 {
         return #{ "ok": false, "error": "no current account in ~/.claude.json (run `claude /login` first)" }
     }
     let path = _registry_path()
-    let reg  = _registry_load(path)
-    let rec  = _account_rec(oa)
+    let mut reg = _registry_load(path)
+    let rec  = _account_rec(oa, nickname)
     let next = _registry_add(reg, rec)
     let dup  = len(next["accounts"]) == len(reg["accounts"])
+    let mut nick_update = false
     if !dup {
         if !_registry_save(path, next) {
             return #{ "ok": false, "error": "failed to write registry: " + path }
         }
+        reg = next
+    } else if len(nickname) > 0 {
+        // dup: same uuid already registered — but the user passed a new nick.
+        // update the existing row's nickname in place rather than refusing.
+        let accts = reg["accounts"]
+        let mut i = 0
+        let n = len(accts)
+        let tgt_uuid = _g(rec, "account_uuid")
+        while i < n {
+            if _g(accts[i], "account_uuid") == tgt_uuid {
+                let mut row = accts[i]
+                if _g(row, "nickname") != nickname {
+                    row["nickname"] = nickname
+                    accts[i] = row
+                    nick_update = true
+                }
+            }
+            i = i + 1
+        }
+        if nick_update {
+            reg["accounts"] = accts
+            if !_registry_save(path, reg) {
+                return #{ "ok": false, "error": "failed to write registry: " + path }
+            }
+        }
     }
     let mut cred_note = ""
-    if len(email) > 0 {
+    if len(email) > 0 && !dup {
         let blob = _trim(_read_creds_json())
         if len(blob) > 0 {
             let st = _store_creds(email, blob)
@@ -654,9 +723,45 @@ fn _cli_add() -> any {
             cred_note = "  · ⚠ no live credentials to capture (switch unavailable for this account)"
         }
     }
-    let head = if dup { "already registered: " + _g(rec, "email") }
-               else { "registered " + _g(rec, "email") + "  → " + path }
+    let head = if dup && nick_update { "updated nickname → " + nickname + "   (" + email + ")" }
+               else if dup { "already registered: " + _who(rec) }
+               else { "registered " + _who(rec) + "  → " + path }
     return #{ "ok": true, "text": head + cred_note }
+}
+
+// ── /quota nick <ref> [nickname] — set or clear a nickname ───────────
+// Empty (or omitted) nickname → clears the existing nick. Useful for
+// renaming (`/quota nick claude1 claude-personal`) or untagging
+// (`/quota nick claude1`).
+fn _cli_nick(ref: string, nickname: string) -> any {
+    if len(ref) == 0 {
+        return #{ "ok": false, "error": "usage: /quota nick <ref> [<nickname>]   (omit nickname to clear)" }
+    }
+    let path = _registry_path()
+    let mut reg = _registry_load(path)
+    if len(reg["accounts"]) == 0 {
+        return #{ "ok": false, "error": "no registered accounts — `/quota add` first" }
+    }
+    let idx = _find_account(reg, ref)
+    if idx == -1 {
+        return #{ "ok": false, "error": "no registered account matching '" + ref + "' — see `/quota list`" }
+    }
+    let mut accts = reg["accounts"]
+    let mut row   = accts[idx]
+    let old_nick  = _g(row, "nickname")
+    if old_nick == nickname {
+        return #{ "ok": true, "text": "no change — nickname already '" + nickname + "' for " + _g(row, "email") }
+    }
+    row["nickname"] = nickname
+    accts[idx] = row
+    reg["accounts"] = accts
+    if !_registry_save(path, reg) {
+        return #{ "ok": false, "error": "failed to write registry: " + path }
+    }
+    let verb_text = if len(nickname) == 0 { "cleared nickname" }
+                    else if len(old_nick) == 0 { "set nickname → " + nickname }
+                    else { "renamed nickname " + old_nick + " → " + nickname }
+    return #{ "ok": true, "text": verb_text + "   (" + _g(row, "email") + ")" }
 }
 
 // ── /quota switch — live credential swap, verified + rollback ────────
@@ -677,6 +782,7 @@ fn _cli_switch(ref: string) -> any {
     let accts     = reg["accounts"]
     let target    = accts[idx]
     let tgt_email = _g(target, "email")
+    let tgt_label = _who(target)
 
     let prev_blob = _trim(_read_creds_json())
     if len(prev_blob) == 0 {
@@ -684,7 +790,7 @@ fn _cli_switch(ref: string) -> any {
     }
     let cur_email = _g(_read_oauth_account(), "emailAddress")
     if cur_email == tgt_email {
-        return #{ "ok": true, "text": "already on " + tgt_email + " — no switch needed" }
+        return #{ "ok": true, "text": "already on " + tgt_label + " — no switch needed" }
     }
 
     let tgt_blob = _trim(_load_creds(tgt_email))
@@ -732,8 +838,13 @@ fn _cli_switch(ref: string) -> any {
     // commit — registry active pointer.
     reg["active"] = idx
     let _s = _registry_save(path, reg)
-    let from = if len(cur_email) > 0 { cur_email } else { "(unknown)" }
-    return #{ "ok": true, "text": "switched → " + tgt_email + "   (was " + from + ")\n"
+    let mut from_label = "(unknown)"
+    if len(cur_email) > 0 {
+        let from_idx = _find_account(reg, cur_email)
+        if from_idx > -1 { from_label = _who(reg["accounts"][from_idx]) }
+        else { from_label = cur_email }
+    }
+    return #{ "ok": true, "text": "switched → " + tgt_label + "   (was " + from_label + ")\n"
         + "  live credentials + ~/.claude.json identity updated · registry active=" + str(idx) + "\n"
         + "  restart `claude` for the new account to take effect" }
 }
@@ -757,6 +868,7 @@ fn _cli_remove(ref: string) -> any {
     let target = reg["accounts"][idx]
     let email  = _g(target, "email")
     let uuid   = _g(target, "account_uuid")
+    let label  = _who(target)
     let next   = _registry_remove(reg, idx)
     if !_registry_save(path, next) {
         return #{ "ok": false, "error": "failed to write registry: " + path }
@@ -764,7 +876,7 @@ fn _cli_remove(ref: string) -> any {
     let cred_gone = _delete_creds(email)
     let _ch       = _delete_cache(uuid)
     let note = if cred_gone { "" } else { "  · ⚠ keychain creds not removed (svc '" + BACKUP_SVC + "')" }
-    return #{ "ok": true, "text": "removed " + email + "  (" + str(len(next["accounts"])) + " account(s) left)" + note }
+    return #{ "ok": true, "text": "removed " + label + "  (" + str(len(next["accounts"])) + " account(s) left)" + note }
 }
 
 // ── /quota refresh — re-fetch usage into the per-account cache ───────
@@ -776,6 +888,7 @@ fn _cli_refresh(ref: string) -> any {
     let mut email = ""
     let mut uuid  = ""
     let mut blob  = ""
+    let mut label = ""
     let mut from_backup = false
     if len(ref) > 0 {
         let reg = _registry_load(_registry_path())
@@ -786,16 +899,21 @@ fn _cli_refresh(ref: string) -> any {
         let rec = reg["accounts"][idx]
         email = _g(rec, "email")
         uuid  = _g(rec, "account_uuid")
+        label = _who(rec)
         blob  = _trim(_load_creds(email))
         from_backup = true
         if len(blob) == 0 {
-            return #{ "ok": false, "error": "no backup credentials for " + email + " — `/quota add` while logged into that account captures them" }
+            return #{ "ok": false, "error": "no backup credentials for " + label + " — `/quota add` while logged into that account captures them" }
         }
     } else {
         let oa = _read_oauth_account()
         email = _g(oa, "emailAddress")
         uuid  = _g(oa, "accountUuid")
         blob  = _trim(_read_creds_json())
+        // try to surface a nickname when the live account is registered
+        let reg = _registry_load(_registry_path())
+        let lidx = _find_account(reg, email)
+        label = if lidx > -1 { _who(reg["accounts"][lidx]) } else { email }
         if len(blob) == 0 {
             return #{ "ok": false, "error": "no current credentials — run `claude /login`" }
         }
@@ -807,30 +925,33 @@ fn _cli_refresh(ref: string) -> any {
         let _s = _store_creds(email, str(tk["blob"]))
     }
     let lim = _fetch_usage_with_token(str(tk["token"]))
-    if !_envelope_ok(lim) { return #{ "ok": false, "error": "usage fetch failed for " + email + ": " + str(lim["error"]) } }
+    if !_envelope_ok(lim) { return #{ "ok": false, "error": "usage fetch failed for " + label + ": " + str(lim["error"]) } }
     if len(uuid) > 0 {
         let row = "{\"ts\":" + str(timestamp()) + ",\"lim\":" + json_stringify(lim) + "}"
         let _w  = write_file(_cache_path_for(uuid), row)
     }
     let tag = if did_refresh { "  (token refreshed)" } else { "" }
-    return #{ "ok": true, "text": "refreshed " + email + tag
+    return #{ "ok": true, "text": "refreshed " + label + tag
         + "  —  5h:" + _win_util(lim["five_hour"]) + "  7d:" + _win_util(lim["seven_day"]) }
 }
 
 fn _help_text() -> string {
     return _join([
-        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.3.0)",
+        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.4.0)",
         "",
         "  /quota                    this text's status form (bare → status)",
         "  /quota status             current account + live 5h/7d (45s cache)",
         "  /quota list               registered accounts (* = active; cached util)",
-        "  /quota add                register current account + capture its credentials",
-        "  /quota switch <acct>      switch the live account (email or list index)",
-        "  /quota remove <acct>      unregister + drop backup creds (alias: rm)",
-        "  /quota refresh [<acct>]   re-fetch 5h/7d into the per-account cache",
+        "  /quota add [<nick>]       register current account + capture creds (optional nickname)",
+        "  /quota nick <ref> [<nick>]  set or clear a nickname for an existing account",
+        "  /quota switch <ref>       switch the live account (ref = nick · email · index)",
+        "  /quota remove <ref>       unregister + drop backup creds (alias: rm)",
+        "  /quota refresh [<ref>]    re-fetch 5h/7d into the per-account cache",
         "                            (active account if no arg; renews expired tokens)",
         "  /quota help               this text",
         "",
+        "  <ref> = nickname (e.g. claude1) · email · numeric index — pick any. Bare `/quota add`",
+        "  keeps the pre-0.4.0 behaviour (no nickname, identified by email only).",
         "  switch = live cred swap, verified + rollback. own-accounts-serial only.",
         "  Live numbers come from api.anthropic.com/api/oauth/usage (non-public);",
         "  cached values are labelled `(stale ...)` when the live fetch fails — honest, never faked."
@@ -853,7 +974,16 @@ fn main() {
         exit(0)
     }
     if verb == "add" {
-        let r = _cli_add()
+        let nick = if len(a) > 2 { a[2] } else { "" }
+        let r = _cli_add(nick)
+        if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
+        eprintln("✗ " + str(r["error"]))
+        exit(1)
+    }
+    if verb == "nick" || verb == "name" || verb == "rename" {
+        let ref  = if len(a) > 2 { a[2] } else { "" }
+        let nick = if len(a) > 3 { a[3] } else { "" }
+        let r = _cli_nick(ref, nick)
         if _envelope_ok(r) { println("✓ " + str(r["text"])); exit(0) }
         eprintln("✗ " + str(r["error"]))
         exit(1)

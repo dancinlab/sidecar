@@ -1,6 +1,6 @@
 ---
-description: /quota <args> — Claude account 5h/7d usage limits + multi-account registry. Verbs — status (default) · list · add (snapshot live ~/.claude.json into registry, metadata-only) · help. Live fetch via OAuth usage endpoint (api.anthropic.com/api/oauth/usage) with 45s per-account cache; on live failure serves labelled-stale cache (honest, never faked). Multi-account registry at $HOME/.sidecar/quota/accounts.json. switch + remove + refresh land in 0.3.0. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.
-argument-hint: "[status | list | add | help]"
+description: /quota <args> — Claude account 5h/7d usage limits + multi-account registry + live credential swap. Verbs — status (default) · list · add (snapshot account + capture creds) · switch <ref> (live cred swap, verified + rollback) · remove <ref> (rm · delete · del) · refresh [<ref>] (re-fetch usage; renews tokens) · help. Live fetch via OAuth usage endpoint with 45s per-account cache; labelled-stale fallback (honest, never faked). Per-account OAuth blob in macOS keychain svc "sidecar-quota" / linux $HOME/.sidecar/quota/creds/<email>.json (0600). own-accounts-serial only. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.
+argument-hint: "[status | list | add | switch <ref> | remove <ref> | refresh [<ref>] | help]"
 allowed-tools: Bash
 ---
 

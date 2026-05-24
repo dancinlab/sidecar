@@ -191,8 +191,8 @@
     {
       "name": "quota",
       "source": "./skills/quota",
-      "description": "/quota <args> — Claude account 5h/7d usage limits + multi-account registry. Verbs: status (default · current account + live 5h/7d) · list (registered accounts, last-cached util) · add (snapshot live ~/.claude.json into registry, metadata-only — cred-capture lands in 0.3.0) · help. Live fetch via OAuth usage endpoint (api.anthropic.com/api/oauth/usage) + auto refresh-token grant (platform.claude.com/v1/oauth/token); 45s per-account cache stops repeat /quota repaints from self-inflicting a 429. On live failure serves labelled-stale cache — honest, never faked. Multi-account registry at $HOME/.sidecar/quota/accounts.json. switch + remove + refresh land in 0.3.0. ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.",
-      "version": "0.2.0"
+      "description": "/quota <args> — Claude account 5h/7d usage limits + multi-account registry + live credential swap. Verbs: status (default · current account + live 5h/7d) · list (registered accounts, last-cached util) · add (snapshot account + capture credentials into backup store) · switch <ref> (live cred swap, verified + rollback on failure) · remove <ref> (rm · delete · del — drop registry row + backup creds, leaves live ~/.claude.json untouched) · refresh [<ref>] (re-fetch usage into per-account cache; renews expired tokens via refreshToken) · help. Live fetch via OAuth usage endpoint (api.anthropic.com/api/oauth/usage) + auto refresh-token grant (platform.claude.com/v1/oauth/token); 45s per-account cache. Per-account OAuth blob backup in macOS keychain svc 'sidecar-quota' / linux ~/.sidecar/quota/creds/<email>.json (0600 + atomic write). own-accounts-serial only — never a multi-tenant router (ToS red-line). ⚠ uses non-public Anthropic OAuth endpoints — may break if rotated.",
+      "version": "0.3.0"
     },
     {
       "name": "kick",

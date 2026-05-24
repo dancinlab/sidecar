@@ -9,6 +9,7 @@
 //   0.4.1 → per-verb commands/<verb>.md so the picker shows /quota:<verb> entries
 //   0.4.2 → /quota:status renders as markdown table (REVERTED in 0.4.3 — CC TUI doesn't render slash-command bash stdout as markdown)
 //   0.4.3 → /quota:status emits Key=Value lines; commands/status.md instructs the agent to render a markdown table in chat (ai-native, so CC actually renders it)
+//   0.5.0 → /quota status emits per-account `Row=` line (6 cols: nick · email · session-time · week-time · session-bar · week-bar); progress bar ▓▓▓░░ NN%; time-to-reset humanized; help text now points at `/quota:quota <verb>` unified form
 //
 // ToS: own-accounts-serial only. Single user, single account active at a time.
 // NOT a multi-tenant router — wilson RESEARCH §c3 red-line, preserved here.
@@ -321,6 +322,88 @@ fn _win_util(w: any) -> string {
     return str(w["utilization"]) + "%"
 }
 
+// utilization as integer percent — handles float `57.0` strings without to_int
+// trailing-garbage error (split at the dot, take the integer part).
+fn _util_int(w: any) -> int {
+    if type_of(w) != "map" || !has_key(w, "utilization") { return 0 }
+    let s = str(w["utilization"])
+    let dot = s.index_of(".")
+    let intpart = if dot < 0 { s } else { s.substring(0, dot) }
+    let mut n = 0
+    try { n = to_int(intpart) } catch e { n = 0 }
+    return n
+}
+
+// 5-slot ASCII progress bar — ▓▓▓░░ NN%.
+fn _bar(util_pct: int) -> string {
+    let slots = 5
+    let mut filled = util_pct / 20
+    if filled > slots { filled = slots }
+    if filled < 0 { filled = 0 }
+    let mut out = ""
+    let mut i = 0
+    while i < filled { out = out + "▓" ; i = i + 1 }
+    let mut j = 0
+    while j < (slots - filled) { out = out + "░" ; j = j + 1 }
+    return out + " " + str(util_pct) + "%"
+}
+
+// trim ISO timestamp `2026-05-24T11:20:00.145030+00:00` to a form `date(1)` can
+// parse — drop microseconds + timezone offset (we'll re-anchor to UTC via -u).
+fn _iso_trim_for_parse(iso: string) -> string {
+    let dot = iso.index_of(".")
+    if dot > 0 { return iso.substring(0, dot) }
+    let t = iso.index_of("T")
+    if t < 0 { return iso }
+    let plus  = iso.last_index_of("+")
+    let minus = iso.last_index_of("-")
+    let off = if plus > t { plus } else if minus > t { minus } else { -1 }
+    if off > 0 { return iso.substring(0, off) }
+    return iso
+}
+
+// ISO → epoch seconds. Tries BSD date (-j -f) first, falls back to GNU date (-d).
+// Returns 0 on failure (caller treats 0 as unknown).
+fn _epoch_of(iso: string) -> int {
+    if len(iso) == 0 { return 0 }
+    let trim = _iso_trim_for_parse(iso)
+    let cmd = "date -j -u -f " + _shq("%Y-%m-%dT%H:%M:%S") + " " + _shq(trim) + " +%s 2>/dev/null"
+        + " || date -u -d " + _shq(iso) + " +%s 2>/dev/null"
+        + " || echo 0"
+    let r = exec_with_status(cmd)
+    let s = _trim(to_string(r[0]))
+    if len(s) == 0 { return 0 }
+    let mut n = 0
+    try { n = to_int(s) } catch e { n = 0 }
+    return n
+}
+
+// human-readable time delta — `1d 4h` / `3h 20m` / `45m` / `0m` (clamped).
+fn _humanize_delta(secs: int) -> string {
+    if secs <= 0 { return "0m" }
+    let d = secs / 86400
+    let h = (secs - d * 86400) / 3600
+    let m = (secs - d * 86400 - h * 3600) / 60
+    if d > 0 {
+        if h > 0 { return str(d) + "d " + str(h) + "h" }
+        return str(d) + "d"
+    }
+    if h > 0 {
+        if m > 0 { return str(h) + "h " + str(m) + "m" }
+        return str(h) + "h"
+    }
+    return str(m) + "m"
+}
+
+// time-to-reset for a window — `_fmt_remaining({utilization, resets_at})` →
+// `1h 20m` etc. Returns `—` when resets_at missing or parse fails.
+fn _fmt_remaining(w: any) -> string {
+    if type_of(w) != "map" || !has_key(w, "resets_at") { return "—" }
+    let epoch = _epoch_of(str(w["resets_at"]))
+    if epoch == 0 { return "—" }
+    return _humanize_delta(epoch - timestamp())
+}
+
 // ── registry (read + write) ──────────────────────────────────────────
 fn _registry_load(path: string) -> any {
     let empty = #{ "active": 0, "accounts": [] }
@@ -413,35 +496,42 @@ fn _join(lines: array) -> string {
     return out
 }
 
-// Plain key=value emitter. The slash command file (commands/status.md) uses an
-// ai-native pattern: the agent reads this stdout and re-emits as a markdown
-// table in its chat response, which CC TUI then renders natively. Trying to
-// emit markdown HERE failed — CC TUI shows slash-command bash stdout as raw
-// monospace text, so `|` and `---` came through verbatim instead of rendering.
+// Per-account `Row=` line emitter — 6 pipe-separated cells:
+//   nick | email | session-time-left | week-time-left | session-bar | week-bar
+// commands/status.md reads each `Row=...` line and renders a markdown table
+// with one row per account. Empty nick is emitted as `—` so the col always has
+// content. Bar = ▓▓▓░░ NN% (5-slot, 20% per slot).
+//
+// `/quota status` emits one Row (the live ~/.claude.json account). `/quota list`
+// (see _registry_text) emits one Row per registered account.
 fn _status_lines() -> array {
     let oa    = _read_oauth_account()
     let email = _g(oa, "emailAddress")
-    let mut who = if len(email) > 0 { email } else { "(no ~/.claude.json oauthAccount — run `claude /login`)" }
+    let mut nick = ""
     if len(email) > 0 {
         let reg = _registry_load(_registry_path())
         let idx = _find_account(reg, email)
-        if idx > -1 {
-            let nick = _g(reg["accounts"][idx], "nickname")
-            if len(nick) > 0 { who = nick + " (" + email + ")" }
-        }
+        if idx > -1 { nick = _g(reg["accounts"][idx], "nickname") }
     }
-    let mut lines = [ "Account=" + who ]
-    if len(_g(oa, "organizationName")) > 0 { lines.push("Org=" + _g(oa, "organizationName")) }
+    let mut lines = []
+    if len(email) == 0 {
+        lines.push("Error=no ~/.claude.json oauthAccount — run `claude /login`")
+        return lines
+    }
     let lim = _fetch_limits()
-    if _envelope_ok(lim) {
-        if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
-            lines.push("StaleCache=cached " + str(lim["cached_age_s"]) + "s ago; live fetch failed: " + str(lim["fetch_error"]))
-        }
-        lines.push("5h=" + _fmt_window(lim["five_hour"]))
-        lines.push("7d=" + _fmt_window(lim["seven_day"]))
-    } else {
-        lines.push("Limits=(unavailable) " + str(lim["error"]))
+    if !_envelope_ok(lim) {
+        lines.push("Error=" + str(lim["error"]))
+        return lines
     }
+    if type_of(lim) == "map" && has_key(lim, "stale") && lim["stale"] == true {
+        lines.push("StaleCache=cached " + str(lim["cached_age_s"]) + "s ago; live fetch failed: " + str(lim["fetch_error"]))
+    }
+    let u5 = _util_int(lim["five_hour"])
+    let u7 = _util_int(lim["seven_day"])
+    let t5 = _fmt_remaining(lim["five_hour"])
+    let t7 = _fmt_remaining(lim["seven_day"])
+    let nick_cell = if len(nick) > 0 { nick } else { "—" }
+    lines.push("Row=" + nick_cell + "|" + email + "|" + t5 + "|" + t7 + "|" + _bar(u5) + "|" + _bar(u7))
     lines.push("AgentSDKCredit=" + AGENTSDK_STUB)
     let reg = _registry_load(_registry_path())
     lines.push("Registry=" + str(len(reg["accounts"])) + " account(s)")
@@ -969,21 +1059,22 @@ fn _cli_refresh(ref: string) -> any {
 
 fn _help_text() -> string {
     return _join([
-        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.4.0)",
+        "/quota — Claude account 5h/7d usage limits + multi-account registry (0.5.0)",
         "",
-        "  /quota                    this text's status form (bare → status)",
-        "  /quota status             current account + live 5h/7d (45s cache)",
-        "  /quota list               registered accounts (* = active; cached util)",
-        "  /quota add [<nick>]       register current account + capture creds (optional nickname)",
-        "  /quota nick <ref> [<nick>]  set or clear a nickname for an existing account",
-        "  /quota switch <ref>       switch the live account (ref = nick · email · index)",
-        "  /quota remove <ref>       unregister + drop backup creds (alias: rm)",
-        "  /quota refresh [<ref>]    re-fetch 5h/7d into the per-account cache",
-        "                            (active account if no arg; renews expired tokens)",
-        "  /quota help               this text",
+        "  /quota:quota                       bare → status (6-col table in chat)",
+        "  /quota:quota status                current account + live 5h/7d (45s cache)",
+        "  /quota:quota list                  registered accounts (* = active; cached util)",
+        "  /quota:quota add [<nick>]          register current account + capture credentials",
+        "  /quota:quota nick <ref> [<nick>]   set or clear a nickname (omit = clear)",
+        "  /quota:quota switch <ref>          switch the live account (ref = nick · email · index)",
+        "  /quota:quota remove <ref>          unregister + drop backup creds (alias: rm)",
+        "  /quota:quota refresh [<ref>]       re-fetch 5h/7d into the per-account cache",
+        "                                     (active account if no arg; renews expired tokens)",
+        "  /quota:quota help                  this text",
         "",
-        "  <ref> = nickname (e.g. claude1) · email · numeric index — pick any. Bare `/quota add`",
-        "  keeps the pre-0.4.0 behaviour (no nickname, identified by email only).",
+        "  Each verb also reachable as its own picker entry: /quota:status · /quota:list · ...",
+        "  <ref> = nickname (e.g. claude1) · email · numeric index. Bare `add` keeps the",
+        "  pre-0.4.0 behaviour (no nickname, identified by email only).",
         "  switch = live cred swap, verified + rollback. own-accounts-serial only.",
         "  Live numbers come from api.anthropic.com/api/oauth/usage (non-public);",
         "  cached values are labelled `(stale ...)` when the live fetch fails — honest, never faked."

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — output-trim 0.1.3 · pool-route 0.6.2: `updatedInput` 재작성에 `permissionDecision:allow` 누락 fix (pr-cycle 0.3.5 동일 버그 · 전수 점검)
+
+- **output-trim 0.1.3 · pool-route 0.6.2 — `updatedInput` 재작성 hook 전수 점검 후 누락된 `permissionDecision:"allow"` 추가** — 전체 플러그인 약점 분석 중, PreToolUse(Bash) `updatedInput` 으로 명령을 재작성하는 hook 3개(pr-cycle · output-trim · pool-route) 중 pr-cycle(0.3.5)만 `permissionDecision:"allow"` 를 동봉하고 **나머지 둘은 누락** → Claude Code 가 재작성을 무시하고 원본 명령을 실행하던 것 발견. 임팩트: (1) **output-trim** — stdout 압축 wrapper 재작성이 안 먹혀 >8000자 출력이 **트리밍 안 됨**(additionalContext 만 떴을 뿐 실제 파이프 미적용); (2) **pool-route** — heavy 명령의 ssh 재작성이 안 먹혀 **pool 로 안 가고 Mac 로컬 실행** → `@D s12`(zero macOS offload) 정면 위반. 둘 다 `_emit` 출력 JSON 에 `"permissionDecision":"allow"` 추가로 해결(pr-cycle 0.3.5 와 동일 fix; `exit(0)` 은 이미 충족하던 조건). Smoke: 두 hook 모두 emit JSON 이 `permissionDecision:allow` + `updatedInput` 공존 확인(pool-route=`pytest` heavy cmd · output-trim=`ls -la` 단순 cmd + `CLAUDE_PLUGIN_ROOT` 설정 시). 표면 lockstep(@D ship · g22): output-trim plugin.json+marketplace 0.1.2→0.1.3 · pool-route 0.6.1→0.6.2. [[pretooluse-updatedinput-needs-allow]] 의 cross-cutting 적용 — 이제 sidecar 의 updatedInput-재작성 hook 3개 전부 정상.
+
 ## 2026-05-25 — pr-cycle 0.3.5: `updatedInput` 재작성에 `permissionDecision:allow` 누락 fix (PR 생성되나 머지 안 됨)
 
 - **pr-cycle 0.3.5 — `updatedInput` 옆에 `permissionDecision: "allow"` 추가** — 증상: `/pr-cycle`(또는 임의 `gh pr create`)에서 **PR 은 생성되는데 자동 머지 tail(`&& gh pr merge`)이 안 붙음**. 원인: PreToolUse(Bash) 훅이 `hookSpecificOutput.updatedInput` 으로 명령을 재작성할 때, **같은 `hookSpecificOutput` 에 `permissionDecision: "allow"` 가 함께 있어야** Claude Code 가 재작성을 적용한다(공식 hooks 문서 확인). 그 sibling 필드가 빠져 있어 Claude Code 가 `updatedInput` 을 무시 → 원본 명령(머지 tail 없음)이 실행돼 PR 만 생성되고 머지 누락. `_emit` 의 출력 JSON 에 `"permissionDecision":"allow"` 추가(`exit(0)` 은 이미 충족하던 또 다른 조건). Smoke: emit JSON 이 `permissionDecision:allow` + `updatedInput` + `additionalContext` 공존하는 유효 JSON. 헤더 주석 + plugin.json/marketplace desc 에 "permissionDecision 필수" 명시. 표면 lockstep(@D ship · g22): pr-cycle plugin.json + marketplace.json 0.3.4 → 0.3.5.

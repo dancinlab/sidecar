@@ -222,7 +222,7 @@ fn _emit(ti: map, new_cmd: string, note: string) {
         i = i + 1
     }
     let updated = "{" + parts.join(",") + "}"
-    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
     println(out)
     exit(0)
 }

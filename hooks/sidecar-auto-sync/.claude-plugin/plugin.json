@@ -1,0 +1,9 @@
+{
+  "name": "sidecar-auto-sync",
+  "description": "SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync.hexa`, invoked via `hexa run`). Closes the gap between an upstream `git push` on origin/main and the local plugin cache — no more manual `sidecar sync` between sessions. Silent on success; advisory note (non-blocking) on failure. Skipped silently when the `sidecar` binary is not on PATH (fresh machine without `hx install sidecar` yet). Adds ~1-2s to session startup (network pull + cache copy + installed_plugins.json patch). NO opt-out by design — the whole point is invisible freshness; uninstall the plugin if you want manual control instead.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "sidecar", "sync", "auto-update", "hexa"]
+}

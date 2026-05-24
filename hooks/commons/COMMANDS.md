@@ -54,4 +54,5 @@ Slash commands available cross-project (backed by sidecar plugins). Use them aut
 # tape-lint      .tape edit lint (fields · length · lang · @I siblings)
 # limit-guard    session-limit checkpoint directive
 # inbox-watch    SessionStart inbox open-entry snapshot
+# sidecar-auto-sync  SessionStart `sidecar sync` (cache always fresh; SIDECAR_AUTO_SYNC=0 to disable)
 ```

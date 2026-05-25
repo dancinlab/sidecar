@@ -53,6 +53,7 @@
     "project-tape": "personal",
     "sign-guard": "personal",
     "sidecar-lint": "personal",
+    "stdlib-ssot-guard": "master",
     "inbox-log-lint": "personal",
     "pool-route": "personal",
     "s9-guard": "personal",

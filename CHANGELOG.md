@@ -32,6 +32,14 @@ anima LIFE 도메인이 매 `/cycle` 라운드 헤매다 잘못 `✅ domain depl
 
 검증: 격리 temp git repo 에서 LIFE 재현(untracked perpetual 스냅샷 + roster 미등록) → `/domain set LIFE` 가 roster 자동등록 + UNTRACKED 경고 + ♾️ 배지 3개 전부 출력 확인. lockstep(@D g22): cycle plugin.json+marketplace 0.7.6→0.7.7 · domain 0.8.7→0.8.8.
 
+## 2026-05-26 — sidecar 0.5.0 — `shadow`/`unshadow` (forced `plugin:command` 네임스페이스 무손실 제거)
+
+Claude Code가 모든 플러그인 명령에 강제하는 `plugin:command` 네임스페이스(#15882 · 끄는 옵션 없음)를 **비정식·무손실**로 우회한다.
+
+- **`sidecar shadow [plan]` + `sidecar unshadow` (신규 verb)** — command/skill 플러그인을 bare-only로 전환: command 미러(`~/.claude/commands/`)에 **SKILL.md `Triggers —` 꼬리를 splice**(bare 엔트리가 NL 자동호출 풍부함 유지) + 플러그인 disable(네임스페이스 형태 소멸). skill-only(`bypass`·`gh-stack`)는 `~/.claude/skills/<n>/`로 미러. **hook 겸용(`prefs`·`pr-cycle`)·hook/mcp는 보존**(disable하면 훅 손실). `plan`=dry-run, `unshadow`=원복(override reset + 생성한 skill 미러 제거). `sidecar sync` 꼬리에서 자동 재적용(do_mirror가 splice를 덮으므로 재splice). 28개 대상(26 cmd + 2 skill) · 34 hook/mcp skip.
+- 구현 `bin/_shadow.hexa`(plan/shadow/unshadow) + `bin/sidecar` verb 배선. opt-out env var 없음 · `unshadow`로 완전 가역.
+- ⚠ 비정식경로 — CC가 command/skill resolution을 바꾸면 깨질 수 있음(`unshadow` 즉시 원복). #15882 공식 fix 시 정식 전환.
+
 ## 2026-05-26 — monitor-guard 0.1.0 + commons g10 (rate-limit 생존 while-monitor)
 
 배경/장기 셸 작업이 rate-limit으로 강제종료될 때 진행분을 잃는 문제를 잡는다. `@D s7`(규칙+enforcement 동시 출하)대로 governance 개정과 가드 훅을 한 사이클에 함께 출하.

@@ -10,12 +10,14 @@
 #   sidecar disable <plugin>  Force-disable one plugin regardless of profile (per-plugin override). Re-applies.
 #   sidecar reset <plugin>    Drop a plugin's override so it follows the profile again. Re-applies.
 #   sidecar mirror      Refresh ~/.claude/commands/ mirrors so plugin commands are bare-invocable (`Skill("imagine")` instead of `Skill("imagine:imagine")`). Auto-runs at the tail of `sync`.
+#   sidecar shadow [plan]  Drop the forced `plugin:command` namespace (#15882): mirror+disable every command/skill plugin (hook/mcp kept), splicing SKILL.md triggers into the bare command so it stays lossless. `plan` = dry-run. Re-asserted at the tail of `sync`.
+#   sidecar unshadow    Revert shadow — re-enable the shadowed plugins (namespaced again) + remove created skill mirrors.
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,13p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,15p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Mirror plugin commands to ~/.claude/commands/ so they're bare-invocable
@@ -178,9 +180,34 @@ TAPE
     fi
     hexa run "$ROOT/install.hexa"
     do_mirror
+    # Re-assert shadow if active: do_mirror overwrote spliced command mirrors
+    # with the plain plugin copy, so re-splice + re-confirm the disable overrides
+    # (idempotent; overrides already persisted so install.hexa above already
+    # applied the disables). No-op when ~/.sidecar/shadowed.json is absent.
+    if [ -f "$HOME/.sidecar/shadowed.json" ] && command -v hexa >/dev/null 2>&1; then
+      hexa run "$ROOT/bin/_shadow.hexa" shadow >/dev/null 2>&1 || true
+      echo "sidecar shadow: re-asserted (bare-only · namespace suppressed)"
+    fi
     ;;
   mirror)
     do_mirror
+    ;;
+  shadow)
+    _root=$(sidecar_root)
+    command -v hexa >/dev/null 2>&1 || { echo "sidecar: hexa not on PATH" >&2; exit 1; }
+    if [ "${1:-}" = plan ]; then
+      exec hexa run "$_root/bin/_shadow.hexa" plan
+    fi
+    hexa run "$_root/bin/_shadow.hexa" shadow || exit 1
+    echo "sidecar shadow: applying (disabling namespaced plugins)…"
+    apply_install
+    ;;
+  unshadow)
+    _root=$(sidecar_root)
+    command -v hexa >/dev/null 2>&1 || { echo "sidecar: hexa not on PATH" >&2; exit 1; }
+    hexa run "$_root/bin/_shadow.hexa" unshadow || exit 1
+    echo "sidecar unshadow: applying (re-enabling plugins)…"
+    apply_install
     ;;
   sign)
     # User sign-off gate. The sign-guard hook hard-denies agent edits to a
@@ -329,7 +356,7 @@ TAPE
     ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · mirror · sign · profile · enable · disable · reset · master" >&2
+    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · master" >&2
     exit 1
     ;;
 esac

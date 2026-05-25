@@ -1,0 +1,278 @@
+// _shadow.hexa — sidecar "shadow" / "unshadow": make command/skill plugins
+// bare-invocable WITHOUT the forced `plugin:command` namespace (#15882), losslessly.
+//
+//   plan      enumerate + classify the cache, print what shadow WOULD do (dry-run)
+//   shadow    for each command/skill plugin in the cache:
+//               • command-bearing → mirror commands/*.md → ~/.claude/commands/,
+//                 and splice the plugin SKILL.md "Triggers —" tail into the
+//                 primary command's description (bare entry keeps NL-invocation richness)
+//               • skill-only (SKILL.md, no commands/) → mirror → ~/.claude/skills/<n>/SKILL.md
+//               • set a per-plugin disable override (kills the `plugin:` namespaced form)
+//             records each in ~/.sidecar/shadowed.json (sync re-asserts · unshadow reverts)
+//   unshadow  clear those overrides + remove created skill mirrors + drop the marker
+//
+// hook/mcp plugins are skipped (never in the command picker). Reversible by
+// design (`sidecar unshadow`). NO opt-out env var (project.tape @D s11).
+
+fn _home() -> string { return env_var("HOME") }
+fn _cache() -> string { return _home() + "/.claude/plugins/cache/sidecar" }
+fn _cmd_dst() -> string { return _home() + "/.claude/commands" }
+fn _skill_dst() -> string { return _home() + "/.claude/skills" }
+fn _opath() -> string { return _home() + "/.sidecar/plugin-overrides.json" }
+fn _mpath() -> string { return _home() + "/.sidecar/shadowed.json" }
+
+fn _read_file_safe(p: string) -> string {
+    let mut s = ""
+    try { s = to_string(read_file(p)) } catch e { s = "" }
+    return s
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _exists(p: string) -> bool {
+    return to_string(exec("test -e '" + p + "' && echo Y || echo N")).contains("Y")
+}
+
+fn _is_dir(p: string) -> bool {
+    return to_string(exec("test -d '" + p + "' && echo Y || echo N")).contains("Y")
+}
+
+// non-empty lines of a command's stdout
+fn _lines(raw: string) -> array {
+    let mut out = []
+    let parts = raw.split("\n")
+    let mut i = 0
+    while i < len(parts) {
+        let t = _trim(parts[i])
+        if len(t) > 0 { out.push(t) }
+        i = i + 1
+    }
+    return out
+}
+
+fn _ls(p: string) -> array {
+    return _lines(to_string(exec("ls -1 '" + p + "' 2>/dev/null")))
+}
+
+// latest semver dir under a plugin cache dir (sort -V | tail -1 · cache-resolver-sort-v)
+fn _latest_ver(plug_dir: string) -> string {
+    let ls = _lines(to_string(exec("ls -1 '" + plug_dir + "' 2>/dev/null | sort -V | tail -1")))
+    if len(ls) == 0 { return "" }
+    return ls[0]
+}
+
+fn _base(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return p }
+    return p.substring(i + 1, len(p))
+}
+
+// value of a `key:` frontmatter line (first match)
+fn _fm_value(content: string, key: string) -> string {
+    let prefix = key + ":"
+    let pl = len(prefix)
+    let lines = content.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if len(ln) >= pl && ln.substring(0, pl) == prefix {
+            return _trim(ln.substring(pl, len(ln)))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// the "Triggers — …" tail of a SKILL.md description (whole desc if none)
+fn _triggers_of(desc: string) -> string {
+    let i = desc.index_of("Triggers")
+    if i < 0 { return "" }
+    return desc.substring(i, len(desc))
+}
+
+// append the trigger tail to a mirrored command's `description:` line (idempotent)
+fn _splice(cmd_path: string, trig: string) {
+    if trig == "" { return }
+    let content = _read_file_safe(cmd_path)
+    if content == "" { return }
+    if content.contains(trig) { return }
+    let lines = content.split("\n")
+    let mut out = []
+    let mut done = false
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if !done && len(ln) >= 12 && ln.substring(0, 12) == "description:" {
+            out.push(ln + " " + trig)
+            done = true
+        } else {
+            out.push(ln)
+        }
+        i = i + 1
+    }
+    write_file(cmd_path, out.join("\n"))
+}
+
+fn _read_overrides() -> map {
+    let mut m = json_parse("{}")
+    try { m = json_parse(_read_file_safe(_opath())) } catch e { m = json_parse("{}") }
+    if type_of(m) != "map" { return json_parse("{}") }
+    return m
+}
+
+fn _save_overrides(m: map) {
+    let _mk = exec("mkdir -p '" + _home() + "/.sidecar'")
+    write_file(_opath(), json_stringify(m) + "\n")
+}
+
+fn _read_marker() -> array {
+    let mut a = json_parse("[]")
+    try { a = json_parse(_read_file_safe(_mpath())) } catch e { a = json_parse("[]") }
+    if type_of(a) != "array" { return json_parse("[]") }
+    return a
+}
+
+// classify every cached plugin → returns array of "name\tkind\tver"
+// kind ∈ cmd (command-bearing) · skill (skill-only) · skip (hook/mcp)
+fn _classify() -> array {
+    let mut out = []
+    let plugs = _ls(_cache())
+    let mut i = 0
+    while i < len(plugs) {
+        let name = plugs[i]
+        let pdir = _cache() + "/" + name
+        if _is_dir(pdir) {
+            let ver = _latest_ver(pdir)
+            if ver != "" {
+                let vdir = pdir + "/" + ver
+                let has_cmds = _is_dir(vdir + "/commands")
+                let has_skill = _exists(vdir + "/SKILL.md")
+                let has_hooks = _is_dir(vdir + "/hooks")
+                // hook-bearing plugins MUST stay enabled (disabling kills the
+                // hook); their `plugin:command` form is the unavoidable cost.
+                let mut kind = "skip"
+                if has_hooks { kind = "skip" }
+                else if has_cmds { kind = "cmd" }
+                else if has_skill { kind = "skill" }
+                out.push(name + "\t" + kind + "\t" + ver)
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+fn main() {
+    let a = argv()
+    let mode = if len(a) > 1 { a[1] } else { "plan" }
+    let rows = _classify()
+
+    if mode == "unshadow" {
+        let marker = _read_marker()
+        let ov = _read_overrides()
+        let mut out_ov = json_parse("{}")
+        let ks = keys(ov)
+        let mut i = 0
+        // keep only overrides NOT in the shadowed marker
+        while i < len(ks) {
+            let mut keep = true
+            let mut j = 0
+            while j < len(marker) { if marker[j] == ks[i] { keep = false } j = j + 1 }
+            if keep { out_ov[ks[i]] = ov[ks[i]] }
+            i = i + 1
+        }
+        _save_overrides(out_ov)
+        // remove any skill mirrors we created
+        i = 0
+        while i < len(marker) {
+            let sk = _skill_dst() + "/" + marker[i]
+            let _rm = exec("rm -rf '" + sk + "'")
+            i = i + 1
+        }
+        let _rmm = exec("rm -f '" + _mpath() + "'")
+        println("sidecar unshadow: reverted " + to_string(len(marker)) + " plugin(s) → namespaced again (run apply to load)")
+        return
+    }
+
+    // plan / shadow share the enumeration
+    let apply = mode == "shadow"
+    let mut shadowed = []
+    let mut n_cmd = 0
+    let mut n_skill = 0
+    let mut n_skip = 0
+    let _mkc = if apply { exec("mkdir -p '" + _cmd_dst() + "'") } else { "" }
+    let ov = _read_overrides()
+
+    let mut i = 0
+    while i < len(rows) {
+        let parts = rows[i].split("\t")
+        let name = parts[0]
+        let kind = parts[1]
+        let ver = parts[2]
+        let vdir = _cache() + "/" + name + "/" + ver
+        if kind == "skip" { n_skip = n_skip + 1; i = i + 1; continue }
+
+        if kind == "cmd" {
+            n_cmd = n_cmd + 1
+            if apply {
+                let cmds = _ls(vdir + "/commands")
+                let skill_desc = if _exists(vdir + "/SKILL.md") { _fm_value(_read_file_safe(vdir + "/SKILL.md"), "description") } else { "" }
+                let trig = _triggers_of(skill_desc)
+                let mut j = 0
+                while j < len(cmds) {
+                    let cf = cmds[j]
+                    if cf.contains(".md") {
+                        let dst = _cmd_dst() + "/" + cf
+                        let _cp = exec("cp '" + vdir + "/commands/" + cf + "' '" + dst + "'")
+                        // splice triggers into the PRIMARY command (basename == plugin name)
+                        if cf == name + ".md" { _splice(dst, trig) }
+                    }
+                    j = j + 1
+                }
+                ov[name] = false
+            }
+            shadowed.push(name)
+        }
+        if kind == "skill" {
+            n_skill = n_skill + 1
+            if apply {
+                let sk = _skill_dst() + "/" + name
+                let _mk = exec("mkdir -p '" + sk + "'")
+                let _cp = exec("cp '" + vdir + "/SKILL.md' '" + sk + "/SKILL.md'")
+                ov[name] = false
+            }
+            shadowed.push(name)
+        }
+        i = i + 1
+    }
+
+    if apply {
+        _save_overrides(ov)
+        write_file(_mpath(), json_stringify(shadowed) + "\n")
+        println("sidecar shadow: " + to_string(len(shadowed)) + " plugin(s) shadowed (" + to_string(n_cmd) + " cmd · " + to_string(n_skill) + " skill-only) · " + to_string(n_skip) + " hook/mcp skipped")
+        println("  → namespaced `plugin:command` forms removed on next load · bare forms kept · revert: sidecar unshadow")
+    } else {
+        println("sidecar shadow PLAN — would shadow " + to_string(len(shadowed)) + " plugin(s) (" + to_string(n_cmd) + " cmd · " + to_string(n_skill) + " skill-only) · skip " + to_string(n_skip) + " hook/mcp:")
+        let mut k = 0
+        while k < len(rows) {
+            let parts = rows[k].split("\t")
+            if parts[1] != "skip" { println("  " + parts[1] + "  " + parts[0]) }
+            k = k + 1
+        }
+    }
+}

@@ -197,7 +197,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`quota-autoadd`](hooks/quota-autoadd/) | hook | `core` | 0.1.1 | SessionStart hook |
 | [`research`](skills/research/) | command + skill | `core` | 0.2.4 | Research-fetch tools |
 | [`secret`](skills/secret/) | command + skill | `core` | 0.4.1 | wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync) |
-| [`sidecar`](commands/sidecar/) | command | `core` | 0.4.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
+| [`sidecar`](commands/sidecar/) | command | `core` | 0.5.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
 | [`step-by-step`](commands/step-by-step/) | command | `core` | 0.1.0 | plan-first sequential runbook |
 | [`workdir-guard`](hooks/workdir-guard/) | hook | `core` | 0.1.0 | SessionStart advisory (hexa-lang `_workdir_guard.hexa`, via `hexa run`) that fires once per session, and only when the… |
 | [`worktree-gc`](hooks/worktree-gc/) | hook | `core` | 0.1.0 | SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_w… |

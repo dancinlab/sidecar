@@ -55,6 +55,7 @@ sidecar/
 ├── mcps/                     # MCP server plugins (pool-mcp)
 ├── project.tape              # sidecar's identity + governance (also linked as CLAUDE.md)
 ├── LATTICE_POLICY.md         # real-limits-first policy (→ hooks/commons/, dropped by `sidecar init`)
+├── CLOSURE_POLICY.md         # closure-honesty policy (SSOT freshness + perpetual domains)
 ├── DESIGN.md / DESIGN.log.md # live design-rules pointer + decision audit trail
 ├── CHANGELOG.md              # chronological ship log
 └── .claude-plugin/
@@ -239,10 +240,22 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 Sidecar's own identity + governance lives in [`project.tape`](project.tape) (also reachable via `CLAUDE.md`). Cross-project `do` / `dont` rules ride inside the `commons` hook plugin and auto-inject at SessionStart + PreCompact + PostCompact. Local sidecar decisions (concept separation, ship cycle, evidence-before-ship, cross-project carrier) are recorded in [`DESIGN.log.md`](DESIGN.log.md) as numbered decisions; [`DESIGN.md`](DESIGN.md) is the live-rules pointer.
 
+## Policies
+
+honesty 정책 2종 — 자율 작업이 *거짓 주장*을 못 하게 막는 cross-cutting 룰. 둘 다 같은 형태: "X 주장은 증명해야 하는 것이지 기본값이 아니다."
+
+| 정책 | 무엇의 정직성 | 한 줄 |
+|---|---|---|
+| [`LATTICE_POLICY.md`](LATTICE_POLICY.md) | *한계* 주장 | 천장은 진짜 물리/수학 한계여야 한다 (편의 숫자 금지) — commons `g25`·`g26` |
+| [`CLOSURE_POLICY.md`](CLOSURE_POLICY.md) | *닫힘* 주장 | 도메인 "완료"는 fresh·live SSOT 에서만 판정 · perpetual 도메인은 절대 종료 안 됨 — cycle `@D ssot_freshness`·`perpetual_domain` + domain stale-guard |
+
+`CLOSURE_POLICY` 는 anima `LIFE` 도메인이 stale untracked 사본 + perpetual 오취급으로 잘못 `✅ 100% depleted` 를 외친 사건에서 도출됐다 (cycle 0.7.7 + domain 0.8.8 이 enforce).
+
 ## Reference
 
 - [`project.tape`](project.tape) — sidecar's identity + governance (linked as `CLAUDE.md`).
 - [`DESIGN.md`](DESIGN.md) / [`DESIGN.log.md`](DESIGN.log.md) — live design-rules pointer + decision audit trail.
+- [`LATTICE_POLICY.md`](LATTICE_POLICY.md) / [`CLOSURE_POLICY.md`](CLOSURE_POLICY.md) — honesty policies (limit-claim · closure-claim) — see [Policies](#policies).
 - [`CHANGELOG.md`](CHANGELOG.md) — chronological log of notable changes (one entry per ship batch).
 - [`GH-STACK.md`](GH-STACK.md) / [`GH-STACK.log.md`](GH-STACK.log.md) — stacked PR workflow reference + enablement history.
 

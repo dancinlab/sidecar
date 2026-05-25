@@ -115,6 +115,15 @@ fn _arr_has(arr: any, v: string) -> bool {
     return false
 }
 
+// is this installed/enabled key a sidecar one (ends in "@sidecar")?
+fn _is_sidecar_key(k: string) -> bool {
+    let suf = "@sidecar"
+    let n = len(k)
+    let m = len(suf)
+    if n < m { return false }
+    return k.substring(n - m, n) == suf
+}
+
 fn main() {
     let home = env_var("HOME")
     if home == "" {
@@ -221,11 +230,16 @@ fn main() {
     let subs = ["hooks", "skills", "commands", "mcps"]
     let mut n = 0
     let mut ndis = 0
+    // every `<name>@sidecar` key the CURRENT marketplace still vouches for —
+    // built over ALL listed plugins (even ones whose srcdir is transiently
+    // missing) so the prune below only drops genuinely-retired entries.
+    let mut valid = json_parse("{}")
     let mut i = 0
     while i < len(plugins) {
         let p = plugins[i]
         let name = to_string(p["name"])
         let ver = to_string(p["version"])
+        valid[name + "@sidecar"] = true
 
         // locate the plugin's source dir (hooks/ · skills/ · commands/)
         let mut srcdir = ""
@@ -286,6 +300,42 @@ fn main() {
         i = i + 1
     }
 
+    // ── prune retired plugins ────────────────────────────────────────
+    // The loop above only ever ADDS / UPDATES entries, so a plugin dropped
+    // from marketplace.json leaves a dangling `<name>@sidecar` in both
+    // installed_plugins.json and settings.enabledPlugins — Claude Code then
+    // reports "<n> error(s) during load" for the missing install path. Drop
+    // every `@sidecar` key the current marketplace no longer vouches for
+    // (non-sidecar keys + still-valid sidecar keys are copied through).
+    let mut npruned = 0
+    let inst_keys = keys(installed["plugins"])
+    let mut new_inst = json_parse("{}")
+    let mut pi = 0
+    while pi < len(inst_keys) {
+        let k = inst_keys[pi]
+        if _is_sidecar_key(k) && !has_key(valid, k) {
+            npruned = npruned + 1
+        } else {
+            new_inst[k] = installed["plugins"][k]
+        }
+        pi = pi + 1
+    }
+    installed["plugins"] = new_inst
+
+    let en_keys = keys(settings["enabledPlugins"])
+    let mut new_en = json_parse("{}")
+    let mut ei = 0
+    while ei < len(en_keys) {
+        let k = en_keys[ei]
+        if _is_sidecar_key(k) && !has_key(valid, k) {
+            // pruned in lockstep with installed_plugins (counted above)
+        } else {
+            new_en[k] = settings["enabledPlugins"][k]
+        }
+        ei = ei + 1
+    }
+    settings["enabledPlugins"] = new_en
+
     _write_json(installed_path, installed)
     _write_json(settings_path, settings)
 
@@ -295,5 +345,8 @@ fn main() {
     println("sidecar install: " + to_string(n)
         + " plugin(s) cached · installed  (HEAD " + shortsha + ")")
     println(prof_note)
+    if npruned > 0 {
+        println("  pruned " + to_string(npruned) + " retired plugin(s) from installed_plugins.json + enabledPlugins")
+    }
     println("  → run /reload-plugins in Claude Code (or restart) to load them now.")
 }

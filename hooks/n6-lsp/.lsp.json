@@ -1,0 +1,9 @@
+{
+  "n6": {
+    "command": "n6-lsp",
+    "args": [],
+    "extensionToLanguage": {
+      ".n6": "n6"
+    }
+  }
+}

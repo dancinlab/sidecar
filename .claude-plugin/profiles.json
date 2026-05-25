@@ -37,6 +37,9 @@
 
     "hexa-lsp": "hexa",
     "tape-lsp": "hexa",
+    "kosmos-lsp": "hexa",
+    "n6-lsp": "hexa",
+    "hxc-lsp": "hexa",
     "tape-lint": "hexa",
     "hexa-native": "hexa",
     "verify-guard": "hexa",

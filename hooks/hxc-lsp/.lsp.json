@@ -1,0 +1,9 @@
+{
+  "hxc": {
+    "command": "hxc-lsp",
+    "args": [],
+    "extensionToLanguage": {
+      ".hxc": "hxc"
+    }
+  }
+}

@@ -33,6 +33,24 @@
       "version": "0.1.1"
     },
     {
+      "name": "kosmos-lsp",
+      "source": "./hooks/kosmos-lsp",
+      "description": "Wire `kosmos-lsp` (kosmos/1.1 multimodal knowledge-anchor manifest LSP \u2014 diagnostics + hover, re-validated on every edit) for `.kosmos` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Requires `kosmos-lsp` on PATH (install via `hx install dancinlab/kosmos`).",
+      "version": "0.1.0"
+    },
+    {
+      "name": "n6-lsp",
+      "source": "./hooks/n6-lsp",
+      "description": "Wire `n6-lsp` (NEXUS-6 knowledge-atlas grammar LSP \u2014 diagnostics + hover, re-validated on every edit) for `.n6` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Requires `n6-lsp` on PATH (install via `hx install dancinlab/n6`).",
+      "version": "0.1.0"
+    },
+    {
+      "name": "hxc-lsp",
+      "source": "./hooks/hxc-lsp",
+      "description": "Wire `hxc-lsp` (HXC hexa-canonical wire/storage format LSP \u2014 diagnostics + hover, re-validated on every edit) for `.hxc` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Requires `hxc-lsp` on PATH (install via `hx install dancinlab/hxc`).",
+      "version": "0.1.0"
+    },
+    {
       "name": "project-tape",
       "source": "./hooks/project-tape",
       "description": "PreCompact + PostCompact hook \u2014 re-injects <project-root>/project.tape as additionalContext so the project's identity + governance survive auto-compaction. No-op when project.tape is absent.",

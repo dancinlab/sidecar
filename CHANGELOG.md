@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — paper 0.6.0 — Pipeline + Companion + xelatex (구조 릴리스)
+
+`/paper new` 가 진짜 ANTIMATTER-tier 의 starter 가 되도록 template 전면 개편. 핵심:
+
+- **`main.tex`**: 9-section spine (Introduction · Background · **§Full Pipeline** (mandatory) · Method · Verify · Results · Limitations · Reproducibility · Conclusion). §Full Pipeline 은 ANTIMATTER-style ⓵→⓻ stage table × tier emoji column (🔵/🟢/🟡/🟠/🔴) × backing-atom column 로 구성. 상단에 tier-rubric 박스 1회 inline. Author block 은 hexa-codex style (`<repo> maintainers` / `dancinlab` / 클릭 가능한 github URL). LLM collaborator 는 `\paragraph{Acknowledgments}` 로 분리 (author line 에 안 박음). BLUE-MAX appendix template 을 tail 에 commented-out 으로 제공. tier emoji 는 `\tierBlue` / `\tierGreen` / ... providecommand 로 추상화 (engine 스위치 시 한 줄 redefine 으로 끝).
+- **`Makefile`**: 기본 엔진 **xelatex** (UTF-8/emoji native) 로 전환 — pdflatex 의 tier-emoji fatal (hexa-fusion-7gate 에서 실제 hit) 차단. 신규 타겟 `wordcount` · `pages` · `lint` · `arxiv-tar` · `figures-clean`. `arxiv-tar` 는 `out/<slug>-arxiv.tar.gz` 로 arxiv submission rules 준수한 source bundle 빌드.
+- **`figures/`**: 기존 `fig01_example.py` 유지 (hexa-native 0.3.2 hook 가 .py 신규 작성 차단 — 기존 유일 `.py` 만 사용). 신규: `figures/_scripts/fig02_line.tex` (TikZ/pgfplots line plot, native LaTeX, Python dep 없음) · `figures/_scripts/fig03_pipeline.tex` (TikZ ⓵→⓻ stage-flow diagram) · `figures/_prompts/cover.template.txt` (fal.ai prompt-design guide — 5-sentence structure, ask/avoid 패턴).
+- **`references.bib`**: 단일 placeholder 1개 → 5 example entries (`@article` · `@book` · `@inproceedings` · `@misc` dataset · `@misc` arxiv). Header 가 DOI/arxiv mandatory 강조 + emoji 금지 명시.
+- **`template/companion/`** (NEW): data-record 축. `verify-ledger.json` · `pr-roll.json` · `session-journal.md` · `adapter-defect-catalog.json` + 한국어 `README.md` (companion-mode 근거 + 채우기 가이드). paper 본문의 모든 numeric claim 이 companion entry 와 1:1 역추적 가능하도록.
+- **`bin/_paper.hexa::lint`**: 확장된 commons @D g51. 기존 (>=10 pages + >=1 fal.ai figure) + §Full Pipeline / §Limitations / §Reproducibility heading 존재 + >=1 `\begin{table}|tabular` + >=2 `\includegraphics|tikzpicture` + >=10 `@`-keyed bibtex entries + references.bib 본문에 tier emoji 0 (deterministic-block pdflatex fatal) + 모든 `\cite{KEY}` 가 bibtex KEY 로 resolve (warn-list, non-blocking).
+
+비파괴 — 기존 paper dir 는 영향 없음. `/paper new <slug>` 는 새 template 사용. version: paper `0.5.3 → 0.6.0` (minor); marketplace.json + plugin.json + SKILL.md + template/README.md + CHANGELOG.md lockstep 갱신 (commons @D g22).
+
+---
+
 ## 2026-05-25 — micro-exp 0.3.0 — local-pool adapter (M3)
 
 `/micro-exp` 가 wall-only / 비 DFT 매트릭스에 대해 'no candidate matrix' 로 false-punt 하던 문제. hexa-lang user 의 GPU 전 차원 벤치마킹 직 매트릭스는 명백히 sweep-shaped 였으나 pod-rent + atlas-register 패턴과 안 맞아 punt됨. 정형화:

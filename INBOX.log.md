@@ -2,6 +2,21 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-25T06:01Z — pool.json roster race-wipe → atomic-write/lock 방어 (from: demiurge RTSC 세션)
+
+**증상 (이번 세션 실증)**: 동시 claude 세션/agent 다수가 `~/.pool/pool.json` 을 read-modify-write 하던 중 roster 가 `{"hosts": []}` (17B) 로 통째 wipe. `pool list` → "empty roster" · `pool on ubu-1` → "not in roster" → 실행 중 DFT job (ubu-1 nohup) 접근이 전면 차단됨. 직전 정상본 `pool.json.n11bak` (639B) 수동 `cp` 복구로 해소.
+
+**원인 (추정)**: pool add/remove/state-update 가 전체 JSON 을 비원자적으로 truncate-rewrite — 두 writer 가 동시 stale-read 후 한쪽이 빈/부분 roster 로 덮음. 파일 lock 부재. (`route-log.jsonl` append 동시성과 별개로 `pool.json` 본체가 취약.)
+
+**방어 제안 (우선순위)**:
+- [ ] **atomic write** — temp write → `os.rename()` (동일 fs 원자 교체) · truncate-in-place 금지
+- [ ] **flock(2) advisory lock** — `pool.json` 수정 전 `pool.json.lock` 잠금 → writer 직렬화
+- [ ] **empty-write guard** — 기존이 non-empty roster 인데 write 결과가 `hosts:[]` 면 거부 (명시적 `pool clear` 만 허용 · 멱등 가드)
+- [ ] **백업 rotation** — write 직전 `pool.json.bak` 자동 생성 (이번에 n11bak 가 우연히 살린 패턴을 정식화)
+- [ ] **add/remove = item 단위 merge** — 전체 덮어쓰기 대신 lock 내 read-modify-write + 항목 병합
+
+**근거**: worktree agent 다수 + 메인 세션 동시 실행은 흔한 워크플로. `pool.json` 은 단일 공유 mutable state — race 방어가 없으면 roster 소실 = 실행 중 캠페인 전면 중단 위험. 이번엔 n11bak 우연 복구로 살았으나, 백업이 없었다면 ubu-1 의 진행 중 DFT job 회수가 불가능했음.
+
 ## 2026-05-25T07:50Z — skill family context-awareness audit + fallback chain proposal (from: demiurge user-feedback)
 
 **사용자 피드백 인용** (2026-05-25T07:30Z, demiurge 세션):

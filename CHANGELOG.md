@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.7.3 — stale-milestone 사전스캔 (H3)
+
+도메인 milestone 박스가 머지된 PR 로 해소됐는데 `[ ]` 잔존하는 패턴 — hexa-lang GPU.md §2 (2a/2b/2c/2e) 가 round-1 N206 등으로 해소됐으나 unflipped 였고, fan-out 직전 수동 grep 으로만 잡혔음. dup-race precheck 의 INBOX-only 범위를 확장:
+
+- **`@D dup_race_precheck` 확장** — scan-A(INBOX)에 scan-B(stale-milestone) 추가. 각 `- [ ]` 항목의 bolded 부분에서 라벨 추출(F-FUSION-* / RFC-* / slug) → 라벨 있으면 `gh pr list --search` + `git log --grep` 로 resolved-class 매치 검사.
+- **SKIP STALE 처리**: 매치 시 `SKIP STALE — resolved by <PR#>/<sha>` + `→ flip [ ] → [x] in <domain>.md at line <N>` 한 줄 surface. **auto-write 안 함** (write-on-detect 는 파괴적 — 사용자/부모가 결정).
+- **`commands/cycle.md` Stage 2b + `cycle-full.md` Stage 3b** 본문 직접 반영.
+- 비파괴 — 라벨 추출 불가 항목은 scan-B bypass (PROCEED).
+
+---
+
 ## 2026-05-25 — cycle 0.7.2 — resource-contention 직렬화 (H2)
 
 병렬 fan-out 이 항상 옳지는 않음. 단일 GPU(예: ubu-2 RTX 5070)에 여러 timed 에이전트가 동시 발사되면 cuEvent wall 이 서로 오염 — hexa-lang GPU 캠페인 round-5 에서 4 후보를 1 timed-fire 로 수동 직렬해야 했음. 정형화:

@@ -84,23 +84,36 @@ fn _bad_slug(slug: string) -> bool {
 }
 
 fn _usage() {
-    println("paper — arxiv-style LaTeX paper scaffolder")
+    println("paper — arxiv-style LaTeX paper scaffolder (v0.7)")
     println("")
     println("usage:")
     println("  /paper new <slug>                          scaffold ./<slug>/ from template")
     println("  /paper sample <slug>                       copy bundled demiurge sample verbatim")
     println("  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine)")
-    println("  /paper compile [dir]                       pdflatex x 3 + bibtex")
-    println("  /paper lint [dir]                          enforce commons g51 — >=10 pages + >=1 fal.ai figure")
+    println("  /paper compile [dir]                       xelatex x 3 + bibtex")
+    println("  /paper lint [dir]                          extended commons g51 lint")
     println("  /paper list                                list bundled samples")
     println("  /paper help                                this message")
+    println("")
+    println("v0.7 verbs:")
+    println("  /paper companion init                      scaffold companion/ in cwd")
+    println("  /paper outline [dir]                       print main.tex sections / figs / tables TOC")
+    println("  /paper pipeline <stage1> <stage2> ...      emit §Full Pipeline LaTeX table skeleton")
+    println("  /paper atoms <domain>                      scan hexa-lang atoms matching <domain>")
+    println("  /paper verify-block <fn> <args...> <expected>  emit \\begin{lstlisting} verdict block")
+    println("  /paper bib add <doi-or-arxiv>              fetch metadata + append bibtex entry")
+    println("  /paper pr-roll <repo> <since-ref>          emit \\paragraph + companion/pr-roll.json")
+    println("  /paper arxiv-prep [<dir>]                  produce out/<slug>-arxiv.tar.gz")
     println("")
     println("image_size: square_hd | landscape_16_9 | portrait_16_9 | square")
     println("")
     println("requirements:")
     println("  new / sample : cp · cwd writable · slug not already a directory")
     println("  fig          : sister `imagine` plugin installed + `secret` CLI + `fal.api_key`")
-    println("  compile      : pdflatex + bibtex (BasicTeX / TeX Live)")
+    println("  compile      : xelatex + bibtex (BasicTeX / TeX Live)")
+    println("  bib add      : curl + (CrossRef DOI or arxiv API id)")
+    println("  pr-roll      : gh CLI authenticated")
+    println("  verify-block : hexa binary (/Users/ghost/.hx/bin/hexa or PATH)")
 }
 
 // locate the sister imagine plugin's dispatcher (source or installed layout)
@@ -418,6 +431,416 @@ fn _cmd_lint(args: array) {
     exit(1)
 }
 
+// =====================================================================
+// v0.7 verbs
+// =====================================================================
+
+// /paper companion init — scaffold companion/ in cwd if missing.
+fn _cmd_companion(root: string, args: array) {
+    let mut sub = ""
+    if len(args) >= 1 { sub = args[0] }
+    if sub != "init" {
+        eprintln("paper companion: usage: /paper companion init")
+        exit(2)
+    }
+    let src = root + "/template/companion"
+    if !_dir_exists(src) {
+        eprintln("paper companion: template/companion/ missing at " + src)
+        exit(1)
+    }
+    let dest = "./companion"
+    if _path_exists(dest) {
+        println("[paper] companion/ already exists in cwd — no changes (idempotent)")
+        print(to_string(exec("ls -1 " + _shq(dest))))
+        return
+    }
+    let cp = exec_with_status("cp -R " + _shq(src) + " " + _shq(dest))
+    if cp[1] != 0 {
+        eprintln("paper companion: copy failed — " + _trim(to_string(cp[0])))
+        exit(1)
+    }
+    println("[paper] scaffolded ./companion/ from template")
+    print(to_string(exec("ls -1 " + _shq(dest))))
+}
+
+// /paper outline [dir] — print main.tex sections / figures / tables TOC.
+fn _cmd_outline(args: array) {
+    let mut dir = "."
+    if len(args) >= 1 && _trim(args[0]) != "" { dir = args[0] }
+    let main_tex = dir + "/main.tex"
+    if !_path_exists(main_tex) {
+        eprintln("paper outline: main.tex not found at " + main_tex)
+        exit(2)
+    }
+    println("[paper] outline of " + main_tex)
+    println("")
+    println("  sections:")
+    let r1 = exec_with_status("grep -nE '^\\\\(section|subsection|paragraph)\\*?\\{' " + _shq(main_tex)
+        + " | sed 's/:\\\\\\\\/  /' | sed 's/\\\\\\\\(section\\\\*\\?\\\\)/  §/' | sed 's/\\\\\\\\(subsection\\\\*\\?\\\\)/    §§/' | sed 's/\\\\\\\\(paragraph\\\\*\\?\\\\)/      ¶/'")
+    print(to_string(r1[0]))
+    // simpler fallback
+    let r1b = exec_with_status("grep -nE '^\\\\section|^\\\\subsection|^\\\\paragraph' " + _shq(main_tex))
+    print(to_string(r1b[0]))
+    println("")
+    println("  figures (\\includegraphics + \\begin{tikzpicture}):")
+    let r2 = exec_with_status("grep -nE '\\\\includegraphics|\\\\begin\\{tikzpicture\\}' " + _shq(main_tex))
+    print(to_string(r2[0]))
+    println("")
+    println("  tables (\\begin{table} + \\begin{tabular}):")
+    let r3 = exec_with_status("grep -nE '\\\\begin\\{table\\}|\\\\begin\\{tabular\\}' " + _shq(main_tex))
+    print(to_string(r3[0]))
+}
+
+// /paper pipeline <stage1> <stage2> ... — emit §Full Pipeline LaTeX table.
+fn _cmd_pipeline(args: array) {
+    if len(args) < 1 {
+        eprintln("paper pipeline: usage: /paper pipeline <stage1> [<stage2> ...]")
+        exit(2)
+    }
+    println("% --- emitted by /paper pipeline ---")
+    println("\\section{Full Pipeline}")
+    println("\\label{sec:pipeline}")
+    println("")
+    println("\\medskip")
+    println("\\noindent\\fbox{\\parbox{0.97\\linewidth}{\\small\\textbf{Tier rubric.}")
+    println("\\tierBlue\\ closed-form \\(\\cdot\\) \\tierGreen\\ numerical \\(\\cdot\\)")
+    println("\\tierYellow\\ cited \\(\\cdot\\) \\tierOrange\\ wet-lab/install-gated \\(\\cdot\\)")
+    println("\\tierRed\\ falsified.}}")
+    println("")
+    println("\\begin{table}[h]")
+    println("\\centering")
+    println("\\small")
+    println("\\begin{tabular}{@{}clcl@{}}")
+    println("\\toprule")
+    println("\\textbf{\\#} & \\textbf{Stage} & \\textbf{Tier} & \\textbf{Backing atom} \\\\")
+    println("\\midrule")
+    let mut i = 0
+    while i < len(args) {
+        let n = i + 1
+        // Use \textcircled for ⓵..⓻ glyphs (engine-portable)
+        println("\\textcircled{\\scriptsize " + to_string(n) + "} & "
+            + args[i] + " & \\tierOrange & \\texttt{atom:<id-" + to_string(n) + ">} \\\\")
+        i = i + 1
+    }
+    println("\\bottomrule")
+    println("\\end{tabular}")
+    println("\\caption{Pipeline stages, each tier-tagged. Fill in the backing atom column with hexa-lang atom ids, companion ledger entries, or DOIs.}")
+    println("\\label{tab:pipeline}")
+    println("\\end{table}")
+    println("% --- end pipeline ---")
+}
+
+// /paper atoms <domain> — scan hexa-lang verify_cli.hexa for atoms matching <domain>.
+fn _cmd_atoms(args: array) {
+    if len(args) < 1 {
+        eprintln("paper atoms: usage: /paper atoms <domain>")
+        exit(2)
+    }
+    let domain = args[0]
+    let home = env_var("HOME")
+    let verify_cli = home + "/core/hexa-lang/tool/verify_cli.hexa"
+    if !_path_exists(verify_cli) {
+        eprintln("paper atoms: hexa-lang verify_cli not found at " + verify_cli)
+        eprintln("  this verb requires a local checkout of hexa-lang under ~/core/hexa-lang")
+        exit(1)
+    }
+    // grep lines whose preceding comment OR same line contains <domain> (case-insensitive)
+    let cmd = "awk 'BEGIN{IGNORECASE=1} /^[[:space:]]*\\/\\// { last=$0; next } /\"[A-Za-z0-9:_-]+\"/ { if (last ~ /" + domain + "/ || $0 ~ /" + domain + "/) print last \"\\n\" $0 \"\\n---\" } { last=\"\" }' " + _shq(verify_cli)
+    let r = exec_with_status(cmd)
+    let body = _trim(to_string(r[0]))
+    if body == "" {
+        println("[paper] no atoms matching '" + domain + "' in " + verify_cli)
+        return
+    }
+    println("% --- emitted by /paper atoms " + domain + " ---")
+    println("\\begin{table}[h]")
+    println("\\centering")
+    println("\\small")
+    println("\\begin{tabular}{@{}ll@{}}")
+    println("\\toprule")
+    println("\\textbf{Atom} & \\textbf{Note} \\\\")
+    println("\\midrule")
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let l = _trim(lines[i])
+        if l != "" && l != "---" {
+            // best-effort: just emit the raw line as a tt cell
+            println("\\texttt{" + l + "} & \\\\")
+        }
+        i = i + 1
+    }
+    println("\\bottomrule")
+    println("\\end{tabular}")
+    println("\\caption{Atoms matching `" + domain + "` (scanned from \\texttt{hexa-lang/tool/verify\\_cli.hexa}).}")
+    println("\\end{table}")
+    println("% --- end atoms ---")
+}
+
+// resolve the canonical hexa binary path (avoid the pool-route relative-hexa hook)
+fn _hexa_bin() -> string {
+    let local_pin = env_var("HOME") + "/.hx/bin/hexa"
+    if _path_exists(local_pin) { return local_pin }
+    // fall back to bare 'hexa' on PATH (may route)
+    return "hexa"
+}
+
+// /paper verify-block <fn> <args...> <expected> — run hexa verify, emit lstlisting.
+fn _cmd_verify_block(args: array) {
+    if len(args) < 3 {
+        eprintln("paper verify-block: usage: /paper verify-block <fn> <args...> <expected>")
+        exit(2)
+    }
+    let hexabin = _hexa_bin()
+    // Build hexa verify --expr <fn> <args...> <expected>
+    let mut cmd = _shq(hexabin) + " verify --expr"
+    let mut i = 0
+    while i < len(args) {
+        cmd = cmd + " " + _shq(args[i])
+        i = i + 1
+    }
+    cmd = cmd + " 2>&1"
+    let r = exec_with_status(cmd)
+    let body = _trim(to_string(r[0]))
+    println("% --- emitted by /paper verify-block ---")
+    println("\\begin{lstlisting}[basicstyle=\\ttfamily\\small,frame=single,xleftmargin=0pt]")
+    println("$ hexa verify --expr " + _join(args, " "))
+    let bl = body.split("\n")
+    let mut j = 0
+    while j < len(bl) {
+        println(bl[j])
+        j = j + 1
+    }
+    println("\\end{lstlisting}")
+    println("% --- end verify-block (exit=" + to_string(r[1]) + ") ---")
+    // do NOT exit non-zero on non-blue/green; surface the raw output
+    exit(0)
+}
+
+fn _join(arr: array, sep: string) -> string {
+    let mut out = ""
+    let mut i = 0
+    while i < len(arr) {
+        if i > 0 { out = out + sep }
+        out = out + arr[i]
+        i = i + 1
+    }
+    return out
+}
+
+// /paper bib add <doi-or-arxiv> — fetch metadata, append bibtex entry to references.bib.
+fn _cmd_bib(args: array) {
+    if len(args) < 2 || args[0] != "add" {
+        eprintln("paper bib: usage: /paper bib add <doi-or-arxiv-id>")
+        exit(2)
+    }
+    let id = args[1]
+    if !_path_exists("./references.bib") {
+        eprintln("paper bib: ./references.bib not found in cwd")
+        exit(2)
+    }
+    if !_has_cmd("curl") {
+        eprintln("paper bib: curl not on PATH")
+        exit(1)
+    }
+    // arxiv id heuristic: 4digits.4-5digits OR arXiv:... ; DOI: contains '/'
+    let mut is_arxiv = false
+    if id.index_of("/") < 0 {
+        // try arxiv format NNNN.NNNNN
+        let mut digits_dot = false
+        let n = len(id)
+        let mut k = 0
+        while k < n {
+            let c = id[k]
+            if c == "." { digits_dot = true }
+            k = k + 1
+        }
+        if digits_dot { is_arxiv = true }
+    }
+    let mut bib_entry = ""
+    if is_arxiv {
+        // arxiv API: http://export.arxiv.org/api/query?id_list=<id>
+        let cmd = "curl -s 'http://export.arxiv.org/api/query?id_list=" + id + "'"
+        let r = exec_with_status(cmd)
+        let body = to_string(r[0])
+        if r[1] != 0 || body == "" {
+            eprintln("paper bib: arxiv API fetch failed for " + id)
+            exit(1)
+        }
+        // crude xml extraction
+        let title_raw = exec_with_status("printf %s " + _shq(body) + " | sed -n 's:.*<entry>.*<title>\\([^<]*\\)</title>.*:\\1:p' | head -1")
+        let auth_raw  = exec_with_status("printf %s " + _shq(body) + " | sed -n 's:.*<author><name>\\([^<]*\\)</name>.*:\\1:p' | head -1")
+        let year_raw  = exec_with_status("printf %s " + _shq(body) + " | sed -n 's:.*<published>\\([0-9]\\{4\\}\\).*:\\1:p' | head -1")
+        let title = _trim(to_string(title_raw[0]))
+        let auth  = _trim(to_string(auth_raw[0]))
+        let year  = _trim(to_string(year_raw[0]))
+        if title == "" {
+            eprintln("paper bib: arxiv API returned no parseable title for " + id)
+            eprintln("  raw response head:")
+            eprintln(body.substring(0, 400))
+            exit(1)
+        }
+        let key = "arxiv" + id.split(".")[0] + id.split(".")[1]
+        bib_entry = "@misc{" + key + ",\n"
+            + "  author       = {" + auth + "},\n"
+            + "  title        = {" + title + "},\n"
+            + "  year         = {" + year + "},\n"
+            + "  eprint       = {" + id + "},\n"
+            + "  archivePrefix= {arXiv},\n"
+            + "  url          = {https://arxiv.org/abs/" + id + "}\n"
+            + "}\n"
+    } else {
+        // CrossRef DOI: https://api.crossref.org/works/<doi>
+        let cmd = "curl -s 'https://api.crossref.org/works/" + id + "'"
+        let r = exec_with_status(cmd)
+        let body = to_string(r[0])
+        if r[1] != 0 || body == "" {
+            eprintln("paper bib: CrossRef DOI fetch failed for " + id)
+            exit(1)
+        }
+        // jq if present, else crude python via sed (no python allowed); rely on jq
+        if !_has_cmd("jq") {
+            eprintln("paper bib: jq not on PATH — required for CrossRef parsing")
+            exit(1)
+        }
+        let title_r = exec_with_status("printf %s " + _shq(body) + " | jq -r '.message.title[0] // empty'")
+        let auth1_r = exec_with_status("printf %s " + _shq(body) + " | jq -r '.message.author[0] | (.family + \", \" + .given) // empty'")
+        let year_r  = exec_with_status("printf %s " + _shq(body) + " | jq -r '.message.issued.\"date-parts\"[0][0] // empty'")
+        let journ_r = exec_with_status("printf %s " + _shq(body) + " | jq -r '.message.\"container-title\"[0] // empty'")
+        let title = _trim(to_string(title_r[0]))
+        let auth  = _trim(to_string(auth1_r[0]))
+        let year  = _trim(to_string(year_r[0]))
+        let journ = _trim(to_string(journ_r[0]))
+        if title == "" {
+            eprintln("paper bib: CrossRef returned no parseable title for DOI " + id)
+            exit(1)
+        }
+        // derive key from first author surname + year
+        let mut surname = auth
+        let cidx = surname.index_of(",")
+        if cidx > 0 { surname = surname.substring(0, cidx) }
+        // strip spaces from key
+        let mut key = ""
+        let mut kk = 0
+        while kk < len(surname) {
+            let cc = surname[kk]
+            if cc != " " && cc != "." { key = key + cc }
+            kk = kk + 1
+        }
+        key = key + year
+        bib_entry = "@article{" + key + ",\n"
+            + "  author       = {" + auth + "},\n"
+            + "  title        = {" + title + "},\n"
+            + "  journal      = {" + journ + "},\n"
+            + "  year         = {" + year + "},\n"
+            + "  doi          = {" + id + "},\n"
+            + "  url          = {https://doi.org/" + id + "}\n"
+            + "}\n"
+    }
+    // append
+    let ap = exec_with_status("printf '\\n%s\\n' " + _shq(bib_entry) + " >> ./references.bib")
+    if ap[1] != 0 {
+        eprintln("paper bib: append failed")
+        exit(1)
+    }
+    println("[paper] appended bibtex entry to ./references.bib:")
+    println(bib_entry)
+}
+
+// /paper pr-roll <repo> <since-ref> — emit \paragraph + companion/pr-roll.json.
+fn _cmd_pr_roll(args: array) {
+    if len(args) < 2 {
+        eprintln("paper pr-roll: usage: /paper pr-roll <repo> <since-ISO-date>")
+        eprintln("  example: /paper pr-roll dancinlab/sidecar 2026-05-01")
+        exit(2)
+    }
+    let repo = args[0]
+    let since = args[1]
+    if !_has_cmd("gh") {
+        eprintln("paper pr-roll: gh CLI not on PATH")
+        exit(1)
+    }
+    let cmd = "gh pr list --repo " + _shq(repo)
+        + " --state merged"
+        + " --search " + _shq("mergedAt:>=" + since)
+        + " --json number,title,mergedAt --limit 200"
+    let r = exec_with_status(cmd + " 2>&1")
+    if r[1] != 0 {
+        eprintln("paper pr-roll: gh fetch failed: " + _trim(to_string(r[0])))
+        exit(1)
+    }
+    let json = _trim(to_string(r[0]))
+    // companion/pr-roll.json overwrite
+    if _dir_exists("./companion") {
+        let w = exec_with_status("printf %s " + _shq(json) + " > ./companion/pr-roll.json")
+        if w[1] == 0 {
+            println("[paper] wrote ./companion/pr-roll.json (" + to_string(len(json)) + " bytes)")
+        }
+    } else {
+        println("[paper] (no ./companion/ in cwd — skipped JSON write; run /paper companion init first)")
+    }
+    // LaTeX \paragraph stub — use jq if present, else raw
+    println("")
+    println("% --- emitted by /paper pr-roll " + repo + " " + since + " ---")
+    println("\\paragraph{Merged PRs since " + since + " (" + repo + ").}")
+    println("\\begin{itemize}\\itemsep0.1em")
+    if _has_cmd("jq") {
+        let jq = exec_with_status("printf %s " + _shq(json)
+            + " | jq -r '.[] | \"\\\\item PR \\#\" + (.number|tostring) + \" --- \" + .title + \" (\" + .mergedAt + \")\"'")
+        print(to_string(jq[0]))
+    } else {
+        println("\\item (jq not on PATH — see companion/pr-roll.json for the raw list)")
+    }
+    println("\\end{itemize}")
+    println("% --- end pr-roll ---")
+}
+
+// /paper arxiv-prep [<dir>] — produce out/<slug>-arxiv.tar.gz with arxiv-mandatory files.
+fn _cmd_arxiv_prep(args: array) {
+    let mut dir = "."
+    if len(args) >= 1 && _trim(args[0]) != "" { dir = args[0] }
+    if !_dir_exists(dir) {
+        eprintln("paper arxiv-prep: " + dir + " is not a directory")
+        exit(2)
+    }
+    if !_path_exists(dir + "/main.tex") {
+        eprintln("paper arxiv-prep: " + dir + "/main.tex not found")
+        exit(2)
+    }
+    if !_path_exists(dir + "/main.bbl") {
+        eprintln("paper arxiv-prep: " + dir + "/main.bbl not found — run `make` first (arxiv requires .bbl)")
+        exit(2)
+    }
+    let basename_dir = _basename(_trim(to_string(exec("cd " + _shq(dir) + " && pwd"))))
+    let slug = basename_dir
+    let out = dir + "/out"
+    let _ = exec("mkdir -p " + _shq(out))
+    let tar = out + "/" + slug + "-arxiv.tar.gz"
+    let cmd = "cd " + _shq(dir)
+        + " && TMP=$(mktemp -d) && cp main.tex references.bib main.bbl \"$TMP\"/ "
+        + " && mkdir -p \"$TMP\"/figures "
+        + " && find figures -maxdepth 1 \\( -name '*.pdf' -o -name '*.png' -o -name '*.eps' \\) -exec cp {} \"$TMP\"/figures/ \\; "
+        + " && (cd \"$TMP\" && tar -czf \"" + tar + "\" .) "
+        + " && rm -rf \"$TMP\""
+    let r = exec_with_status(cmd + " 2>&1")
+    if r[1] != 0 {
+        eprintln("paper arxiv-prep: bundle failed: " + _trim(to_string(r[0])))
+        exit(1)
+    }
+    // validate: exactly 1 .tex + .bbl present
+    let count = exec_with_status("tar -tzf " + _shq(tar) + " | grep -c '\\.tex$'")
+    let n_tex = to_int(_trim(to_string(count[0])))
+    if n_tex != 1 {
+        eprintln("paper arxiv-prep: WARNING — bundle has " + to_string(n_tex) + " .tex files (arxiv expects exactly 1)")
+    }
+    let has_bbl = exec_with_status("tar -tzf " + _shq(tar) + " | grep -q '\\.bbl$'")
+    if has_bbl[1] != 0 {
+        eprintln("paper arxiv-prep: WARNING — bundle missing .bbl (arxiv won't rebuild references)")
+    }
+    println("[paper] arxiv bundle → " + tar)
+    print(to_string(exec("tar -tzf " + _shq(tar))))
+}
+
 fn main() {
     let raw = argv()
     let mut root = ""
@@ -461,6 +884,22 @@ fn main() {
         _cmd_lint(rest)
     } else if verb == "list" {
         _cmd_list(root)
+    } else if verb == "companion" {
+        _cmd_companion(root, rest)
+    } else if verb == "outline" {
+        _cmd_outline(rest)
+    } else if verb == "pipeline" {
+        _cmd_pipeline(rest)
+    } else if verb == "atoms" {
+        _cmd_atoms(rest)
+    } else if verb == "verify-block" {
+        _cmd_verify_block(rest)
+    } else if verb == "bib" {
+        _cmd_bib(rest)
+    } else if verb == "pr-roll" {
+        _cmd_pr_roll(rest)
+    } else if verb == "arxiv-prep" {
+        _cmd_arxiv_prep(rest)
     } else if verb == "help" || verb == "-h" || verb == "--help" || verb == "" {
         _usage()
     } else {

@@ -6,6 +6,25 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — paper 0.7.0 — verbs (8 신규)
+
+v0.6 의 구조 위에 작동 verb 8개 추가. paper-author 가 매번 손으로 짜던 패턴을 dispatch 화:
+
+- **`companion init`** — cwd 에 `companion/` 디렉토리가 없으면 `template/companion/` 에서 카피 (idempotent).
+- **`outline [dir]`** — `main.tex` 의 sections (section/subsection/paragraph) + figures (`\includegraphics` + `\begin{tikzpicture}`) + tables (`\begin{table}` + `\begin{tabular}`) TOC 출력.
+- **`pipeline <stage1> <stage2> ...`** — §Full Pipeline LaTeX table skeleton 출력. 각 행은 `🟠` tier 로 pre-fill (user 가 verdict 따라 교체). tier-rubric 박스도 같이 emit.
+- **`atoms <domain>`** — `~/core/hexa-lang/tool/verify_cli.hexa` 를 awk 스캔, comment OR 같은 줄에 `<domain>` 포함된 atom 항목을 LaTeX coverage table 로 emit.
+- **`verify-block <fn> <args...> <expected>`** — canonical `~/.hx/bin/hexa` (없으면 PATH `hexa`) 로 `hexa verify --expr` 실행 → 결과를 `\begin{lstlisting}` 블록으로 wrap. verdict 가 🔵/🟢 아니어도 raw output 그대로 expose (honest stance — pool-route hook 우회 위해 canonical bin path 사용).
+- **`bib add <doi-or-arxiv>`** — id 에 `.` 있고 `/` 없으면 arxiv (export.arxiv.org API), 아니면 DOI (api.crossref.org). 메타데이터 fetch → bibtex `@article`/`@misc` entry 키 derived 후 `./references.bib` 에 append. arxiv 는 sed 파싱 (no jq dep), DOI 는 jq 필요.
+- **`pr-roll <repo> <since-ref>`** — `gh pr list --state merged --search 'mergedAt:>=<since>' --json ...` → `companion/pr-roll.json` 에 write (있으면) + LaTeX `\paragraph{Merged PRs since <since>}` + `\begin{itemize}` block emit.
+- **`arxiv-prep [<dir>]`** — `out/<slug>-arxiv.tar.gz` 빌드: `main.tex` + `references.bib` + `main.bbl` + `figures/*.{pdf,png,eps}`. arxiv rules validate (.tex==1, .bbl present); 미충족 시 WARNING.
+
+`commands/paper.md` 의 description + argument-hint 갱신; `bin/_paper.hexa::_usage()` 에 v0.7 verb 블록 표시; dispatch 케이스 8개 추가.
+
+비파괴 — 기존 verb 의 시그너처 0 변경. paper `0.6.0 → 0.7.0` (minor — additive). marketplace.json + plugin.json + SKILL.md + commands/paper.md + CHANGELOG.md lockstep 갱신 (commons @D g22).
+
+---
+
 ## 2026-05-25 — paper 0.6.0 — Pipeline + Companion + xelatex (구조 릴리스)
 
 `/paper new` 가 진짜 ANTIMATTER-tier 의 starter 가 되도록 template 전면 개편. 핵심:

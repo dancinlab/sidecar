@@ -17,8 +17,13 @@ The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** wheneve
 - any command containing a `/Users/` or `/home/` absolute-path literal — host-specific
 - any command containing a `~/.` or `$HOME/.` **home-dotstate** reference (0.6.9) — `~/.zsh_history` · `~/.hexa-cache` · `~/.pool` · `~/.sidecar` · `~/.config` · … are per-host hidden state that is **not** user-synced, so routing them to a pool host reads the wrong host's history / cache. Synced workdirs (`~/core/...`) are deliberately excluded and keep routing — the `find ~/core/anima` big-tree pattern still dispatches.
 - any command containing `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` literals — resolve via the dispatching bash to the workstation's plugin cache, which only exists on the local Mac (sidecar slash commands like `/quota:quota`, `/pool:pool`, … all match)
+- `hexa cloud *` commands (0.6.10) — `hexa cloud` is **itself** a Mac-local-only remote-dispatch tool (it needs the local hexa build + `stdlib/cloud`). Its post-`--` remote argv routinely carries heavy words (`nvidia-smi` · `train.log` · `make`) that tripped the classifier, non-deterministically shipping the whole `hexa cloud exec <pod> -- …` to a Linux pool host with no `cloud` subcommand. Double-routing a dispatcher is incoherent — cloud already reaches the remote pod itself.
 
-These run local unconditionally; they're version-control / local-fs / trusted-plugin ops, never the heavy compute the pool exists for.
+These run local unconditionally; they're version-control / local-fs / trusted-plugin / remote-dispatcher ops, never the heavy compute the pool exists for.
+
+## Worktree → canonical-root fallback (0.6.10)
+
+A heavy command launched from a **git linked worktree** outside `$HOME` (e.g. `/tmp/wt-x` — the standard isolation pattern for stdlib / SSCHA agents) used to be **denied** with `cwd outside $HOME`, because the worktree path can't be mirrored to a pool host. The router now resolves the worktree's **main checkout** via `git worktree list --porcelain` (the main worktree is listed first) and, when that root is under `$HOME` (a synced `~/core/…` workdir the pool already routes), mirrors that root instead. The remote runs against the canonical checkout — for `hexa kick`/`drill`/`loop`/`cc` (which already get `HEXA_LANG=$HOME/core/hexa-lang`) that is the intended target; the route-log `why` records `worktree→canonical-root`. This runs **only** in the branch that previously denied, so it can never regress a routing command — it strictly rescues worktree dispatch.
 
 ## Local-bound sign gate (0.6.4)
 

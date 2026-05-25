@@ -512,6 +512,19 @@ fn main() {
     let stripped = _strip_quotes(cmd)
     let toks = _tokens(stripped)   // classifier tokens are quote-stripped
 
+    // cloud pin (0.6.10): `hexa cloud *` is ITSELF a remote-dispatch tool —
+    // Mac-local-only (needs the local hexa build + stdlib/cloud/cloud_cli).
+    // Its post-`--` remote argv routinely carries heavy words (nvidia-smi ·
+    // train.log · make) that trip the classifier below, shipping the whole
+    // `hexa cloud exec <pod> -- ...` to a Linux pool host where there is no
+    // `cloud` subcommand (and no cloud_cli source) → it fails non-
+    // deterministically depending on the argv. Double-routing a dispatcher
+    // is incoherent: cloud already reaches the remote pod itself. Always run
+    // local. Mirrors the heavy detector's adjacency + substring robustness so
+    // a zsh-snapshot-wrapped `hexa cloud` is caught too. (INBOX hexa-lang
+    // 2026-05-25T06:37Z — pool-route double-routes hexa cloud.)
+    if _any_adjacent(toks, ["hexa", "cloud"]) || _any_pair_substring(stripped, ["hexa", "cloud"]) { _allow() }
+
     // heavy classifier — build / test / package / train commands
     // 0.6.7 — `aprime_cc` added: hexa-lang's in-tree self-host native codegen
     // (build/aprime_cc, Mach-O arm64 ~1.2MB · invoked as `./build/aprime_cc <x>.hexa
@@ -618,7 +631,40 @@ fn main() {
         } else if cwd.starts_with(home + "/") {
             wd_remote = "~/" + cwd.substring(len(home) + 1, len(cwd))
         } else {
-            _deny("pool-route: cwd outside $HOME cannot be mirrored to any pool host — heavy command refused (move into $HOME or rerun without the heavy-classifier trigger).")
+            // worktree → canonical-root fallback (0.6.10) — INBOX hexa-lang
+            // 2026-05-25T08:10Z(a). A git LINKED worktree lives outside $HOME
+            // (e.g. /tmp/wt-x), so its cwd can't be mirrored to a pool host.
+            // But its MAIN checkout usually IS under ~/core (a synced workdir
+            // the pool already routes). `git worktree list --porcelain` lists
+            // the main worktree FIRST — mirror that root instead. This runs
+            // ONLY in the branch that already DENIES, so it can never regress
+            // a routing command; it strictly rescues the standard worktree-
+            // isolation dispatch pattern (stdlib / SSCHA agents). The remote
+            // runs against the canonical checkout, not the worktree's
+            // uncommitted edits — for kick/drill/loop/cc (HEXA_LANG=canonical)
+            // that is already the intended target; logged in `why` for audit.
+            let mut rescued = 0
+            if cwd != "" {
+                let gr = exec_with_status("git -C " + _shq(cwd) + " worktree list --porcelain 2>/dev/null")
+                if gr[1] == 0 {
+                    let wl = _tokens(gr[0])   // first line: `worktree <abs-main-path>`
+                    if len(wl) >= 2 && wl[0] == "worktree" {
+                        let root = wl[1]
+                        if root == home {
+                            wd_remote = "~"
+                            rescued = 1
+                        } else if root.starts_with(home + "/") {
+                            wd_remote = "~/" + root.substring(len(home) + 1, len(root))
+                            rescued = 1
+                        }
+                    }
+                }
+            }
+            if rescued == 1 {
+                why = why + " · worktree→canonical-root"
+            } else {
+                _deny("pool-route: cwd outside $HOME cannot be mirrored to any pool host — heavy command refused (move into $HOME or rerun without the heavy-classifier trigger).")
+            }
         }
     }
     if wd_remote == "" { _deny("pool-route: empty remote workdir — heavy command refused.") }

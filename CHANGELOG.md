@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — pool-route 0.6.10: hexa cloud 로컬 핀 + worktree→canonical-root fallback
+
+hexa-lang INBOX cross-repo handoff 2건 해소 (둘 다 hexa-lang 이 아니라 이 라우터 소관으로 판명된 항목).
+
+- **cloud pin** — `hexa cloud *` 는 항상 로컬 실행. `hexa cloud` 자체가 Mac-local-only 원격 dispatch 도구(로컬 hexa 빌드 + `stdlib/cloud` 필요)인데, `--` 뒤 remote argv 에 heavy word(`nvidia-smi`·`train.log`·`make`)가 섞이면 분류기가 트립 → `hexa cloud exec <pod> -- ...` 전체가 `cloud` subcommand 없는 Linux pool host 로 비결정적 라우팅돼 실패. dispatcher 를 이중 라우팅하는 건 모순. `toks` 인접쌍 + substring 둘 다로 zsh-snapshot 래핑까지 포착. (INBOX 2026-05-25T06:37Z.)
+- **worktree→canonical-root fallback** — `/tmp/wt-x` 같은 git LINKED worktree(표준 stdlib/SSCHA 격리 패턴)에서 heavy 명령이 `cwd outside $HOME` 로 거부되던 것을, `git worktree list --porcelain`(main 체크아웃이 첫 줄)로 MAIN 루트를 얻어 그 루트가 $HOME 아래면 mirror. **기존 deny 브랜치 안에서만** 동작 → 라우팅 중인 명령은 회귀 불가, worktree dispatch 만 구제. route-log `why` 에 `worktree→canonical-root` 기록. (INBOX 2026-05-25T08:10Z(a).)
+  - **검증** — 4 케이스 PASS: `hexa cloud exec`→allow(local) · `hexa kick`→여전히 라우팅(회귀 없음) · 비-git `/tmp`→deny 유지 · `/tmp` worktree→`~/core/sidecar` rescue + ubu-2 라우팅.
+  - **표면**: `hooks/pool-route/bin/_pool_route.hexa` (cloud early-allow + deny-branch rescue) · `hooks/pool-route/.claude-plugin/plugin.json` 0.6.9 → 0.6.10 · `.claude-plugin/marketplace.json` pool-route 0.6.9 → 0.6.10 · `hooks/pool-route/README.md` · README 표 cell.
+
 ## 2026-05-25 — domain 0.8.5: 옵션 `@title:` 디스플레이 헤더 (아이콘·이름·별칭)
 
 - **domain 0.8.5 — `/domain title <text>` (alias `subtitle`) + 옵션 `@title:` 필드** — anima IIT4 핸드오프(INBOX) 해소. 도메인 스냅샷에 easy-mode 7요소 헤더(아이콘 · 이름 · 별칭, 예 `🧠 IIT4 — "의식 측정자(尺)"`)를 옵션으로 달 수 있게 했음. bare `/domain` · `set <NAME>` 출력이 `@title:` 가 있으면 plain `◆ active domain: IIT4` 대신 `◆ 🧠 IIT4 — "의식 측정자(尺)"   🎯 <goal>` 로 렌더. easy plugin 7요소와 도메인 트래커의 정합 갭을 메움.

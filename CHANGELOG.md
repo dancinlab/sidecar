@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.7.1 — throttle 내성 (H1)
+
+서브에이전트가 `"Server is temporarily limiting requests · Rate limited"` 로 mid-flight 죽는 패턴을 hexa-lang GPU fusion 캠페인에서 3회 관측(서브에이전트 토큰 0~수십, 작업 유실). 부모가 인라인 회수해야 했음. 정형화:
+
+- **`@D throttle_resilience`** 클로즈 신설 (`skills/cycle/SKILL.md`): fan-out Agent 프롬프트는 매번 (1) `CHECKPOINT-COMMIT each milestone` (2) `rate-limit → wait + resume` 두 절을 verbatim 포함. parent-recovery 는 같은 worktree 브랜치에 재발사 (checkpoint history replay-safe).
+- **`commands/cycle.md` + `cycle-full.md`** Stage 4 본문에 두 절을 직접 인용 (사용자가 슬래시 명령 실행 시 즉시 노출).
+- **plugin.json + marketplace.json description** 갱신.
+- 증거 메모리: `feedback-crash-recovery-artifact-pattern` (parent-인라인 회수 패턴, hexa-lang PR #1028 사례).
+
+비파괴 (기존 정상 흐름 영향 0; 죽은 경우에만 회수 contract 활성).
+
+---
+
 ## 2026-05-25 — master 프로파일/티어 + 창작자 마커 (sidecar 0.3.0)
 
 minimal/hexa/full 위에 **창작자 전용 `master` 모드** 추가. 기존 `personal` 티어는 누구나

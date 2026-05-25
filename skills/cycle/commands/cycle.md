@@ -29,6 +29,13 @@ Engage the `cycle` skill. In ONE message run all five stages:
    Treat as SKIP if **any** of A/B/C fires resolved-class; otherwise PROCEED. Print one judgement line per item: `precheck <slug>: SKIP (A:[x] done) | PROCEED (no signal)`. Items whose label does NOT name an INBOX entry bypass precheck (always PROCEED).
 3. **Parallel-plan** — print a compact table `| # | item | subagent_type | iso | goal | precheck |` before dispatch (precheck = `SKIP <reason>` or `PROCEED`).
 4. **Fan-out** — issue an `Agent` tool call **only for PROCEED rows** (each `run_in_background: true`, `isolation: "worktree"` if it edits code, fully self-contained prompt). SKIP rows do not get an Agent.
+
+   **Auto-inject (throttle resilience, @D throttle_resilience)** — every spawned Agent prompt MUST include these two clauses verbatim (copy-paste into the prompt body, near the top):
+
+   - `CHECKPOINT-COMMIT each milestone (after kernel/oracle/measurement) to your worktree branch so a rate-limit death loses no work — run \`git add -A && git commit -m 'wip: <milestone>'\` in your isolated worktree before moving to the next milestone.`
+   - `If you hit "Server is temporarily limiting requests (not your usage limit) · Rate limited", wait briefly and resume — the task remains valid; cite the last checkpoint commit SHA when you resume so the parent can see continuity.`
+
+   **Parent-recovery on throttle death** — if the parent observes an Agent died mid-flight on a rate-limit error, re-fire it as a single-agent retry against the SAME worktree branch (the checkpoint commits are replay-safe). Reference pattern: memory `feedback-crash-recovery-artifact-pattern`.
 5. **Loop tail — auto-continue to depletion (DEPTH).** After the fan-out, decide whether the active domain is DEPLETED and either self-continue or terminate. Bare `/cycle` is depletion-driving by default: it does NOT stop after one round while backlog remains.
 
    **Depletion test (omit ScheduleWakeup) — only when ALL three hold:**

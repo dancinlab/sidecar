@@ -52,7 +52,6 @@ sidecar/
 ├── hooks/                    # PreToolUse · SessionStart · PreCompact · PostCompact · LSP plugins
 ├── commands/                 # /slash-command invoked plugins
 ├── skills/                   # Skill tool invocable plugins
-├── mcps/                     # MCP server plugins (pool-mcp)
 ├── project.tape              # sidecar's identity + governance (also linked as CLAUDE.md)
 ├── LATTICE_POLICY.md         # real-limits-first policy (→ hooks/commons/, dropped by `sidecar init`)
 ├── CLOSURE_POLICY.md         # closure-honesty policy (SSOT freshness + perpetual domains)
@@ -171,7 +170,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-63 plugins across `{hook · command · skill · mcp}` — one concept each (28 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+62 plugins across `{hook · command · skill}` — one concept each (27 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -190,7 +189,6 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.0 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10, rate-limit survival); proactive sister of limit-guard |
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
 | [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
-| [`pool-mcp`](mcps/pool-mcp/) | mcp | `core` | 0.1.1 | stdio MCP server exposing pool hosts as Claude Code MCP tools |
 | [`prefs`](commands/prefs/) | command | `core` | 0.4.0 | /prefs view/set language prefs (code · docs · response) — writes the fixed prefs.json SSOT |
 | [`prefs-hook`](hooks/prefs-hook/) | hook | `core` | 0.1.0 | UserPromptSubmit+SessionStart+PreCompact+PostCompact — injects language prefs from the fixed SSOT (prefs split) |
 | [`question`](skills/question/) | command + skill | `core` | 0.2.0 | Quick side-question alias for Claude Code's built-in `/btw` |

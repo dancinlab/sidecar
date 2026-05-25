@@ -207,7 +207,9 @@
 
 @D g57 := "pod fire → 🛰️ Monitor + SAVE_POD=1 + ⏱ walltime (no fire-and-forget polling)" :: governance [required active]
   do   = "after `hexa cloud nohup/run`: 🛰️ Monitor + SAVE_POD=1 + ⏱ walltime ETA + headroom hours"
+  do   = "early-life-check ~5min post-fire — SSH ps + train.log progress + nvidia-smi util > 0%"
   dont = "tail -f / sleep-poll · SSH drop sans SAVE_POD=1 · undersize walltime — all = result LOST"
+  dont = "infer train alive from pod RUNNING + watchdog-elapsed alone — idle burn risk (no progress)"
 
 @D g58 := "/cycle family — enumerate only the active domain's open milestones" :: governance [required active]
   do   = "next-list = active <NAME>.md `- [ ]` items · run `/domain set <NAME>` first if none active"
@@ -273,3 +275,10 @@
   do   = "term 'bonghap' (KR phonetic) = the post-gate flip-to-absorbed closure-sequence tail (d5)"
   do   = "term 'NEXUS' = repo-root NEXUS.tape reuse-lattice SSOT (g67 · hexa-lang hub g68)"
   dont = "stall on a non-Latin term lookup — invoke the command per g67/g68/g69, do not grep-spin"
+
+@D g71 := "pool work — sync to origin/main first; avoid local sign-gate for heavy jobs" :: governance [required active]
+  do   = "before routing heavy/data-bound work to a pool host: git fetch + checkout origin/main on it"
+  do   = "prefer a pool host over a Mac-local sign-gated path for heavy / cost-bearing / data-bound work"
+  do   = "audit launcher/dispatcher for hardcoded host paths — pool fire needs portable repo-root"
+  dont = "run on a stale pool checkout (silent arg/codegen drift = idle GPU burn) · sign-token loop on local"
+  dont = "assume origin/main is portable — a `/Users/...` hardcode silently scp-fails on a Linux pool host"

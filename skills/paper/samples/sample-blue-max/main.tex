@@ -1,0 +1,36 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,booktabs,hyperref}
+\providecommand{\tierBlue}{🔵}
+\providecommand{\tierGreen}{🟢}
+\title{\textbf{BLUE-MAX audit (sample)}\\[2pt]\large algebraic-root-only paper structure}
+\author{\texttt{<repo>} maintainers\\\normalsize\textit{dancinlab}\\[2pt]\normalsize\href{https://github.com/dancinlab/<repo>}{\texttt{github.com/dancinlab/<repo>}}}
+\date{\today}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Minimal BLUE-MAX-only paper structure. Every claim in the body resolves to an \texttt{atom:<id>} whose \texttt{hexa verify} verdict is \tierBlue\ (closed-form algebraic identity) — no \tierGreen\ numerical, no \tierOrange\ orange, no citation-fallback. Use this template for an algebraic-root audit of an existing claim set.
+\end{abstract}
+
+\section{Method}
+For each headline claim, derive the closed-form identity, register it as a hexa-lang atom, run \texttt{hexa verify <atom>}, and require the verdict to be \tierBlue\ \texttt{SUPPORTED-FORMAL}. Reject any claim that only achieves \tierGreen\ \texttt{SUPPORTED-NUMERICAL} (it goes to a sibling green-paper, not here).
+
+\section{BLUE-MAX audit table}
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lll@{}}\toprule
+\textbf{Claim} & \textbf{Atom} & \textbf{Tier} \\\midrule
+sum identity            & \texttt{atom:sum-N}           & \tierBlue \\
+arithmetic-mean bound   & \texttt{atom:am-gm-2}         & \tierBlue \\
+log-sum-exp convexity   & \texttt{atom:lse-convex}      & \tierBlue \\
+Cauchy-Schwarz          & \texttt{atom:cauchy-schwarz}  & \tierBlue \\
+\bottomrule\end{tabular}
+\caption{Every paper claim resolves to a \tierBlue\ atom. No \tierGreen\ falls through.}
+\end{table}
+
+\section{Limitations and honest caveats}
+The BLUE-MAX bar means anything not closed-form is not in this paper. Numerical results, even reproducible ones, belong in a sibling \tierGreen\ paper that cites the atoms here.
+
+\section{Reproducibility}
+Run \texttt{hexa verify <atom>} for each row in the table; verdicts must match column 3. Persisted at \texttt{companion/verify-ledger.json}.
+\end{document}

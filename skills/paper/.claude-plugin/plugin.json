@@ -1,9 +1,9 @@
 {
   "name": "paper",
-  "description": "/paper <args> — arxiv-style LaTeX paper scaffolder (v0.7 verbs). Core verbs: new <slug> · sample <slug> · fig <size> <prompt> <out.png> · compile [dir] (xelatex × 3 + bibtex) · lint [dir] (extended commons @D g51) · list · help. New v0.7 verbs: companion init (scaffold companion/ in cwd) · outline [dir] (print main.tex sections / figures / tables TOC) · pipeline <stage1> <stage2> ... (emit §Full Pipeline LaTeX table skeleton, each row pre-filled with 🟠 tier) · atoms <domain> (scan ~/core/hexa-lang/tool/verify_cli.hexa for atoms matching <domain>) · verify-block <fn> <args...> <expected> (run hexa verify from canonical root, emit ready-to-paste \\begin{lstlisting} block; surfaces raw output even when verdict ≠ 🔵/🟢) · bib add <doi-or-arxiv> (fetch metadata via CrossRef/arxiv API, append bibtex entry) · pr-roll <repo> <since-ref> (gh PR list, emit \\paragraph + companion/pr-roll.json) · arxiv-prep [<dir>] (out/<slug>-arxiv.tar.gz with arxiv-mandatory files + 1-tex + .bbl validation).",
-  "version": "0.7.0",
+  "description": "/paper <args> — arxiv-style LaTeX paper scaffolder (v0.8 — samples). Verbs: new <slug> · sample [<name>] [<dest>] · fig <size> <prompt> <out.png> · compile [dir] (xelatex × 3 + bibtex) · lint [dir] (extended commons @D g51) · list · help · companion init · outline [dir] · pipeline <stage1> <stage2> ... · atoms <domain> · verify-block <fn> <args...> <expected> · bib add <doi-or-arxiv> · pr-roll <repo> <since-ref> · arxiv-prep [<dir>]. v0.8 bundles FOUR samples (was one): sample-nb-bcs-absorbed (full ARXiv-quality reference exhibit) · sample-fusion-7gate (D-T fusion 10-stage §Full Pipeline starter) · sample-cost-routing (cost-benchmark structure mirroring hexa-codex economics-routing-savings) · sample-blue-max (algebraic-root-only audit paper structure). The sample verb now takes [<name>] [<dest>]; `/paper list` enumerates all four.",
+  "version": "0.8.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "skill", "command", "paper", "latex", "arxiv", "scaffold", "fal.ai", "xelatex", "companion", "pipeline", "verify", "bibtex", "pr-roll"]
+  "keywords": ["claude-code", "skill", "command", "paper", "latex", "arxiv", "scaffold", "fal.ai", "xelatex", "companion", "pipeline", "verify", "bibtex", "pr-roll", "samples"]
 }

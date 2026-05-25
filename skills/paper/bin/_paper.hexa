@@ -88,7 +88,7 @@ fn _usage() {
     println("")
     println("usage:")
     println("  /paper new <slug>                          scaffold ./<slug>/ from template")
-    println("  /paper sample <slug>                       copy bundled demiurge sample verbatim")
+    println("  /paper sample [<name>] [<dest>]            copy a bundled sample (see `/paper list`)")
     println("  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine)")
     println("  /paper compile [dir]                       xelatex x 3 + bibtex")
     println("  /paper lint [dir]                          extended commons g51 lint")
@@ -157,16 +157,31 @@ fn _cmd_new(root: string, slug: string) {
     print(to_string(exec("ls -1 " + _shq("./" + slug))))
 }
 
-fn _cmd_sample(root: string, slug0: string) {
-    let mut slug = slug0
-    if slug == "" { slug = "sample-nb-bcs-absorbed" }
-    if _bad_slug(slug) {
-        eprintln("paper sample: <slug> must be a simple name (no slashes / no leading dot)")
+// /paper sample [<sample-name>] [<dest-slug>] — copy a bundled sample.
+//   1-arg : <sample-name>  → copy to ./<sample-name>/
+//   2-arg : <sample-name> <dest-slug> → copy to ./<dest-slug>/
+//   0-arg : default to sample-nb-bcs-absorbed
+// Bundled (v0.8): sample-nb-bcs-absorbed · sample-fusion-7gate
+//                 sample-cost-routing · sample-blue-max
+fn _cmd_sample(root: string, args: array) {
+    let mut name = "sample-nb-bcs-absorbed"
+    let mut slug = ""
+    if len(args) >= 1 && _trim(args[0]) != "" { name = args[0] }
+    if len(args) >= 2 && _trim(args[1]) != "" { slug = args[1] }
+    if slug == "" { slug = name }
+    if _bad_slug(name) {
+        eprintln("paper sample: <sample-name> must be a simple name (no slashes / no leading dot)")
         exit(2)
     }
-    let src = root + "/samples/sample-nb-bcs-absorbed"
+    if _bad_slug(slug) {
+        eprintln("paper sample: <dest-slug> must be a simple name (no slashes / no leading dot)")
+        exit(2)
+    }
+    let src = root + "/samples/" + name
     if !_dir_exists(src) {
-        eprintln("paper sample: bundled sample missing at " + src)
+        eprintln("paper sample: bundled sample '" + name + "' not found at " + src)
+        eprintln("  bundled samples:")
+        print(to_string(exec("ls -1 " + _shq(root + "/samples") + " 2>/dev/null")))
         exit(1)
     }
     if _path_exists("./" + slug) {
@@ -178,7 +193,7 @@ fn _cmd_sample(root: string, slug0: string) {
         eprintln("paper sample: copy failed — " + _trim(to_string(cp[0])))
         exit(1)
     }
-    println("[paper] copied bundled sample → ./" + slug + "/ (demiurge sample-nb-bcs-absorbed verbatim)")
+    println("[paper] copied bundled '" + name + "' → ./" + slug + "/")
     print(to_string(exec("ls -1 " + _shq("./" + slug))))
 }
 
@@ -873,9 +888,7 @@ fn main() {
         if len(rest) >= 1 { slug = rest[0] }
         _cmd_new(root, slug)
     } else if verb == "sample" {
-        let mut slug = ""
-        if len(rest) >= 1 { slug = rest[0] }
-        _cmd_sample(root, slug)
+        _cmd_sample(root, rest)
     } else if verb == "fig" {
         _cmd_fig(root, rest)
     } else if verb == "compile" {

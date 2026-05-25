@@ -2,6 +2,24 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-25T09:10Z — pool data-locality + sign-local 토큰 < build 시간 (from: anima PURE 세션)
+
+**관측 맥락** (anima PURE 도메인 · F-CURRICULA-1 GPU fire 준비 중):
+local 입력파일(Mac 의 session log 추출본 + Phase D corpus)에 의존하는 corpus build (`hexa run build_curriculum_corpus.hexa …`) 가 **두 경로 모두에서 막혀** fire 가 2회 BLOCKED. 비용 0 으로 정직하게 halt 됐으나, 자율 fire 흐름이 sign 게이트에 반복 차단되는 마찰이 드러남.
+
+### 갭 #1 — pool-route data-locality 오진단
+- bare `hexa run …` → pool-route 가 ubu-2 로 라우팅 → ubu-2 에 입력 jsonl(Mac-로컬)이 미동기화 → **compile-stage `source not found`** 로 죽음.
+- 문제: 에러가 **데이터 부재**(입력파일이 그 호스트에 없음)인데 **코드 오류**(소스 못 찾음)처럼 보여 오진단 유발. classifier 가 "이 invocation 은 로컬 입력파일 의존" 임을 모름.
+- **fix 후보**: classifier(`@D s10`)가 인자에 **존재하는 로컬 경로**(`--corpus-path`·`--out`·입력 jsonl)를 참조하는 `hexa run` 을 **local-bound 분류 → 미라우팅** (또는 "input `<path>` not on `<host>` — local-bound, not routing" 명시). zero-macOS-offload `@D s12` 정합. pool-route 0.6.10 local-pin 위 잔여 케이스.
+
+### 갭 #2 — sign-local 토큰(5분) < 실제 build 시간(10-20분)
+- 절대경로 `/Users/ghost/.hx/bin/hexa run …` → fork-storm `sign local` 게이트. `! sidecar sign local` 발행해도 **토큰 5분** 인데 corpus 재생성+build 는 **10-20분** → build 중간 다음 `hexa run` 재차단(토큰 만료).
+- 정당한 단일 로컬 작업이 **한 토큰 윈도우 안에 못 끝남** → 5분마다 재서명하는 비현실적 마찰.
+- **fix 후보**: (a) 윈도우 내 *시작된* invocation 은 완료까지 커버(wall-clock 5분 mid-build kill 금지), (b) known-safe 로컬 build 용 긴 토큰 tier, (c) `sidecar sign local <minutes>` 인자. (a) 가 fork-storm 안전성 유지하며 마찰 최소.
+
+### severity
+medium — 우회 가능(반복 서명 or 입력 pool 선동기화)하나 자율 fire(`a_fire_autonomous`) + 자원 상시활용(anima `a_pool_resource_ready` 제안 중) 흐름을 반복 차단. anima 측은 입력 pre-sync 로 갭#1 완화 예정.
+
 ## 2026-05-25T08:00Z — `/domain` 아이콘+별칭 타이틀/서브타이틀 지정 (from: anima IIT4 세션)
 
 **사용자 요청** (2026-05-25, anima IIT4 도메인 세션):

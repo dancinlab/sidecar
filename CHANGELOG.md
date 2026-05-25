@@ -6,6 +6,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.7.2 — resource-contention 직렬화 (H2)
+
+병렬 fan-out 이 항상 옳지는 않음. 단일 GPU(예: ubu-2 RTX 5070)에 여러 timed 에이전트가 동시 발사되면 cuEvent wall 이 서로 오염 — hexa-lang GPU 캠페인 round-5 에서 4 후보를 1 timed-fire 로 수동 직렬해야 했음. 정형화:
+
+- **`@D resource_contention`** 신설 (`skills/cycle/SKILL.md`): exclusive 자원 공유 항목은 직렬, distinct/비배타 자원은 병렬.
+- **Stage 3 plan-table 칼럼 확장**: `| # | item | subagent_type | iso | resource | goal | precheck |`. `resource` 값 = `GPU:<host>-timed` (배타) · `GPU:<host>-any` (비배타) · `CPU-only` (기본) · `Network` · `Filesystem:<repo>`.
+- **Stage 4 직렬화 contract**: 같은 배타 자원 공유 항목은 dispatch → wait-for-completion → next 패턴; 별도/비배타는 한 메시지 다중 Agent 그대로. 사전에 `resource-partition: parallel=<N> · serial-chain=[…]` 한 줄 출력.
+- **`commands/cycle.md` + `cycle-full.md`** Stage 3/4 본문 직접 반영.
+- 증거: hexa-lang round-5 GPU.md §1k (4-config 수동 직렬, 153 config 벤치).
+
+비파괴 — resource 미선언 시 `CPU-only` 기본 (비배타) → 기존 흐름 영향 0.
+
+---
+
 ## 2026-05-25 — cycle 0.7.1 — throttle 내성 (H1)
 
 서브에이전트가 `"Server is temporarily limiting requests · Rate limited"` 로 mid-flight 죽는 패턴을 hexa-lang GPU fusion 캠페인에서 3회 관측(서브에이전트 토큰 0~수십, 작업 유실). 부모가 인라인 회수해야 했음. 정형화:

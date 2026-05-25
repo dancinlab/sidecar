@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — commons 0.10.6: micro-exp 카탈로그 backfill + README 문서 정합화
+
+- **commons 0.10.6 — 슬래시 명령 카탈로그(`COMMANDS.md`)에 `/micro-exp:micro-exp` 추가** — micro-exp(0.2.0)가 랜딩됐으나(`5c8174d`) SessionStart-주입 카탈로그에 누락돼 있었음. Dispatch 섹션(`/cloud` 옆)에 한 줄 추가. commons 가 carry 하는 콘텐츠 변경이므로 g22 lockstep 으로 버전 bump.
+  - **표면**: `hooks/commons/COMMANDS.md` (Dispatch 섹션 1줄) · `hooks/commons/.claude-plugin/plugin.json` 0.10.5 → 0.10.6 · `.claude-plugin/marketplace.json` commons 0.10.5 → 0.10.6 · README 표 cell.
+- **README 문서 정합화 (버전 bump 없음 — 이미 ship 된 상태로 동기화)** — README 가 실제 marketplace 상태와 drift 해 있던 것을 교정:
+  - 플러그인 수 라인 `55 plugins (… 13 hexa …)` → `56 plugins (… 14 hexa …)` (micro-exp 반영).
+  - 플러그인 표에 `micro-exp` 행 누락 → hexa tier 알파벳 위치(kick↔paper)에 추가.
+  - 슬래시 명령 카탈로그(README 본문)에 `/micro-exp:micro-exp` 누락 → Dispatch 섹션에 추가.
+  - 표 버전 cell stale: `commons` 0.10.4 → 0.10.6 · `pool-route` 0.6.3 → 0.6.9 (둘 다 marketplace/plugin.json 에선 이미 bump 됐으나 README 표만 뒤처져 있었음 — `pool-route 0.6.9` `f1d4609`).
+
 ## 2026-05-25 — pool-route 0.6.8: 사이드카 플러그인 변수(`$CLAUDE_PLUGIN_ROOT`/`$CLAUDE_PLUGIN_DATA`) local pin
 
 - **pool-route 0.6.8 — 사이드카 슬래시 명령 local 고정** — `/quota:quota` · `/pool:pool` 등 모든 sidecar 슬래시가 emit 하는 bash 의 `H="$CLAUDE_PLUGIN_ROOT/bin/_X.hexa"; hexa run "$H" ...` 패턴이 ubu-1/2 로 라우팅 → 원격엔 sidecar 캐시가 없어 `✗ _quota.hexa not found` 로 실패하는 현상 사용자 보고.

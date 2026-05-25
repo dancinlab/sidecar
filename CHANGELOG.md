@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — cycle 0.8.1 (@D ssot_freshness: FILE-fresh ≠ CONTENT-fresh — scan-B 의무화)
+
+`@D ssot_freshness` 의 git probe 는 FILE 만 origin/main 과 비교한다 — 파일이 origin/main 과 **일치(probe PASS)해도 내용은 stale 할 수 있다**: 체크박스/구버전-커밋-앵커 섹션이 실제 코드 현실보다 뒤처짐(landing 후 아무도 box 를 flip 안 함). 이 staleness 는 여기가 아니라 `@D dup_race_precheck` scan-B(per-item merged-PR 증거)가 잡는다. 따라서 open-count 가 크거나(round cap ≫) 도c 에 old-commit 앵커 / `doc-lag · flip to [x]` / `GENUINELY OPEN @ <sha>` 류 섹션이 있으면 file-fresh PASS 를 **불충분**으로 보고 모든 open 항목에 scan-B 를 돌려 이미-landed 된 것을 evidence-flip(정합 PR) 먼저 한 뒤 genuine remainder 만 enumerate. 입증: hexa-lang RUNTIME.md 가 file-fresh(== origin/main, probe PASS)였지만 Phase-1 Tier-A 88 box 가 stale-done(바이너리 0 externs · north-star MET #1058/#1059) — scan-B(`_gmtime_r` #1053 등)가 잡고 #1186 정합(open 129→41). SKILL.md @D + `cycle.md` Stage 0 양쪽 반영. lockstep(g22) cycle 0.8.0→0.8.1.
+
 ## 2026-05-26 — install.hexa: 은퇴 플러그인 prune (stale enable 키 → /doctor 에러 차단)
 
 `sidecar sync` 가 마켓에서 사라진 플러그인의 `<name>@sidecar` 키를 `installed_plugins.json` · `settings.enabledPlugins` 에 그대로 남겨, Claude Code 가 `/doctor` 에서 "Plugin <name> not found in marketplace sidecar" 로드 에러를 내던 문제. (실사례: all-bg-go 폐기 후 enable 키 잔존 → 로드 에러.) install.hexa 의 enable 루프는 ADD/UPDATE 만 하고 제거를 안 했음.

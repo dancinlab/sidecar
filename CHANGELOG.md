@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — pool-route 0.7.1 (`pool` 디스패처 자체는 local-bound)
+
+`pool-route` 가 Mac 고부하 시 `pool on <host> <cmd>` **자체**를 다른 Linux 호스트로 load-balance 하던 버그 수정 (s10 위반 — local-bound 명령은 라우팅 금지). `pool` 은 로컬 SSH 디스패처라 원격 호스트엔 `pool` 바이너리가 없어 `127` 로 죽거나(관측됨: `pool on ubu-1 …` → ubu-2 로 라우팅 → `pool: command not found`), 있어도 이중 디스패치가 된다. local-bound 분류기에 `git`/`gh` 와 나란히 `pool` 추가 — 첫 토큰이든 prefix 형(`POOL_DISABLE=1 pool …`)이든 `_has_word(cmd, "pool")` 로 항상 로컬 실행. opt-out env var 아님(s11 무관). lockstep(g22) pool-route 0.7.0→0.7.1.
+
 ## 2026-05-26 — pool-mcp 폐기 (stdio MCP 서버 블로킹 → CLI 경로로 충분)
 
 `pool-mcp` (stdio MCP 서버, `mcp__pool__on` · `mcp__pool__list` 두 도구) 를 마켓플레이스에서 **완전 폐기**. 세션에서 자꾸 블로킹을 유발 — 0.1.1 의 "stdio handshake deadlock" fix 도 메시지당 `hexa run` 디스패치 read-loop 라 핸드셰이크/툴콜 지점에서 멈춤이 재발. pool 기능은 이미 `pool` CLI · `/pool` 커맨드 · `pool-route` 자동 라우터 hook 으로 완전히 커버되므로 MCP 래퍼는 중복 표면.

@@ -424,10 +424,16 @@ fn main() {
     // `git push` / `hexa run /Users/.../x.hexa` / a `/Users/`-absolute smoke
     // shipped to a Linux pool host where that path resolves to nothing.
     //   - git / gh : operate on the local working tree + remotes (cwd repo)
+    //   - pool     : the dispatcher ITSELF (`pool on <host> <cmd>`). Routing a
+    //                `pool` command to a pool host is nonsensical — the remote
+    //                host has no `pool` binary (→ 127), and even if it did it
+    //                would double-dispatch. The `pool` CLI is the local SSH
+    //                wrapper; it must always run on THIS workstation. (0.7.1 —
+    //                fixes load-balanced mis-route of `pool on …` to a peer host.)
     //   - /Users/ or /home/ literal : host-specific absolute path
     // These are read/version-control/local-fs ops, never the heavy compute the
     // pool exists for, so an early _allow() is always correct.
-    if _has_word(cmd, "git") || _has_word(cmd, "gh") { _allow() }
+    if _has_word(cmd, "git") || _has_word(cmd, "gh") || _has_word(cmd, "pool") { _allow() }
     // sidecar plugin pin (0.6.8): `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA`
     // literals always resolve to the LOCAL plugin cache — routing them to a
     // pool host fails because the cache lives only on the workstation. Trusted

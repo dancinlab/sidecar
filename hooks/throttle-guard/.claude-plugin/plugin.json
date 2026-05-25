@@ -1,0 +1,9 @@
+{
+  "name": "throttle-guard",
+  "description": "PostToolUse(Task|Agent) cross-session coordinator for the TRANSIENT server throttle — 'Server is temporarily limiting requests (not your usage limit) · Rate limited' — which fires when too many concurrent requests hit at once (several sessions, or a wide fan-out). Distinct from limit-guard (the 5h/7d USAGE/session cap → checkpoint + RESUME). On detect: (1) writes/extends a SHARED cooldown marker ~/.sidecar/throttle.json with an exponential backoff (15·30·60·120·240·300s, capped) so every session/round reads one backoff window — killing the thundering-herd re-fire where all sessions retry in lockstep and re-trip the throttle; (2) injects a non-blocking directive — back off with JITTER (never retry in lockstep), cut fan-out WIDTH to ≤1 until the window passes, resume by re-reading not re-running. Concurrency control that RESPECTS the throttle (it clears once in-flight load drops), not an evasion. Gated to NOT double-fire with limit-guard (skips when the result names a usage/session limit). Implemented in hexa-lang (`_throttle_guard.hexa`, invoked via `hexa run`). NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "rate-limit", "throttle", "backoff", "concurrency", "hexa"]
+}

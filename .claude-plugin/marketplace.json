@@ -135,6 +135,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "throttle-guard",
+      "source": "./hooks/throttle-guard",
+      "description": "PostToolUse(Task|Agent) cross-session coordinator for the TRANSIENT server throttle \u2014 'Server is temporarily limiting requests (not your usage limit) \u00b7 Rate limited' \u2014 that fires when too many concurrent requests hit at once (several sessions, or a wide fan-out). Distinct from limit-guard (the 5h/7d USAGE/session cap \u2192 checkpoint + RESUME). On detect: (1) writes/extends a SHARED cooldown marker ~/.sidecar/throttle.json with an exponential backoff (15\u00b730\u00b760\u00b7120\u00b7240\u00b7300s, capped, 120s storm window) so every session/round reads ONE backoff window \u2014 killing the thundering-herd re-fire where all sessions retry in lockstep and re-trip the throttle; (2) injects a non-blocking directive \u2014 back off with JITTER (never retry in lockstep), cut fan-out WIDTH to \u22641 until the window passes, resume by re-reading not re-running. Concurrency control that RESPECTS the throttle (clears once in-flight load drops), not evasion. Gated to NOT double-fire with limit-guard (skips when the result names a usage/session limit). Implemented in hexa-lang (`_throttle_guard.hexa`, invoked via `hexa run`). NO opt-out by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "ai-api-guard",
       "source": "./hooks/ai-api-guard",
       "description": "PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang (`_ai_api_guard.hexa`, invoked via `hexa run`). Two deny patterns: (1) `curl`/`wget`/`http`/`httpie` to an AI hostname (`api.openai.com` \u00b7 `api.anthropic.com` \u00b7 `fal.run` \u00b7 `api.replicate.com` \u00b7 `generativelanguage.googleapis.com`); (2) inline `python(3)?` / `node` / `deno` / `bun` with `-c`/`-e` AND `import` of `openai` / `anthropic` / `fal_client` / `replicate` / `google.generativeai`. Redirects to `/imagine` (image) / `/research` (text) / etc. \u2014 commons @D g50 enforcement. Whitespace/line-continuation is normalized before matching (0.1.3) so multi-space / split forms still match; dynamic imports (`exec(...)`, base64) remain out of scope (static scan limit). General SDK usage in committed code files (no inline `-c`/`-e`) passes through. NO opt-out by design.",

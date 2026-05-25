@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — throttle-guard 0.1.0 (transient rate-limit 별도 플러그인 분리)
+
+여러 세션/와이드 fan-out이 동시에 API를 두드려 터지는 **일시적 서버 throttle**("temporarily limiting requests · not your usage limit")을 limit-guard(usage/session 한도)에서 **별도 플러그인으로 분리** — 신호도 처리도 달라 s1 개념 분리.
+
+- **throttle-guard 0.1.0 (신규 hook · `core`)** — `PostToolUse(Task|Agent)`. transient throttle 감지 시 (1) **세션 간 공유 쿨다운 마커** `~/.sidecar/throttle.json` 지수 백오프(15·30·60·120·240·300s · 120s storm 창) — 모든 세션이 한 백오프 창을 읽어 thundering-herd 재발사 차단, (2) jitter 백오프 + fan-out WIDTH≤1 + re-read(재실행 금지) 지시. usage/session 문구엔 skip(limit-guard와 이중발화 방지). hexa-lang(`_throttle_guard.hexa`) · opt-out 없음. 4/4 검증(FIRE+마커 · 지수 escalation · usage-limit SILENT · clean SILENT).
+- marketplace · profiles(`core`) · README(62→63 · core 28) 락스텝.
+- ⚠ 의존 fix: hexa-lang `self/runtime.c`에 `#include <spawn.h>` 누락으로 콜드 hexa 컴파일이 깨져 있어 로컬 1줄 추가로 언블록(throttle-guard·install.hexa 등 신규 hexa 빌드 전부 영향) — 영구 fix는 hexa-lang main에 랜딩 필요(g59).
+
 ## 2026-05-26 — CLOSURE_POLICY.md (닫힘 정직성 정책 문서화)
 
 cycle 0.7.7 + domain 0.8.8 가 막은 LIFE-class false closure 의 방어법 + 설계 방향을 루트 정책 문서 `CLOSURE_POLICY.md` 로 기록. `LATTICE_POLICY.md`(한계 주장의 정직성)의 자매 — 닫힘 주장의 정직성. 2겹 근본원인(stale untracked SSOT shadow · perpetual 오취급) → 두 기둥(SSOT 신선도 · 닫힘 정직성) + 보조(roster self-heal) + 설계 원칙 5개(SSOT=live · 정직성>진행감 · fail-open · surface-don't-act · 마커 기반 일반화) + 구현 매핑표. README 에 `## Policies` 섹션 신설(두 honesty 정책 묶음) + Reference·Layout 갱신. 코드 변경 없음(문서 전용).

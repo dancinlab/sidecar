@@ -18,6 +18,7 @@
     "memory-lint": "core",
     "limit-guard": "core",
     "monitor-guard": "core",
+    "throttle-guard": "core",
     "quota": "core",
     "quota-autoadd": "core",
     "secret": "core",

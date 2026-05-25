@@ -1,0 +1,123 @@
+// _throttle_guard.hexa — PostToolUse(Task|Agent) cross-session transient-throttle coordinator.
+//
+// DISTINCT from limit-guard: limit-guard handles the 5h/7d USAGE/session
+// limit (→ checkpoint + RESUME.md). THIS handles the TRANSIENT server
+// throttle — "Server is temporarily limiting requests (not your usage
+// limit) · Rate limited" — which fires when too many concurrent requests
+// hit at once (several sessions, or a wide fan-out). On detect:
+//   1. write/extend a SHARED cooldown marker ~/.sidecar/throttle.json with
+//      an EXPONENTIAL backoff (15·30·60·120·240·300s, capped) so every
+//      session/round reads one backoff window — kills the thundering-herd
+//      re-fire (all sessions retrying in lockstep re-trip the throttle).
+//   2. inject a non-blocking directive: back off with JITTER, cut fan-out
+//      WIDTH to ≤1 until the window passes, resume by re-reading not re-running.
+// Advisory only (PostToolUse additionalContext, never denies). NO opt-out by
+// design — no env var, no config file, no exception list.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _read_file_safe(p: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(p)) } catch e { out = "" }
+    return out
+}
+
+fn _now() -> int {
+    return to_int(_trim(to_string(exec("date +%s"))))
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    return hay.index_of(needle) >= 0
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let lo = raw.to_lower()
+
+    // TRANSIENT throttle only — NOT the usage/session cap (that is limit-guard's
+    // job; gate it out so the two guards never double-fire on one result).
+    let hit = _contains(lo, "temporarily limiting")
+        || (_contains(lo, "rate limited") && !_contains(lo, "usage limit") && !_contains(lo, "session limit"))
+    if !hit { _allow() }
+
+    let home = env_var("HOME")
+    let path = home + "/.sidecar/throttle.json"
+    let now = _now()
+
+    // prior storm state
+    let mut hits = 0
+    let mut last = 0
+    try {
+        let m = json_parse(_read_file_safe(path))
+        if type_of(m) == "map" {
+            if has_key(m, "hits") { hits = to_int(to_string(m["hits"])) }
+            if has_key(m, "last") { last = to_int(to_string(m["last"])) }
+        }
+    } catch e { hits = 0; last = 0 }
+
+    // within a 120s window = same storm → escalate; else a fresh storm
+    if now - last >= 0 && now - last < 120 { hits = hits + 1 } else { hits = 1 }
+
+    // exponential cooldown: 15 · 2^(hits-1), capped at 300s
+    let mut cd = 15
+    let mut i = 1
+    while i < hits { cd = cd * 2; i = i + 1 }
+    if cd > 300 { cd = 300 }
+    let until = now + cd
+
+    let _mk = exec("mkdir -p " + home + "/.sidecar")
+    write_file(path, "{\"until\":" + to_string(until) + ",\"hits\":" + to_string(hits) + ",\"last\":" + to_string(now) + ",\"cooldown\":" + to_string(cd) + "}\n")
+
+    let cds = to_string(cd)
+    let body = "⚠ TRANSIENT THROTTLE detected (server 'temporarily limiting requests' — NOT your usage limit). A concurrency burst, shared across all your sessions. Cross-session cooldown written to ~/.sidecar/throttle.json (cooldown +" + cds + "s · storm hit #" + to_string(hits) + ").\n\n1. BACK OFF with JITTER — wait ~" + cds + "s plus a random 0-" + cds + "s before any retry. NEVER retry in lockstep: all sessions retrying at once re-trip the throttle (thundering herd).\n2. CUT fan-out WIDTH — spawn at most 1 background Agent (ideally 0) until the cooldown passes; serialize instead of parallelize.\n3. RESUME by re-reading state (last checkpoint commit / log) — do NOT re-run completed work.\nThis is concurrency control, not a usage limit — it clears on its own once total in-flight load drops. (limit-guard handles the separate 5h/7d cap.)"
+
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(body) + "}}"
+    println(out)
+    exit(0)
+}

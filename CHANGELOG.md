@@ -15,6 +15,15 @@ hexa-lang INBOX cross-repo handoff 2건 해소 (둘 다 hexa-lang 이 아니라 
   - **검증** — 4 케이스 PASS: `hexa cloud exec`→allow(local) · `hexa kick`→여전히 라우팅(회귀 없음) · 비-git `/tmp`→deny 유지 · `/tmp` worktree→`~/core/sidecar` rescue + ubu-2 라우팅.
   - **표면**: `hooks/pool-route/bin/_pool_route.hexa` (cloud early-allow + deny-branch rescue) · `hooks/pool-route/.claude-plugin/plugin.json` 0.6.9 → 0.6.10 · `.claude-plugin/marketplace.json` pool-route 0.6.9 → 0.6.10 · `hooks/pool-route/README.md` · README 표 cell.
 
+## 2026-05-25 — domain 0.8.6: `/domain list` (alias `ls`) — repo 전체 도메인 인덱스
+
+- **domain 0.8.6 — `/domain list` (alias `ls`)** — 프로젝트마다 도메인이 늘고 일부가 `<NAME>/` 폴더 안으로 이동하면서, "이 repo에 도메인이 뭐가 있더라?"를 한눈에 볼 surface가 없던 갭을 메움. bare `/domain` 은 활성 1개만 보여주는데, `list` 는 repo 전체(루트 + 한 단계 폴더)를 스캔해 도메인 쌍(`<NAME>.md` + `<NAME>.log.md`)을 한 표로 렌더 — `★ = 활성 · @goal · 진행바 · 위치(./ 또는 <NAME>/)`.
+  - **온디맨드 · 체크인 파일 없음** — 호출 때마다 파일시스템을 스캔하므로 드리프트 0. 별도 인덱스 파일을 체크인하지 않아 git churn 없음 (g0 occam · "SSOT는 파일에서 파생" 원칙 유지).
+  - **도메인 판별** — `.log.md` 짝(sister)이 도메인 마커 (README/CHANGELOG/CLAUDE 는 `.log.md` 없음). 폴더 쌍은 `<NAME>/<NAME>.log.md`(폴더명 == 도메인명)일 때만 인정 + `<NAME>.md` 스냅샷 존재 필수 → `notadomain/OTHER.log.md` 같은 비-도메인은 제외. `.md` 짝 없는 스트레이(예 레거시 underscore `HEXA_LANG.log.md`)는 자연히 빠지고, `_is_name` 실패하는 이름은 `⚠legacy-name` 으로 표식해 정리 유도.
+  - **렌더** — 활성 도메인 행이 맨 위, 나머지는 `find | sort` 순. 진행바는 컴팩트형(`▓▓▓░░ NN%`, 퍼센트 3-wide 우측정렬로 ▓/░ 멀티바이트 폭과 무관하게 열 고정). @goal 은 행 끝(가변 폭) · 72바이트로 절단하되 UTF-8 룬 경계를 찾아 한글이 중간에 깨지지 않게 처리.
+  - **검증** — sidecar(4 도메인) · hexa-lang(10 도메인, ★ 활성 마커 + 한글 goal 절단) · 임시 repo(루트 + 폴더 중첩 + 비-도메인 폴더 제외) 3 케이스 PASS.
+  - **표면**: `skills/domain/bin/_domain.hexa` (`_truncate`/`_rpad`/`_lpad3`/`_bar_compact`/`_goal_at`/`_count_at`/`_ends_with`/`_list_row`/`_list` + `list`/`ls` dispatch + `_usage`) · `skills/domain/.claude-plugin/plugin.json` 0.8.5 → 0.8.6 · `.claude-plugin/marketplace.json` domain 0.8.5 → 0.8.6 · SKILL.md · commands/domain.md · README 표 cell + 명령 카탈로그.
+
 ## 2026-05-25 — domain 0.8.5: 옵션 `@title:` 디스플레이 헤더 (아이콘·이름·별칭)
 
 - **domain 0.8.5 — `/domain title <text>` (alias `subtitle`) + 옵션 `@title:` 필드** — anima IIT4 핸드오프(INBOX) 해소. 도메인 스냅샷에 easy-mode 7요소 헤더(아이콘 · 이름 · 별칭, 예 `🧠 IIT4 — "의식 측정자(尺)"`)를 옵션으로 달 수 있게 했음. bare `/domain` · `set <NAME>` 출력이 `@title:` 가 있으면 plain `◆ active domain: IIT4` 대신 `◆ 🧠 IIT4 — "의식 측정자(尺)"   🎯 <goal>` 로 렌더. easy plugin 7요소와 도메인 트래커의 정합 갭을 메움.

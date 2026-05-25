@@ -643,9 +643,176 @@ fn _show(root: string, name: string) {
     print(_read_file_safe(log))
 }
 
+fn _ends_with(s: string, suf: string) -> bool {
+    if len(suf) > len(s) { return false }
+    return s.substring(len(s) - len(suf), len(s)) == suf
+}
+
+// pad `s` with trailing spaces to display width `w` (ASCII-only callers — name,
+// location — so char count == display width). No-op when already ≥ w.
+fn _rpad(s: string, w: int) -> string {
+    let mut out = s
+    while len(out) < w { out = out + " " }
+    return out
+}
+
+// Truncate `s` to at most `max` BYTES with a `…` suffix, backing the cut up to
+// a UTF-8 rune boundary so a multibyte (Korean) goal never splits mid-char.
+// hexa strings are byte-indexed (len/substring/char_code count bytes); a
+// continuation byte is 0x80..0xBF (128..191), so a cut landing on one is mid-
+// rune — walk back until char_code is an ASCII (<128) or lead (≥192) byte.
+fn _truncate(s: string, max: int) -> string {
+    if len(s) <= max { return s }
+    let mut cut = max
+    while cut > 0 {
+        let b = char_code(s, cut)
+        if b < 128 || b >= 192 { break }
+        cut = cut - 1
+    }
+    return s.substring(0, cut) + "…"
+}
+
+// right-justify a 0..100 percent into a 3-wide ASCII field (`  0` / ` 60` /
+// `100`) so the progress column stays fixed-width regardless of ▓/░ byte width.
+fn _lpad3(n: int) -> string {
+    let mut s = to_string(n)
+    while len(s) < 3 { s = " " + s }
+    return s
+}
+
+// compact progress bar for the list table: 10 cells + space + right-justified
+// `NNN%`. Fixed display width (the ▓/░ glyphs are single-cell in terminals; the
+// percent is right-padded to 3) so rows align without measuring multibyte len.
+fn _bar_compact(done: int, total: int) -> string {
+    let mut pct = 0
+    let mut filled = 0
+    if total > 0 {
+        pct = (done * 100) / total
+        filled = (done * 10) / total
+    }
+    let mut bar = ""
+    let mut i = 0
+    while i < 10 {
+        if i < filled { bar = bar + "▓" } else { bar = bar + "░" }
+        i = i + 1
+    }
+    return bar + " " + _lpad3(pct) + "%"
+}
+
+// path-based @goal: reader (the (root,name) `_get_goal` resolves root-first; the
+// list needs the goal for an EXACT snapshot path it already located).
+fn _goal_at(snap: string) -> string {
+    let body = _read_file_safe(snap)
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@goal:") {
+            return _trim(lines[i].substring(6, len(lines[i])))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// path-based [done, todo] milestone count for an EXACT snapshot path.
+fn _count_at(snap: string) -> array {
+    let body = _read_file_safe(snap)
+    let lines = body.split("\n")
+    let mut done = 0
+    let mut todo = 0
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [x] ") { done = done + 1 }
+        else if _starts_with(ln, "- [ ] ") { todo = todo + 1 }
+        i = i + 1
+    }
+    return [done, todo]
+}
+
+// Render one domain row: `<mark> <NAME> <bar>  <loc> <goal>`. Goal is LAST
+// (variable CJK width) so nothing after it needs alignment; name/loc are ASCII
+// and padded to fixed columns. An invalid (`_is_name`-failing) name — e.g. a
+// legacy underscore stray — is flagged so the user can clean it up.
+fn _list_row(name: string, loc: string, snap: string, active: string) {
+    let c = _count_at(snap)
+    let goal = _goal_at(snap)
+    let mark = if name == active { "★ " } else { "  " }
+    let mut tail = "(no @goal ⚠)"
+    if goal != "" { tail = _truncate(goal, 72) }
+    if !_is_name(name) { tail = tail + "  ⚠legacy-name" }
+    println(mark + _rpad(name, 13) + " " + _bar_compact(c[0], c[1] + c[0]) + "  " + _rpad(loc, 9) + " " + tail)
+}
+
+// `/domain list` (alias `ls`) — scan the repo (root + one folder level) for
+// every domain pair (`<NAME>.md` + `<NAME>.log.md`) and render a one-shot table
+// (★ = the session's active domain). On-demand: no checked-in index file, so it
+// never drifts. The `.log.md` sister is the domain marker (README/CHANGELOG/
+// CLAUDE have none); a folder pair counts only as `<NAME>/<NAME>.log.md` (dir
+// basename == name). The active row prints first, the rest in `find | sort`
+// order.
+fn _list(root: string) {
+    let active = _get_active(root)
+    let raw = to_string(exec("find '" + root + "' -maxdepth 2 -name '*.log.md' 2>/dev/null | sort"))
+    let lines = raw.split("\n")
+    let pfx = root + "/"
+    // parallel arrays of resolved domain pairs
+    let mut names = []
+    let mut locs = []
+    let mut snaps = []
+    let mut i = 0
+    while i < len(lines) {
+        let p = _trim(lines[i])
+        i = i + 1
+        if p == "" { continue }
+        let mut rel = p
+        if _starts_with(p, pfx) { rel = p.substring(len(pfx), len(p)) }
+        let file = _basename(rel)
+        if !_ends_with(file, ".log.md") { continue }
+        let name = file.substring(0, len(file) - 7)
+        if name == "" { continue }
+        let slash = rel.index_of("/")
+        let mut dir = root
+        let mut loc = "./"
+        if slash >= 0 {
+            // folder pair only when the folder IS the domain (<NAME>/<NAME>.log.md)
+            let folder = rel.substring(0, slash)
+            if folder != name { continue }
+            dir = root + "/" + name
+            loc = name + "/"
+        }
+        let snap = dir + "/" + name + ".md"
+        if !file_exists(snap) { continue }   // require the snapshot sister
+        names.push(name)
+        locs.push(loc)
+        snaps.push(snap)
+    }
+    let total = len(names)
+    let base = _domain_name(_basename(root))
+    if total == 0 {
+        println("◆ " + base + " · 도메인 없음 — /domain init <NAME> 로 시작")
+        return
+    }
+    println("◆ " + base + " · 도메인 " + to_string(total) + "개  (★ = 활성)")
+    println("")
+    // active row first
+    let mut j = 0
+    while j < total {
+        if names[j] == active { _list_row(names[j], locs[j], snaps[j], active) }
+        j = j + 1
+    }
+    // remaining rows in sorted order
+    j = 0
+    while j < total {
+        if names[j] != active { _list_row(names[j], locs[j], snaps[j], active) }
+        j = j + 1
+    }
+}
+
 fn _usage() {
     eprintln("usage:")
     eprintln("  domain                      Show active domain + @goal + progress bar (+ lint)")
+    eprintln("  domain list                 List every domain pair in the repo (alias: ls) — ★ = active · goal · progress · location")
     eprintln("  domain init <NAME>          Scaffold <NAME>.md + <NAME>.log.md (NAME = UPPERCASE-start + UPPERCASE/digits/`-`/`+`; `+` for meta-domain: RTSC+HTS)")
     eprintln("  domain set <NAME>           Select NAME as the session's active domain")
     eprintln("  domain <NAME>               (shortcut for `set <NAME>`)")
@@ -680,6 +847,14 @@ fn main() {
     let v = args[0]
     if v == "-h" || v == "--help" {
         _usage()
+        return
+    }
+
+    // `list` (alias `ls`) — repo-wide domain index: scan root + one folder
+    // level for every `<NAME>.md` + `<NAME>.log.md` pair and table them. Read
+    // only; no active-domain change, no checked-in index file.
+    if v == "list" || v == "ls" {
+        _list(root)
         return
     }
 

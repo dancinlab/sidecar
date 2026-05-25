@@ -2,6 +2,20 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-26 — worktree-gc 가 활성 worktree prune (브랜치명 재사용 오판) (from demiurge monograph fan-out)
+
+> demiurge monograph 함대(CERN·RTSC·ANTIMATTER·UFO)를 `isolation:worktree` + `/Users/ghost/wt-*-mono` 로 fan-out 하던 중, 빌드 진행 중인 worktree 가 통째로 사라지는 사고가 다수 에이전트에서 반복. 기존 `hooks/worktree-gc` 0.1.0(merged-prune)이 *살아있는* worktree 를 prune 한 것 — 2026-05-25 "4-gap"(harness HEAD/ref/bundle)과 별개의 **worktree-gc 자체 갭**(sidecar-actionable).
+
+- [ ] **증상**: `git worktree add -b feat/cern-monograph /Users/ghost/wt-cern-mono origin/main` 성공 직후, 빌드 중 worktree 가 wipe — `.git` 링크 + `main.tex`/`Makefile`/`appendix/` 소실, `companion/` + fal.ai `cover.png` 만 생존(= 비원자/race prune). CERN(PR #220)·ANTIMATTER(PR #222) 각각 1회, 모두 checkpoint-commit + `/private/tmp` 재컷으로 복구.
+- [ ] **원인 추정**: 브랜치명 재사용. 이전(압축된) 세션이 동명 `feat/<dom>-monograph` 를 생성→merge→origin 브랜치 삭제 → SessionStart worktree-gc 가 worktree 의 브랜치를 **이름 기준 "origin-gone"** 으로 판정 → 동명으로 재컷한 신규 worktree(미푸시 라이브 작업)를 merged 로 오인하고 prune. 0.1.0 의 open-PR skip 가드는 빌드(=PR 생성 전) 단계엔 무력.
+- [ ] **fix 후보** (worktree-gc 0.2.0):
+    - **dirty/recent-mtime 가드**: prune 전 `git -C <wt> status --porcelain` 비어있지 않거나 최근 N분(예: 30m) 내 mtime 파일 있으면 skip — 라이브 에이전트가 쓰는 중.
+    - **HEAD-ancestor 진짜-merged 체크**: "원격 브랜치명 부재"가 아니라 worktree 의 로컬 HEAD 가 merge 커밋의 ancestor 일 때만 prune. 동명 재사용 + 신규 로컬 커밋은 ancestor 아님 → 보존.
+    - **cwd-in-use 체크**: `lsof`/프로세스 cwd 가 worktree 안이면 skip.
+    - **원자 prune**: 가드 통과 후엔 all-or-nothing (부분 wipe 금지).
+- [ ] **severity**: high — in-flight 에이전트 작업을 조용히 파괴. 이번 세션 monograph 함대에서 다수 재발. checkpoint-commit 이 유일한 방어선이었음.
+- 출처: demiurge monograph fan-out 2026-05-26 (CERN #220 · RTSC #221 · ANTIMATTER #222 · UFO in-flight). 회피책(현재): 빌드 worktree 를 `/private/tmp` 에 두고 `make` 대신 texbin 직접 호출(별 갭 — pool-route 가 `make` 단어를 ubu 로 라우팅).
+
 ## 2026-05-26T00:05Z — paper:paper v0.8 — 3 verb 버그 (from: demiurge ANTIMATTER paper rego PR #197)
 
 **맥락**: ANTIMATTER BLUE-MAX paper를 paper v0.8(sample-blue-max + 신규 verb)로 재생성 중 3개 verb가 advertised대로 동작 안 함. stub-first (g60) — 구현은 review 후.

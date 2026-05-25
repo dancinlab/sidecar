@@ -555,6 +555,56 @@ fn _set_goal(root: string, name: string, text: string) {
     write_file(snap, out.join("\n"))
 }
 
+// the snapshot's optional display title: a single `@title: <text>` line — an
+// easy-mode 7-element header (icon · name · alias), e.g.
+// `🧠 IIT4 — "의식 측정자(尺)"`. Rendered by _show in place of the plain
+// `active domain: NAME`. Empty string when none declared (the default).
+fn _get_title(root: string, name: string) -> string {
+    let body = _read_file_safe(_snap_path(root, name))
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@title:") {
+            return _trim(lines[i].substring(7, len(lines[i])))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// set/replace the `@title:` line. An existing line is replaced IN PLACE (so
+// repeated edits never accumulate blank lines); otherwise a fresh line is
+// inserted directly under the first `# ` heading. Optional field — absence
+// keeps the current plain output, so this is fully non-breaking.
+fn _set_title(root: string, name: string, text: string) {
+    _ensure_files(root, name)
+    let snap = _snap_path(root, name)
+    let body = _read_file_safe(snap)
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@title:") {
+            lines[i] = "@title: " + text
+            write_file(snap, lines.join("\n"))
+            return
+        }
+        i = i + 1
+    }
+    let mut out = []
+    let mut placed = false
+    i = 0
+    while i < len(lines) {
+        out.push(lines[i])
+        if !placed && _starts_with(lines[i], "# ") {
+            out.push("@title: " + text)
+            placed = true
+        }
+        i = i + 1
+    }
+    if !placed { out.push("@title: " + text) }
+    write_file(snap, out.join("\n"))
+}
+
 // lint a domain's snapshot: a final goal (`@goal:`) AND ≥1 milestone (`- [ ]`/
 // `- [x]`) are both required. Warn-only (stderr), never blocks.
 fn _lint(root: string, name: string) {
@@ -573,12 +623,16 @@ fn _show(root: string, name: string) {
     let log = _log_path(root, name)
     let goal = _get_goal(root, name)
     let c = _count_tasks(root, name)
+    // header label: the optional `@title:` (icon · name · alias) when set, else
+    // the plain `active domain: NAME` — keeps pre-@title output unchanged.
+    let title = _get_title(root, name)
+    let label = if title != "" { title } else { "active domain: " + name }
     // progress is reported ONLY when an `@goal:` is declared — the goal is
     // the frame of reference. No goal → no progress line (just the lint).
     if goal == "" {
-        println("◆ active domain: " + name)
+        println("◆ " + label)
     } else {
-        println("◆ active domain: " + name + "   🎯 " + goal)
+        println("◆ " + label + "   🎯 " + goal)
         println("진행 " + _progress_bar(c[0], c[0] + c[1]))
     }
     _lint(root, name)
@@ -596,6 +650,7 @@ fn _usage() {
     eprintln("  domain set <NAME>           Select NAME as the session's active domain")
     eprintln("  domain <NAME>               (shortcut for `set <NAME>`)")
     eprintln("  domain goal <text>          Declare the FINAL goal — sets the snapshot's `@goal:` line")
+    eprintln("  domain title <text>         Set an optional display title (alias: subtitle) — icon · name · alias, e.g. '🧠 IIT4 — 의식 측정자(尺)'")
     eprintln("  domain milestone <text>     Add a `- [ ]` progress milestone (alias: ms) — counts toward progress")
     eprintln("  domain done <match>         Flip a milestone `- [ ]` -> `- [x]`, else flip a log task")
     eprintln("  domain todo <task-text>     Append `- [ ] <task-text>` to the log")
@@ -664,6 +719,21 @@ fn main() {
         let g = _join_from(args, 1)
         _set_goal(root, eff_name, g)
         println("🎯 goal set · " + eff_name + ": " + g)
+        return
+    }
+
+    // `title <text>` (alias `subtitle`) — set/replace the snapshot's optional
+    // `@title:` line: an easy-mode 7-element header (icon · name · alias), e.g.
+    // `🧠 IIT4 — "의식 측정자(尺)"`. Rendered by bare /domain + set in place of
+    // the plain `active domain: NAME`. Optional — absence keeps current output.
+    if v == "title" || v == "subtitle" {
+        if argc < 2 {
+            eprintln("usage: domain title <text>   (e.g. domain title '🧠 IIT4 — 의식 측정자(尺)')")
+            exit(1)
+        }
+        let t = _join_from(args, 1)
+        _set_title(root, eff_name, t)
+        println("🏷  title set · " + eff_name + ": " + t)
         return
     }
 

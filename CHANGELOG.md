@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — domain 0.8.5: 옵션 `@title:` 디스플레이 헤더 (아이콘·이름·별칭)
+
+- **domain 0.8.5 — `/domain title <text>` (alias `subtitle`) + 옵션 `@title:` 필드** — anima IIT4 핸드오프(INBOX) 해소. 도메인 스냅샷에 easy-mode 7요소 헤더(아이콘 · 이름 · 별칭, 예 `🧠 IIT4 — "의식 측정자(尺)"`)를 옵션으로 달 수 있게 했음. bare `/domain` · `set <NAME>` 출력이 `@title:` 가 있으면 plain `◆ active domain: IIT4` 대신 `◆ 🧠 IIT4 — "의식 측정자(尺)"   🎯 <goal>` 로 렌더. easy plugin 7요소와 도메인 트래커의 정합 갭을 메움.
+  - **non-breaking**: `@title:` 미설정 도메인은 100% 현행 동작 (plain `active domain: NAME`). lint 은 `@title:` 부재를 경고하지 않음 (별칭은 취향 — `@goal`/milestone 처럼 필수 아님 · g0 occam).
+  - **`_set_title`**: 기존 `@title:` 는 in-place 교체(반복 편집 시 빈 줄 누적 없음), 없으면 `# ` 헤딩 바로 아래 삽입. `_get_title` 은 `_get_goal` 미러.
+  - **표면**: `skills/domain/bin/_domain.hexa` (`_get_title`/`_set_title`/`title` verb/`_show` 렌더/`_usage`) · `skills/domain/.claude-plugin/plugin.json` 0.8.4 → 0.8.5 · `.claude-plugin/marketplace.json` domain 0.8.4 → 0.8.5 · SKILL.md · commands/domain.md · README 표 cell.
+
 ## 2026-05-25 — commons 0.10.6: micro-exp 카탈로그 backfill + README 문서 정합화
 
 - **commons 0.10.6 — 슬래시 명령 카탈로그(`COMMANDS.md`)에 `/micro-exp:micro-exp` 추가** — micro-exp(0.2.0)가 랜딩됐으나(`5c8174d`) SessionStart-주입 카탈로그에 누락돼 있었음. Dispatch 섹션(`/cloud` 옆)에 한 줄 추가. commons 가 carry 하는 콘텐츠 변경이므로 g22 lockstep 으로 버전 bump.

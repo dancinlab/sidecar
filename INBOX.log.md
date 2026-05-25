@@ -35,6 +35,15 @@ bare /domain:
 
 **근거**: 작은 비침습 추가(옵션 필드 1개 + 서브커맨드 1개 + 출력 렌더 분기). 미설정 도메인은 100% 현행 동작. easy plugin 7요소와 도메인 트래커의 정합을 메운다.
 
+### 제안 surface 처리
+
+- [x] **`<NAME>.md` 옵션 `@title:` 필드** — ✅ `_get_title`(=`_get_goal` 미러) 추가. `@goal:` 위에 위치.
+- [x] **`/domain title <text>` 서브커맨드** (alias `subtitle`) — ✅ `title`/`subtitle` verb 추가. `_set_title` 은 기존 `@title:` in-place 교체(빈 줄 누적 없음)·없으면 헤딩 바로 아래 삽입.
+- [x] **bare `/domain` · `set <NAME>` 출력 렌더** — ✅ `_show` 가 `@title:` 있으면 `◆ <title>   🎯 <goal>`, 없으면 `◆ active domain: NAME` 현행 fallback.
+- [x] **lint(옵션)** — ✅ `_lint` 미변경 = `@title:` 부재 무경고 (취향 필드 · g0). 형식 강제도 없음.
+
+**Status**: ✅ resolved · fix=domain 0.8.5 (`skills/domain/bin/_domain.hexa` + plugin.json·marketplace.json·SKILL.md·commands/domain.md·README·CHANGELOG) · non-breaking(미설정=현행) · 3× title-edit idempotency + render 검증 · 2026-05-25
+
 ## 2026-05-25T06:01Z — pool.json roster race-wipe → atomic-write/lock 방어 (from: demiurge RTSC 세션)
 
 **증상 (이번 세션 실증)**: 동시 claude 세션/agent 다수가 `~/.pool/pool.json` 을 read-modify-write 하던 중 roster 가 `{"hosts": []}` (17B) 로 통째 wipe. `pool list` → "empty roster" · `pool on ubu-1` → "not in roster" → 실행 중 DFT job (ubu-1 nohup) 접근이 전면 차단됨. 직전 정상본 `pool.json.n11bak` (639B) 수동 `cp` 복구로 해소.

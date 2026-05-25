@@ -15,6 +15,7 @@
     "output-trim": "core",
     "memory-lint": "core",
     "limit-guard": "core",
+    "monitor-guard": "core",
     "quota": "core",
     "quota-autoadd": "core",
     "secret": "core",

@@ -162,6 +162,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   memory-lint    MEMORY.md pileup / long lines → archive
 #   inbox-log-lint INBOX.log.md pileup → archive
 #   limit-guard    subagent session-limit → checkpoint directive
+#   monitor-guard  bg/long shell launch → detach + log + Monitor (g10, rate-limit survival)
 #   pod-monitor    GPU pod fire → SAVE_POD / detach reminders (g57)
 #   s9-guard       Mac load-check cmds → exclude claude PIDs (s9)
 # SESSION lifecycle:
@@ -170,7 +171,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-56 plugins across `{hook · command · skill · mcp}` — one concept each (25 `core` · 14 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+57 plugins across `{hook · command · skill · mcp}` — one concept each (26 `core` · 14 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -186,6 +187,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`git-guard`](hooks/git-guard/) | hook | `core` | 0.5.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`) |
 | [`limit-guard`](hooks/limit-guard/) | hook | `core` | 0.1.3 | PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) |
 | [`memory-lint`](hooks/memory-lint/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memo… |
+| [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.0 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10, rate-limit survival); proactive sister of limit-guard |
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
 | [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
 | [`pool-mcp`](mcps/pool-mcp/) | mcp | `core` | 0.1.1 | stdio MCP server exposing pool hosts as Claude Code MCP tools |
@@ -214,7 +216,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |
 | [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
-| [`commons`](hooks/commons/) | hook | `personal` | 0.10.6 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
+| [`commons`](hooks/commons/) | hook | `personal` | 0.10.12 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |

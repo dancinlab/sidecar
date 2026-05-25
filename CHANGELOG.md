@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — monitor-guard 0.1.0 + commons g10 (rate-limit 생존 while-monitor)
+
+배경/장기 셸 작업이 rate-limit으로 강제종료될 때 진행분을 잃는 문제를 잡는다. `@D s7`(규칙+enforcement 동시 출하)대로 governance 개정과 가드 훅을 한 사이클에 함께 출하.
+
+- **commons `@D g10` 개정** — "Monitor tool 필수"에서 **"background work — detach + log + Monitor, survive rate-limit"**로 확장. 옛 "모델 sleep-poll 금지"는 `dont`에 보존하되, detach(`nohup`/`setsid`) + progress log + **Monitor를 LOG에 부착**(live 프로세스 아님 — 토큰 경량·rate-limit 후 재첨부) + detached OS `while` heartbeat(liveness) 를 추가. user sign-gate(`sidecar sign commons`) 경유.
+- **monitor-guard 0.1.0 (신규 hook · `core`)** — `PreToolUse(Bash)` advisory. 배경 작업 발사(끝 단일 `&` · `nohup`/`setsid`/`disown` · Bash `run_in_background`) 감지 시, durable 패턴(detach + log)이 빠졌을 때만 non-blocking additionalContext로 g10을 상기. 이미 detach+log면 침묵. pod-monitor(GPU pod)의 일반-로컬 자매 · limit-guard(사후 checkpoint)의 proactive 짝. hexa-lang(`_monitor_guard.hexa`) · opt-out 없음.
+- marketplace.json · profiles.json(`core`) · README(57 plugins · core 26 · 표 · ASCII) 락스텝.
+
 ## 2026-05-26 — paper 0.9.0 — monograph mode + 58p-build bug-fixes
 
 The HEXA-FUSION 58-page monograph proved the pattern; this re-design ships it as first-class verbs and fixes the real pain points that build surfaced.

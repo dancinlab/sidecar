@@ -1,0 +1,113 @@
+// _monitor_guard.hexa — PreToolUse(Bash) advisory for background / long shell launches.
+//
+// Fires when a Bash command launches background / long-running work
+// (trailing single `&` · `nohup` / `setsid` / `disown` · or the Bash tool's
+// `run_in_background` flag). When the rate-limit-survivable pattern is
+// incomplete, emits non-blocking additionalContext enforcing commons
+// @D g10 — the while-monitor pattern:
+//   1. detach (nohup/setsid) so a session rate-limit death does NOT SIGHUP the job
+//   2. progress log (`> /tmp/<job>.log 2>&1`) — durable record + Monitor re-attach point
+//   3. attach the Monitor tool to the LOG (not the live pipe) + an OS-side
+//      `while` heartbeat for liveness (token-free; no model sleep-poll)
+//
+// Stays silent when the job is already detached AND logged. General-local
+// sister of pod-monitor (GPU pods). NO opt-out by design — no env var, no
+// config file, no exception list.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _trim_end(s: string) -> string {
+    let mut n = len(s)
+    while n > 0 {
+        let c = s[n - 1]
+        if c != " " && c != "\t" && c != "\n" && c != "\r" { break }
+        n = n - 1
+    }
+    return s.substring(0, n)
+}
+
+// trailing single `&` (background) — NOT `&&` (logical-and chain).
+fn _ends_single_amp(cmd: string) -> bool {
+    let t = _trim_end(cmd)
+    let n = len(t)
+    if n == 0 { return false }
+    if t[n - 1] != "&" { return false }
+    if n >= 2 && t[n - 2] == "&" { return false }
+    return true
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0
+
+    let mut run_bg = false
+    if has_key(ti, "run_in_background") {
+        if ti["run_in_background"] == true { run_bg = true }
+    }
+
+    let has_detach = cmd.contains("nohup ") || cmd.contains("setsid ") || cmd.contains("disown")
+    let is_bg = run_bg || has_detach || _ends_single_amp(cmd) || cmd.contains(" & ")
+    if !is_bg { _allow() }
+
+    // durable progress sink — a real file, append, or tee (not /dev/null).
+    let has_log = cmd.contains(".log") || cmd.contains(".out") || cmd.contains("tee ") || cmd.contains(">>")
+
+    // run_in_background is harness-detached, so it counts as detached.
+    let need_detach = !has_detach && !run_bg
+    let need_log = !has_log
+    if !need_detach && !need_log { _allow() }
+
+    let mut hints = []
+    if need_detach {
+        hints.push("  • detach 없음 — `nohup setsid <job> &` 로 분리 (안 하면 세션 rate-limit 사망 시 작업도 SIGHUP)")
+    }
+    if need_log {
+        hints.push("  • progress log 없음 — `> /tmp/<job>.log 2>&1` (durable 기록 + Monitor 재첨부 지점 · rate-limit 후 재개 가능)")
+    }
+    hints.push("  • 🛰️ Monitor는 LOG 파일에 붙여라 (live 프로세스 아님) — 토큰 경량·세션 부활 시 재첨부; liveness는 detached `while kill -0 $!; do …; sleep N; done &` heartbeat (모델 sleep-poll 금지)")
+
+    let body = "⚠ 배경 작업 감지 (commons @D g10 · rate-limit 생존) — while-monitor 패턴:\n" + hints.join("\n")
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_str(body) + "}}"
+    println(out)
+    exit(0)
+}

@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g70` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.10.11"
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g71` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.10.12"
     },
     {
       "name": "prefs",
@@ -97,6 +97,12 @@
       "source": "./hooks/pod-monitor",
       "description": "PreToolUse(Bash) advisory hook for GPU pod fires (`hexa cloud nohup` / `hexa cloud run`). Emits non-blocking additionalContext reminding the agent of commons @D g57 \u2014 three invariants: set `SAVE_POD=1` envar (pod retain when SSH drops), attach the \ud83d\udef0\ufe0f Monitor tool to the streaming log (no `tail -f` / sleep-poll), AND \u23f1 estimate walltime up front with pod-hours headroom (undersize \u2192 pod auto-killed mid-run \u2192 result LOST). Closes the R8a-LOST class. Sister of cloud-guard (which blocks raw runpodctl/vastai); pod-monitor advises on the wrapped `hexa cloud` path. Implemented in hexa-lang (`_pod_monitor.hexa`, invoked via `hexa run`). NO opt-out by design.",
       "version": "0.1.2"
+    },
+    {
+      "name": "monitor-guard",
+      "source": "./hooks/monitor-guard",
+      "description": "PreToolUse(Bash) advisory hook for background / long-running shell launches (trailing `&` \u00b7 `nohup`/`setsid`/`disown` \u00b7 the Bash tool's `run_in_background` flag). When the rate-limit-survivable pattern is incomplete, emits non-blocking additionalContext enforcing commons @D g10 \u2014 the while-monitor pattern: (1) detach the job (`nohup`/`setsid`) so a session rate-limit death does NOT SIGHUP it, (2) write a progress log (`> /tmp/<job>.log 2>&1`) as a durable record + Monitor re-attach point, (3) attach the \ud83d\udef0\ufe0f Monitor tool to the LOG (not the live pipe \u2014 token-light, re-attachable after a rate-limit), with an OS-side `while` heartbeat for liveness (no model-side sleep-poll). Stays silent when the job is already detached AND logged. Closes the rate-limit-force-kill class for general local background work; general-local sister of pod-monitor (GPU pods) and proactive sister of limit-guard (post-hoc checkpoint). Implemented in hexa-lang (`_monitor_guard.hexa`, invoked via `hexa run`). NO opt-out by design.",
+      "version": "0.1.0"
     },
     {
       "name": "ai-api-guard",

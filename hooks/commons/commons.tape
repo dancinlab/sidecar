@@ -42,9 +42,12 @@
   do   = "sidekick roster → `pool on <host> <cmd>` — macOS-only (swift/xcode) · GPU · heavy build"
   dont = "run host-specific work on local shell when a sidekick host fits — roster in SessionStart"
 
-@D g10 := "Monitor tool — required for ALL background streaming" :: governance [required active]
-  do   = "background process / long task → Claude Code `Monitor` tool (per-line stdout push) — always"
-  dont = "`tail -f` · `sleep`-poll loop · repeated cat/poll of a log for background events — never"
+@D g10 := "background work — detach + log + Monitor, survive rate-limit" :: governance [required active]
+  do   = "long/background job → detach (`nohup`/`setsid`) + write a progress log (`> <job>.log 2>&1`)"
+  do   = "attach `Monitor` to the LOG (not the live pipe) — token-light, re-attach after rate-limit"
+  do   = "liveness via a detached OS `while` heartbeat (token-free); on resume re-read the log"
+  dont = "model-side `tail -f` / `sleep`-poll / repeated cat-poll — burns turns, dies on rate-limit"
+  dont = "long job attached to the session (no detach/log) — rate-limit death SIGHUPs it, progress lost"
 
 @D g11 := "no gap workarounds — fix at source" :: governance [required active]
   do   = "log hexa-lang upstream gaps to `<hexa-lang>/INBOX.log.md` (`/domain set INBOX`) on discovery"

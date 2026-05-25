@@ -1,7 +1,7 @@
 {
   "name": "easy",
   "description": "Easy (friendly) response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII diagram · compare). Skill (natural-language trigger) + /easy command. 5 language samples: en · ko · ja · zh · ru.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

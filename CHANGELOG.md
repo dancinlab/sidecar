@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — sidecar 0.4.0: `sidecar mirror` verb + `sync` tail 자동 미러 (bare-invocable 표면)
+
+`~/.claude/commands/<name>.md` 미러를 `sidecar` CLI 가 자체 관리하도록 합류 — 플러그인 명령이 `plugin:` 네임스페이스 없이 bare 로 호출 가능하게 (`Skill("imagine")` 통함; 기존엔 `Skill("imagine:imagine")` 강제).
+
+- **`sidecar mirror` 신규 verb** — `~/.claude/plugins/cache/sidecar/<plugin>/<latest-version>/commands/*.md` 를 `~/.claude/commands/` 로 그대로 복사. 항상 overwrite (mirror == 플러그인 명령; 커스터마이즈는 플러그인 소스 측에서). 캐시 누락 시 skip + warning.
+- **`sidecar sync` tail 자동 호출** — 기존 sync 가 `exec hexa run install.hexa` 로 끝나던 것을 `hexa run` → `do_mirror` 로 변경(install 자체 종료 코드는 그대로 보존). marketplace pull + cache refresh + installed_plugins.json + enabledPlugins + **mirror** 까지 한 사이클로 끝남 — ship cycle tail 의 의미가 "동기화+가시화" 로 확장.
+- **`$CLAUDE_PLUGIN_ROOT` fallback (소스측)** — user-level 미러는 `$CLAUDE_PLUGIN_ROOT` 가 비어있어서 raw 사용은 깨짐. `prefs` (0.3.4) · `easy` (0.1.2) 두 플러그인 명령에 cache-resolver fallback (`sort -V | tail -1`) 추가. 이 패턴이 미러 대상 명령의 표준 (이미 `imagine`/`paper`/`ship`/`research/{arxiv,yt}` 등은 가지고 있던 것).
+- **표면 lockstep**(@D ship · g22): `bin/sidecar` (mirror verb + do_mirror + sync tail + help) · `commands/sidecar/.claude-plugin/plugin.json` 0.3.0 → 0.4.0 + description verb 목록 · `hooks/prefs/commands/prefs.md` (fallback) · `hooks/prefs/.claude-plugin/plugin.json` 0.3.3 → 0.3.4 · `skills/easy/commands/easy.md` (fallback) · `skills/easy/.claude-plugin/plugin.json` 0.1.1 → 0.1.2 · `.claude-plugin/marketplace.json` 3 항목 lockstep. main 의 sidecar 0.3.0 (master 티어) 위에 mirror 기능을 적층 — 충돌 해소 시 description 에 둘 다 통합 (mirror verb + master tier/verb).
+
+---
+
 ## 2026-05-25 — paper 0.8.0 — samples (3 신규 · 총 4)
 
 `/paper list` 가 1개 → 4개 bundled samples 를 enumerate. paper-author 가 첫 페이지부터 ANTIMATTER-tier starter 잡도록:
@@ -23,7 +34,6 @@ For the full audit trail, see `git log`.
 - 미존재 sample 요청 시 bundled list 출력.
 
 비파괴 — 기존 (`sample-nb-bcs-absorbed`) 동작 보존. paper `0.7.0 → 0.8.0` (minor — additive). marketplace.json + plugin.json + SKILL.md + commands/paper.md + CHANGELOG.md lockstep 갱신 (commons @D g22).
-
 ---
 
 ## 2026-05-25 — paper 0.7.0 — verbs (8 신규)
@@ -147,7 +157,6 @@ minimal/hexa/full 위에 **창작자 전용 `master` 모드** 추가. 기존 `pe
 parse/문법/master-status/profile 테스트 PASS. from anima IIT4 세션 (creator-only 거버넌스 plugin 분리 요구).
 
 ---
-
 ## 2026-05-25 — cycle 0.7.0: bare `/cycle` + `/cycle-full` 도 자동으로 depletion 까지 self-drain (패밀리 전체 일관화)
 
 0.6.0 이 `*-loop` 변종에만 준 **depletion-구동(self-continue)** 동작을 cycle 패밀리 **전체**로 확장 — 이제 bare `/cycle` 와 `/cycle-full` 도 한 라운드 후 멈추지 않고, 도메인의 `## deferred` backlog 를 배치별로 끝까지 스스로 파낸다.

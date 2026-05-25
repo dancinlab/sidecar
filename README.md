@@ -46,7 +46,7 @@ The [`project-tape`](hooks/project-tape/) hook re-injects `project.tape` on PreC
 
 ```
 sidecar/
-├── bin/sidecar               # CLI — init · sync · sign · profile · enable · disable · reset · master
+├── bin/sidecar               # CLI — init · sync · mirror · sign · profile · enable · disable · reset · master
 ├── bin/_overrides.hexa       # per-plugin enable-override store (~/.sidecar/plugin-overrides.json)
 ├── install.hexa              # hx build hook — clone marketplace · cache · enable per active profile
 ├── hooks/                    # PreToolUse · SessionStart · PreCompact · PostCompact · LSP plugins
@@ -189,13 +189,13 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
 | [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
 | [`pool-mcp`](mcps/pool-mcp/) | mcp | `core` | 0.1.1 | stdio MCP server exposing pool hosts as Claude Code MCP tools |
-| [`prefs`](hooks/prefs/) | hook + command | `core` | 0.3.3 | User language preferences |
+| [`prefs`](hooks/prefs/) | hook + command | `core` | 0.3.4 | User language preferences |
 | [`question`](skills/question/) | command + skill | `core` | 0.2.0 | Quick side-question alias for Claude Code's built-in `/btw` |
 | [`quota`](skills/quota/) | command + skill | `core` | 0.10.0 | Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames |
 | [`quota-autoadd`](hooks/quota-autoadd/) | hook | `core` | 0.1.1 | SessionStart hook |
 | [`research`](skills/research/) | command + skill | `core` | 0.2.4 | Research-fetch tools |
 | [`secret`](skills/secret/) | command + skill | `core` | 0.4.1 | wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync) |
-| [`sidecar`](commands/sidecar/) | command | `core` | 0.2.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
+| [`sidecar`](commands/sidecar/) | command | `core` | 0.4.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
 | [`step-by-step`](commands/step-by-step/) | command | `core` | 0.1.0 | plan-first sequential runbook |
 | [`workdir-guard`](hooks/workdir-guard/) | hook | `core` | 0.1.0 | SessionStart advisory (hexa-lang `_workdir_guard.hexa`, via `hexa run`) that fires once per session, and only when the… |
 | [`worktree-gc`](hooks/worktree-gc/) | hook | `core` | 0.1.0 | SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_w… |
@@ -215,7 +215,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
 | [`commons`](hooks/commons/) | hook | `personal` | 0.10.6 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
-| [`easy`](skills/easy/) | command + skill | `personal` | 0.1.1 | Easy (friendly) response style |
+| [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
 | [`inbox-log-lint`](hooks/inbox-log-lint/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the INBOX domain log (`INBOX.log.md`) |

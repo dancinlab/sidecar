@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — commons 0.10.7: g61 stdlib-SSOT 범위확장 (primitives → + domain engines)
+
+`g61` 을 "general primitives" 에서 **"shared code — primitives + domain engines"** 로 확장.
+≥2-repo 재사용 domain engine(예: `consciousness/iit4`)도 `stdlib/<domain>/` 승격 대상 명문화
++ **engine(substrate-agnostic, stdlib) ⊥ adapter(repo별)** 분리 원칙 + `import "stdlib/…"` 단일
+hexa-lang 해석(물리 SSOT) 추가. plugin.json 0.10.6→0.10.7 (marketplace 와 drift 해소).
+(from anima IIT4 세션 — IIT4 엔진을 hexa-brain/eeg 와 공유하기 위한 거버넌스 선결.)
+
+---
+
 ## 2026-05-25 — pool-route 0.6.10: hexa cloud 로컬 핀 + worktree→canonical-root fallback
 
 hexa-lang INBOX cross-repo handoff 2건 해소 (둘 다 hexa-lang 이 아니라 이 라우터 소관으로 판명된 항목).

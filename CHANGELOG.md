@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — install.hexa prune (은퇴 플러그인 잔여 항목 제거)
+
+`install.hexa`(부트스트랩)는 marketplace.json 의 플러그인을 순회하며 `installed_plugins.json` + `settings.enabledPlugins` 를 **추가/갱신만** 했고, marketplace 에서 빠진 플러그인의 `<name>@sidecar` 항목은 남겨 둬 Claude Code 가 "N error(s) during load"(없는 install 경로)를 띄웠다. all-bg-go 폐기 후 실제로 발생해 수동 정리했던 그 원인을 install 경로에서 제도화(@D s7: 룰+enforcement 동시 출하).
+
+- **prune 패스 추가** — marketplace.json 의 현행 플러그인 전체를 `valid` 집합으로 모으고(srcdir 일시 누락분도 포함 → 진짜 은퇴분만 삭제), enable 루프 뒤에 `installed_plugins.json` + `enabledPlugins` 의 `@sidecar` 키 중 `valid` 에 없는 것을 제거(비-sidecar 타 마켓 키 + 유효 sidecar 키는 그대로 통과). 제거 건수는 설치 출력에 노출(`pruned N retired plugin(s)…`). 헬퍼 `_is_sidecar_key`(접미사 `@sidecar` 정확 매칭) 추가.
+- 부트스트랩 인프라(plugin.json 버전 없음) — CHANGELOG 만 갱신. 순수 검증 하니스 9/9 통과(ghost 1건만 제거 · foreign 마켓 키 생존 · valid 보존 · 접미사 엣지케이스).
+
 ## 2026-05-26 — throttle-guard 0.1.0 (transient rate-limit 별도 플러그인 분리)
 
 여러 세션/와이드 fan-out이 동시에 API를 두드려 터지는 **일시적 서버 throttle**("temporarily limiting requests · not your usage limit")을 limit-guard(usage/session 한도)에서 **별도 플러그인으로 분리** — 신호도 처리도 달라 s1 개념 분리.

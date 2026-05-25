@@ -151,18 +151,38 @@ fn _under_signs(abs: string) -> bool {
 
 // Mint form = `sidecar sign <key>` where <key> is NOT a read/clear sub-verb.
 // Bare `sidecar sign` (list) and `sidecar sign clear|list|status|--list` pass.
+//
+// 0.1.5 — narrowed to a real COMMAND INVOCATION, not a mention. Pre-0.1.5 this
+// scanned every token position of the raw (quote-unaware) command, so the
+// literal `sidecar sign <key>` inside a quoted argument — a commit message
+// (`git commit -m "... sidecar sign local ..."`) or a PR body (`gh pr --body
+// "..."`) — was mis-flagged as a self-mint and DENIED. Two narrowings fix it:
+//   1. the caller scans a QUOTE-MASKED copy (see `_mask_quotes`), so anything
+//      inside '...'/"..." is blanked — a real mint is never quoted, a mention
+//      always is;
+//   2. `sidecar` must be at a command position (first token, or right after a
+//      shell separator `;`·`&&`·`||`·`|`·`&`) — `echo sidecar sign x` is not an
+//      invocation. `bin/sidecar`'s /dev/tty layer stays the backstop against
+//      deliberate quote-evasion, so the hook need not be airtight.
+fn _is_sep(t: string) -> bool {
+    return t == ";" || t == "&&" || t == "||" || t == "|" || t == "&"
+}
+
 fn _is_sign_mint(toks: array) -> bool {
     let n = len(toks)
     let mut i = 0
     while i + 1 < n {
         if _basename(toks[i]) == "sidecar" && toks[i + 1] == "sign" {
-            if i + 2 >= n { return false }
-            let sub = toks[i + 2]
-            if sub == "clear" { return false }
-            if sub == "list" { return false }
-            if sub == "status" { return false }
-            if sub == "--list" { return false }
-            return true
+            let at_cmd_pos = (i == 0) || _is_sep(toks[i - 1])
+            if at_cmd_pos {
+                if i + 2 >= n { return false }
+                let sub = toks[i + 2]
+                if sub == "clear" { return false }
+                if sub == "list" { return false }
+                if sub == "status" { return false }
+                if sub == "--list" { return false }
+                return true
+            }
         }
         i = i + 1
     }
@@ -202,6 +222,29 @@ fn _tokens(s: string) -> array {
     }
     if len(cur) > 0 { out.push(cur) }
     return out
+}
+
+// Mask single/double-quoted regions to spaces so a mint/write MENTION inside a
+// quoted argument (commit message · PR body · echo string) is not read as a
+// real command token. The quote delimiters are kept; only inner chars blank.
+// A real `sidecar sign <key>` / `tee <gated>` is never quoted; mentions are.
+fn _mask_quotes(cmd: string) -> string {
+    let n = len(cmd)
+    let mut i = 0
+    let mut q = ""
+    let mut out = []
+    while i < n {
+        let c = cmd[i]
+        if q != "" {
+            if c == q { q = ""; out.push(c) } else { out.push(" ") }
+            i = i + 1
+            continue
+        }
+        if c == "\"" || c == "'" { q = c; out.push(c); i = i + 1; continue }
+        out.push(c)
+        i = i + 1
+    }
+    return out.join("")
 }
 
 fn _is_meta(c: string) -> bool {
@@ -321,7 +364,10 @@ fn _handle_bash(payload: map, ti: map) {
     let mut cwd = ""
     if has_key(payload, "cwd") { cwd = payload["cwd"] }
 
-    let toks = _tokens(cmd)
+    // 0.1.5 — scan a QUOTE-MASKED copy so a `sidecar sign` / `tee <gated>`
+    // MENTION inside a quoted arg (commit -m · pr --body) is not mis-read as a
+    // real invocation; only genuine unquoted command tokens survive.
+    let toks = _tokens(_mask_quotes(cmd))
     // self-mint channel a: the mint command itself.
     if _is_sign_mint(toks) { _deny_mint() }
 

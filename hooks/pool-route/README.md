@@ -6,7 +6,7 @@ PreToolUse(Bash) pool **auto-router**. When the pool roster has hosts and a Bash
 
 The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** whenever it lists at least one enabled host. When armed, a command routes if it matches:
 
-- **heavy classifier** — `make` · `cargo` · `npm` · `pnpm` · `yarn` · `gradle` · `mvn` · `bazel` · `cmake` · `ctest` · `tox` · `pytest` · `jest` · `vitest` · `webpack` · `go build`/`test` · `swift build`/`test` · `xcodebuild` · `xcrun` · `swiftc` · `docker build` · `nvidia-smi` · `train` · `hexa kick`/`drill`/`loop`/`cc` (hexa-native heavy subverbs — kick-storm 2026-05-23 Mac kill: `/kick` = `hexa kick --seed`, multi-agent local fire drove load 80+) · `find $HOME/core/anima` big-tree scan
+- **heavy classifier** — `make` · `cargo` · `npm` · `pnpm` · `yarn` · `gradle` · `mvn` · `bazel` · `cmake` · `ctest` · `tox` · `pytest` · `jest` · `vitest` · `webpack` · `go build`/`test` · `swift build`/`test` · `xcodebuild` · `xcrun` · `swiftc` · `docker build` · `gcc`/`g++`/`clang`/`clang++`/`cc`/`c++` · `nvidia-smi` · `train` · `hexa kick`/`drill`/`loop`/`cc` (hexa-native heavy subverbs — kick-storm 2026-05-23 Mac kill: `/kick` = `hexa kick --seed`, multi-agent local fire drove load 80+) · `find $HOME/core/anima` big-tree scan
 - **root-needing** — `apt` · `dpkg` · `systemctl` · `yum` · … — always routable, and `sudo`-prefixed on a host with `sudo: true`
 
 > **0.6.0 — load-escalation removed.** A prior gate (`0.5.7`) promoted any non-trivial cmd to heavy when the non-claude CPU sum exceeded 150%. On a multi-core Mac that threshold trips constantly (WindowServer + browser + build daemons), so nearly every `git` / `hexa run /Users/...` / smoke got shipped to a Linux pool host where the Mac-local path doesn't exist — and broke. "system busy" ≠ "this command should move"; that conflation was the bug. Storm protection still holds — the real meltdown patterns (`hexa kick`/`drill`/`loop`/`cc`, `find ~/core/anima`) are in the explicit classifier above.
@@ -68,6 +68,14 @@ The workstation Mac is reached only when a macOS-capability marker explicitly de
 **False-positive (bare reads gated).** `_local_heavy_interp` used `_has_word(cmd, "hexa")` to detect hexa invocations, but `_has_word` treats `-` as a word boundary — so `cat /Users/…/hexa-lang/foo.txt` matched (the `hexa` inside the path was scored as a verb). That made `cat`/`ls`/`grep` on the hexa-lang tree demand a sign token. 0.6.5 matches by **first-token basename** (`toks[0]` → `hexa`/`hexa.real`/`hexac`/`hexadrv`/`hxv2`/`python*`/`bash`/`sh`) — the first token is the invoked verb; matching there is sound. Bare reads on any path stay free.
 
 **False-negative (`hexa run`/`build` ran local instead of routing).** The 0.6.x heavy classifier listed `hexa kick/drill/loop/cc` but **not** `hexa run` or `hexa build` — yet those are exactly the verbs that hit the dispatch-cache → re-fork loop on every invocation (canonical mac fork-storm, load 130+ measured with multiple sessions). 0.6.5 adds `hexa run`/`hexa build` to the heavy pairs so they route through the pool by default. The sign gate above remains as the local-bound exemption's narrow guard.
+
+## C/C++ compiler routing (0.6.11)
+
+The C/C++ compiler drivers — `gcc` · `g++` · `clang` · `clang++` · `cc` · `c++` — join the heavy classifier. A C/C++ compile is heavy local compute, the same workstation-protection rationale as `make` / `cmake` / `cargo`. They carry **no** macOS-capability marker, so they fall into the general-heavy bucket → **Linux pool hosts only**, round-robin (the workstation Mac stays protected, per project `@D s12`).
+
+Detection is **word-match** (not first-token), so a `zsh`-snapshot-wrapped invocation is still caught — the same robustness `make`/`cargo` already have. `cc` is the only 2-char driver; `git`/`gh` and any `/Users/`·`/home/` absolute-path command already return local **above** the classifier, so a coincidental bare `cc` token in an unrelated command does not reach the classifier.
+
+> A C/C++ compile routed to a Linux host produces a **Linux** artifact in the synced workdir — identical to `make`/`cargo`/`cmake` today. For a macOS-native build, reach for an explicit macOS-capability path (`swiftc`, Xcode) or run it under `pool on <macos-host>`.
 
 ## How it routes
 

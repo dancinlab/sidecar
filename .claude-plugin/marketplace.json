@@ -17,8 +17,8 @@
     {
       "name": "prefs",
       "source": "./hooks/prefs",
-      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values; UserPromptSubmit re-injects every turn so the preference never fades. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences. Each prefs.json field is type-gated on read (0.3.3) \u2014 a non-string value falls back to the default instead of breaking injection.",
-      "version": "0.3.3"
+      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values; UserPromptSubmit re-injects every turn so the preference never fades. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences. Each prefs.json field is type-gated on read (0.3.3) \u2014 a non-string value falls back to the default instead of breaking injection. /prefs command body now carries a $CLAUDE_PLUGIN_ROOT \u2192 ~/.claude/plugins/cache/sidecar/prefs/<latest> fallback (0.3.4) so the bare-invocable user-level mirror works.",
+      "version": "0.3.4"
     },
     {
       "name": "hexa-lsp",
@@ -239,8 +239,8 @@
     {
       "name": "sidecar",
       "source": "./commands/sidecar",
-      "description": "/sidecar <args> \u2014 thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`). Verbs \u2014 init (scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md) \u00b7 sync (pull marketplace + refresh cache + installed_plugins.json + enable plugins) \u00b7 sign (user sign-off gate). `sign <key>` mints a 5-min token at ~/.sidecar/signs/<key>.sign unlocking agent edits to a sign-gated governance SSOT file \u2014 the sign-guard hook hard-denies those edits until a fresh token exists; keys are `commons` (commons.tape) and `project` (project.tape). Bare `sign` / `sign --list` shows active tokens; `sign clear [<key>]` removes them. Multi-user enable profiles \u2014 `profile [<name>]` shows/sets the enable profile (minimal = core only \u00b7 hexa = core + hexa-lang \u00b7 full = everything, default), `enable`/`disable <plugin>` force one plugin on/off (per-plugin override), `reset <plugin>` drops the override; each re-applies the install. State in ~/.sidecar/profile + plugin-overrides.json; install.hexa enables per .claude-plugin/profiles.json tiers \u2014 plugin disable, not an in-guard opt-out (@D s11 safe). Args pass through unchanged.",
-      "version": "0.3.0"
+      "description": "/sidecar <args> \u2014 thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`). Verbs \u2014 init (scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md) \u00b7 sync (pull marketplace + refresh cache + installed_plugins.json + enable plugins + mirror commands) \u00b7 mirror (refresh ~/.claude/commands/ mirrors so plugin commands are bare-invocable \u2014 `Skill(\"imagine\")` instead of `Skill(\"imagine:imagine\")` \u2014 auto-runs at sync tail) \u00b7 sign (user sign-off gate). `sign <key>` mints a 5-min token at ~/.sidecar/signs/<key>.sign unlocking agent edits to a sign-gated governance SSOT file \u2014 the sign-guard hook hard-denies those edits until a fresh token exists; keys are `commons` (commons.tape) and `project` (project.tape). Bare `sign` / `sign --list` shows active tokens; `sign clear [<key>]` removes them. Multi-user enable profiles \u2014 `profile [<name>]` shows/sets the enable profile (minimal = core only \u00b7 hexa = core + hexa-lang \u00b7 full = everything, default \u00b7 master = full + creator-only). `master [on|off|status]` mints/removes the ~/.sidecar/master marker. `enable`/`disable <plugin>` force one plugin on/off (per-plugin override), `reset <plugin>` drops the override; each re-applies the install. State in ~/.sidecar/profile + plugin-overrides.json; install.hexa enables per .claude-plugin/profiles.json tiers \u2014 plugin disable, not an in-guard opt-out (@D s11 safe). Args pass through unchanged.",
+      "version": "0.4.0"
     },
     {
       "name": "inject",
@@ -269,8 +269,8 @@
     {
       "name": "easy",
       "source": "./skills/easy",
-      "description": "Easy (friendly) response style \u2014 7-element pattern (icon \u00b7 name \u00b7 alias \u00b7 plain-line \u00b7 analogy \u00b7 ASCII \u00b7 compare). Skill (natural-language trigger) + /easy command. 5 language samples: en \u00b7 ko \u00b7 ja \u00b7 zh \u00b7 ru.",
-      "version": "0.1.1"
+      "description": "Easy (friendly) response style \u2014 7-element pattern (icon \u00b7 name \u00b7 alias \u00b7 plain-line \u00b7 analogy \u00b7 ASCII \u00b7 compare). Skill (natural-language trigger) + /easy command. 5 language samples: en \u00b7 ko \u00b7 ja \u00b7 zh \u00b7 ru. /easy command body now points at $CLAUDE_PLUGIN_ROOT with a cache-resolved fallback (0.1.2) so the bare-invocable user-level mirror works.",
+      "version": "0.1.2"
     },
     {
       "name": "easy-auto",

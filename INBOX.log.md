@@ -42,13 +42,17 @@ bare /domain:
 **원인 (추정)**: pool add/remove/state-update 가 전체 JSON 을 비원자적으로 truncate-rewrite — 두 writer 가 동시 stale-read 후 한쪽이 빈/부분 roster 로 덮음. 파일 lock 부재. (`route-log.jsonl` append 동시성과 별개로 `pool.json` 본체가 취약.)
 
 **방어 제안 (우선순위)**:
-- [ ] **atomic write** — temp write → `os.rename()` (동일 fs 원자 교체) · truncate-in-place 금지
-- [ ] **flock(2) advisory lock** — `pool.json` 수정 전 `pool.json.lock` 잠금 → writer 직렬화
-- [ ] **empty-write guard** — 기존이 non-empty roster 인데 write 결과가 `hosts:[]` 면 거부 (명시적 `pool clear` 만 허용 · 멱등 가드)
-- [ ] **백업 rotation** — write 직전 `pool.json.bak` 자동 생성 (이번에 n11bak 가 우연히 살린 패턴을 정식화)
-- [ ] **add/remove = item 단위 merge** — 전체 덮어쓰기 대신 lock 내 read-modify-write + 항목 병합
+- [x] **atomic write** — temp write → `mv -f`(rename(2), 동일 fs 원자 교체) · truncate-in-place 폐기. ✅ pool 0.8.5 `_save`. **원 wipe 벡터 제거** — reader 가 truncate 중간 상태를 못 봄.
+- [x] **empty-write guard** — 디스크에 non-empty roster 가 있는데 write 결과가 `hosts:[]` 면 거부. ✅ pool 0.8.5 `_save(root, allow_empty)` — `pool rm` 의 마지막 호스트 제거만 `allow_empty=true` 로 정당 통과(별도 `pool clear` verb 불요).
+- [x] **백업 rotation** — write 직전 `pool.json.bak` 자동 생성. ✅ pool 0.8.5 (+ `_load` 가 빈/torn 파일 만나면 `.bak` 복구 — n11bak 우연 패턴을 정식화).
+
+**Deferred (별도 future-enhancement · 이 핸드오프 범위 밖)**:
+- **flock(2) advisory lock** — writer 직렬화로 lost-update 방지. macOS 에 `flock(1)` 부재(비포터블) · 원자 write 가 관측된 wipe 를 이미 제거 · lost-update 는 저severity(한 동시 edit 유실, 전체 wipe 아님 · 재실행 회복).
+- **add/remove = item 단위 merge** — lock 내 read-modify-write. 원자 write + empty-guard 로 wipe 가 닫혀 우선순위 하락 · flock 과 함께 deferred.
 
 **근거**: worktree agent 다수 + 메인 세션 동시 실행은 흔한 워크플로. `pool.json` 은 단일 공유 mutable state — race 방어가 없으면 roster 소실 = 실행 중 캠페인 전면 중단 위험. 이번엔 n11bak 우연 복구로 살았으나, 백업이 없었다면 ubu-1 의 진행 중 DFT job 회수가 불가능했음.
+
+**Status**: ✅ resolved · fix=`dancinlab/pool` 0.8.5 (`601a42d`) · `_save` 원자 write + empty-clobber 가드 + `_load`/.bak 로테이션 · 30-writer 동시 storm 무손상 검증 · `hx install pool` 로컬 라이브 · flock 직렬화(lost-update)는 deferred(macOS 비포터블 · 저severity) · 2026-05-25
 
 ## 2026-05-25T07:50Z — skill family context-awareness audit + fallback chain proposal (from: demiurge user-feedback)
 

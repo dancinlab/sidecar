@@ -262,3 +262,8 @@
   do   = "record consumed stdlib primitives as from-hexa[] in a repo's NEXUS.tape (star, not mesh)"
   do   = "keep hexa-lang's root NEXUS.tape atlas-backed — atlas auto-folds atoms on verify, no manual sync"
   dont = "fork a hexa-lang stdlib primitive into a project · treat the hub as a peer inter-project mesh"
+
+@D g69 := "domain finalization gate — BLUE-MAX 🔵-pair audit at absorbed=true" :: governance [required active]
+  do   = "before absorbed=true, run `hexa verify --blue-max <DOMAIN>` and cite the tier matrix in the flip log"
+  do   = "for every 🟢 libm-class atom, ensure a 🔵 algebraic-root pair exists (integer factor/exponent)"
+  dont = "flip absorbed without a BLUE-MAX audit citation · ship 🟢 atoms with no 🔵 pair attempt"

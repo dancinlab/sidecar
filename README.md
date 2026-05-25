@@ -86,7 +86,7 @@ Each plugin's tier is the **Tier** column below; the classification SSOT is [`.c
 
 ### `master` tier — creator-only
 
-The `personal` tier is dancinlab-specific but anyone can opt in via `full`. The **`master` tier is genuinely creator-only**: a `master`-tier plugin enables **only while the `~/.sidecar/master` marker exists** — force-disabled otherwise, *even under the `full`/`master` profile* (a per-plugin `enable` override still escapes it). The marker isn't shipped, so public installs never get `master` plugins; the creator runs `sidecar master on` once to mint it. Current `master`-tier members: `stdlib-ssot-guard` (g61 cross-repo SSOT enforcement — a dancinlab-workflow governance guard).
+The `personal` tier is dancinlab-specific but anyone can opt in via `full`. The **`master` tier is genuinely creator-only**: a `master`-tier plugin enables **only while the `~/.sidecar/master` marker exists** — force-disabled otherwise, *even under the `full`/`master` profile* (a per-plugin `enable` override still escapes it). The marker isn't shipped, so public installs never get `master` plugins; the creator runs `sidecar master on` once to mint it. Current `master`-tier members: `stdlib-ssot-guard` (PreToolUse advisory) + `stdlib` (`/stdlib check`·`promote` skill) — together the g61 cross-repo SSOT enforcement pair, dancinlab workflow only.
 
 ## Commands
 

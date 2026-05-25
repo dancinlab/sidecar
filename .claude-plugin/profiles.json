@@ -54,6 +54,7 @@
     "sign-guard": "personal",
     "sidecar-lint": "personal",
     "stdlib-ssot-guard": "master",
+    "stdlib": "master",
     "inbox-log-lint": "personal",
     "pool-route": "personal",
     "s9-guard": "personal",

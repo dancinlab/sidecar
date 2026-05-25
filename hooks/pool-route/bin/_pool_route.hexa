@@ -531,7 +531,16 @@ fn main() {
     // --emit=asm`). User-reported workstation load 85%+ when invoked directly on
     // mac. Same workstation-protection rationale as swift build (0.6.6) — route
     // to a mac pool host (mini) where the binary can also execute.
-    let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc"]
+    // 0.6.11 — C/C++ compiler drivers added: gcc · g++ · clang · clang++ · cc ·
+    // c++. A C/C++ compile is heavy local compute — same workstation-protection
+    // rationale as make/cmake/cargo. They carry NO macOS-capability marker, so
+    // they land in the general-heavy bucket → Linux-only round-robin (the Mac
+    // stays the workstation, per @D s12 zero-macOS-offload). Word-matched (not
+    // first-token) so a zsh-snapshot-wrapped invocation is still caught; `cc` is
+    // the only 2-char driver — bounded by non-word chars, and git/gh + absolute-
+    // path commands already returned local above, so a coincidental bare `cc`
+    // token in an unrelated command is unlikely to reach here.
+    let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc"]
     // hexa-native heavy subverbs (kick-storm 2026-05-23 Mac kill: /kick = `hexa kick --seed`,
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)

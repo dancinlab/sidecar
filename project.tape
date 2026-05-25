@@ -52,9 +52,9 @@
   do   = "guards + auto-hooks unconditional · gate only on real preconditions (binary · dirty-tree skip)"
   dont = "env var/config/exception that DISABLES a guard — gets auto-flipped to silence, defeats purpose"
 
-@D s12 := "pool never consumes macOS resources — goal: zero macOS offload" :: governance [required active]
-  do   = "auto-route heavy work to Linux pool hosts only · run macOS-capable cmds local on the workstation"
-  dont = "auto-route any command to a macOS pool host (mini) — macOS compute stays on the local Mac"
+@D s12 := "zero macOS offload by default · `pool mini-equal on` opts mini in" :: governance [required active]
+  do   = "general-heavy→Linux pool (default) · macOS-only→mac host · mini joins via `pool mini-equal on`"
+  dont = "Linux-only work→mac host · route general-heavy to mini while mini-equal OFF (Mac=workstation)"
 
 @D s13 := "governance SSOT files are sign-gated — user sign-off before agent edits" :: governance [required active]
   do   = "edit commons.tape · project.tape ONLY after the USER runs `sidecar sign <key>` · obey the deny"

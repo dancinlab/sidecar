@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — pool-route 0.7.0: `mini-equal` 토글 — macOS 풀 호스트를 일반 워커로 옵트인
+
+`mini`(macOS 풀 호스트)를 OS-무관 general-heavy 라운드로빈에 **사용자 토글로** 합류시킬 수 있게 함. 기존 0.6.6 정책(general-heavy = Linux 전용)을 옵트인 시에만 완화.
+
+- **`pool mini-equal on|off|status` verb** (pool repo 0.8.6) — `~/.pool/mini-equal` 마커에 `on`/`off` 기록. master 마커와 같은 패턴.
+- **pool-route 훅 (0.7.0)** — general-heavy `else` 분기에서 마커가 `on`이면 macOS 호스트도 `elig`에 포함, 아니면 기존대로 `h_plat != "macos"` 필터. **is_linux/is_macos 분기는 불변** → Linux 전용 작업(apt·elf·CUDA)은 토글과 무관하게 여전히 mini로 안 감. 토글은 *포터블 작업의 재분배*만 좌우.
+- **기본 OFF** (마커 없음/`!= "on"`) → zero-macOS-offload(@D s12) 보존.
+- **@D s11 비위반** — idle 호스트로 라우팅을 *여는* 것이지 안전 가드를 *끄는* opt-out이 아님.
+- **@D s12 reword** — "zero macOS offload"가 절대 금지가 아니라 *기본값*이고 `mini-equal on`으로 명시 옵트인 가능함을 반영 (sign-gated 편집).
+- 표면 lockstep(@D ship · g22): `hooks/pool-route/bin/_pool_route.hexa` · `hooks/pool-route/.claude-plugin/plugin.json` 0.6.13 → 0.7.0 · `.claude-plugin/marketplace.json` · `README.md` (셀 0.6.10 드리프트도 0.7.0으로 정정) · `project.tape` @D s12. pool repo는 별도 PR(`hexa.toml` 0.8.5 → 0.8.6 + pool CHANGELOG).
+
+---
+
 ## 2026-05-25 — sidecar 0.4.0: `sidecar mirror` verb + `sync` tail 자동 미러 (bare-invocable 표면)
 
 `~/.claude/commands/<name>.md` 미러를 `sidecar` CLI 가 자체 관리하도록 합류 — 플러그인 명령이 `plugin:` 네임스페이스 없이 bare 로 호출 가능하게 (`Skill("imagine")` 통함; 기존엔 `Skill("imagine:imagine")` 강제).

@@ -33,6 +33,7 @@ The absolute-path exemption above turned out to be the canonical mac fork-storm 
 |---|---|
 | `hexa` (any verb · including `hexa.real`) | ✅ sign required |
 | `python` / `python3` / `py` | ✅ sign required |
+| `gcc` / `g++` / `clang` / `clang++` / `cc` / `c++` (0.6.12) | ✅ sign required |
 | `bash <script>` / `sh <script>` (positional script arg) | ✅ sign required |
 | `bash -c "…"` / `sh -c "…"` (shell wrapper) | ❌ free |
 | `ls` / `cat` / `grep` / `find` / `head` / `tail` / … | ❌ free |

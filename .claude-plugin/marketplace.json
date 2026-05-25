@@ -95,8 +95,8 @@
     {
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
-      "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit \u00b7 missing CHANGELOG.md at repo root (commons @D g29) \u00b7 (when .claude-plugin/profiles.json is present) any marketplace plugin missing a tier there (sidecar @D s7 \u2014 untagged silently defaults to 'personal', hidden from the minimal/hexa profiles). NO opt-out by design.",
-      "version": "0.5.0"
+      "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit \u00b7 missing CHANGELOG.md at repo root (commons @D g29) \u00b7 (when .claude-plugin/profiles.json is present) any marketplace plugin missing a tier there (sidecar @D s7 \u2014 untagged silently defaults to 'personal', hidden from the minimal/hexa profiles) \u00b7 any registered MCP-server plugin (project.tape @D s15 \u2014 `mcps/` source or `mcpServers` in plugin.json; no MCP-server plugins, stdio handshake blocks sessions). NO opt-out by design.",
+      "version": "0.6.0"
     },
     {
       "name": "hexa-native",

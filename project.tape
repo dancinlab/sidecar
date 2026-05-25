@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.5"
+  version = "1.6"
 
 @I := "sidecar" :: identity [active]
   kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
@@ -63,3 +63,7 @@
 @D s14 := "Claude capacity / rate-limit relief is CLI-routed — never API keys" :: governance [required active]
   do   = "relieve via CLI paths only — account swap (quota) · CLI routers · Bedrock/Vertex backends"
   dont = "suggest · mention · wire Anthropic API keys (pay-per-token) as a capacity remedy"
+
+@D s15 := "no MCP-server plugins — hook · command · skill concepts only" :: governance [required active]
+  do   = "expose capability via the 3 plugin concepts (hook · command · skill) over the host CLI"
+  dont = "add an MCP-server plugin (mcps/ dir · mcpServers in plugin.json) — stdio handshake blocks"

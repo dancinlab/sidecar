@@ -156,7 +156,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47)
 #   output-trim    >8000-char Bash stdout → dedup + truncate
 # ADVISORY (non-blocking additionalContext):
-#   sidecar-lint   git-commit: stale-history · hardpath · version drift · CHANGELOG · profiles tier
+#   sidecar-lint   git-commit: stale-history · hardpath · version drift · CHANGELOG · profiles tier · mcp-ban
 #   workdir-guard  working tree shared by ≥2 agents → use a worktree (s-shared)
 #   memory-lint    MEMORY.md pileup / long lines → archive
 #   inbox-log-lint INBOX.log.md pileup → archive
@@ -233,7 +233,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |
 | [`sidecar-auto-sync`](hooks/sidecar-auto-sync/) | hook | `personal` | 0.2.0 | SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync… |
-| [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.5.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |
+| [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.6.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |
 | [`sign-guard`](hooks/sign-guard/) | hook | `personal` | 0.1.4 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) sign-gate for governance-SSOT files, implemented in hexa-lang (`_sign_guard.h… |
 | [`subagent-route`](hooks/subagent-route/) | hook | `personal` | 0.1.0 | [POC] PreToolUse(Task\|Agent) observation hook + SessionStart observation-log snapshot, implemented in hexa-lang (`_sub… |
 

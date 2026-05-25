@@ -13,6 +13,8 @@
 //   5. no CHANGELOG.md at repo root (commons @D g29)
 //   6. plugin missing a profiles.json tier (sidecar @D s7) — only when the
 //      repo has .claude-plugin/profiles.json (sidecar's multi-user profiles)
+//   7. MCP-server plugin registered — mcps/ source or mcpServers in plugin.json
+//      (project.tape @D s15: no MCP-server plugins; hook · command · skill only)
 //
 // Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
 // NO opt-out by design — no env var, no config file, no exception
@@ -94,6 +96,19 @@ fn _lstrip(s: string) -> string {
 fn _starts_with(s: string, prefix: string) -> bool {
     if len(prefix) > len(s) { return false }
     return s.substring(0, len(prefix)) == prefix
+}
+
+fn _contains(s: string, needle: string) -> bool {
+    let nl = len(needle)
+    if nl == 0 { return true }
+    let sl = len(s)
+    if nl > sl { return false }
+    let mut i = 0
+    while i <= sl - nl {
+        if s.substring(i, i + nl) == needle { return true }
+        i = i + 1
+    }
+    return false
 }
 
 fn _tokens(s: string) -> array {
@@ -339,7 +354,9 @@ fn main() {
     }
 
     // (3) marketplace.json <-> plugin.json version drift
+    // (7) MCP-server plugin registered (project.tape @D s15) — shares this loop
     let mut drift = []
+    let mut mcpban = []
     let mraw = _read_file_safe(root + "/.claude-plugin/marketplace.json")
     if mraw != "" {
         try {
@@ -349,7 +366,7 @@ fn main() {
                 if type_of(plugs) == "array" {
                     let pn = len(plugs)
                     let mut j = 0
-                    while j < pn && len(drift) < 8 {
+                    while j < pn {
                         let entry = plugs[j]
                         if type_of(entry) == "map" {
                             let mut src = ""
@@ -360,6 +377,11 @@ fn main() {
                             if src != "" {
                                 let pjpath = root + "/" + src + "/.claude-plugin/plugin.json"
                                 let pjraw = _read_file_safe(pjpath)
+                                let mut is_mcp = _starts_with(src, "mcps/")
+                                if !is_mcp && _contains(pjraw, "mcpServers") { is_mcp = true }
+                                if is_mcp && len(mcpban) < 8 {
+                                    mcpban.push("  " + name + " (" + src + "): MCP-server plugin — mcps/ source or mcpServers in plugin.json")
+                                }
                                 if pjraw != "" {
                                     let pj = json_parse(pjraw)
                                     if type_of(pj) == "map" {
@@ -367,7 +389,7 @@ fn main() {
                                         if has_key(entry, "version") { mv = entry["version"] }
                                         let mut pv = ""
                                         if has_key(pj, "version") { pv = pj["version"] }
-                                        if mv != "" && pv != "" && mv != pv {
+                                        if mv != "" && pv != "" && mv != pv && len(drift) < 8 {
                                             drift.push("  " + name + ": marketplace.json=" + mv + " vs plugin.json=" + pv + " (version drift)")
                                         }
                                     }
@@ -457,6 +479,9 @@ fn main() {
     }
     if len(untagged) > 0 {
         sections.push("plugins missing a profiles.json tier (sidecar @D s7 — tag a tier {core·hexa·personal} so the multi-user profiles can place it; untagged defaults to 'personal'):\n" + untagged.join("\n"))
+    }
+    if len(mcpban) > 0 {
+        sections.push("MCP-server plugin(s) registered (project.tape @D s15 — no MCP-server plugins; expose capability via hook · command · skill + host CLI; stdio MCP handshake blocks sessions):\n" + mcpban.join("\n"))
     }
 
     if len(sections) == 0 { _allow() }

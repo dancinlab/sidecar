@@ -6,7 +6,12 @@ For the full audit trail, see `git log`.
 
 ---
 
-## 2026-05-26 — pool-route 0.7.1 (`pool` 디스패처 자체는 local-bound)
+## 2026-05-26 — project.tape s15: MCP-server 플러그인 금지 + sidecar-lint 0.6.0 enforcement
+
+pool-mcp(폐기됨)가 stdio 핸드셰이크 데드락으로 세션을 블로킹한 사례를 거버넌스로 못박음 — **MCP-server 플러그인 생성 금지**. 능력 노출은 hook · command · skill 3개 개념 표면(+ 그 위의 host CLI)으로 충분하며, s1 의 concept set 도 원래 `{hook · command · skill}` 이었음. 규칙 + enforcement 동시 출하(s7).
+
+- **project.tape @D s15 (신규 · spec 1.5)** — `no MCP-server plugins — hook · command · skill concepts only`. do: 3개 개념 표면 + host CLI 로 노출 / dont: `mcps/` 디렉토리나 plugin.json `mcpServers` 필드로 MCP-server 플러그인 추가 (stdio handshake 블로킹). sign-gated 편집(s13, 유저 `sidecar sign project` 후).
+- **sidecar-lint 0.5.0 → 0.6.0** — 검사 7 추가. `git commit` 시 marketplace.json 을 스캔해 (a) `./mcps/` source 엔트리, (b) 임의 plugin.json 의 `mcpServers` 필드 중 하나라도 보이면 advisory finding(비차단, 기존 검사들과 동급 — `guards-narrow-scope`). 검사 3(버전 drift) 루프에 동승, `_contains` 헬퍼 추가. 검증 3/3 — mcps/ source FIRE · mcpServers-in-plugin.json FIRE · mcp 없는 repo 오탐 0.
 
 `pool-route` 가 Mac 고부하 시 `pool on <host> <cmd>` **자체**를 다른 Linux 호스트로 load-balance 하던 버그 수정 (s10 위반 — local-bound 명령은 라우팅 금지). `pool` 은 로컬 SSH 디스패처라 원격 호스트엔 `pool` 바이너리가 없어 `127` 로 죽거나(관측됨: `pool on ubu-1 …` → ubu-2 로 라우팅 → `pool: command not found`), 있어도 이중 디스패치가 된다. local-bound 분류기에 `git`/`gh` 와 나란히 `pool` 추가 — 첫 토큰이든 prefix 형(`POOL_DISABLE=1 pool …`)이든 `_has_word(cmd, "pool")` 로 항상 로컬 실행. opt-out env var 아님(s11 무관). lockstep(g22) pool-route 0.7.0→0.7.1.
 

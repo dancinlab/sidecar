@@ -19,6 +19,7 @@ NOTE: plugin slash commands are ALWAYS namespaced `/plugin:command` in Claude Co
 # ── Dispatch ────────────────────────────────────────────────
 /pool:pool <args>                 host roster + remote exec on sidekick hosts
 /cloud:cloud <args>               hexa cloud — rented-GPU pod dispatch (runpod / vast.ai)
+/micro-exp:micro-exp [scope]      context-driven micro-experiment sweep (pods → monitor → parse → atlas auto-fold)
 
 # ── Cross-project ───────────────────────────────────────────
 /domain:domain <task>             <NAME>.md snapshot + <NAME>.log.md checkbox-task log

@@ -103,6 +103,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 # ── Dispatch ────────────────────────────────────────────────
 /pool:pool <args>                 host roster + remote exec on sidekick hosts
 /cloud:cloud <args>               hexa cloud — rented-GPU pod dispatch (runpod / vast.ai)
+/micro-exp:micro-exp [scope]      context-driven micro-experiment sweep (pods → monitor → parse → atlas auto-fold)
 
 # ── Cross-project ───────────────────────────────────────────
 /domain:domain <task>             <NAME>.md snapshot + <NAME>.log.md checkbox-task log
@@ -161,7 +162,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-55 plugins across `{hook · command · skill · mcp}` — one concept each (25 `core` · 13 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+56 plugins across `{hook · command · skill · mcp}` — one concept each (25 `core` · 14 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -197,6 +198,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | `hexa` | 0.1.1 | Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files |
 | [`hexa-native`](hooks/hexa-native/) | hook | `hexa` | 0.3.2 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) hard block for `.py` / `.sh` writes inside any project rooted at a directory… |
 | [`kick`](skills/kick/) | command + skill | `hexa` | 0.2.1 | runs `hexa kick --seed "<seed>"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`) |
+| [`micro-exp`](skills/micro-exp/) | command + skill | `hexa` | 0.2.0 | context-driven micro-experiment sweep orchestrator (self-enumerate → pod budget → monitor → parse → atlas auto-fold) |
 | [`paper`](skills/paper/) | command + skill | `hexa` | 0.5.3 | arxiv-style LaTeX paper scaffolder |
 | [`pod-monitor`](hooks/pod-monitor/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) advisory hook for GPU pod fires (`hexa cloud nohup` / `hexa cloud run`) |
 | [`tape-lint`](hooks/tape-lint/) | hook | `hexa` | 0.5.1 | PreToolUse(Edit\|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` |
@@ -204,14 +206,14 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |
 | [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
-| [`commons`](hooks/commons/) | hook | `personal` | 0.10.4 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
+| [`commons`](hooks/commons/) | hook | `personal` | 0.10.6 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.1 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
 | [`inbox-log-lint`](hooks/inbox-log-lint/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the INBOX domain log (`INBOX.log.md`) |
 | [`inject`](skills/inject/) | command + skill | `personal` | 0.2.0 | Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install… |
 | [`plist-guard`](hooks/plist-guard/) | hook | `personal` | 0.1.2 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, inv… |
-| [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.6.3 | PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, i… |
+| [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.6.9 | PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, i… |
 | [`pr-cycle`](hooks/pr-cycle/) | hook + command | `personal` | 0.3.6 | PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hex… |
 | [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |

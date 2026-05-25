@@ -255,4 +255,10 @@
   do   = "stamp each record with cross-domain edges — reused[] (borrowed) · provides[] (offered)"
   do   = "keep a repo-root NEXUS.tape reuse graph current — nodes = domains, edges = reuse"
   dont = "rebuild a primitive a sibling domain already verified · leave a reuse edge unrecorded"
-  dont = "couple domains across separate repos — intra-project only, no inter-project graph"
+  dont = "couple domains across separate repos — intra-project only (hexa-lang substrate hub exempt · g68)"
+
+@D g68 := "hexa-lang stdlib/atlas = shared substrate hub — the one cross-project link" :: governance [required active]
+  do   = "draw shared primitives from the hexa-lang stdlib (code home · @D d3) + atlas (verified atoms)"
+  do   = "record consumed stdlib primitives as from-hexa[] in a repo's NEXUS.tape (star, not mesh)"
+  do   = "keep hexa-lang's root NEXUS.tape atlas-backed — atlas auto-folds atoms on verify, no manual sync"
+  dont = "fork a hexa-lang stdlib primitive into a project · treat the hub as a peer inter-project mesh"

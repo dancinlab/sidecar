@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.4"
+  version = "1.5"
 
 @I := "sidecar" :: identity [active]
   kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
@@ -59,3 +59,7 @@
 @D s13 := "governance SSOT files are sign-gated — user sign-off before agent edits" :: governance [required active]
   do   = "edit commons.tape · project.tape ONLY after the USER runs `sidecar sign <key>` · obey the deny"
   dont = "self-mint the sign · edit a sign-gated file without a fresh user token · add an opt-out"
+
+@D s14 := "Claude capacity / rate-limit relief is CLI-routed — never API keys" :: governance [required active]
+  do   = "relieve via CLI paths only — account swap (quota) · CLI routers · Bedrock/Vertex backends"
+  dont = "suggest · mention · wire Anthropic API keys (pay-per-token) as a capacity remedy"

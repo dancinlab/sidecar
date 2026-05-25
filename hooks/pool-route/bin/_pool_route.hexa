@@ -250,7 +250,8 @@ fn _local_signed() -> bool {
 
 // `_local_heavy_interp` — heavy interpreter/compiler invocation? These are
 // the canonical mac fork-storm sources when forced local-bound: hexa CLI
-// (any verb), direct hexa.real, python/python3/py, and `bash`/`sh
+// (any verb), direct hexa.real, python/python3/py, the C/C++ compiler
+// drivers (gcc/g++/clang/clang++/cc/c++ — 0.6.12), and `bash`/`sh
 // <script>` (positional script arg, not `bash -c "..."` which is the
 // shell wrapper convention). Bare reads (ls/cat/grep/find/...) stay free.
 //
@@ -267,6 +268,14 @@ fn _local_heavy_interp(cmd: string, toks: array) -> bool {
     if t0_basename == "hexadrv" { return true }
     if t0_basename == "hxv2" { return true }
     if t0_basename == "python" || t0_basename == "python3" || t0_basename == "py" { return true }
+    // 0.6.12 — C/C++ compiler drivers: an absolute-path compile (e.g.
+    // `/usr/bin/gcc /Users/…/x.c`) is the same fork-storm trigger as a heavy
+    // interpreter — multi-session re-fork of the compiler on the workstation.
+    // First-token basename keeps it precise: only a real compiler invocation
+    // matches, never a bare read that merely mentions `cc` inside a path.
+    if t0_basename == "gcc" || t0_basename == "g++" { return true }
+    if t0_basename == "clang" || t0_basename == "clang++" { return true }
+    if t0_basename == "cc" || t0_basename == "c++" { return true }
     if t0_basename == "bash" || t0_basename == "sh" {
         if len(toks) >= 2 {
             let t1 = toks[1]
@@ -445,7 +454,7 @@ fn main() {
         let toks = _tokens(cmd)
         if _local_heavy_interp(cmd, toks) {
             if !_local_signed() {
-                _deny("local-bound heavy invocation (hexa/python/sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.")
+                _deny("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.")
             }
         }
         _allow()

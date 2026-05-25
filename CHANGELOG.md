@@ -16,6 +16,19 @@ For the full audit trail, see `git log`.
 - **패밀리 일관화** — bare `/cycle` · `/cycle-full` · `/cycle-loop` · `/cycle-full-loop` 모두 동일 depletion end-state 로 backlog 를 끝까지 비움. 차이는 **진입/pacing 형태만**: bare = inline self-continue(ScheduleWakeup 직접) · `-loop` = 명시적 continuous-intent + 빌트인 `loop` 스킬 pacing. bare `/cycle` 와 `/cycle-loop` 가 같은 end-state 에 도달하지만 **published 명령은 삭제하지 않음**(scope 외) — 이제-얇아진 구분(진입 표면)을 문서화. SKILL.md 에 "Family — all four drain to depletion" 섹션 추가.
 - **표면 lockstep**(@D ship · g22): `skills/cycle/SKILL.md` (`@D cycle` do/dont + family 섹션 + description) · `skills/cycle/commands/cycle.md` (Stage 5 auto-continue) · `cycle-full.md` (loop tail auto-continue) · `cycle-loop.md` (bare 관계 명시) · `skills/cycle/.claude-plugin/plugin.json` 0.6.0 → 0.7.0 · `.claude-plugin/marketplace.json` cycle 0.6.0 → 0.7.0 · `README.md` 표 cell + Commands 섹션 4줄.
 
+---
+
+## 2026-05-25 — stdlib-ssot-guard 0.1.0 + stdlib 0.1.0 (g61 강제·자동화)
+
+commons **g61**(hexa-lang stdlib = 단일 SSOT) 을 *정책*에서 *강제+자동화*로:
+- **stdlib-ssot-guard** (hook) — PreToolUse(Write|Edit) 비차단 advisory: `.hexa` 편집 시
+  (a) abs-path cross-repo import(anima-locked) (b) stdlib `pub fn` 중복 재구현 nudge
+  + SessionStart 에서 단일 stdlib root(~/core/hexa-lang/stdlib) 존재 검증. fail-safe.
+- **stdlib** (skill) — `/stdlib check`(cwd repo g61 위반 스캔: abs-import + stdlib dup)
+  · `/stdlib promote <file>`(stdlib 이전+thin-shim 런북, engine⊥adapter).
+guard 4-test + skill bash sanity PASS. from anima IIT4 — g61 확장(0.10.7) 후속 도구화.
+(IIT4 엔진이 stdlib/consciousness/iit4 로 승격된 흐름의 거버넌스 완성.)
+
 ## 2026-05-25 — cycle 0.6.0: `## deferred` 를 1급 seed 소스로 승격 + 루프 변종에 DEPLETION 종료 조건
 
 `/cycle` 패밀리가 도메인을 **고갈(depletion)** 까지 자동으로 비울 수 있게 함 — 라운드마다 steering 을 위해 멈추는 대신, 도메인이 선언한 backlog 를 스스로 떠먹으며(self-feed) 끝까지 march.

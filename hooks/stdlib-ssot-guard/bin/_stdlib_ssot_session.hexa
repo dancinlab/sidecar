@@ -1,0 +1,47 @@
+// _stdlib_ssot_session.hexa — SessionStart import-root check for commons @D g61.
+//
+// `import "stdlib/…"` must resolve to ONE hexa-lang stdlib (single physical
+// SSOT). This advises (non-blocking) once per session if that root is missing,
+// so cross-repo stdlib imports don't silently fail to resolve. Fail-safe: any
+// uncertainty → silent exit 0.
+
+fn _read_stdin() -> string { return to_string(exec("cat")) }
+fn _allow() { exit(0) }
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") } else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _advise(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn main() {
+    let _ = _read_stdin()
+    let home = to_string(exec("printf %s \"$HOME\""))
+    let stdroot = home + "/core/hexa-lang/stdlib"
+    let mut present = ""
+    try { present = to_string(exec("test -d '" + stdroot + "' && printf yes")) } catch e { _allow() }
+    if present == "yes" { _allow() }                 // SSOT root present — nothing to say
+    _advise("⊿ stdlib-ssot (g61): hexa-lang stdlib root not found at " + stdroot + " — `import \"stdlib/…\"` may not resolve. Single physical SSOT expected there.")
+}

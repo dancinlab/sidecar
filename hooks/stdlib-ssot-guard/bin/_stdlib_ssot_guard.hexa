@@ -1,0 +1,158 @@
+// _stdlib_ssot_guard.hexa — PreToolUse(Write|Edit) advisory for commons @D g61
+// (hexa-lang stdlib is the SSOT for shared code — primitives AND domain engines).
+//
+// NON-BLOCKING. On a `.hexa` Write/Edit it nudges (additionalContext, never
+// deny) when the new content looks like it is fighting the single-SSOT rule:
+//   (a) abs-path import of another repo's `.hexa` (anima-locked import) —
+//       if that code is reusable, promote it to stdlib and import "stdlib/…".
+//   (b) defining a `fn NAME` whose name already exists as a `pub fn` in
+//       hexa-lang stdlib (duplicate primitive/engine) — import it instead.
+//
+// Fail-safe: any parse/IO uncertainty → silent allow (exit 0). Edits to files
+// already under hexa-lang/stdlib are skipped (the SSOT may define freely).
+
+fn _read_stdin() -> string { return to_string(exec("cat")) }
+fn _allow() { exit(0) }
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") } else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _advise(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    let nh = len(hay)
+    let nn = len(needle)
+    if nn == 0 { return true }
+    if nn > nh { return false }
+    let mut i = 0
+    while i <= nh - nn {
+        if hay.substring(i, i + nn) == needle { return true }
+        i = i + 1
+    }
+    return false
+}
+
+fn _ends_with(s: string, suf: string) -> bool {
+    let ns = len(s)
+    let ne = len(suf)
+    if ne > ns { return false }
+    return s.substring(ns - ne, ns) == suf
+}
+
+fn _starts_with(s: string, pre: string) -> bool {
+    let ns = len(s)
+    let np = len(pre)
+    if np > ns { return false }
+    return s.substring(0, np) == pre
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c == " " || c == "\t" { a = a + 1 } else { break }
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c == " " || c == "\t" || c == "\r" { b = b - 1 } else { break }
+    }
+    return s.substring(a, b)
+}
+
+// fn name defined on a line: "fn NAME(" / "pub fn NAME(" → NAME, else "".
+fn _fn_name(line: string) -> string {
+    let mut t = _trim(line)
+    if _starts_with(t, "pub fn ") { t = t.substring(7, len(t)) }
+    else if _starts_with(t, "fn ") { t = t.substring(3, len(t)) }
+    else { return "" }
+    let n = len(t)
+    let mut i = 0
+    while i < n {
+        if t[i] == "(" || t[i] == " " { return t.substring(0, i) }
+        i = i + 1
+    }
+    return ""
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    let tool = payload["tool_name"]
+    if tool != "Write" && tool != "Edit" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    let mut target = ""
+    if has_key(ti, "file_path") { target = ti["file_path"] }
+    if target == "" { _allow() }
+    if !_ends_with(target, ".hexa") { _allow() }
+    if _contains(target, "/hexa-lang/stdlib/") { _allow() }   // the SSOT itself — skip
+
+    let mut content = ""
+    if has_key(ti, "content") { content = ti["content"] }            // Write
+    else if has_key(ti, "new_string") { content = ti["new_string"] } // Edit
+    if content == "" { _allow() }
+
+    // stdlib root for the dup-fn check (best-effort).
+    let home = to_string(exec("printf %s \"$HOME\""))
+    let stdroot = home + "/core/hexa-lang/stdlib"
+
+    let lines = content.split("\n")
+    let nl = len(lines)
+    let mut hits = []
+    let mut li = 0
+    while li < nl {
+        let line = lines[li]
+        let t = _trim(line)
+        // (a) abs-path import nudge
+        if _starts_with(t, "import \"/") {
+            if !_contains(t, "/stdlib/") {
+                hits.push("  · abs-path import `" + _trim(t.substring(7, len(t))) + "` — if reusable, promote to stdlib + `import \"stdlib/…\"` (g61)")
+            }
+        }
+        // (b) stdlib dup-fn nudge (best-effort grep; fail-safe)
+        let fname = _fn_name(line)
+        if fname != "" {
+            let cmd = "grep -rIl 'pub fn " + fname + "(' '" + stdroot + "' 2>/dev/null | head -1"
+            let mut found = ""
+            try { found = to_string(exec(cmd)) } catch e { found = "" }
+            if _trim(found) != "" {
+                hits.push("  · `fn " + fname + "` already exists as a stdlib `pub fn` — import it, don't re-implement (g61)")
+            }
+        }
+        li = li + 1
+    }
+
+    if len(hits) == 0 { _allow() }
+    let msg = "⊿ stdlib-ssot-guard (commons @D g61) — advisory, non-blocking:\n" + hits.join("\n") + "\n  hexa-lang stdlib is the single SSOT for shared code. `/stdlib check` to scan · `/stdlib promote <file>` to move."
+    _advise(msg)
+}

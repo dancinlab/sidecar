@@ -1,0 +1,9 @@
+{
+  "name": "stdlib-ssot-guard",
+  "description": "PreToolUse(Write|Edit) + SessionStart advisory for commons @D g61 (hexa-lang stdlib is the SSOT for shared code — primitives AND domain engines), implemented in hexa-lang (`_stdlib_ssot_guard.hexa` / `_stdlib_ssot_session.hexa`, invoked via `hexa run`). NON-BLOCKING (additionalContext only, never deny). On a `.hexa` Write/Edit it nudges when the new content fights single-SSOT: (a) abs-path import of another repo's `.hexa` (anima-locked import) — if reusable, promote to stdlib + import \"stdlib/…\"; (b) defining a `fn NAME` whose name already exists as a `pub fn` in hexa-lang stdlib (duplicate primitive/engine) — import it instead (best-effort grep, fail-safe). SessionStart checks the single physical stdlib root (~/core/hexa-lang/stdlib) is present so `import \"stdlib/…\"` resolves. Edits to files already under hexa-lang/stdlib are skipped. Fail-safe: any parse/IO uncertainty → silent allow. Pairs with the /stdlib skill (check · promote).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "stdlib", "ssot", "g61", "hexa"]
+}

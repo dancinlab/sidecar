@@ -94,9 +94,9 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 # ── Fan-out / loop ──────────────────────────────────────────
 /all-bg-go:all-bg-go              reactive single fan-out of the prior turn's branches
-/cycle:cycle                      autonomous loop: self-enumerate (empty → seed from `## deferred`) → plan → fan-out → loop
-/cycle:cycle-full <goal>          /cycle:cycle preceded by a phase-0 depletion brainstorm
-/cycle:cycle-loop                 /cycle:cycle handed off to /loop — drains domain to depletion (milestones 0 + deferred empty)
+/cycle:cycle                      autonomous loop: self-enumerate (empty → seed from `## deferred`) → plan → fan-out → auto-continue to depletion
+/cycle:cycle-full <goal>          /cycle:cycle + a one-time phase-0 depletion brainstorm, then auto-continue to depletion
+/cycle:cycle-loop                 /cycle:cycle via the /loop skill — explicit continuous-intent pacing surface (same depletion end-state)
 /cycle:cycle-full-loop            /cycle:cycle-full once, then /loop /cycle:cycle — drains to the same depletion condition
 /step-by-step:step-by-step <task>  sequential runbook: plan → auto-run steps in order (alias /step-by-step:sbs)
 
@@ -172,7 +172,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`brainstorm`](skills/brainstorm/) | command + skill | `core` | 0.1.1 | Iterative brainstorming |
 | [`bypass`](skills/bypass/) | skill | `core` | 0.2.1 | Anti-punt |
 | [`check`](skills/check/) | command + skill | `core` | 0.1.0 | Task dashboard skill |
-| [`cycle`](skills/cycle/) | command + skill | `core` | 0.6.0 | Autonomous work-loop driver |
+| [`cycle`](skills/cycle/) | command + skill | `core` | 0.7.0 | Autonomous work-loop driver (whole family auto-drains to depletion) |
 | [`domain`](skills/domain/) | command + skill | `core` | 0.8.7 | Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) · `/domain list` repo-wide index (DOMAINS.tape roster — domains at any path)… |
 | [`end`](skills/end/) | command + skill | `core` | 0.2.0 | Session closure safety check |
 | [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |

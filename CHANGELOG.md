@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.7.0: bare `/cycle` + `/cycle-full` 도 자동으로 depletion 까지 self-drain (패밀리 전체 일관화)
+
+0.6.0 이 `*-loop` 변종에만 준 **depletion-구동(self-continue)** 동작을 cycle 패밀리 **전체**로 확장 — 이제 bare `/cycle` 와 `/cycle-full` 도 한 라운드 후 멈추지 않고, 도메인의 `## deferred` backlog 를 배치별로 끝까지 스스로 파낸다.
+
+- **bare `/cycle` = depletion-구동 (기본값)** — Stage 5(loop tail)를 재작성: fan-out 후 도메인이 아직 안 비워졌으면(open milestone > 0 OR `deferred` 미해소 OR 다른 신호) **ScheduleWakeup 으로 다음 라운드 self-continue**(`*-loop` 변종과 동일한 depletion-aware 메커니즘), **(1) open milestone = 0 AND (2) `deferred` 비어있음 AND (3) 다른 seed 신호 없음** 셋 다 충족할 때만 ScheduleWakeup 생략 + closure 보고. 더 이상 single-round-then-stop 아님.
+- **`/cycle-full` 도 동일** — phase-0 brainstorm + 첫 fan-out 후, 이후 라운드는 plain `/cycle` 의미로 `deferred` 에서 self-feed 하며 같은 depletion 조건까지 auto-continue (brainstorm 은 goal 당 1회).
+- **가드레일 불변** — 라운드당 cap(기본 3)은 라운드 **WIDTH** throttle, auto-continue 가 **DEPTH** 제공. 5-stage 구조 · plan-table · dup-race-precheck · leak-guard 전부 그대로. 사용자는 어느 라운드든 interrupt 가능.
+- **패밀리 일관화** — bare `/cycle` · `/cycle-full` · `/cycle-loop` · `/cycle-full-loop` 모두 동일 depletion end-state 로 backlog 를 끝까지 비움. 차이는 **진입/pacing 형태만**: bare = inline self-continue(ScheduleWakeup 직접) · `-loop` = 명시적 continuous-intent + 빌트인 `loop` 스킬 pacing. bare `/cycle` 와 `/cycle-loop` 가 같은 end-state 에 도달하지만 **published 명령은 삭제하지 않음**(scope 외) — 이제-얇아진 구분(진입 표면)을 문서화. SKILL.md 에 "Family — all four drain to depletion" 섹션 추가.
+- **표면 lockstep**(@D ship · g22): `skills/cycle/SKILL.md` (`@D cycle` do/dont + family 섹션 + description) · `skills/cycle/commands/cycle.md` (Stage 5 auto-continue) · `cycle-full.md` (loop tail auto-continue) · `cycle-loop.md` (bare 관계 명시) · `skills/cycle/.claude-plugin/plugin.json` 0.6.0 → 0.7.0 · `.claude-plugin/marketplace.json` cycle 0.6.0 → 0.7.0 · `README.md` 표 cell + Commands 섹션 4줄.
+
 ## 2026-05-25 — cycle 0.6.0: `## deferred` 를 1급 seed 소스로 승격 + 루프 변종에 DEPLETION 종료 조건
 
 `/cycle` 패밀리가 도메인을 **고갈(depletion)** 까지 자동으로 비울 수 있게 함 — 라운드마다 steering 을 위해 멈추는 대신, 도메인이 선언한 backlog 를 스스로 떠먹으며(self-feed) 끝까지 march.

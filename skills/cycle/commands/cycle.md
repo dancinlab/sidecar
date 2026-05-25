@@ -62,13 +62,19 @@ Engage the `cycle` skill. In ONE message run all five stages:
      ⏩ domain not depleted (open: <count> · deferred: <count>) — scheduled next round.
      ```
 
-   - **DEPLETED** (all three hold) → do NOT ScheduleWakeup. Report closure and end with:
+   - **$0-RUNNABLE LANE EXHAUSTED** (all three hold) → do NOT ScheduleWakeup. **But this is a PAUSE, not "100% done" (@D depletion_not_terminal · `feedback-closure-is-physical-limit`):** "no cheap runnable next task" ≠ "domain complete". For exploratory / perf / limit-bounded domains the frontier toward the **physical/math limit is OPEN** even when the $0 lane is empty (e.g. an intractable large-N exact computation, a not-yet-written larger spec, a cost-bearing GPU fire, a roofline not yet reached). Closure = approaching that limit, NOT a checkbox. So frame the stop as a lane-pause + open-frontier, never as terminal completion. End with:
 
      ```
      M agents launched (cycle N): <item labels>  [K skipped: <skipped labels with reasons>]
 
-     ✅ domain depleted (open milestones 0 · deferred empty · no other signal) — loop terminates. (Extend: /domain milestone <text> · switch: /domain set <other> · close: /end)
+     ⏸️ $0-runnable lane exhausted (open milestones 0 · deferred empty · no $0 seed) — loop PAUSES (not 100%-done; the frontier toward the physical/math limit stays open per feedback-closure-is-physical-limit). Remaining paths live ABOVE the $0 lane:
+       • cost-bearing fire (GPU/pod) — if the next step is runnable-but-not-free
+       • new spec / larger structure — if the next step needs design first
+       • intractable-limit note — if the remaining work is past the math/physical ceiling (record it as the limit, not as "done")
+       • switch: /domain set <other> · close: /end
      ```
+
+     Reserve a literal "✅ done / terminal" message ONLY for a genuinely FINITE-scope domain whose listed closure criteria are ALL met AND which has NO open physical-limit frontier (rare). When in doubt, PAUSE the lane — do not declare 100%.
 
    (The per-round cap still throttles WIDTH so each round stays reviewable; the auto-continue marches DEPTH-wise through the whole declared backlog. The user can interrupt at any round.)
 

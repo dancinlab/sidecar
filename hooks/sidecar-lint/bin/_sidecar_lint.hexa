@@ -155,6 +155,22 @@ fn _is_replaces_char(c: string) -> bool {
     return false
 }
 
+// (8) version/generation marker in a name (commons @D g72 — minimal role name).
+// Hand-rolled (no regex): stage0..2 · -new/-old/-final suffix · _vN/-vN/_mkN/-mkN/_cN (N=2..9).
+fn _ver_marked(s: string) -> bool {
+    if _contains(s, "stage0") || _contains(s, "stage1") || _contains(s, "stage2") { return true }
+    if _contains(s, "-new") || _contains(s, "-old") || _contains(s, "-final") { return true }
+    let mut d = 2
+    while d <= 9 {
+        let ds = to_string(d)
+        if _contains(s, "_v" + ds) || _contains(s, "-v" + ds) { return true }
+        if _contains(s, "_mk" + ds) || _contains(s, "-mk" + ds) { return true }
+        if _contains(s, "_c" + ds) { return true }
+        d = d + 1
+    }
+    return false
+}
+
 // `removed in ` + N+.N+ (semver-ish prefix)
 fn _version_at(lo: string, idx: int) -> bool {
     let n = len(lo)
@@ -357,6 +373,7 @@ fn main() {
     // (7) MCP-server plugin registered (project.tape @D s15) — shares this loop
     let mut drift = []
     let mut mcpban = []
+    let mut verban = []
     let mraw = _read_file_safe(root + "/.claude-plugin/marketplace.json")
     if mraw != "" {
         try {
@@ -381,6 +398,9 @@ fn main() {
                                 if !is_mcp && _contains(pjraw, "mcpServers") { is_mcp = true }
                                 if is_mcp && len(mcpban) < 8 {
                                     mcpban.push("  " + name + " (" + src + "): MCP-server plugin — mcps/ source or mcpServers in plugin.json")
+                                }
+                                if _ver_marked(name) && len(verban) < 8 {
+                                    verban.push("  " + name + " (" + src + "): version/generation marker in plugin name — use a minimal role name (version = semver in plugin.json)")
                                 }
                                 if pjraw != "" {
                                     let pj = json_parse(pjraw)
@@ -482,6 +502,9 @@ fn main() {
     }
     if len(mcpban) > 0 {
         sections.push("MCP-server plugin(s) registered (project.tape @D s15 — no MCP-server plugins; expose capability via hook · command · skill + host CLI; stdio MCP handshake blocks sessions):\n" + mcpban.join("\n"))
+    }
+    if len(verban) > 0 {
+        sections.push("version/generation marker in plugin name(s) (commons @D g72 — minimal role-name identifiers; the version lives in semver / git tag, never the name):\n" + verban.join("\n"))
     }
 
     if len(sections) == 0 { _allow() }

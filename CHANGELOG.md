@@ -6,7 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
-## 2026-05-26 — project.tape s15: MCP-server 플러그인 금지 + sidecar-lint 0.6.0 enforcement
+## 2026-05-26 — commons g72: minimal role-name 식별자 (버전/세대 마커 금지) + sidecar-lint 0.7.0 check 8
+
+식별자·파일·바이너리 이름에서 버전/세대 마커를 추방하는 cross-project 규칙. `_v2`·`_v3`·`_mk2`·`_c2`·`stage0`·`_new`·`_old`·`_final`·`-fixNNNN` 류 금지 — 이름은 **역할 기반 minimal**(Rust snake_case), 버전은 semver/git tag 에 산다(이름엔 절대 안 박음). Go식 `/vN` import-path 버저닝도 금지(마커는 메타데이터지 이름이 아니다). 기존 `hexa_v2` 등은 grandfather(빌드 깨짐 방지) — 신규만 차단.
+
+- **commons.tape `@D g72`** 추가 (commons 0.10.12→0.10.13) — commons hook 이 모든 세션(hexa-lang 포함)에 cross-project 주입하므로 에이전트가 신규 명명 시 자동 적용.
+- **sidecar-lint check 8** (0.6.0→0.7.0) — 마켓플레이스 등록 플러그인 이름을 `_ver_marked` 로 스캔(stage0..2 · -new/-old/-final · `_vN`/`-vN`/`_mkN`/`_cN` N=2..9, hand-rolled no-regex), 발견 시 non-blocking finding. s7(룰+enforcement 동반).
+- 세션 산출물 동반 정리: 멀티호스트 배포 바이너리를 `hexa-fixNNNN`→bare `hexa`(Rust `rustc` 스타일)로 통일(Mac·ubu-1·ubu-2).
 
 pool-mcp(폐기됨)가 stdio 핸드셰이크 데드락으로 세션을 블로킹한 사례를 거버넌스로 못박음 — **MCP-server 플러그인 생성 금지**. 능력 노출은 hook · command · skill 3개 개념 표면(+ 그 위의 host CLI)으로 충분하며, s1 의 concept set 도 원래 `{hook · command · skill}` 이었음. 규칙 + enforcement 동시 출하(s7).
 

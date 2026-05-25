@@ -219,7 +219,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |
 | [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
-| [`commons`](hooks/commons/) | hook | `personal` | 0.10.12 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
+| [`commons`](hooks/commons/) | hook | `personal` | 0.10.13 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
@@ -233,7 +233,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |
 | [`sidecar-auto-sync`](hooks/sidecar-auto-sync/) | hook | `personal` | 0.2.0 | SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync… |
-| [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.6.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |
+| [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.7.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |
 | [`sign-guard`](hooks/sign-guard/) | hook | `personal` | 0.1.4 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) sign-gate for governance-SSOT files, implemented in hexa-lang (`_sign_guard.h… |
 | [`subagent-route`](hooks/subagent-route/) | hook | `personal` | 0.1.0 | [POC] PreToolUse(Task\|Agent) observation hook + SessionStart observation-log snapshot, implemented in hexa-lang (`_sub… |
 

@@ -4,4 +4,4 @@ argument-hint: "[show | code <lang> | docs <lang> | response <lang>]"
 allowed-tools: Bash
 ---
 
-!`hexa run "$CLAUDE_PLUGIN_ROOT/bin/_prefs.hexa" $ARGUMENTS`
+!`H="$CLAUDE_PLUGIN_ROOT/bin/_prefs.hexa"; [ -f "$H" ] || { V="$(ls -1 "$HOME/.claude/plugins/cache/sidecar/prefs" 2>/dev/null | sort -V | tail -1)"; [ -n "$V" ] && H="$HOME/.claude/plugins/cache/sidecar/prefs/$V/bin/_prefs.hexa"; }; hexa run "$H" $ARGUMENTS`

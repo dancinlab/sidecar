@@ -486,12 +486,13 @@ fn main() {
             let mut enabled = true
             if has_key(h, "enabled") { if type_of(h["enabled"]) == "bool" { enabled = h["enabled"] } }
             if enabled {
+                // host name — for the @D s8 akida governance check + ssh fallback
+                let mut hname = ""
+                if has_key(h, "name") { if type_of(h["name"]) == "string" { hname = h["name"] } }
                 // ssh target — the `ssh` field, falling back to `name`
                 let mut tgt = ""
                 if has_key(h, "ssh") { if type_of(h["ssh"]) == "string" { tgt = h["ssh"] } }
-                if tgt == "" {
-                    if has_key(h, "name") { if type_of(h["name"]) == "string" { tgt = h["name"] } }
-                }
+                if tgt == "" { tgt = hname }
                 let mut pl = "linux"
                 if has_key(h, "os") { if type_of(h["os"]) == "string" { pl = h["os"] } }
                 // 0.6.6 — macOS pool hosts are now eligible for macOS-ONLY
@@ -502,7 +503,12 @@ fn main() {
                 // hosts to is_macos commands only, so the workstation is still
                 // protected from general-heavy round-robin (linux-only there),
                 // but mini DOES receive Swift/Xcode work as the user asked.
-                if tgt != "" {
+                // @D s8 — pi5-akida is anima-only: NEVER an auto-dispatch
+                // candidate (no route / load-balance / round-robin). Reached
+                // ONLY via explicit `pool on pi5-akida` (the pool CLI, not this
+                // hook). Match on name OR ssh so it never enters the elig set.
+                let is_akida = hname.contains("akida") || tgt.contains("akida")
+                if tgt != "" && !is_akida {
                     h_name.push(tgt)
                     h_plat.push(pl)
                     let mut su = false
@@ -697,15 +703,34 @@ fn main() {
         }
     }
 
-    // hexa subverb (kick/drill/loop/cc) gate — script-backed verbs need the
-    // hexa-lang repo + build/hexa_interp on the remote. Cmd-independent of
-    // the picked host, so we compute the subverb (if any) once.
+    // toolchain preflight (0.6.13) — pre-0.6.13 only kick/drill/loop/cc probed
+    // the actual tool (`hexa <verb> --help`); `hexa run`/`build` + C compiles
+    // checked only `test -d <wd>`, so a host with a broken/missing toolchain
+    // (e.g. ubu-1 with a non-functional hexa) PASSED preflight then FAILED the
+    // real run. Now every hexa verb + C/C++ compile contributes a tool probe
+    // (existence `command -v` + interp `test -x` + a cheap real invocation
+    // `<tool> --help`, all in one ssh); a host that fails it is SKIPPED so the
+    // round-robin moves on, and if ALL fail the deny trailer names the gap.
+    // hexa_subverb is still tracked separately — it drives HEXA_LANG below.
+    // Known limit (@D d6): a binary that passes `--help` but segfaults at
+    // RUNTIME is not caught (would need a full exec probe — heavier, deferred).
     let toks_pre = _tokens(cmd)
     let mut hexa_subverb = ""
-    if len(toks_pre) >= 2 && toks_pre[0] == "hexa" {
-        let sv0 = toks_pre[1]
-        if sv0 == "kick" || sv0 == "drill" || sv0 == "loop" || sv0 == "cc" {
-            hexa_subverb = sv0
+    let mut tool_probe = ""
+    let mut tool_label = ""
+    if len(toks_pre) >= 1 {
+        let t0b = _basename(toks_pre[0])
+        if t0b == "hexa" {
+            let mut hverb = ""
+            if len(toks_pre) >= 2 { hverb = toks_pre[1] }
+            if hverb == "kick" || hverb == "drill" || hverb == "loop" || hverb == "cc" { hexa_subverb = hverb }
+            let mut help_cmd = "hexa --help"
+            if hverb != "" && hverb.substring(0, 1) != "-" { help_cmd = "hexa " + hverb + " --help" }
+            tool_probe = "command -v hexa >/dev/null 2>&1 && test -x \"$HOME/core/hexa-lang/build/hexa_interp\" && PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_LANG=\"$HOME/core/hexa-lang\" " + help_cmd + " >/dev/null 2>&1"
+            tool_label = help_cmd
+        } else if t0b == "gcc" || t0b == "g++" || t0b == "clang" || t0b == "clang++" || t0b == "cc" || t0b == "c++" {
+            tool_probe = "command -v " + t0b + " >/dev/null 2>&1"
+            tool_label = t0b
         }
     }
 
@@ -739,10 +764,10 @@ fn main() {
         }
         let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
 
-        // preflight — workdir + hexa-subverb dispatchability check
+        // preflight — workdir present + (0.6.13) the command's toolchain works
         let mut probe_inner = "test -d " + wd_sh
-        if hexa_subverb != "" {
-            probe_inner = probe_inner + " && PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_LANG=\"$HOME/core/hexa-lang\" hexa " + hexa_subverb + " --help >/dev/null 2>&1"
+        if tool_probe != "" {
+            probe_inner = probe_inner + " && " + tool_probe
         }
         let mut probe = ""
         if tx == "tailscale" {
@@ -767,7 +792,7 @@ fn main() {
         // record failure reason for the deny trailer
         tried.push(host_i)
         let mut why_fail = "preflight rc=" + to_string(rc) + " (workdir missing"
-        if hexa_subverb != "" { why_fail = why_fail + " or `hexa " + hexa_subverb + "` not dispatchable" }
+        if tool_label != "" { why_fail = why_fail + " or `" + tool_label + "` toolchain not runnable on this host" }
         why_fail = why_fail + ")"
         reasons.push(host_i + ": " + why_fail)
         li = li + 1
@@ -779,9 +804,10 @@ fn main() {
                  + "  why     : " + why + " (heavy-classified, must use pool resources)\n"
                  + "  tried   : " + tried.join(", ") + "\n"
                  + "  failures:\n    " + reasons.join("\n    ") + "\n"
-                 + "  fix     : ensure each pool host has the hexa-lang repo at ~/core/hexa-lang "
+                 + "  fix     : for hexa, ensure each pool host has the hexa-lang repo at ~/core/hexa-lang "
                  + "+ a built build/hexa_interp (`cd ~/core/hexa-lang && hexa cc --regen`); "
-                 + "for non-hexa commands, ensure the workdir (" + wd_remote + ") exists on at least one host."
+                 + "for C/C++, ensure the compiler (gcc/clang) is installed on a host; "
+                 + "for any command, ensure the workdir (" + wd_remote + ") exists on at least one host."
         _deny(body)
     }
 }

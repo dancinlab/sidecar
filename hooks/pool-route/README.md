@@ -78,12 +78,26 @@ Detection is **word-match** (not first-token), so a `zsh`-snapshot-wrapped invoc
 
 > A C/C++ compile routed to a Linux host produces a **Linux** artifact in the synced workdir — identical to `make`/`cargo`/`cmake` today. For a macOS-native build, reach for an explicit macOS-capability path (`swiftc`, Xcode) or run it under `pool on <macos-host>`.
 
+## Toolchain preflight + akida exclusion (0.6.13)
+
+**pi5-akida is anima-only (@D s8).** It is excluded from the auto-dispatch candidate set entirely — never in `route` / load-balance / round-robin. It is reached **only** via an explicit `pool on pi5-akida <cmd>` (the `pool` CLI, not this hook).
+
+**Toolchain preflight.** Before routing, each candidate host is probed for the command's *actual* toolchain, not just the workdir — so a host with a broken/missing toolchain (e.g. a non-functional `hexa` on one box) is **skipped** rather than routed-to-then-failed:
+
+| Command | Preflight probe |
+|---|---|
+| any `hexa <verb>` | `command -v hexa` + `test -x ~/core/hexa-lang/build/hexa_interp` + `hexa <verb> --help` |
+| `gcc` / `g++` / `clang` / `clang++` / `cc` / `c++` | `command -v <compiler>` |
+| everything else | `test -d <workdir>` |
+
+A failing host is skipped and the round-robin moves to the next eligible host; if **all** fail, the hook denies with a per-host failure breakdown (never a silent local fallback). **Known limit:** a binary that passes `--help` but segfaults at *runtime* is not caught — that needs a full exec probe (heavier, deferred).
+
 ## How it routes
 
-1. **Capability filter** — a macOS-only command (`xcodebuild`, `codesign`, `swift build`, `.dylib`, …) is restricted to `os: macos` hosts (e.g. `mini`); a Linux-only command (`apt`, `dpkg`, `.deb`, …) to `os: linux` hosts. A general-heavy command (make/cargo/hexa run/…) round-robins across `os: linux` hosts only — the workstation Mac is reached **only** when a macOS-capability marker explicitly demands it. No eligible host → runs local.
+1. **Capability filter** — a macOS-only command (`xcodebuild`, `codesign`, `swift build`, `.dylib`, …) is restricted to `os: macos` hosts (e.g. `mini`); a Linux-only command (`apt`, `dpkg`, `.deb`, …) to `os: linux` hosts. A general-heavy command (make/cargo/hexa run/…) round-robins across `os: linux` hosts only (**never `pi5-akida` — anima-only, @D s8**) — the workstation Mac is reached **only** when a macOS-capability marker explicitly demands it. No eligible host → runs local.
 2. **Round-robin** — picks one eligible host, spreading load across calls.
-3. **Workdir** — the local path under `$HOME` is mirrored to the remote `~/`. A cwd outside `$HOME` runs local.
-4. **Sync** — `autosync` rsyncs the project to the host before the command, so the remote workdir need not pre-exist.
+3. **Preflight** — probes the picked host for the command's toolchain (table above); a host that fails is skipped, and the next eligible host is tried.
+4. **Workdir** — the local path under `$HOME` is mirrored to the remote `~/`. A cwd outside `$HOME` runs local (with a worktree→canonical-root rescue).
 5. **Rewrite** — the command becomes `ssh <host> 'cd <workdir> && <cmd>'` — `tailscale ssh` when a local tailscale daemon is up.
 
 A command that is already routed (carries the `__SIDECAR_POOL__` marker), a heredoc, a background command, or an explicit `ssh …` passes through untouched.

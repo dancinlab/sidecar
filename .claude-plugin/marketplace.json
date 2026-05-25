@@ -203,8 +203,8 @@
     {
       "name": "cloud",
       "source": "./skills/cloud",
-      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod / vast.ai dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw runpodctl/vastai/ssh/scp/curl per commons g8, hard-enforced by the cloud-guard hook). Subverbs: preflight \u00b7 run \u00b7 nohup \u00b7 poll \u00b7 copy-to \u00b7 copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup \u00b7 no LLM \u00b7 $0). NL trigger via skill. Pairs with commons g8 + g12.",
-      "version": "0.3.2"
+      "description": "/cloud <args> \u2014 wraps `hexa cloud` (runpod / vast.ai dispatch \u00b7 canonical subcommand form, structured argv \u2014 never raw runpodctl/vastai/ssh/scp/curl per commons g8, hard-enforced by the cloud-guard hook). Subverbs: preflight \u00b7 run \u00b7 nohup \u00b7 poll \u00b7 tail \u00b7 copy-to \u00b7 copy-from. preflight = closed-form GPU mem-budget check (refuses out-of-budget specs before pod spinup \u00b7 no LLM \u00b7 $0). tail = live remote-log stream \u2192 Monitor bridge (ssh tail -F | sed -u \u00b7 terminal-exit on a crash-aware default \u00b7 commons g57). NL trigger via skill. Pairs with commons g8 + g12 + g57.",
+      "version": "0.3.3"
     },
     {
       "name": "hexa-help",

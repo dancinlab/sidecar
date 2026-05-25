@@ -6,6 +6,12 @@ allowed-tools: Agent, Bash, Read
 
 Engage the `cycle` skill. In ONE message run all five stages:
 
+**0. SSOT-freshness pre-check (@D ssot_freshness) — RUN FIRST, before reading any milestone.** The whole loop trusts the working-tree `<NAME>.md`; if that is a stale/untracked shadow, the next-list AND the depletion verdict are both wrong. Fail-open probe (skip silently outside a git repo / no origin/main ref):
+   - **untracked?** `git ls-files --error-unmatch <NAME>.md` nonzero ⇒ local-only copy shadowing the committed SSOT.
+   - **behind main?** `git log --oneline HEAD..origin/main -- <NAME>.md` non-empty ⇒ origin/main has newer milestones/@goal your tree lacks.
+   - If EITHER fires: SURFACE `⚠ stale-SSOT: <NAME>.md untracked|behind-main — reconcile before trusting milestones/depletion (git diff HEAD origin/main -- <NAME>.md · git checkout origin/main -- <NAME>.md)` and reconcile (or ask the user) before proceeding. Do NOT auto-overwrite — the user may hold intentional local edits. Evidence: anima LIFE on an orphan-recover branch untracked root LIFE.md → working tree was the stale "$0-frontier-closed" version (all `[x]`, no perpetual @goal) while origin/main held the live "perpetual engine" version with open axes → `/cycle` wrongly declared depletion.
+   - **Perpetual detection (@D perpetual_domain):** also scan the `@goal:` line for a perpetual marker (`종료 조건 없음` · `완료되지 않` · `100% 미도달` · `미도달 = 설계` · `영구` · `끝없` · `perpetual` · `open horizon` · `no termination`). If present, note `♾️ perpetual domain — Stage 5 will never emit a terminal closure`. (`/domain set` already badges this `♾️ perpetual`.)
+
 1. **Next-list (self-enumerate, ACTIVE DOMAIN ONLY)** — read the session's active domain (`domain` skill's active-domain pointer; if none set, run `/domain set <NAME>` first and stop). Enumerate from the active `<NAME>.md` snapshot's open `- [ ]` milestone checkboxes (commons @D g58 — off-domain work is explicitly forbidden). If `$ARGUMENTS` is non-empty, intersect the enumeration with that scope. State in one line: active domain name + count of open milestones picked.
 
    **1a. Auto-seed on empty next-list** — if zero open milestones (snapshot at 100% closure or freshly initialized), do NOT punt back to the user; instead inspect the domain's declared backlog + recent conversation context for next-batch candidates and seed them into the snapshot before proceeding:
@@ -75,6 +81,17 @@ Engage the `cycle` skill. In ONE message run all five stages:
      ```
 
      Reserve a literal "✅ done / terminal" message ONLY for a genuinely FINITE-scope domain whose listed closure criteria are ALL met AND which has NO open physical-limit frontier (rare). When in doubt, PAUSE the lane — do not declare 100%.
+
+   - **PERPETUAL domain override (@D perpetual_domain)** — if Stage 0 flagged the domain `♾️ perpetual` (its @goal declares no-termination), the exhaustion handling is STRICTER than the generic pause: (1) FIRST re-seed the next batch from the domain's own declared perpetual-axis backlog — an `## 영구 축` / `## perpetual axes` (or `## deferred`) section with open `- [ ]` — promote ≤N as milestones and **self-continue (ScheduleWakeup)** as if not depleted; (2) ONLY if that backlog is ALSO drained, end with the ♾️ form below. A perpetual domain NEVER prints `✅ … terminates` / `100% closure` — terminal closure contradicts its declared goal.
+
+     ```
+     M agents launched (cycle N): <item labels>  [K skipped: <skipped labels with reasons>]
+
+     ♾️ perpetual domain — current-tier lane drained; NO terminal closure by declaration (per feedback-closure-is-physical-limit). The frontier stays OPEN:
+       • re-seed declared axes — /domain milestone <next-axis task> (the perpetual @goal expects continuation)
+       • cost-bearing / larger-spec tier — if the next axis needs a fire or design first
+       • /schedule the next tier · switch: /domain set <other>
+     ```
 
    (The per-round cap still throttles WIDTH so each round stays reviewable; the auto-continue marches DEPTH-wise through the whole declared backlog. The user can interrupt at any round.)
 

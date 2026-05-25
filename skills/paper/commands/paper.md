@@ -1,6 +1,6 @@
 ---
-description: /paper <args> — arxiv-style LaTeX paper scaffolder (v0.7). Verbs — new <slug> · sample <slug> · fig <size> <prompt> <out.png> · compile [dir] · lint [dir] · list · help · companion init · outline [dir] · pipeline <stage1> <stage2> ... · atoms <domain> · verify-block <fn> <args...> <expected> · bib add <doi-or-arxiv> · pr-roll <repo> <since-ref> · arxiv-prep [<dir>]. `new` scaffolds the rich template (9-section spine + companion/ + 3 figures). `compile` runs xelatex × 3 + bibtex. `lint` enforces extended commons @D g51.
-argument-hint: "<new <slug> | sample <slug> | fig <size> <prompt> <out.png> | compile [dir] | lint [dir] | list | help | companion init | outline [dir] | pipeline <stage1> ... | atoms <domain> | verify-block <fn> <args...> <expected> | bib add <id> | pr-roll <repo> <since> | arxiv-prep [<dir>]>"
+description: /paper <args> — arxiv-style LaTeX paper scaffolder (v0.8 — 4 samples). Verbs — new <slug> · sample [<name>] [<dest>] · fig <size> <prompt> <out.png> · compile [dir] · lint [dir] · list · help · companion init · outline [dir] · pipeline <stage1> <stage2> ... · atoms <domain> · verify-block <fn> <args...> <expected> · bib add <doi-or-arxiv> · pr-roll <repo> <since-ref> · arxiv-prep [<dir>]. v0.8 bundles FOUR samples — sample-nb-bcs-absorbed · sample-fusion-7gate · sample-cost-routing · sample-blue-max. `/paper list` enumerates them; `/paper sample <name> [<dest>]` copies.
+argument-hint: "<new <slug> | sample [<name>] [<dest>] | fig <size> <prompt> <out.png> | compile [dir] | lint [dir] | list | help | companion init | outline [dir] | pipeline <stage1> ... | atoms <domain> | verify-block <fn> <args...> <expected> | bib add <id> | pr-roll <repo> <since> | arxiv-prep [<dir>]>"
 allowed-tools: Bash
 ---
 

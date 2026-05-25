@@ -1,0 +1,40 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,booktabs,hyperref}
+\title{\textbf{Tier-routing cost reduction (sample)}\\[2pt]\large hexa-codex economics-routing-savings starter}
+\author{\texttt{<repo>} maintainers\\\normalsize\textit{dancinlab}\\[2pt]\normalsize\href{https://github.com/dancinlab/<repo>}{\texttt{github.com/dancinlab/<repo>}}}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+Minimal cost-benchmark paper structure mirroring \texttt{hexa-codex/PAPER/economics-routing-savings/}. Replace the formula, the manifest, and the headline numbers with your own benchmark. Persisted raw evidence lives under \texttt{.verdicts/<slug>/} (or \texttt{companion/verify-ledger.json}) for bit-for-bit reproduction.
+\end{abstract}
+
+\section{Formula}
+For $N$ tasks with per-task tier $t_i$ and Anthropic per-call rate $r(t_i)$, total cost is the trivial sum
+\begin{equation}
+  C(N) = \sum_{i=1}^{N} r(t_i) = \sum_{t \in \{\text{haiku, sonnet, opus}\}} N_t \, r(t).
+\end{equation}
+Savings of router $R$ versus baseline $B$:
+\begin{equation}
+  s_{R/B} = \frac{C_B - C_R}{C_B} \cdot 100\,\%.
+\end{equation}
+
+\section{Method}
+\textbf{Task manifest:} N fixed prompts spanning trivial-fact, short-code, longer-reasoning. \textbf{Tier rule:} length-based cutoffs $\le L_1$ → haiku, $\le L_2$ → sonnet, else opus. \textbf{Persistence:} verbatim \texttt{claude --bare -p --output-format json} stdout under \texttt{.verdicts/<slug>/\{baseline,router\}.tsv}.
+
+\section{Results}
+\begin{table}[h]\centering\small
+\begin{tabular}{lrr}\toprule
+\textbf{Configuration} & \textbf{Cost (USD)} & \textbf{Accuracy} \\\midrule
+always-opus baseline & \$0.299947 & 19/20 \\
+length-router        & \$0.081914 & 19/20 \\\midrule
+\textbf{savings}     & \textbf{72.69\%} & no measured loss \\\bottomrule
+\end{tabular}\end{table}
+
+\section{Limitations and honest caveats}
+Replace these with your scale-replication tempering. The honest claim is the SCALED savings + any accuracy cost; never the headline.
+
+\section{Reproducibility}
+Code: \url{https://github.com/dancinlab/<repo>}. Persisted under \texttt{.verdicts/<slug>/}.
+\end{document}

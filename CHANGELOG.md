@@ -6,6 +6,26 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — paper 0.8.0 — samples (3 신규 · 총 4)
+
+`/paper list` 가 1개 → 4개 bundled samples 를 enumerate. paper-author 가 첫 페이지부터 ANTIMATTER-tier starter 잡도록:
+
+- **`sample-fusion-7gate/`** (NEW) — 1-page main.tex 가 D-T fusion 10-stage fuel journey 로 §Full Pipeline pattern fully populated. Stage table: Li-6 enrichment (🟡) → Tritium breeding (🟢) → ... → 🟠 wet-lab handoff. NOT a full copy of hexa-fusion-7gate — 패턴만 보여줌. 42 lines.
+- **`sample-cost-routing/`** (NEW) — hexa-codex `economics-routing-savings/` 구조 mirror. Formula (closed-form cost sum identity) → Method → Results (savings 표) → Limitations → Reproducibility. 40 lines.
+- **`sample-blue-max/`** (NEW) — BLUE-MAX-only 구조. 모든 claim 이 `atom:<id>` → 🔵 SUPPORTED-FORMAL verdict 로 resolve. 🟢 numerical 은 sibling paper 로 분리. Audit table 4-row 예시. 36 lines.
+
+각 sample 은 main.tex + README.md (사용법 + copy 명령). 모두 50 lines max 규정 준수 (42/40/36).
+
+**`bin/_paper.hexa::_cmd_sample`** 수정: 기존엔 `sample-nb-bcs-absorbed` 하드코드 (arg 무시). 이제 `[<sample-name>] [<dest-slug>]` 받음:
+- 0-arg: default to `sample-nb-bcs-absorbed`
+- 1-arg: copy to `./<sample-name>/`
+- 2-arg: copy to `./<dest-slug>/`
+- 미존재 sample 요청 시 bundled list 출력.
+
+비파괴 — 기존 (`sample-nb-bcs-absorbed`) 동작 보존. paper `0.7.0 → 0.8.0` (minor — additive). marketplace.json + plugin.json + SKILL.md + commands/paper.md + CHANGELOG.md lockstep 갱신 (commons @D g22).
+
+---
+
 ## 2026-05-25 — paper 0.7.0 — verbs (8 신규)
 
 v0.6 의 구조 위에 작동 verb 8개 추가. paper-author 가 매번 손으로 짜던 패턴을 dispatch 화:

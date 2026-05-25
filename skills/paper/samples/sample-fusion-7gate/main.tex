@@ -1,0 +1,42 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,booktabs,hyperref,array}
+\providecommand{\tierBlue}{🔵}
+\providecommand{\tierGreen}{🟢}
+\providecommand{\tierYellow}{🟡}
+\providecommand{\tierOrange}{🟠}
+\providecommand{\tierRed}{🔴}
+\title{\textbf{D-T fusion fuel: a 10-stage pipeline sample}\\[2pt]\large §Full Pipeline pattern populated end-to-end}
+\author{\texttt{<repo>} maintainers\\\normalsize\textit{dancinlab}\\[2pt]\normalsize\href{https://github.com/dancinlab/<repo>}{\texttt{github.com/dancinlab/<repo>}}}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+Minimal sample showing the §Full Pipeline pattern fully populated with the 10-stage D-T fusion fuel journey. Use this as a starter — relabel stages for your domain, fill in atom ids, attach the cover image generated via \texttt{/paper fig}.
+\end{abstract}
+\section{Full Pipeline}
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}clcl@{}}
+\toprule
+\textbf{\#} & \textbf{Stage} & \textbf{Tier} & \textbf{Backing atom} \\
+\midrule
+1 & Lithium-6 enrichment            & \tierYellow & DOI:10.0000/li6.enr \\
+2 & Tritium breeding (LiD blanket)  & \tierGreen  & \texttt{atom:tbr-1.15} \\
+3 & Deuterium electrolysis          & \tierBlue   & \texttt{atom:d2-yield} \\
+4 & D-T fuel pellet pressing        & \tierOrange & \texttt{atom:pellet-rho} \\
+5 & Laser preheat (NIF-class)       & \tierGreen  & DOI:10.0000/nif.ig \\
+6 & Implosion symmetry verify       & \tierBlue   & \texttt{atom:legendre-P2} \\
+7 & Alpha-self-heating threshold    & \tierGreen  & \texttt{atom:alpha-Q1} \\
+8 & Q $>$ 1 ignition gate           & \tierBlue   & \texttt{atom:Q-gain} \\
+9 & Tritium recovery (post-shot)    & \tierOrange & \texttt{atom:recov-frac} \\
+10 & Wet-lab handoff (cryo-fill)    & \tierOrange & \texttt{atom:handoff-dt} \\
+\bottomrule
+\end{tabular}
+\caption{D-T fusion fuel pipeline. Stages 1--3 fuel cycle, 4--8 ignition physics, 9--10 recovery + handoff.}
+\end{table}
+% Cover image: /paper fig square_hd figures/_prompts/cover.txt figures/cover.png
+\section{Limitations and honest caveats}
+This is a structural sample — numeric values are placeholders.
+\section{Reproducibility}
+See \texttt{companion/verify-ledger.json} for atom-by-atom recompute (in your derived paper).
+\end{document}

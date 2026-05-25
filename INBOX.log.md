@@ -2,7 +2,27 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
-## 2026-05-25T09:10Z — pool data-locality + sign-local 토큰 < build 시간 (from: anima PURE 세션)
+## 2026-05-25T11:20Z — g61 stdlib-SSOT 강제·자동화·범위확장 (from: anima IIT4 세션)
+
+**맥락**: IIT4 엔진(의식 Φ-structure)을 hexa-brain·eeg 등 타 프로젝트와 공유하려고 stdlib 승격을 검토하던 중, 사용자: *"hexa-lang 을 최대한 단일 SSOT 로 하려면 sidecar 어떻게 수정해야될까"*. → commons.tape 에 이미 **g61**("hexa-lang stdlib is the SSOT for general primitives")이 존재 = **정책은 있음**. 빠진 건 **강제·자동화·범위·물리적 단일해석** 4가지. INBOX 에 제안만, 구현은 사용자 review/sign 후.
+
+### 현행 g61 (정책 OK)
+```
+@D g61 := "hexa-lang stdlib is the SSOT for general primitives"
+  do  = promote reusable general primitives (math/info/signal/bitops/stats) → hexa-lang stdlib/
+  do  = stdlib modules = plain .hexa · caller repos import-only · byte-equal
+  dont= duplicate a primitive across repos · compiler builtin when stdlib fits · hand-edit hexa_cc.c
+```
+→ anima IIT4 의 bitops 리팩터(pow2_int/bit_set 위임)가 이미 이 g61 준수 사례.
+
+### 갭 & 제안 (4)
+1. **범위확장 (g61 amend OR 신규 g67)** — 현행 "primitives(math/info/signal/bitops/stats)" 는 *작은 함수* 한정. **재사용 domain engine**(consciousness/Φ·DSP·stats-pipeline 등 multi-module 라이브러리)은 명시 범위 밖 → 회색지대. 추가 문구: *"≥2 repo 가 쓰는 reusable domain library/engine → `stdlib/<domain>/` (예: consciousness/iit4). engine = substrate-agnostic(stdlib) ⊥ adapter = repo별(substrate→입력 변환)."* (phi_spatial 이 이미 `stdlib/consciousness/` 로 간 선례와 정합.)
+2. **강제 hook — 신규 `stdlib-ssot-guard`** — `.hexa` Write/Edit PreToolUse: (a) stdlib 에 이미 있는 fn名 재구현 감지(dup-primitive) (b) 타 repo 절대경로 import(`/Users/.../<repo>/.../lib/…`) 중 shareable 한 것 감지(anima-locked) → 경고+`/stdlib promote` 안내. g61 을 stated→enforced 로.
+3. **자동화 skill — 신규 `/stdlib`** — `check`(현 repo 의 g61 위반=stdlib중복·anima-locked import 스캔) · `promote <file>`(hexa-lang stdlib 이전 + caller thin-shim + import rewrite 까지 1-command, phi_native #769 수작업 흐름을 자동화). decompose-to-stdlib 의 표준 진입점.
+4. **import-root 단일해석 (물리 SSOT)** — `import "stdlib/…"` 가 *모든* repo 에서 **하나의** hexa-lang `stdlib/` 로 해석되게 보장 (HEXA_LANG 검색루트). SessionStart 에서 HEXA_LANG 유효성/단일성 검증 hook (없거나 stale 면 경고). 코드 SSOT 가 논리뿐 아니라 물리적으로도 1곳.
+
+### 근거
+정책(g61)만 있고 강제가 없으면 각 repo 가 조용히 primitive 를 재구현 → SSOT 침식. guard+skill 이 "승격이 기본, 중복이 예외" 를 워크플로로 만든다. 범위확장은 IIT4 같은 *엔진* 공유(hexa-brain/eeg)를 g61 우산 안에 넣는다. (commons.tape = sign-gated → g61 확장은 `sidecar sign commons` 후 land; guard+skill 은 신규 plugin 이라 sign 불요.)
 
 **관측 맥락** (anima PURE 도메인 · F-CURRICULA-1 GPU fire 준비 중):
 local 입력파일(Mac 의 session log 추출본 + Phase D corpus)에 의존하는 corpus build (`hexa run build_curriculum_corpus.hexa …`) 가 **두 경로 모두에서 막혀** fire 가 2회 BLOCKED. 비용 0 으로 정직하게 halt 됐으나, 자율 fire 흐름이 sign 게이트에 반복 차단되는 마찰이 드러남.

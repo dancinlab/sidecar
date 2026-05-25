@@ -2,6 +2,39 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-25T08:00Z — `/domain` 아이콘+별칭 타이틀/서브타이틀 지정 (from: anima IIT4 세션)
+
+**사용자 요청** (2026-05-25, anima IIT4 도메인 세션):
+> "도메인 문서 마다 🧠 IIT4 — \"의식 측정자(尺)\" 해당형태로 타이틀 이나 서브타이틀 지정할수 있도록"
+
+즉 각 도메인 문서가 **easy plugin 의 7요소 패턴(아이콘 · 이름 · 별칭)** 헤더를 가질 수 있게 — `🧠 IIT4 — "의식 측정자(尺)"` 처럼. 현재 `<NAME>.md` 는 `# IIT4 — current state` 고정 H1 + `@goal:` 만 있고, bare `/domain` / `set` 출력도 `◆ active domain: IIT4   🎯 <goal>` 로 아이콘·별칭 개념이 없음. INBOX 에 제안만 던지고 구현은 사용자 review 후 driven (target = `domain` plugin).
+
+### 동기
+- 도메인이 누적되면(현재 anima 한 repo 만 IIT4 · LIFE · PURE · STDLIB · …) 이름만으론 "이게 뭐 하는 lane 이지?"가 즉시 안 떠오름. 친근한 별칭("의식 측정자") + 아이콘이 한눈 식별·기억을 돕는다.
+- 이미 easy-auto plugin 이 응답에 7요소(아이콘·이름·별칭·…)를 강제하는데, 정작 도메인 트래커 문서 자체엔 그 헤더가 없다 — 정합성 갭.
+
+### 제안 surface (`domain` plugin)
+- [ ] **`<NAME>.md` 옵션 `@title:` 필드** — `@goal:` 위/아래에 `@title: 🧠 IIT4 — "의식 측정자(尺)"` 한 줄 (옵션, 없으면 현행 동작 유지 = non-breaking).
+- [ ] **`/domain title <text>` 서브커맨드** (alias `subtitle`) — `@title:` set/갱신. 예 `/domain title "🧠 IIT4 — 의식 측정자(尺)"`. 인자 형태 자유 (아이콘+이름+별칭 권장이나 강제 X).
+- [ ] **bare `/domain` · `set <NAME>` 출력 렌더** — `@title:` 있으면 `◆ active domain: IIT4` 대신 `◆ 🧠 IIT4 — "의식 측정자(尺)"   🎯 <goal>` 렌더. 없으면 현행 fallback.
+- [ ] **lint(옵션)** — `@title:` 없을 때 경고는 **하지 않음** (별칭은 취향 — `@goal`/milestone 처럼 필수 아님). 형식 강제도 지양 (g0 occam, over-engineering 회피).
+
+### 예시 (before / after)
+```
+before:  # IIT4 — current state
+         @goal: hexa-native faithful IIT 4.0 …
+
+after:   # IIT4 — current state
+         @title: 🧠 IIT4 — "의식 측정자(尺)"
+         @goal: hexa-native faithful IIT 4.0 …
+
+bare /domain:
+  before: ◆ active domain: IIT4   🎯 …
+  after:  ◆ 🧠 IIT4 — "의식 측정자(尺)"   🎯 …
+```
+
+**근거**: 작은 비침습 추가(옵션 필드 1개 + 서브커맨드 1개 + 출력 렌더 분기). 미설정 도메인은 100% 현행 동작. easy plugin 7요소와 도메인 트래커의 정합을 메운다.
+
 ## 2026-05-25T06:01Z — pool.json roster race-wipe → atomic-write/lock 방어 (from: demiurge RTSC 세션)
 
 **증상 (이번 세션 실증)**: 동시 claude 세션/agent 다수가 `~/.pool/pool.json` 을 read-modify-write 하던 중 roster 가 `{"hosts": []}` (17B) 로 통째 wipe. `pool list` → "empty roster" · `pool on ubu-1` → "not in roster" → 실행 중 DFT job (ubu-1 nohup) 접근이 전면 차단됨. 직전 정상본 `pool.json.n11bak` (639B) 수동 `cp` 복구로 해소.

@@ -257,9 +257,16 @@ fn _cmd_list(root: string) {
     }
 }
 
-// commons @D g51 — paper lint: PDF must compile to ≥10 pages AND embed
-// ≥1 fal.ai-generated figure (detected via figures/_prompts/*.txt OR
-// figures/_scripts/*.py grep for "imagine" / "fal" / "/paper fig").
+// commons @D g51 — paper lint (extended in 0.6.0):
+//   Base : >=10 pages AND >=1 fal.ai-generated figure
+//   v0.6 : +§Full Pipeline present (heading regex)
+//          +§Limitations present
+//          +§Reproducibility present
+//          +>=1 \begin{table} (or `tabular`)
+//          +>=2 \includegraphics (or TikZ fig)
+//          +>=10 @-keyed bibtex entries
+//          +no tier emoji in references.bib body (pdflatex fatal guard)
+//          +all \cite{KEY} resolve to a bibtex KEY (warn-list, non-blocking)
 // Exit 0 = pass, 1 = fail. Output is a per-condition checklist.
 fn _cmd_lint(args: array) {
     let mut dir = "."
@@ -305,7 +312,60 @@ fn _cmd_lint(args: array) {
     }
     let fal_ok = prompt_hits > 0 || script_hits > 0
 
-    println("paper lint (commons @D g51) — " + dir)
+    // --- extended (v0.6) checks ---
+    let main_tex = dir + "/main.tex"
+    let bib      = dir + "/references.bib"
+    let main_present = _path_exists(main_tex)
+    let bib_present  = _path_exists(bib)
+
+    // §Full Pipeline / §Limitations / §Reproducibility headings
+    let mut sec_pipeline_ok = false
+    let mut sec_limits_ok   = false
+    let mut sec_repro_ok    = false
+    let mut tables_n  = 0
+    let mut figures_n = 0
+    if main_present {
+        let r1 = exec_with_status("grep -cE '^\\\\section\\{Full Pipeline' " + _shq(main_tex) + " 2>/dev/null")
+        if r1[1] == 0 { if to_int(_trim(r1[0])) >= 1 { sec_pipeline_ok = true } }
+        let r2 = exec_with_status("grep -cE '^\\\\section\\{Limitations' " + _shq(main_tex) + " 2>/dev/null")
+        if r2[1] == 0 { if to_int(_trim(r2[0])) >= 1 { sec_limits_ok = true } }
+        let r3 = exec_with_status("grep -cE '^\\\\section\\*?\\{Reproducibility' " + _shq(main_tex) + " 2>/dev/null")
+        if r3[1] == 0 { if to_int(_trim(r3[0])) >= 1 { sec_repro_ok = true } }
+        let rt = exec_with_status("grep -cE '\\\\begin\\{tabular\\}|\\\\begin\\{table\\}' " + _shq(main_tex) + " 2>/dev/null")
+        if rt[1] == 0 { tables_n = to_int(_trim(rt[0])) }
+        let rf = exec_with_status("grep -cE '\\\\includegraphics|\\\\begin\\{tikzpicture\\}' " + _shq(main_tex) + " 2>/dev/null")
+        if rf[1] == 0 { figures_n = to_int(_trim(rf[0])) }
+    }
+    let tables_ok  = tables_n  >= 1
+    let figures_ok = figures_n >= 2
+
+    // bib entry count + emoji guard
+    let mut bib_entries = 0
+    let mut bib_emoji_lines = 0
+    if bib_present {
+        let rb = exec_with_status("grep -cE '^@[A-Za-z]+\\{' " + _shq(bib) + " 2>/dev/null")
+        if rb[1] == 0 { bib_entries = to_int(_trim(rb[0])) }
+        // emoji guard — match tier emoji byte sequences (UTF-8 encoded):
+        // U+1F535 blue / U+1F7E2 green / U+1F7E1 yellow / U+1F7E0 orange / U+1F534 red
+        let re = exec_with_status("LC_ALL=C grep -cE $'\\xf0\\x9f\\x94\\xb5|\\xf0\\x9f\\x9f\\xa2|\\xf0\\x9f\\x9f\\xa1|\\xf0\\x9f\\x9f\\xa0|\\xf0\\x9f\\x94\\xb4' " + _shq(bib) + " 2>/dev/null")
+        if re[1] == 0 { bib_emoji_lines = to_int(_trim(re[0])) }
+    }
+    let bib_count_ok = bib_entries >= 10
+    let bib_emoji_ok = bib_emoji_lines == 0
+
+    // unresolved \cite{KEY} — warn-list (does NOT fail the lint)
+    let mut unresolved = ""
+    if main_present && bib_present {
+        let cmd = "awk 'match($0, /\\\\cite[pt]?\\{[^}]+\\}/) { s=substr($0,RSTART,RLENGTH); sub(/\\\\cite[pt]?\\{/,\"\",s); sub(/\\}.*/,\"\",s); n=split(s,a,\",\"); for(i=1;i<=n;i++){gsub(/[ \\t]/,\"\",a[i]); print a[i]} }' "
+            + _shq(main_tex)
+            + " | sort -u | while read k; do "
+            + "  if [ -n \"$k\" ] && ! grep -qE \"^@[A-Za-z]+\\{$k,\" " + _shq(bib) + "; then echo \"$k\"; fi; "
+            + "done"
+        let ru = exec_with_status(cmd)
+        if ru[1] == 0 { unresolved = _trim(ru[0]) }
+    }
+
+    println("paper lint (commons @D g51 — extended v0.6) — " + dir)
     if pdf_present {
         if pages_ok { println("  ✓ pages: " + to_string(pages) + " (>=10)") }
         else { println("  ✗ pages: " + to_string(pages) + " (<10, need >=10)") }
@@ -317,8 +377,44 @@ fn _cmd_lint(args: array) {
     } else {
         println("  ✗ fal.ai figure: no figures/_prompts/*.txt and no fal/imagine reference in figures/_scripts/*.py")
     }
+    if main_present {
+        if sec_pipeline_ok { println("  ✓ section: Full Pipeline present") }
+        else { println("  ✗ section: \\section{Full Pipeline...} missing") }
+        if sec_limits_ok { println("  ✓ section: Limitations present") }
+        else { println("  ✗ section: \\section{Limitations...} missing") }
+        if sec_repro_ok { println("  ✓ section: Reproducibility present") }
+        else { println("  ✗ section: \\section{Reproducibility...} missing") }
+        if tables_ok { println("  ✓ tables: " + to_string(tables_n) + " (>=1)") }
+        else { println("  ✗ tables: " + to_string(tables_n) + " (<1, need >=1 \\begin{tabular} or \\begin{table})") }
+        if figures_ok { println("  ✓ figures: " + to_string(figures_n) + " (>=2 includegraphics or tikz)") }
+        else { println("  ✗ figures: " + to_string(figures_n) + " (<2, need >=2 \\includegraphics or \\begin{tikzpicture})") }
+    } else {
+        println("  ✗ main.tex not found at " + main_tex)
+    }
+    if bib_present {
+        if bib_count_ok { println("  ✓ bibtex entries: " + to_string(bib_entries) + " (>=10)") }
+        else { println("  ✗ bibtex entries: " + to_string(bib_entries) + " (<10, need >=10 @-keyed entries)") }
+        if bib_emoji_ok { println("  ✓ bibtex emoji guard: no tier emoji in references.bib") }
+        else { println("  ✗ bibtex emoji guard: " + to_string(bib_emoji_lines) + " emoji line(s) — strip tier emoji to avoid pdflatex fatal") }
+    } else {
+        println("  ✗ references.bib not found at " + bib)
+    }
+    if unresolved != "" {
+        println("  ⚠ unresolved \\cite keys (warn-only, not blocking):")
+        let lines = unresolved.split("\n")
+        let mut i = 0
+        while i < len(lines) {
+            let k = _trim(lines[i])
+            if k != "" { println("      - " + k) }
+            i = i + 1
+        }
+    }
 
-    if pages_ok && fal_ok { exit(0) }
+    let all_ok = pages_ok && fal_ok
+        && main_present && sec_pipeline_ok && sec_limits_ok && sec_repro_ok
+        && tables_ok && figures_ok
+        && bib_present && bib_count_ok && bib_emoji_ok
+    if all_ok { exit(0) }
     exit(1)
 }
 

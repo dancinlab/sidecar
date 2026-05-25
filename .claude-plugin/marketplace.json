@@ -293,8 +293,8 @@
     {
       "name": "paper",
       "source": "./skills/paper",
-      "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> \u00b7 sample <slug> \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (pdflatex \u00d7 3 + bibtex) \u00b7 lint [dir] (enforces commons @D g51 \u2014 main.pdf \u226510 pages AND \u22651 fal.ai figure detected via figures/_prompts/*.{txt,md} or figures/_scripts/*.py grep for fal/imagine; exit 0 = pass) \u00b7 list \u00b7 help. Template is a minimal arxiv-style single-column 11pt skeleton \u2014 compiles end-to-end out of the box, one figure inlined. `fig` requires the sister `imagine` plugin.",
-      "version": "0.5.3"
+      "description": "/paper <args> \u2014 arxiv-style LaTeX paper scaffolder. Verbs: new <slug> (scaffold the rich template \u2014 9-section spine with \u00a7Full Pipeline tier table, hexa-codex-style author block, BLUE-MAX appendix stub, companion/ data-record dir, fig01 matplotlib + fig02 TikZ line + fig03 TikZ pipeline + cover prompt-design guide) \u00b7 sample <slug> \u00b7 fig <size> <prompt> <out.png> (delegates to sister `imagine` \u2192 fal.ai `openai/gpt-image-2`) \u00b7 compile [dir] (xelatex \u00d7 3 + bibtex \u2014 emoji-native, kills the pdflatex tier-emoji fatal) \u00b7 lint [dir] (extended commons @D g51 \u2014 \u226510 pages + \u22651 fal.ai figure + \u00a7Pipeline/\u00a7Limitations/\u00a7Reproducibility present + \u22651 table + \u22652 figures + \u226510 bibtex entries + no tier emoji in references.bib + cite-key resolution warn-list) \u00b7 list \u00b7 help. Template ships ready-to-compile end-to-end. companion/ provides verify-ledger.json + pr-roll.json + session-journal.md + adapter-defect-catalog.json. Makefile adds wordcount \u00b7 pages \u00b7 lint \u00b7 arxiv-tar \u00b7 figures-clean targets.",
+      "version": "0.6.0"
     },
     {
       "name": "imagine",

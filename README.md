@@ -46,7 +46,7 @@ The [`project-tape`](hooks/project-tape/) hook re-injects `project.tape` on PreC
 
 ```
 sidecar/
-├── bin/sidecar               # CLI — init · sync · sign · profile · enable · disable · reset
+├── bin/sidecar               # CLI — init · sync · sign · profile · enable · disable · reset · master
 ├── bin/_overrides.hexa       # per-plugin enable-override store (~/.sidecar/plugin-overrides.json)
 ├── install.hexa              # hx build hook — clone marketplace · cache · enable per active profile
 ├── hooks/                    # PreToolUse · SessionStart · PreCompact · PostCompact · LSP plugins
@@ -59,7 +59,7 @@ sidecar/
 ├── CHANGELOG.md              # chronological ship log
 └── .claude-plugin/
     ├── marketplace.json      # plugin manifest (name · source · version)
-    └── profiles.json         # enable-profile tiers (core · hexa · personal)
+    └── profiles.json         # enable-profile tiers (core · hexa · personal · master[creator-only])
 ```
 
 ## Profiles
@@ -70,7 +70,8 @@ sidecar ships an opinionated stack. A **profile** picks which plugins to enable 
 |---|---|---|
 | `minimal` | `core` only | general use — universal safety · QoL · workflow |
 | `hexa` | `core` + `hexa` | + the hexa-lang toolchain (`hexa` CLI · `.hexa` / `.tape`) |
-| `full` *(default)* | everything | the complete dancinlab setup |
+| `full` *(default)* | `core` + `hexa` + `personal` | the complete dancinlab setup |
+| `master` | + `master` tier | **creator-only** — gated by the `~/.sidecar/master` marker |
 
 ```
 sidecar profile minimal     # set the profile (re-applies the install)
@@ -78,9 +79,14 @@ sidecar profile             # show the active profile + any per-plugin overrides
 sidecar enable  <plugin>    # force one plugin ON  — overrides the profile
 sidecar disable <plugin>    # force one plugin OFF
 sidecar reset   <plugin>    # drop the override → follow the profile again
+sidecar master on|off|status   # mint/remove the creator marker (~/.sidecar/master)
 ```
 
 Each plugin's tier is the **Tier** column below; the classification SSOT is [`.claude-plugin/profiles.json`](.claude-plugin/profiles.json). This rides on Claude Code's own plugin enable/disable — **not** an in-guard opt-out — so an enabled guard stays unconditional (`@D s11`). State lives in `~/.sidecar/profile` + `~/.sidecar/plugin-overrides.json`; `sidecar-lint` flags any plugin missing a tier so the classification stays complete (`@D s7`).
+
+### `master` tier — creator-only
+
+The `personal` tier is dancinlab-specific but anyone can opt in via `full`. The **`master` tier is genuinely creator-only**: a `master`-tier plugin enables **only while the `~/.sidecar/master` marker exists** — force-disabled otherwise, *even under the `full`/`master` profile* (a per-plugin `enable` override still escapes it). The marker isn't shipped, so public installs never get `master` plugins; the creator runs `sidecar master on` once to mint it. Current `master`-tier members: `stdlib-ssot-guard` (g61 cross-repo SSOT enforcement — a dancinlab-workflow governance guard).
 
 ## Commands
 

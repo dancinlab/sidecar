@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.7.5 — worktree-leak 사전 청소 (M2)
+
+throttle 사망한 에이전트가 남긴 `/tmp/wt-*` + 동명 로컬 브랜치 때문에 fresh fan-out 의 `worktree add -b <same>` 가 충돌. hexa-lang 캠페인 내내 재발사 전에 수동 `git worktree remove` + `git branch -D` 함. 정형화:
+
+- **`@D worktree_leak_cleanup`** 신설: Stage 3 → Stage 4 사이 자동 sweep. 조건 — `/tmp/wt-*` 만 대상, (a) 브랜치가 origin/main 머지 OR (b) HEAD age > 1h + 최근 commit 없음 + 브랜치명이 fan-out 컨벤션(`gpu-*`/`cycle-*`/`<domain>-*`) 매치.
+- 절차: `git worktree remove <path>` (NO `--force`; uncommitted user work 차단되면 skip+log) → `git branch -D <branch>` (worktree remove 성공 후만).
+- **safe-scoped**: `/Users/*` worktree 는 절대 안 건드림 (user-managed `~/core/<repo>-*` off-limits).
+- `commands/cycle.md` Stage 3→4 사이 + `cycle-full.md` Stage 4→5 사이에 sweep 단계 명시.
+
+비파괴 — 매칭 조건 0개면 sweep 0; `/Users/*` 건드림 0.
+
+---
+
 ## 2026-05-25 — cycle 0.7.4 — cross-cutting 원칙 주입 (M1)
 
 도메인 사이클이 메모리에 박힌 cross-cutting 원칙을 못 보면 그 원칙대로 verdict 가 안 나옴. 증거: hexa-lang round-7 (PR #1080) 가 `feedback-closure-is-physical-limit` 원칙(perf=roofline %)이 메모리에 있는데도 verdict 를 raw `ratio vs cuBLAS` (5.3-6.9×) 로 보고, roofline % 환산 안 함. 에이전트 프롬프트에 원칙이 안 들어갔기 때문. 정형화:

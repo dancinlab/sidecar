@@ -23,7 +23,6 @@
     "quota-autoadd": "core",
     "secret": "core",
     "pool": "core",
-    "pool-mcp": "core",
     "domain": "core",
     "question": "core",
     "check": "core",

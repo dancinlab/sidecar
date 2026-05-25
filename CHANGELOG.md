@@ -10,6 +10,15 @@ For the full audit trail, see `git log`.
 
 `pool-route` 가 Mac 고부하 시 `pool on <host> <cmd>` **자체**를 다른 Linux 호스트로 load-balance 하던 버그 수정 (s10 위반 — local-bound 명령은 라우팅 금지). `pool` 은 로컬 SSH 디스패처라 원격 호스트엔 `pool` 바이너리가 없어 `127` 로 죽거나(관측됨: `pool on ubu-1 …` → ubu-2 로 라우팅 → `pool: command not found`), 있어도 이중 디스패치가 된다. local-bound 분류기에 `git`/`gh` 와 나란히 `pool` 추가 — 첫 토큰이든 prefix 형(`POOL_DISABLE=1 pool …`)이든 `_has_word(cmd, "pool")` 로 항상 로컬 실행. opt-out env var 아님(s11 무관). lockstep(g22) pool-route 0.7.0→0.7.1.
 
+## 2026-05-26 — pool-mcp 폐기 (stdio MCP 서버 블로킹 → CLI 경로로 충분)
+
+`pool-mcp` (stdio MCP 서버, `mcp__pool__on` · `mcp__pool__list` 두 도구) 를 마켓플레이스에서 **완전 폐기**. 세션에서 자꾸 블로킹을 유발 — 0.1.1 의 "stdio handshake deadlock" fix 도 메시지당 `hexa run` 디스패치 read-loop 라 핸드셰이크/툴콜 지점에서 멈춤이 재발. pool 기능은 이미 `pool` CLI · `/pool` 커맨드 · `pool-route` 자동 라우터 hook 으로 완전히 커버되므로 MCP 래퍼는 중복 표면.
+
+- **`mcps/pool-mcp/` 트리 삭제** — 유일한 mcp 플러그인이라 `mcps/` 개념 디렉토리 자체가 소멸 (concept-separation: mcp 카테고리 비게 됨).
+- **마켓플레이스 등록 제거** — `marketplace.json` 엔트리 + `profiles.json` `core` 태그 삭제. 다음 `sidecar sync` 의 install.hexa prune 패스(#162)가 로컬 `installed_plugins.json` + `settings.enabledPlugins` 의 `pool-mcp@sidecar` 키를 자동 self-heal 제거.
+- **README 갱신** — 아키텍처 트리의 `mcps/` 줄 · 플러그인 표 행 삭제, 집계 `63 → 62` (`{hook · command · skill}`, 27 `core`).
+- 이미 실행중인 MCP 서버는 세션 재시작 시 사라짐 (Claude Code 가 SessionStart 에 MCP 라이프사이클 관리).
+
 ## 2026-05-26 — cycle 0.8.1 (@D ssot_freshness: FILE-fresh ≠ CONTENT-fresh — scan-B 의무화)
 
 `@D ssot_freshness` 의 git probe 는 FILE 만 origin/main 과 비교한다 — 파일이 origin/main 과 **일치(probe PASS)해도 내용은 stale 할 수 있다**: 체크박스/구버전-커밋-앵커 섹션이 실제 코드 현실보다 뒤처짐(landing 후 아무도 box 를 flip 안 함). 이 staleness 는 여기가 아니라 `@D dup_race_precheck` scan-B(per-item merged-PR 증거)가 잡는다. 따라서 open-count 가 크거나(round cap ≫) 도c 에 old-commit 앵커 / `doc-lag · flip to [x]` / `GENUINELY OPEN @ <sha>` 류 섹션이 있으면 file-fresh PASS 를 **불충분**으로 보고 모든 open 항목에 scan-B 를 돌려 이미-landed 된 것을 evidence-flip(정합 PR) 먼저 한 뒤 genuine remainder 만 enumerate. 입증: hexa-lang RUNTIME.md 가 file-fresh(== origin/main, probe PASS)였지만 Phase-1 Tier-A 88 box 가 stale-done(바이너리 0 externs · north-star MET #1058/#1059) — scan-B(`_gmtime_r` #1053 등)가 잡고 #1186 정합(open 129→41). SKILL.md @D + `cycle.md` Stage 0 양쪽 반영. lockstep(g22) cycle 0.8.0→0.8.1.

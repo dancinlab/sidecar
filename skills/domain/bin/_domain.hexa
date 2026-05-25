@@ -255,6 +255,22 @@ fn _roster_append(root: string, name: string, relpath: string) {
     write_file(rp, body + "@domain " + name + " := \"" + relpath + "\"\n")
 }
 
+// Auto-register a roster row when the snapshot already exists on disk but
+// DOMAINS.tape has no entry — the gap that left anima's LIFE unregistered
+// (snapshot present, roster missing → `/domain list` ghosted it, /cycle could
+// not resolve it). `/domain set` calls this so selecting an on-disk-but-
+// unregistered domain self-heals the roster. No-op when already registered or
+// no snapshot exists yet (a brand-new name still scaffolds via init/show).
+fn _ensure_roster(root: string, name: string) {
+    if _roster_has(root, name) { return }
+    let dir = _domain_dir(root, name)
+    let snap = dir + "/" + name + ".md"
+    if !file_exists(snap) { return }
+    let relpath = if dir == root { "./" + name + ".md" } else { "./" + name + "/" + name + ".md" }
+    _roster_append(root, name, relpath)
+    eprintln("✓ roster: registered " + name + " → " + relpath + " in DOMAINS.tape (was on-disk but unregistered)")
+}
+
 // snapshot path: roster path wins (domain can live anywhere); else legacy
 // root → folder-nested → root-default resolution.
 fn _snap_path(root: string, name: string) -> string {
@@ -268,6 +284,35 @@ fn _log_path(root: string, name: string) -> string {
     let rp = _roster_lookup(root, name)
     if rp != "" { return _dirname(_abs(root, rp)) + "/" + name + ".log.md" }
     return _domain_dir(root, name) + "/" + name + ".log.md"
+}
+
+// stale-SSOT shadow guard (reference_domain_init_untracked_ssot): when a domain
+// snapshot is read from a working tree that is NOT the live committed SSOT, its
+// milestone/@goal set can be stale — /cycle then mis-reads progress/closure.
+// Two signals, both fail-open (skip silently outside a git repo or with no
+// origin/main ref):
+//   (a) UNTRACKED — `git ls-files --error-unmatch` nonzero ⇒ local-only copy.
+//   (b) BEHIND main — `git log HEAD..origin/main -- <snap>` non-empty ⇒ main has
+//       newer commits to this file your tree lacks (you read an older snapshot).
+// Evidence: anima LIFE on an orphan-recover branch untracked root LIFE.md → the
+// working tree was the stale "$0-frontier-closed" version (all [x], no perpetual
+// @goal) while origin/main held the live "perpetual engine" version with open
+// axes A-D → /cycle wrongly declared the domain depleted.
+fn _stale_shadow_warn(root: string, name: string) {
+    let rr = exec_with_status("git -C '" + root + "' rev-parse --show-toplevel 2>/dev/null")
+    if rr[1] != 0 { return }
+    let snap = _snap_path(root, name)
+    let tk = exec_with_status("git -C '" + root + "' ls-files --error-unmatch '" + snap + "' 2>/dev/null")
+    if tk[1] != 0 {
+        eprintln("⚠ stale-SSOT: " + name + ".md is UNTRACKED — working-tree copy may shadow the committed SSOT (progress/closure read a local-only snapshot that diverges silently). publish (commit) or reconcile before trusting /cycle depletion. ref: reference_domain_init_untracked_ssot")
+        return
+    }
+    let mref = exec_with_status("git -C '" + root + "' rev-parse --verify --quiet origin/main 2>/dev/null")
+    if mref[1] != 0 { return }
+    let ahead = exec_with_status("git -C '" + root + "' log --oneline HEAD..origin/main -- '" + snap + "' 2>/dev/null")
+    if _trim(to_string(ahead[0])) != "" {
+        eprintln("⚠ stale-SSOT: origin/main has newer " + name + ".md not in your working tree — open milestones / a perpetual @goal may be missing locally. reconcile before /cycle: git diff HEAD origin/main -- " + name + ".md")
+    }
 }
 
 fn _scaffold_snapshot(path: string, name: string) {
@@ -622,6 +667,27 @@ fn _get_goal(root: string, name: string) -> string {
     return ""
 }
 
+// True iff the @goal text declares the domain PERPETUAL (no terminal 100%).
+// A perpetual domain's progress bar is a frontier-depletion gauge, never a
+// completion countdown — _show badges it ♾️ and /cycle never emits a terminal
+// closure for it (cycle @D perpetual_domain). Aligns with the cross-cutting
+// principle feedback-closure-is-physical-limit (exploratory = open horizon).
+// Markers cover KO + EN.
+fn _is_perpetual(goal: string) -> bool {
+    if _contains(goal, "종료 조건 없") { return true }
+    if _contains(goal, "완료되지 않") { return true }
+    if _contains(goal, "100% 미도달") { return true }
+    if _contains(goal, "미도달 = 설계") { return true }
+    if _contains(goal, "끝없") { return true }
+    if _contains(goal, "영구") { return true }
+    if _contains(goal, "perpetual") { return true }
+    if _contains(goal, "open horizon") { return true }
+    if _contains(goal, "open-horizon") { return true }
+    if _contains(goal, "no termination") { return true }
+    if _contains(goal, "never terminal") { return true }
+    return false
+}
+
 // set/replace the `@goal:` line — inserted right after the first `# ` heading.
 fn _set_goal(root: string, name: string, text: string) {
     _ensure_files(root, name)
@@ -727,7 +793,13 @@ fn _show(root: string, name: string) {
         println("◆ " + label)
     } else {
         println("◆ " + label + "   🎯 " + goal)
-        println("진행 " + _progress_bar(c[0], c[0] + c[1]))
+        // perpetual domains: badge the bar as a frontier gauge, not a 100%
+        // countdown — keeps /cycle + the user from reading depletion as "done".
+        if _is_perpetual(goal) {
+            println("진행 " + _progress_bar(c[0], c[0] + c[1]) + "  ♾️ perpetual — 종료점 없음 (진행도 = frontier 소진율, 100% 종료 아님)")
+        } else {
+            println("진행 " + _progress_bar(c[0], c[0] + c[1]))
+        }
     }
     _lint(root, name)
     println("═══ " + snap + " ═══")
@@ -1077,6 +1149,8 @@ fn main() {
             exit(1)
         }
         _set_active(root, args[1])
+        _ensure_roster(root, args[1])      // self-heal: register if on-disk but unregistered
+        _stale_shadow_warn(root, args[1])  // warn if untracked / behind origin/main
         _show(root, args[1])
         return
     }
@@ -1156,6 +1230,8 @@ fn main() {
     // domain (subsequent todo/done/append default to it) + show with progress.
     if _is_name(args[0]) && argc == 1 {
         _set_active(root, args[0])
+        _ensure_roster(root, args[0])      // self-heal: register if on-disk but unregistered
+        _stale_shadow_warn(root, args[0])  // warn if untracked / behind origin/main
         _show(root, args[0])
         return
     }

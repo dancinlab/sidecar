@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — cycle 0.7.7 + domain 0.8.8 (stale-SSOT 가드 + perpetual 도메인 인지)
+
+anima LIFE 도메인이 매 `/cycle` 라운드 헤매다 잘못 `✅ domain depleted — loop terminates`(100% 종료)를 외친 사건의 근본원인 2겹을 두 플러그인 양쪽에서 막는다. 원인 = (1) orphan-recover 브랜치가 root `LIFE.md` 를 추적 해제 → working tree 가 stale "$0-frontier 종결" 사본(전부 `[x]`, perpetual @goal 없음)이 origin/main 의 "영구 엔진" good 버전을 shadow, (2) LIFE 가 DOMAINS.tape 미등록. 진단 핸드오프 = `anima/INBOX.log.md` · 원칙 = `feedback-closure-is-physical-limit`.
+
+**domain 0.8.8** (`_domain.hexa`):
+- `_stale_shadow_warn` — `/domain set` 시 working-tree `<NAME>.md` 가 **UNTRACKED**(`git ls-files --error-unmatch` 실패) 또는 **origin/main 보다 뒤처짐**(`git log HEAD..origin/main -- <NAME>.md` 비어있지 않음)이면 경고. fail-open(git repo 아니거나 origin/main ref 없으면 조용히 skip). LIFE 의 정확한 root cause(untracked shadow)를 잡는다. ref `reference_domain_init_untracked_ssot`.
+- `_ensure_roster` — `/domain set` 시 스냅샷이 디스크에 있는데 DOMAINS.tape 미등록이면 roster row 자동 등록(LIFE 가 ghost 였던 갭 self-heal).
+- `_is_perpetual` + `_show` ♾️ 배지 — `@goal` 에 종료-없음 마커(`종료 조건 없음`·`완료되지 않`·`100% 미도달`·`영구`·`perpetual`·`open horizon`·…)가 있으면 진행바를 `♾️ perpetual — 종료점 없음 (진행도 = frontier 소진율, 100% 종료 아님)` 로 렌더 → 진행바를 완료 카운트다운이 아니라 frontier 소진율로 읽게.
+
+**cycle 0.7.7** (`SKILL.md` + `commands/cycle.md` · `cycle-full.md`):
+- `@D ssot_freshness` — Stage 0 freshness pre-check: 밀스톤 읽기 전·depletion 선언 전, 활성 `<NAME>.md` 가 live SSOT 인지 git 으로 검증(untracked / behind-main). 둘 중 하나면 stale 경고 + reconcile 후 진행(자동 덮어쓰기 금지 — 사용자 의도 편집 가능성). depletion 은 destructive read 이므로 `/domain set` 과 별개로 재검.
+- `@D perpetual_domain` — `@goal` 이 종료-없음을 선언한 도메인은 Stage 5 에서 **절대** 종료 closure(`✅ … terminates`)를 내지 않음. 먼저 선언된 `## 영구 축`/`perpetual axes`/`## deferred` 의 열린 `- [ ]` 에서 재시드 후 self-continue; 그것마저 소진되면 `♾️ perpetual` lane-pause 만 출력. 기존 `@D depletion_not_terminal`("애매하면 PAUSE")를 마커 존재 시 terminal 분기 **하드 금지**로 강화.
+
+검증: 격리 temp git repo 에서 LIFE 재현(untracked perpetual 스냅샷 + roster 미등록) → `/domain set LIFE` 가 roster 자동등록 + UNTRACKED 경고 + ♾️ 배지 3개 전부 출력 확인. lockstep(@D g22): cycle plugin.json+marketplace 0.7.6→0.7.7 · domain 0.8.7→0.8.8.
+
 ## 2026-05-26 — monitor-guard 0.1.0 + commons g10 (rate-limit 생존 while-monitor)
 
 배경/장기 셸 작업이 rate-limit으로 강제종료될 때 진행분을 잃는 문제를 잡는다. `@D s7`(규칙+enforcement 동시 출하)대로 governance 개정과 가드 훅을 한 사이클에 함께 출하.

@@ -6,6 +6,8 @@ allowed-tools: Agent, Bash, Read
 
 Engage the `cycle` skill, but precede the next-list step with a **depletion brainstorm**.
 
+**0. SSOT-freshness pre-check (@D ssot_freshness) — RUN FIRST.** Before brainstorming or reading milestones, verify the active `<NAME>.md` is the live SSOT (fail-open, skip outside a git repo): `git ls-files --error-unmatch <NAME>.md` (untracked?) + `git log --oneline HEAD..origin/main -- <NAME>.md` (behind main?). If either fires, SURFACE `⚠ stale-SSOT: <NAME>.md untracked|behind-main — reconcile before depletion` and reconcile (or ask) before trusting milestones/depletion — a stale shadow makes next-list + depletion wrong (anima LIFE was an untracked shadow that wrongly read as depleted). Do NOT auto-overwrite. **Perpetual detection (@D perpetual_domain):** scan the `@goal:` for a perpetual marker (`종료 조건 없음`·`완료되지 않`·`100% 미도달`·`영구`·`perpetual`·`open horizon`·…); if present, note `♾️ perpetual` — the loop tail will never emit a terminal closure.
+
 1. **Brainstorm depletion (phase 0)** — for `$ARGUMENTS` (or current goal context if empty), run iterative brainstorm rounds. Each round generates ONLY ideas genuinely new vs prior rounds; stop when a new round produces no novel candidates (cap 8 rounds). State the final, deduplicated idea inventory as a numbered bullet list.
 2. **Next-list** — take the depleted inventory as the next-list (no re-enumeration). If >8 items, cap at top 8 by impact + state which were deferred.
 3. **Dup-race precheck** — same as `/cycle` step 2: for each item that names an INBOX handoff entry (slug/header present in `INBOX.log.md` in the current repo), run the 3-signal grep (A: locate the entry via `grep -niE -A6 '<slug>' INBOX.log.md`, then test its checkbox/status line against the resolved-class regex `(fixed|resolved|closed|landed|shipped|absorbed|superseded|merged|done|✅|🟢|- \[x\])` · B: `gh pr list --state merged --search "<slug>"` · C: `git log --all --grep="<slug>"`). Mark SKIP / PROCEED with reason. Print one judgement line per item.
@@ -43,6 +45,8 @@ Engage the `cycle` skill, but precede the next-list step with a **depletion brai
 
      ⏸️ $0-runnable lane exhausted (open milestones 0 · deferred empty · no $0 seed) — loop PAUSES (not 100%-done; frontier toward the physical/math limit stays open). Remaining paths ABOVE the $0 lane: cost-bearing fire · new spec · intractable-limit note · switch: /domain set <other> · close: /end. (Reserve a literal ✅ done ONLY for a finite-scope domain with no open physical-limit frontier.)
      ```
+
+   - **PERPETUAL domain override (@D perpetual_domain)** — if Stage 0 flagged `♾️ perpetual`, FIRST re-seed the next batch from the declared `## 영구 축` / `perpetual axes` / `## deferred` open `- [ ]` and **self-continue (ScheduleWakeup)**; only if that backlog is ALSO drained, end with `♾️ perpetual domain — current-tier lane drained; NO terminal closure by declaration (re-seed declared axes /domain milestone · /schedule next tier · switch /domain set <other>)`. NEVER `✅ … terminates` for a perpetual domain.
 
    (The per-round cap throttles WIDTH so each round stays reviewable; the auto-continue marches DEPTH-wise through the whole declared backlog. The user can interrupt at any round.)
 

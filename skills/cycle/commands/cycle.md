@@ -1,5 +1,5 @@
 ---
-description: /cycle — autonomous work-loop driver: next-list (self-enumerate) → parallel-plan table → fan-out (one background Agent per item, same message) → loop. Repeat `/cycle` to march through a goal in parallel batches. Distinct from `all bg go` (that fans out PRIOR-turn branches; /cycle self-generates the next batch each round).
+description: /cycle — autonomous work-loop driver: next-list (self-enumerate) → parallel-plan table → fan-out (one background Agent per item, same message) → auto-continue to DEPLETION. Bare `/cycle` self-drains the active domain's `## deferred` backlog batch-by-batch (self-continues via ScheduleWakeup each round; terminates only when open milestones = 0 AND deferred empty AND no other signal). Distinct from `all bg go` (that fans out PRIOR-turn branches; /cycle self-generates the next batch each round).
 argument-hint: "[scope hint]"
 allowed-tools: Agent, Bash, Read
 ---
@@ -18,7 +18,7 @@ Engage the `cycle` skill. In ONE message run all five stages:
    - **Seed action** — derive ≤N candidate milestones (each a concrete `- [ ]` task in the active domain's scope) and append them via `/domain milestone <text>` per item. Print one line per seeded item: `🌱 auto-seeded: <text> · source: deferred | user | gap | log-tail`. For `deferred`-sourced items, also drain them from the `## deferred` section in the same edit.
    - **Re-enumerate** — after seeding, re-read the snapshot and proceed to Stage 2 with the newly added items.
    - **No-signal fallback** — if context yields NO defensible candidate (domain truly closed: zero open milestones AND empty `deferred` AND no user hint / `/gap` / `/check` / log-tail signal), stop with one line: `🛑 no open milestones + empty deferred + no seed signal — choose: extend domain (/domain milestone <text>), switch (/domain set <other>), or close (/end)`. Do NOT fabricate off-domain items just to keep the loop running.
-   - **Cap** — seed at most N items per /cycle invocation (default N = 3); further items wait for the next round so each batch stays reviewable and the user can steer between batches. (The `*-loop` variants auto-continue across rounds to drain `deferred` to depletion — the cap throttles per-round WIDTH, the loop provides the DEPTH.)
+   - **Cap** — seed at most N items per /cycle invocation (default N = 3); further items wait for the next round so each batch stays reviewable. The cap throttles per-round WIDTH; the auto-continue in Stage 5 provides the DEPTH — bare `/cycle` self-drains the whole `deferred` backlog batch-by-batch to depletion (the `*-loop` variants add explicit continuous intent + ScheduleWakeup pacing, but bare `/cycle` is already depletion-driving by default).
 
 2. **Dup-race precheck** — for each item whose label names an INBOX handoff entry (slug/header present in `INBOX.log.md` in the current repo), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
 
@@ -29,12 +29,30 @@ Engage the `cycle` skill. In ONE message run all five stages:
    Treat as SKIP if **any** of A/B/C fires resolved-class; otherwise PROCEED. Print one judgement line per item: `precheck <slug>: SKIP (A:[x] done) | PROCEED (no signal)`. Items whose label does NOT name an INBOX entry bypass precheck (always PROCEED).
 3. **Parallel-plan** — print a compact table `| # | item | subagent_type | iso | goal | precheck |` before dispatch (precheck = `SKIP <reason>` or `PROCEED`).
 4. **Fan-out** — issue an `Agent` tool call **only for PROCEED rows** (each `run_in_background: true`, `isolation: "worktree"` if it edits code, fully self-contained prompt). SKIP rows do not get an Agent.
-5. **Loop bias** — end with:
+5. **Loop tail — auto-continue to depletion (DEPTH).** After the fan-out, decide whether the active domain is DEPLETED and either self-continue or terminate. Bare `/cycle` is depletion-driving by default: it does NOT stop after one round while backlog remains.
 
-```
-M agents launched (cycle N): <item labels>  [K skipped: <skipped labels with reasons>]
+   **Depletion test (omit ScheduleWakeup) — only when ALL three hold:**
 
-Next: `/cycle` to enumerate + fan out the next round once results land.
-```
+   1. **Open milestones = 0** — re-read the active `<NAME>.md` snapshot; no `- [ ]` checkbox remains (this round drained the last batch), AND
+   2. **`deferred` is empty** — the active `<NAME>.md` has no `## deferred` section, or its body holds no still-open backlog item (every item already promoted + drained in prior rounds), AND
+   3. **No other seed signal** — no direct user mention, no prior-turn `/gap` shortlist, no `/check` / `/end` follow-up, no `<NAME>.log.md` tail open thread the snapshot + `deferred` haven't captured.
 
-Guardrails (per SKILL.md): self-enumerate only when next work is genuinely inferable (else ask); disjoint items only; no destructive fan-out; cap >8 with confirm; no nesting; **never silently drop a SKIP — always print the precheck reason**.
+   - **NOT yet depleted** (open milestones > 0 OR `deferred` non-empty OR another signal exists) → the domain is NOT drained. **Self-continue: issue a `ScheduleWakeup` for the next round** (same depletion-aware mechanism the `*-loop` variants use), and end with:
+
+     ```
+     M agents launched (cycle N): <item labels>  [K skipped: <skipped labels with reasons>]
+
+     ⏩ domain not depleted (open: <count> · deferred: <count>) — scheduled next round.
+     ```
+
+   - **DEPLETED** (all three hold) → do NOT ScheduleWakeup. Report closure and end with:
+
+     ```
+     M agents launched (cycle N): <item labels>  [K skipped: <skipped labels with reasons>]
+
+     ✅ domain depleted (open milestones 0 · deferred empty · no other signal) — loop terminates. (Extend: /domain milestone <text> · switch: /domain set <other> · close: /end)
+     ```
+
+   (The per-round cap still throttles WIDTH so each round stays reviewable; the auto-continue marches DEPTH-wise through the whole declared backlog. The user can interrupt at any round.)
+
+Guardrails (per SKILL.md): self-enumerate only when next work is genuinely inferable (else ask); disjoint items only; no destructive fan-out; cap >8 with confirm; no nesting; **never silently drop a SKIP — always print the precheck reason**; auto-continue stops at true depletion (never schedule a wake-up once all three depletion conditions hold).

@@ -619,14 +619,31 @@ fn main() {
             ei = ei + 1
         }
     } else {
-        // 0.6.6 — general-heavy round-robin is Linux-only. The workstation
-        // Mac stays protected from generic build/test fan-out; only an
-        // explicit macOS-capability marker (swift build · xcodebuild · …)
-        // promotes the command into the is_macos branch above (→ mini).
-        why = "load-balanced (Linux-only — Mac is the workstation)"
-        while ei < len(h_name) {
-            if h_plat[ei] != "macos" { elig.push(ei) }
-            ei = ei + 1
+        // 0.6.6 — general-heavy round-robin is Linux-only by default. The
+        // workstation Mac stays protected from generic build/test fan-out;
+        // only an explicit macOS-capability marker (swift build · xcodebuild
+        // · …) promotes the command into the is_macos branch above (→ mini).
+        //
+        // 0.7.0 — `mini-equal` toggle (project.tape @D s12): when the user
+        // opts a separate macOS pool host (mini) IN as an equal worker via
+        // `pool mini-equal on` (writes ~/.pool/mini-equal = "on"), macOS hosts
+        // ALSO enter this OS-agnostic bucket. This branch is reached ONLY for
+        // OS-agnostic work — is_linux commands took the Linux-only branch
+        // above, so Linux-specific work (elf · apt · CUDA) still never lands
+        // on a macOS host. Default OFF (marker absent / != "on") preserves the
+        // zero-macOS-offload behavior. NOT an in-guard opt-out (@D s11): this
+        // OPENS routing to an idle host, it does not DISABLE a safety guard.
+        let mut mini_equal = false
+        try { if read_file(dd + "/mini-equal").trim() == "on" { mini_equal = true } } catch e { }
+        if mini_equal {
+            why = "load-balanced (mini-equal: all enabled hosts · OS-agnostic)"
+            while ei < len(h_name) { elig.push(ei); ei = ei + 1 }
+        } else {
+            why = "load-balanced (Linux-only — Mac is the workstation)"
+            while ei < len(h_name) {
+                if h_plat[ei] != "macos" { elig.push(ei) }
+                ei = ei + 1
+            }
         }
     }
     if len(elig) == 0 { _allow() }

@@ -107,7 +107,8 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 # ── Cross-project ───────────────────────────────────────────
 /domain:domain <task>             <NAME>.md snapshot + <NAME>.log.md checkbox-task log
-/domain:domain list               repo-wide domain index (★ active · goal · progress · location)
+/domain:domain list               repo-wide domain index — DOMAINS.tape roster (NAME→path, domains anywhere)
+/domain:domain list --sync        reconcile DOMAINS.tape with disk (bootstraps the roster)
 #                                 cross-repo handoff → `cd <target> && /domain:domain set INBOX`
 
 # ── Verify / atlas / help ───────────────────────────────────
@@ -172,7 +173,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`bypass`](skills/bypass/) | skill | `core` | 0.2.1 | Anti-punt |
 | [`check`](skills/check/) | command + skill | `core` | 0.1.0 | Task dashboard skill |
 | [`cycle`](skills/cycle/) | command + skill | `core` | 0.6.0 | Autonomous work-loop driver |
-| [`domain`](skills/domain/) | command + skill | `core` | 0.8.6 | Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) · `/domain list` repo-wide index… |
+| [`domain`](skills/domain/) | command + skill | `core` | 0.8.7 | Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) · `/domain list` repo-wide index (DOMAINS.tape roster — domains at any path)… |
 | [`end`](skills/end/) | command + skill | `core` | 0.2.0 | Session closure safety check |
 | [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |
 | [`gh-stack`](skills/gh-stack/) | skill | `core` | 0.1.1 | Stacked-PR workflow skill |

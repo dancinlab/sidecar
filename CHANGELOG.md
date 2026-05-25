@@ -35,6 +35,16 @@ hexa-lang INBOX cross-repo handoff 2건 해소 (둘 다 hexa-lang 이 아니라 
   - **검증** — 4 케이스 PASS: `hexa cloud exec`→allow(local) · `hexa kick`→여전히 라우팅(회귀 없음) · 비-git `/tmp`→deny 유지 · `/tmp` worktree→`~/core/sidecar` rescue + ubu-2 라우팅.
   - **표면**: `hooks/pool-route/bin/_pool_route.hexa` (cloud early-allow + deny-branch rescue) · `hooks/pool-route/.claude-plugin/plugin.json` 0.6.9 → 0.6.10 · `.claude-plugin/marketplace.json` pool-route 0.6.9 → 0.6.10 · `hooks/pool-route/README.md` · README 표 cell.
 
+## 2026-05-25 — domain 0.8.7: `DOMAINS.tape` 호적부 — 인-프로젝트 인덱스 + 임의 경로 도메인
+
+- **domain 0.8.7 — `DOMAINS.tape` 도메인 호적부(roster)** — "프로젝트마다 내부에서 관리" 요구 해소. repo 루트에 구조화 carrier(@D s2) 인덱스 파일을 두고 `@domain <NAME> := "<path>"` 한 줄로 도메인을 등록. **핵심 설계 = 휘발성 대시보드와 안정성 명부 분리**: 호적부는 `이름→경로`(파생 불가한 안정 데이터)만 담고, 진행%·@goal 은 호출 때마다 각 스냅샷에서 **라이브로 계산**(파생). → 체크인해도 milestone flip 마다 diff 가 나지 않음(churn 0), git 이력엔 "도메인 추가/이동/제거" 같은 의미 있는 변화만 남음.
+  - **임의 경로 도메인** — 경로 해석이 호적부를 **최우선**으로 봄. `domains/RUNTIME/RUNTIME.md`·`sub/deep/X/X.md` 등 어디에 둬도 모든 verb(goal·ms·done·set·show)가 추적. 기존 "루트 + `<NAME>/` 1단계만" 해석 한계를 들어냄 (원래 "폴더 내부로 이동" pain 의 근본 해소).
+  - **`/domain init <NAME> [<dir>]`** — 스캐폴드 + 호적부 행 자동 등록. 옵션 `<dir>` 로 임의 폴더에 생성(`init RUNTIME domains` → `domains/RUNTIME.md`). roster_append 를 ensure 보다 먼저 호출 → 스캐폴드가 호적부 경로에 바로 안착.
+  - **`/domain list`** — 호적부 있으면 **authoritative** 렌더(★활성·진행·위치·goal) + 디스크 대조로 **미등록**(disk엔 있으나 호적부에 없음)·**유령**(호적부에 있으나 파일 없음 👻) 경고. 호적부 **없으면** 0.8.6 라이브 스캔으로 fallback (non-breaking).
+  - **`/domain list --sync`** — 디스크 스캔(루트+1단계)에서 미등록 도메인을 호적부에 append → 기존 repo 에서 호적부 부트스트랩. 유령은 보고만(자동 삭제 안 함), 깊은 경로 이동은 수동 편집(호적부가 경로 SSOT).
+  - **검증** — 임시 repo 11케이스 PASS: init 루트+폴더 · 호적부 경유 goal/ms/done · list roster mode(★+50% flip) · 미등록 경고 · --sync 등록 · 유령 탐지(👻) · 하위호환(hexa-lang 호적부 없음 → 라이브 스캔) · bare/set/show 회귀 없음. (worktree 격리 복구 — 동시 세션 clobber 후 stash 에서 0.8.7 작업 복원.)
+  - **표면**: `skills/domain/bin/_domain.hexa` (`_roster_path`/`_dirname`/`_abs`/`_roster_entries`/`_roster_lookup`/`_roster_has`/`_roster_append` + `_snap_path`/`_log_path` roster-우선 + `_ensure_files` mkdir + `_disk_domains`/`_loc_of`/`_list_roster_row`/`_list_disk`/`_list`/`_list_sync` + `init [<dir>]`·`list --sync` dispatch + `_usage`) · `skills/domain/.claude-plugin/plugin.json` 0.8.6 → 0.8.7 · `.claude-plugin/marketplace.json` domain 0.8.6 → 0.8.7 · SKILL.md · commands/domain.md · README 표 cell + 명령 카탈로그.
+
 ## 2026-05-25 — domain 0.8.6: `/domain list` (alias `ls`) — repo 전체 도메인 인덱스
 
 - **domain 0.8.6 — `/domain list` (alias `ls`)** — 프로젝트마다 도메인이 늘고 일부가 `<NAME>/` 폴더 안으로 이동하면서, "이 repo에 도메인이 뭐가 있더라?"를 한눈에 볼 surface가 없던 갭을 메움. bare `/domain` 은 활성 1개만 보여주는데, `list` 는 repo 전체(루트 + 한 단계 폴더)를 스캔해 도메인 쌍(`<NAME>.md` + `<NAME>.log.md`)을 한 표로 렌더 — `★ = 활성 · @goal · 진행바 · 위치(./ 또는 <NAME>/)`.

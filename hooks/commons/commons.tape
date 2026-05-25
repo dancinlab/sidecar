@@ -281,3 +281,8 @@
   do   = "audit launcher/dispatcher for hardcoded host paths — pool fire needs portable repo-root"
   dont = "run on a stale pool checkout (silent arg/codegen drift = idle GPU burn) · sign-token loop on local"
   dont = "assume origin/main is portable — a `/Users/...` hardcode silently scp-fails on a Linux pool host"
+
+@D g72 := "minimal role-name identifiers — no version/generation marker" :: governance [required active]
+  do   = "name by ROLE, minimal · snake_case · version lives in semver / git tag, never the name"
+  dont = "version/generation marker in symbol · file · binary name (`_v2`·`_mk2`·`_c2`·`stage0`)"
+  dont = "`_new`·`_old`·`_final` · Go-style `/vN` import-path — marker belongs in metadata not name"

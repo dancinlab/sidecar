@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.5"
+  version = "1.6"
 
 @I := "sidecar" :: identity [active]
   kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"

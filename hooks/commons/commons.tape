@@ -267,3 +267,9 @@
   do   = "before absorbed=true, run `hexa verify --blue-max <DOMAIN>` and cite the tier matrix in the flip log"
   do   = "for every 🟢 libm-class atom, ensure a 🔵 algebraic-root pair exists (integer factor/exponent)"
   dont = "flip absorbed without a BLUE-MAX audit citation · ship 🟢 atoms with no 🔵 pair attempt"
+
+@D g70 := "non-Latin term canonical-command map (stall-prevention)" :: glossary [required active]
+  do   = "term 'blue-max bonghap' (KR phonetic) = `hexa verify --blue-max <D>` + absorbed=true (g69)"
+  do   = "term 'bonghap' (KR phonetic) = the post-gate flip-to-absorbed closure-sequence tail (d5)"
+  do   = "term 'NEXUS' = repo-root NEXUS.tape reuse-lattice SSOT (g67 · hexa-lang hub g68)"
+  dont = "stall on a non-Latin term lookup — invoke the command per g67/g68/g69, do not grep-spin"

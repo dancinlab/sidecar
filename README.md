@@ -171,7 +171,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-57 plugins across `{hook · command · skill · mcp}` — one concept each (26 `core` · 14 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+60 plugins across `{hook · command · skill · mcp}` — one concept each (26 `core` · 17 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -207,8 +207,11 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`hexa-help`](skills/hexa-help/) | command + skill | `hexa` | 0.2.1 | wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific) |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | `hexa` | 0.1.1 | Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files |
 | [`hexa-native`](hooks/hexa-native/) | hook | `hexa` | 0.3.2 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) hard block for `.py` / `.sh` writes inside any project rooted at a directory… |
+| [`hxc-lsp`](hooks/hxc-lsp/) | hook | `hexa` | 0.1.0 | Wire `hxc-lsp` (HXC hexa-canonical wire/storage format LSP — diagnostics + hover) for `.hxc` files |
 | [`kick`](skills/kick/) | command + skill | `hexa` | 0.2.1 | runs `hexa kick --seed "<seed>"` (hexa-lang gap-breakthrough / discovery engine, aliased to `hexa drill`) |
+| [`kosmos-lsp`](hooks/kosmos-lsp/) | hook | `hexa` | 0.1.0 | Wire `kosmos-lsp` (kosmos multimodal knowledge-anchor manifest LSP — diagnostics + hover) for `.kosmos` files |
 | [`micro-exp`](skills/micro-exp/) | command + skill | `hexa` | 0.2.0 | context-driven micro-experiment sweep orchestrator (self-enumerate → pod budget → monitor → parse → atlas auto-fold) |
+| [`n6-lsp`](hooks/n6-lsp/) | hook | `hexa` | 0.1.0 | Wire `n6-lsp` (NEXUS-6 knowledge-atlas grammar LSP — diagnostics + hover) for `.n6` files |
 | [`paper`](skills/paper/) | command + skill | `hexa` | 0.5.3 | arxiv-style LaTeX paper scaffolder |
 | [`pod-monitor`](hooks/pod-monitor/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) advisory hook for GPU pod fires (`hexa cloud nohup` / `hexa cloud run`) |
 | [`tape-lint`](hooks/tape-lint/) | hook | `hexa` | 0.5.1 | PreToolUse(Edit\|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` |

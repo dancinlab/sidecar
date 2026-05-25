@@ -1,0 +1,9 @@
+{
+  "name": "hxc-lsp",
+  "description": "Wire the `hxc-lsp` server (HXC hexa-canonical wire/storage format LSP — diagnostics + hover, re-validated on every edit) for `.hxc` files in Claude Code. LSP config carried in plugin-root `.lsp.json` (the canonical Claude Code LSP filename — dot-prefixed; auto-discovered, no manifest field needed). Requires `hxc-lsp` on PATH (install via `hx install dancinlab/hxc`); if absent, Claude Code surfaces the error in /plugin Errors.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "lsp", "hxc"]
+}

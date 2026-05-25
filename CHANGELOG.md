@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — kosmos-lsp · n6-lsp · hxc-lsp 0.1.0 (sister-format LSP 3종 출하)
+
+`hexa-lsp`/`tape-lsp`가 깐 패턴(plugin-root `.lsp.json`로 PATH 위 LSP 서버를 `extensionToLanguage`에 와이어링)을 sister-format 3종으로 확장한다. DESIGN.log 의 "tape/n6/hxc/kosmos sister-format LSP 는 각각 별도 미래 플러그인" 항목을 닫는다.
+
+- **kosmos-lsp 0.1.0 (신규 hook · `hexa`)** — `.kosmos` (kosmos/1.1 multimodal knowledge-anchor manifest) → `kosmos-lsp` 서버. PATH 의 `kosmos-lsp` 필요(`hx install dancinlab/kosmos`).
+- **n6-lsp 0.1.0 (신규 hook · `hexa`)** — `.n6` (NEXUS-6 knowledge-atlas grammar) → `n6-lsp` 서버. PATH 의 `n6-lsp` 필요(`hx install dancinlab/n6`).
+- **hxc-lsp 0.1.0 (신규 hook · `hexa`)** — `.hxc` (HXC hexa-canonical wire/storage format) → `hxc-lsp` 서버. PATH 의 `hxc-lsp` 필요(`hx install dancinlab/hxc`).
+- 세 서버 모두 `tape-lsp`와 동일한 capability — `didOpen`/`didChange → publishDiagnostics` + `hover`. 즉 편집할 때마다 문법(진단)이 자동 재검증·반영된다. LSP-레벨 semantic-token 하이라이팅은 미구현(tape-lsp/hexa-lsp 와 동일 범위).
+- 각 플러그인은 최소형 — `.claude-plugin/plugin.json` + `.lsp.json` (hexa-lsp 와 동일, per-plugin README 없음).
+- marketplace.json · profiles.json(`hexa` tier 3개) · README(60 plugins · hexa 14→17 · 표 3행) 락스텝(@D ship · g22).
+
 ## 2026-05-26 — cycle 0.7.7 + domain 0.8.8 (stale-SSOT 가드 + perpetual 도메인 인지)
 
 anima LIFE 도메인이 매 `/cycle` 라운드 헤매다 잘못 `✅ domain depleted — loop terminates`(100% 종료)를 외친 사건의 근본원인 2겹을 두 플러그인 양쪽에서 막는다. 원인 = (1) orphan-recover 브랜치가 root `LIFE.md` 를 추적 해제 → working tree 가 stale "$0-frontier 종결" 사본(전부 `[x]`, perpetual @goal 없음)이 origin/main 의 "영구 엔진" good 버전을 shadow, (2) LIFE 가 DOMAINS.tape 미등록. 진단 핸드오프 = `anima/INBOX.log.md` · 원칙 = `feedback-closure-is-physical-limit`.

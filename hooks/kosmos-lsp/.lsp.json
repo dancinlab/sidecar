@@ -1,0 +1,9 @@
+{
+  "kosmos": {
+    "command": "kosmos-lsp",
+    "args": [],
+    "extensionToLanguage": {
+      ".kosmos": "kosmos"
+    }
+  }
+}

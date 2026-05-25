@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — micro-exp 0.3.0 — local-pool adapter (M3)
+
+`/micro-exp` 가 wall-only / 비 DFT 매트릭스에 대해 'no candidate matrix' 로 false-punt 하던 문제. hexa-lang user 의 GPU 전 차원 벤치마킹 직 매트릭스는 명백히 sweep-shaped 였으나 pod-rent + atlas-register 패턴과 안 맞아 punt됨. 정형화:
+
+- **`@D local_pool_adapter`** 신설 (`skills/micro-exp/SKILL.md`): no-signal fallback 전에 (a) `pool list` 가 ON 호스트 보임(예: `ubu-2` for GPU walls, `mini` for arm64) AND (b) `kind` 가 wall-measurement / structural-oracle / build-bench (NOT DFT-elph/SSCHA) 면 local-pool mode 진입.
+- **local-pool mode**: `hexa cloud rent` 대신 `pool on <host>`, `cloud copy-to/copy-from` 대신 `scp`, atlas register 스킵(wall 은 atom 아님 — `.verdicts/<slug>/<id>.txt` 만 persist), 예산은 `local_hours_max`.
+- 진입 시 한 줄 출력: `local-pool mode: host=<host> kind=<kind> budget=<hours>`.
+- `commands/micro-exp.md` Stage 1 의 No-signal fallback 직전에 local-pool adapter 게이트 명시.
+
+비파괴 — 매칭 조건 0개면 기존 pod-rent 흐름 그대로 진행.
+
+---
+
 ## 2026-05-25 — cycle 0.7.5 — worktree-leak 사전 청소 (M2)
 
 throttle 사망한 에이전트가 남긴 `/tmp/wt-*` + 동명 로컬 브랜치 때문에 fresh fan-out 의 `worktree add -b <same>` 가 충돌. hexa-lang 캠페인 내내 재발사 전에 수동 `git worktree remove` + `git branch -D` 함. 정형화:

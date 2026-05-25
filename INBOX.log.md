@@ -2,6 +2,17 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-26T00:05Z — paper:paper v0.8 — 3 verb 버그 (from: demiurge ANTIMATTER paper rego PR #197)
+
+**맥락**: ANTIMATTER BLUE-MAX paper를 paper v0.8(sample-blue-max + 신규 verb)로 재생성 중 3개 verb가 advertised대로 동작 안 함. stub-first (g60) — 구현은 review 후.
+
+- [ ] `paper pr-roll <repo> <since>` — `pr-roll.json` 작성은 OK이나 LaTeX `\paragraph` emit이 jq `\#` escape 버그로 crash · bare repo name 대신 `OWNER/REPO` slug 요구
+- [ ] `paper atoms <DOMAIN>` — case-sensitive + `verify_cli.hexa` 주석 라인만 매칭 → usable atom list 안 나옴 (소스 fn dispatch 파싱 필요)
+- [ ] `paper arxiv-prep [dir]` — tar target을 relative path로 만들고 `cd "$TMP"` subshell 안에서 tar 실행 → 항상 실패 (절대경로 또는 cd 제거)
+- [ ] (관련 context) shipped `bin/hexa-verify`가 stale → antimatter atom 미인식, verify-block이 재빌드 강제 (install-sync 갭)
+
+repro: demiurge antimatter-bluemax-2026 rego (PR #197) · paper plugin v0.8
+
 ## 2026-05-25T11:20Z — g61 stdlib-SSOT 강제·자동화·범위확장 (from: anima IIT4 세션)
 
 **맥락**: IIT4 엔진(의식 Φ-structure)을 hexa-brain·eeg 등 타 프로젝트와 공유하려고 stdlib 승격을 검토하던 중, 사용자: *"hexa-lang 을 최대한 단일 SSOT 로 하려면 sidecar 어떻게 수정해야될까"*. → commons.tape 에 이미 **g61**("hexa-lang stdlib is the SSOT for general primitives")이 존재 = **정책은 있음**. 빠진 건 **강제·자동화·범위·물리적 단일해석** 4가지. INBOX 에 제안만, 구현은 사용자 review/sign 후.

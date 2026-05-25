@@ -240,7 +240,7 @@
       "name": "sidecar",
       "source": "./commands/sidecar",
       "description": "/sidecar <args> \u2014 thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`). Verbs \u2014 init (scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md) \u00b7 sync (pull marketplace + refresh cache + installed_plugins.json + enable plugins) \u00b7 sign (user sign-off gate). `sign <key>` mints a 5-min token at ~/.sidecar/signs/<key>.sign unlocking agent edits to a sign-gated governance SSOT file \u2014 the sign-guard hook hard-denies those edits until a fresh token exists; keys are `commons` (commons.tape) and `project` (project.tape). Bare `sign` / `sign --list` shows active tokens; `sign clear [<key>]` removes them. Multi-user enable profiles \u2014 `profile [<name>]` shows/sets the enable profile (minimal = core only \u00b7 hexa = core + hexa-lang \u00b7 full = everything, default), `enable`/`disable <plugin>` force one plugin on/off (per-plugin override), `reset <plugin>` drops the override; each re-applies the install. State in ~/.sidecar/profile + plugin-overrides.json; install.hexa enables per .claude-plugin/profiles.json tiers \u2014 plugin disable, not an in-guard opt-out (@D s11 safe). Args pass through unchanged.",
-      "version": "0.2.0"
+      "version": "0.3.0"
     },
     {
       "name": "inject",

@@ -194,6 +194,10 @@ fn main() {
     let prof_ok = has_key(prof_cfg, "profiles") && has_key(prof_cfg, "tiers") && len(active_tiers) > 0
     let filtering = prof_ok && active_profile != "full"
     let overrides = _parse_or(home + "/.sidecar/plugin-overrides.json", "{}")
+    // master tier = CREATOR-ONLY: a `master`-tier plugin enables only when the
+    // ~/.sidecar/master marker exists (force-disabled otherwise, even under the
+    // no-filter `full`/`master` profile). Public installs never have the marker.
+    let master_marker = _trim(_read_safe(home + "/.sidecar/master")) != ""
 
     // ── 2. register the marketplace in known_marketplaces.json ───────
     let known = _parse_or(known_path, "{}")
@@ -264,13 +268,17 @@ fn main() {
         // enable per the active profile (the step that also fixes "commands
         // don't show up"). Override wins; else tier∈active_tiers when filtering;
         // else true (full / legacy → enable everything).
+        let tier = if has_key(tier_map, name) { to_string(tier_map[name]) } else { "personal" }
         let mut en = true
         if has_key(overrides, name) {
             en = overrides[name] == true
         } else if filtering {
-            let tier = if has_key(tier_map, name) { to_string(tier_map[name]) } else { "personal" }
             en = _arr_has(active_tiers, tier)
         }
+        // master tier is creator-only — off unless ~/.sidecar/master exists
+        // (applies even in the no-filter `full` profile). Explicit per-plugin
+        // override still wins (the user's own escape hatch).
+        if tier == "master" && !master_marker && !has_key(overrides, name) { en = false }
         settings["enabledPlugins"][key] = en
         if !en { ndis = ndis + 1 }
 

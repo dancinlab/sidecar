@@ -1,9 +1,10 @@
 {
-  "_doc": "Multi-user enable profiles. install.hexa enables a plugin iff its tier is in the active profile's tier list (read from ~/.sidecar/profile, default 'full'), unless ~/.sidecar/plugin-overrides.json sets it explicitly. Tiers: core = universal safety/QoL/workflow (on for everyone) · hexa = needs the hexa-lang CLI or .hexa/.tape files (useless/blocking without it) · personal = dancinlab-specific governance/infra/style. A plugin with no tier here defaults to 'personal' (kept out of the minimal profile). Edit a tier to recategorize; this file is the classification SSOT, kept separate from marketplace.json on purpose.",
+  "_doc": "Multi-user enable profiles. install.hexa enables a plugin iff its tier is in the active profile's tier list (read from ~/.sidecar/profile, default 'full'), unless ~/.sidecar/plugin-overrides.json sets it explicitly. Tiers: core = universal safety/QoL/workflow (on for everyone) · hexa = needs the hexa-lang CLI or .hexa/.tape files (useless/blocking without it) · personal = dancinlab-specific governance/infra/style (opt-in via 'full') · master = CREATOR-ONLY: enabled solely when the ~/.sidecar/master marker exists, force-disabled otherwise EVEN under 'full'/'master' profile (a per-plugin override can still escape-hatch it on). A plugin with no tier here defaults to 'personal' (kept out of the minimal profile). Edit a tier to recategorize; this file is the classification SSOT, kept separate from marketplace.json on purpose.",
   "profiles": {
     "minimal": ["core"],
     "hexa": ["core", "hexa"],
-    "full": ["core", "hexa", "personal"]
+    "full": ["core", "hexa", "personal"],
+    "master": ["core", "hexa", "personal", "master"]
   },
   "default": "full",
   "tiers": {

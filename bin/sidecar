@@ -245,7 +245,7 @@ TAPE
     if [ -z "$SUB" ]; then
       cur=$(cat "$PROF_FILE" 2>/dev/null || echo "full")
       echo "sidecar profile: ${cur:-full}"
-      echo "  available: minimal (core only) · hexa (core + hexa-lang) · full (everything)"
+      echo "  available: minimal (core only) · hexa (core + hexa-lang) · full (everything) · master (full + creator-only · needs ~/.sidecar/master)"
       echo "  set: sidecar profile <name>   ·   per-plugin: sidecar enable|disable|reset <plugin>"
       _root=$(sidecar_root)
       if command -v hexa >/dev/null 2>&1 && [ -f "$_root/bin/_overrides.hexa" ]; then
@@ -255,8 +255,8 @@ TAPE
       exit 0
     fi
     case "$SUB" in
-      minimal|hexa|full) ;;
-      *) echo "sidecar profile: unknown '$SUB' — pick: minimal · hexa · full" >&2; exit 1 ;;
+      minimal|hexa|full|master) ;;
+      *) echo "sidecar profile: unknown '$SUB' — pick: minimal · hexa · full · master" >&2; exit 1 ;;
     esac
     mkdir -p "$HOME/.sidecar"
     printf '%s\n' "$SUB" > "$PROF_FILE"
@@ -282,9 +282,21 @@ TAPE
     echo "sidecar reset: $PLUG → follows the profile · applying…"
     apply_install
     ;;
+  master)
+    # creator-only marker. master-tier plugins enable ONLY while ~/.sidecar/master
+    # exists (install.hexa gate). on = mint marker · off = remove · status = show.
+    MK="$HOME/.sidecar/master"
+    SUB="${1:-status}"
+    case "$SUB" in
+      on)  mkdir -p "$HOME/.sidecar"; printf '1\n' > "$MK"; echo "sidecar master: ON — ~/.sidecar/master minted · master-tier plugins now enable · applying…"; apply_install ;;
+      off) rm -f "$MK"; echo "sidecar master: OFF — marker removed · master-tier plugins disabled · applying…"; apply_install ;;
+      status|"") if [ -f "$MK" ]; then echo "sidecar master: ON (~/.sidecar/master present)"; else echo "sidecar master: OFF (no ~/.sidecar/master — master-tier plugins disabled)"; fi ;;
+      *) echo "usage: sidecar master [on|off|status]" >&2; exit 1 ;;
+    esac
+    ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · sign · profile · enable · disable · reset" >&2
+    echo "  valid verbs: init · sync · sign · profile · enable · disable · reset · master" >&2
     exit 1
     ;;
 esac

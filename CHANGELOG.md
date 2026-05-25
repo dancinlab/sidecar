@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — master 프로파일/티어 + 창작자 마커 (sidecar 0.3.0)
+
+minimal/hexa/full 위에 **창작자 전용 `master` 모드** 추가. 기존 `personal` 티어는 누구나
+`profile full` 로 켤 수 있어 창작자 강제가 없었음 → `master` 티어는 **마커 게이트**로 진짜 제작자 전용.
+- **profiles.json**: `master` profile (`core+hexa+personal+master`) + `master` 티어 (creator-only) 추가.
+- **install.hexa**: `~/.sidecar/master` 마커 읽기 — `master`-티어 플러그인은 **마커 있을 때만 enable**,
+  없으면 `full`/`master` 프로파일이어도 강제 off (per-plugin override 는 escape-hatch). 비파괴(태깅된 master 플러그인 0개 → 동작 불변).
+- **bin/sidecar (0.3.0)**: `profile master` 허용 + `master [on|off|status]` verb (마커 mint/remove/조회 → apply_install).
+- 공개 설치자는 마커가 없어 master 플러그인 기본 off; 제작자만 `sidecar master on` 으로 활성.
+parse/문법/master-status/profile 테스트 PASS. from anima IIT4 세션 (creator-only 거버넌스 plugin 분리 요구).
+
+---
+
 ## 2026-05-25 — cycle 0.7.0: bare `/cycle` + `/cycle-full` 도 자동으로 depletion 까지 self-drain (패밀리 전체 일관화)
 
 0.6.0 이 `*-loop` 변종에만 준 **depletion-구동(self-continue)** 동작을 cycle 패밀리 **전체**로 확장 — 이제 bare `/cycle` 와 `/cycle-full` 도 한 라운드 후 멈추지 않고, 도메인의 `## deferred` backlog 를 배치별로 끝까지 스스로 파낸다.

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — CLOSURE_POLICY.md (닫힘 정직성 정책 문서화)
+
+cycle 0.7.7 + domain 0.8.8 가 막은 LIFE-class false closure 의 방어법 + 설계 방향을 루트 정책 문서 `CLOSURE_POLICY.md` 로 기록. `LATTICE_POLICY.md`(한계 주장의 정직성)의 자매 — 닫힘 주장의 정직성. 2겹 근본원인(stale untracked SSOT shadow · perpetual 오취급) → 두 기둥(SSOT 신선도 · 닫힘 정직성) + 보조(roster self-heal) + 설계 원칙 5개(SSOT=live · 정직성>진행감 · fail-open · surface-don't-act · 마커 기반 일반화) + 구현 매핑표. README 에 `## Policies` 섹션 신설(두 honesty 정책 묶음) + Reference·Layout 갱신. 코드 변경 없음(문서 전용).
+
 ## 2026-05-26 — cloud 0.3.3 (`tail` subverb 노출 — Monitor 브릿지)
 
 `hexa cloud tail` 이 hexa-lang 에 랜딩(PR #1165)됨에 따라 `/cloud` skill 의 subverb 목록에 `tail` 을 추가한다. `tail <host> <log> [--grep RE] [--until RE]` 은 원격 작업 로그를 ssh 로 라이브 스트리밍(`tail -F | sed -u`, 크래시-aware 기본 종료 마커)해서 **폴링 없이 Monitor 에 붙이는 canonical 경로**(commons g57: "attach Monitor to the LOG"). nohup `--early-life-check`(즉사 가드)와 짝 — early-life 는 발사 직후 즉사를 잡고, tail 은 그 이후 전 구간을 지켜본다. 4개 표면 lockstep(@D g22): SKILL.md · commands/cloud.md · plugin.json · marketplace.json `0.3.2 → 0.3.3`.

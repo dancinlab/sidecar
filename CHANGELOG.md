@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.7.4 — cross-cutting 원칙 주입 (M1)
+
+도메인 사이클이 메모리에 박힌 cross-cutting 원칙을 못 보면 그 원칙대로 verdict 가 안 나옴. 증거: hexa-lang round-7 (PR #1080) 가 `feedback-closure-is-physical-limit` 원칙(perf=roofline %)이 메모리에 있는데도 verdict 를 raw `ratio vs cuBLAS` (5.3-6.9×) 로 보고, roofline % 환산 안 함. 에이전트 프롬프트에 원칙이 안 들어갔기 때문. 정형화:
+
+- **`@D principle_injection`** 신설 (`skills/cycle/SKILL.md`): Stage 4 가 `MEMORY.md` 스캔 → cross-cutting 마커(`ALL 도메인` / `모든 도메인` / `cross-cutting` / `cross-domain` 또는 frontmatter `cross_cutting: true` 또는 body `**Cross-domain principle**:`) 매치 → UP TO 3 발췌(≤300 chars each, 총 ≤1KB) → 모든 fan-out Agent 프롬프트 상단에 `Cross-cutting principles` 블록으로 inject.
+- **`commands/cycle.md` Stage 4 + `cycle-full.md`** 본문에 inject contract 직접 반영. 예시 원칙: `feedback-closure-is-physical-limit`, `feedback-instrument-first-methodology`.
+- Agent 는 verdicts 를 그 lens 로 framing 의무 (예: `% of roofline achieved` 가 `ratio vs X` 대체/보완).
+- 비파괴 — 매칭 메모리 0개면 inject 0; off-domain 명시 작업은 marker 로 우회 가능.
+
+---
+
 ## 2026-05-25 — cycle 0.7.3 — stale-milestone 사전스캔 (H3)
 
 도메인 milestone 박스가 머지된 PR 로 해소됐는데 `[ ]` 잔존하는 패턴 — hexa-lang GPU.md §2 (2a/2b/2c/2e) 가 round-1 N206 등으로 해소됐으나 unflipped 였고, fan-out 직전 수동 grep 으로만 잡혔음. dup-race precheck 의 INBOX-only 범위를 확장:

@@ -11,6 +11,7 @@
     "prefs": "core",
     "git-guard": "core",
     "workdir-guard": "core",
+    "worktree-guard": "core",
     "worktree-gc": "core",
     "output-trim": "core",
     "memory-lint": "core",

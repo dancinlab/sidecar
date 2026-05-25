@@ -1,0 +1,9 @@
+{
+  "name": "worktree-guard",
+  "description": "PreToolUse(Bash) advisory hook for `git worktree add`. When a Bash command creates a git worktree, emits non-blocking additionalContext with the durable-worktree drill: in a heavily-concurrent or synced repo an isolated worktree dir can be removed out from under you (a sibling agent's `git worktree prune`, a workspace sync, or the macOS /tmp reaper), and any UNCOMMITTED edits vanish with it — so commit + push promptly after editing, don't hold uncommitted work across turns, and land via PR then `git worktree remove` (verification builds AFTER the commit, so a failed build never costs the work). Adds a stronger note when the target path sits under a volatile location (/tmp · /private/tmp · /var/folders) that is both tmp-reaped and outside the synced workspace. Implemented in hexa-lang (`_worktree_guard.hexa`, invoked via `hexa run`). Advisory-only by design (per the guards-narrow-scope policy: non-blocking additionalContext beats a deny for hygiene). Sister of workdir-guard (shared-tree SessionStart advisory) and worktree-gc (merged-worktree prune). NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "git", "worktree", "advisory", "hexa"]
+}

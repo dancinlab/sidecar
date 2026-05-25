@@ -11,7 +11,6 @@ NOTE: plugin slash commands are ALWAYS namespaced `/plugin:command` in Claude Co
 /brainstorm:brainstorm <seed>     width-first idea exhaustion (rounds until depletion)
 
 # ── Fan-out / loop ──────────────────────────────────────────
-/all-bg-go:all-bg-go              reactive single fan-out of the prior turn's branches
 /cycle:cycle                      autonomous loop: self-enumerate → plan → fan-out → loop
 /cycle:cycle-full <goal>          /cycle:cycle preceded by a phase-0 depletion brainstorm
 /step-by-step:step-by-step <task>  sequential runbook: plan → auto-run steps in order (alias /step-by-step:sbs)

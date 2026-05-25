@@ -246,3 +246,10 @@
 @D g66 := "sweep pod-cap ≠ agent-cap — distinct semantics" :: governance [required active]
   do   = "keep pod_concurrent_max (rent budget) and parallel-agent-cap (≤3 · rate-limit) separate"
   dont = "conflate the two caps · apply the agent-cap to pod dispatch · the pod-cap to parse Agents"
+
+@D g67 := "intra-project domain reuse lattice — atlas-first · provenance · per-repo INDEX" :: governance [required active]
+  do   = "before building a primitive, grep atlas + sibling-domain records for a verified one to reuse"
+  do   = "stamp each record with cross-domain edges — reused[] (borrowed) · provides[] (offered)"
+  do   = "keep a repo-root INDEX.md reuse graph current — nodes = domains, edges = reuse"
+  dont = "rebuild a primitive a sibling domain already verified · leave a reuse edge unrecorded"
+  dont = "couple domains across separate repos — intra-project only, no inter-project graph"

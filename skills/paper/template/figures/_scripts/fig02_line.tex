@@ -3,6 +3,11 @@
 % Python dep). Replace the `coordinates {...}` rows with your data; keep axis
 % labels and the legend honest (units explicit, no log-scale without a label).
 %
+% IMPORTANT (working pattern): this is a STANDALONE document (own \documentclass).
+% In main.tex, \includegraphics{figures/fig02_line.pdf} the COMPILED pdf — do NOT
+% \input this .tex (that pulls a full \documentclass into your paper and breaks
+% the build). `make figures` produces figures/fig02_line.pdf for you.
+%
 % Manual single-shot compile (debug):
 %   pdflatex -interaction=nonstopmode -halt-on-error fig02_line.tex
 \documentclass[tikz,border=4pt]{standalone}

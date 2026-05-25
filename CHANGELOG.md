@@ -6,6 +6,29 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — paper 0.9.0 — monograph mode + 58p-build bug-fixes
+
+The HEXA-FUSION 58-page monograph proved the pattern; this re-design ships it as first-class verbs and fixes the real pain points that build surfaced.
+
+**Bug-fixes (from the 58p build):**
+- **lint figure-traverse (#1)** — `bin/_paper.hexa` lint now scans `main.tex` AND every `\input`'d / `appendix/*.tex` file for `\includegraphics` + tikzpicture (and tables, sections, `\cite` keys). Previously it counted main.tex only, so a 16-figure doc with figures inside appendices reported "4". New `_lint_tex_files` / `_lint_appendix_count` helpers; counts are summed across the body fileset.
+- **Makefile appendix/figure deps (#2)** — `template/Makefile` adds `APPENDIX = $(wildcard appendix/*.tex)` + `FIG_PDFS_EXISTING = $(wildcard figures/*.pdf)` to the `$(DOC).pdf` prerequisite list. Editing an appendix or a committed figure now triggers a rebuild on the next `make` — no `make distclean && make`.
+- **pgfplots in default preamble (#3)** — `template/main.tex` ships `\usepackage{pgfplots}\pgfplotsset{compat=1.18}`; README notes the `tlmgr install pgfplots` BasicTeX dep.
+- **standalone-fig caveat (#4)** — README + `fig02_line.tex` header document the working pattern: `\includegraphics{figures/figNN.pdf}` of the COMPILED standalone, never `\input` of its `\documentclass`-bearing `.tex`.
+
+**Monograph mode (the re-design):**
+- **`/paper monograph-init <slug> [N]`** — scaffolds the template spine PLUS an `\appendix` block in `main.tex` that `\input`s N (default 12) self-contained `appendix/<L>_*.tex` chapter stubs (each `\section` + `\label` + `% TODO`), alongside `companion/`. The HEXA-FUSION 58p structure; seed reference `/paper sample sample-fusion-7gate`.
+- **`/paper fill <appendix-letter>`** — prints the per-appendix fill runbook (source path + `% TODO` markers · `\input` wiring check against main.tex · recompile note).
+- **`/paper companion sync`** — best-effort rebuild of `companion/pr-roll.json` (from `gh pr list`) + `companion/verify-ledger.json` (from a `hexa atlas` scan).
+
+**lint v0.7 profile:**
+- **monograph tier auto-detect** — `\appendix` + ≥6 `\input` appendix files → expects ≥30 pages, ≥6 figures, a present `companion/` dir; else the existing ≥10p/≥1fig paper tier. All v0.6 gates (Pipeline/Limitations/Repro/table/bib-count/emoji-guard/cite-resolve) retained.
+- **"comparison ⇒ chart" heuristic** — warns (non-blocking) when a comparison-style `tabular` (vs / expected-computed / baseline-this-work) is present but the doc has 0 figures.
+
+- Surface lockstep (@D g22): `skills/paper/.claude-plugin/plugin.json` · `skills/paper/SKILL.md` · `skills/paper/commands/paper.md` · `skills/paper/template/{main.tex,Makefile,README.md,figures/_scripts/fig02_line.tex}` · `.claude-plugin/marketplace.json` paper entry 0.8.0 → 0.9.0.
+
+---
+
 ## 2026-05-26 — cycle 0.7.6 — depletion = PAUSE, not "100% done" (@D depletion_not_terminal)
 
 `/cycle` 의 depletion 분기가 `✅ domain depleted — loop terminates` 로 binary-checkbox 닫힘을 선언해, cross-cutting 원칙 `feedback-closure-is-physical-limit` ("끝은 없어 · 100% 도달불가 · 끝 = 물리·수학 한계 + 계속 탐구")와 정면 충돌. 실증: anima LIFE(IIT4-Φ) 도메인 /cycle 이 "domain depleted / terminal" 선언했으나 large-N faithful-Φ(intractable) + full-IIT4-CES(대형 spec) frontier 는 여전히 OPEN — **$0-runnable lane 만 비었지 도메인이 끝난 게 아니었음**. 정형화:

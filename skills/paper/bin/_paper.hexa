@@ -84,16 +84,22 @@ fn _bad_slug(slug: string) -> bool {
 }
 
 fn _usage() {
-    println("paper — arxiv-style LaTeX paper scaffolder (v0.7)")
+    println("paper — arxiv-style LaTeX paper scaffolder (v0.9 — monograph mode)")
     println("")
     println("usage:")
     println("  /paper new <slug>                          scaffold ./<slug>/ from template")
     println("  /paper sample [<name>] [<dest>]            copy a bundled sample (see `/paper list`)")
     println("  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine)")
     println("  /paper compile [dir]                       xelatex x 3 + bibtex")
-    println("  /paper lint [dir]                          extended commons g51 lint")
+    println("  /paper lint [dir]                          commons g51 lint (auto paper/monograph tier)")
     println("  /paper list                                list bundled samples")
     println("  /paper help                                this message")
+    println("")
+    println("v0.9 monograph verbs:")
+    println("  /paper monograph-init <slug> [N]           scaffold a monograph: main.tex \\appendix +")
+    println("                                             N (default 12) appendix/<L>_*.tex stubs + companion/")
+    println("  /paper fill <appendix-letter>              print the fill runbook for one appendix")
+    println("  /paper companion sync                      rebuild companion/{pr-roll,verify-ledger}.json")
     println("")
     println("v0.7 verbs:")
     println("  /paper companion init                      scaffold companion/ in cwd")
@@ -285,16 +291,100 @@ fn _cmd_list(root: string) {
     }
 }
 
-// commons @D g51 — paper lint (extended in 0.6.0):
+// Build the space-separated list of .tex files that contribute to the
+// document body: main.tex PLUS every \input{...}/\include{...} target it
+// references (resolving the conventional .tex extension), PLUS any
+// appendix/*.tex present. Returns shell-quoted, space-joined paths.
+//   The 58p monograph build proved lint MUST traverse \input'd appendix
+//   files — counting \includegraphics in main.tex alone reported "4
+//   figures" for a 16-figure doc (#1).
+fn _lint_tex_files(dir: string, main_tex: string) -> string {
+    let mut files = ""
+    if _path_exists(main_tex) {
+        files = _shq(main_tex)
+        // extract \input{X} / \include{X} targets from main.tex
+        let cmd = "grep -oE '\\\\(input|include)\\{[^}]+\\}' " + _shq(main_tex)
+            + " 2>/dev/null | sed -E 's/\\\\(input|include)\\{//; s/\\}//'"
+        let r = exec_with_status(cmd)
+        if r[1] == 0 {
+            let lines = _trim(to_string(r[0])).split("\n")
+            let mut i = 0
+            while i < len(lines) {
+                let raw = _trim(lines[i])
+                if raw != "" {
+                    // resolve target relative to dir; add .tex if no extension file
+                    let mut cand = dir + "/" + raw
+                    if !_path_exists(cand) { cand = dir + "/" + raw + ".tex" }
+                    if _path_exists(cand) && files.index_of(_shq(cand)) < 0 {
+                        files = files + " " + _shq(cand)
+                    }
+                }
+                i = i + 1
+            }
+        }
+    }
+    // also glob appendix/*.tex (monograph layout) in case it isn't \input'd yet
+    if _dir_exists(dir + "/appendix") {
+        let r2 = exec_with_status("ls -1 " + _shq(dir + "/appendix") + "/*.tex 2>/dev/null")
+        if r2[1] == 0 {
+            let lines = _trim(to_string(r2[0])).split("\n")
+            let mut i = 0
+            while i < len(lines) {
+                let p = _trim(lines[i])
+                if p != "" && files.index_of(_shq(p)) < 0 { files = files + " " + _shq(p) }
+                i = i + 1
+            }
+        }
+    }
+    return files
+}
+
+// count \input appendix files wired in (monograph tier detection): requires
+// \appendix present in main.tex AND >=1 appendix/*.tex (or \input{appendix/..}).
+fn _lint_appendix_count(dir: string, main_tex: string) -> int {
+    if !_path_exists(main_tex) { return 0 }
+    let has_appendix = exec_with_status("grep -cE '^\\\\appendix' " + _shq(main_tex) + " 2>/dev/null")
+    if has_appendix[1] != 0 || to_int(_trim(has_appendix[0])) < 1 { return 0 }
+    let mut n = 0
+    if _dir_exists(dir + "/appendix") {
+        let r = exec_with_status("ls -1 " + _shq(dir + "/appendix") + "/*.tex 2>/dev/null | wc -l")
+        if r[1] == 0 { n = to_int(_trim(r[0])) }
+    }
+    if n == 0 {
+        let r2 = exec_with_status("grep -cE '\\\\(input|include)\\{appendix/' " + _shq(main_tex) + " 2>/dev/null")
+        if r2[1] == 0 { n = to_int(_trim(r2[0])) }
+    }
+    return n
+}
+
+// "comparison ⇒ chart" heuristic (v0.7 profile): count body .tex files whose
+// tabular content looks like a numeric comparison (contains "vs", an
+// expected/computed pair, or a baseline/this-work pair). Heuristic — warn, not
+// fail; false positives are an acceptable nudge.
+fn _lint_comparison_tables(files: string) -> int {
+    if files == "" { return 0 }
+    let cmd = "grep -liE 'textbf\\{vs|[ &]vs\\.?[ &]|expected.*computed|computed.*expected|baseline.*this work|this work.*baseline' "
+        + files + " 2>/dev/null | wc -l"
+    let r = exec_with_status(cmd)
+    if r[1] != 0 { return 0 }
+    return to_int(_trim(r[0]))
+}
+
+// commons @D g51 — paper lint (extended 0.6.0; figure-traverse + monograph
+// tier + comparison-chart heuristic added 0.9.0):
 //   Base : >=10 pages AND >=1 fal.ai-generated figure
-//   v0.6 : +§Full Pipeline present (heading regex)
-//          +§Limitations present
-//          +§Reproducibility present
+//   v0.6 : +§Full Pipeline / §Limitations / §Reproducibility headings
 //          +>=1 \begin{table} (or `tabular`)
 //          +>=2 \includegraphics (or TikZ fig)
 //          +>=10 @-keyed bibtex entries
 //          +no tier emoji in references.bib body (pdflatex fatal guard)
 //          +all \cite{KEY} resolve to a bibtex KEY (warn-list, non-blocking)
+//   v0.9 : figure + table counts traverse main.tex AND every \input'd /
+//          appendix/*.tex file (#1 fix — was main.tex only).
+//          monograph tier auto-detect: \appendix + >=6 \input appendix files
+//          → expect >=30 pages, >=6 figures, >=1 companion/ dir; else the
+//          existing >=10p / >=1fig paper tier.
+//          "comparison ⇒ chart" heuristic warns on a comparison tabular w/ 0 figs.
 // Exit 0 = pass, 1 = fail. Output is a per-condition checklist.
 fn _cmd_lint(args: array) {
     let mut dir = "."
@@ -315,8 +405,6 @@ fn _cmd_lint(args: array) {
             if v != "" { pages = to_int(v) }
         }
     }
-    let pages_ok = pages >= 10
-
     // (A) figures/_prompts/ contains ≥1 .txt/.md file
     let prompts_dir = dir + "/figures/_prompts"
     let mut prompt_hits = 0
@@ -346,26 +434,42 @@ fn _cmd_lint(args: array) {
     let main_present = _path_exists(main_tex)
     let bib_present  = _path_exists(bib)
 
-    // §Full Pipeline / §Limitations / §Reproducibility headings
+    // body .tex fileset = main.tex + \input'd + appendix/*.tex  (v0.9 #1 fix)
+    let tex_files = _lint_tex_files(dir, main_tex)
+    let appendix_n = _lint_appendix_count(dir, main_tex)
+    // monograph tier: \appendix + >=6 \input appendix files
+    let monograph = appendix_n >= 6
+    let companion_present = _dir_exists(dir + "/companion")
+    // tier-scaled thresholds
+    let mut min_pages = 10
+    let mut min_figs  = 2
+    if monograph { min_pages = 30; min_figs = 6 }
+    let pages_ok = pages >= min_pages
+
+    // §Full Pipeline / §Limitations / §Reproducibility headings (scan whole body)
     let mut sec_pipeline_ok = false
     let mut sec_limits_ok   = false
     let mut sec_repro_ok    = false
     let mut tables_n  = 0
     let mut figures_n = 0
-    if main_present {
-        let r1 = exec_with_status("grep -cE '^\\\\section\\{Full Pipeline' " + _shq(main_tex) + " 2>/dev/null")
+    if main_present && tex_files != "" {
+        let r1 = exec_with_status("grep -hcE '^\\\\section\\{Full Pipeline' " + tex_files + " 2>/dev/null | awk '{s+=$1} END{print s+0}'")
         if r1[1] == 0 { if to_int(_trim(r1[0])) >= 1 { sec_pipeline_ok = true } }
-        let r2 = exec_with_status("grep -cE '^\\\\section\\{Limitations' " + _shq(main_tex) + " 2>/dev/null")
+        let r2 = exec_with_status("grep -hcE '^\\\\section\\{Limitations' " + tex_files + " 2>/dev/null | awk '{s+=$1} END{print s+0}'")
         if r2[1] == 0 { if to_int(_trim(r2[0])) >= 1 { sec_limits_ok = true } }
-        let r3 = exec_with_status("grep -cE '^\\\\section\\*?\\{Reproducibility' " + _shq(main_tex) + " 2>/dev/null")
+        let r3 = exec_with_status("grep -hcE '^\\\\section\\*?\\{Reproducibility' " + tex_files + " 2>/dev/null | awk '{s+=$1} END{print s+0}'")
         if r3[1] == 0 { if to_int(_trim(r3[0])) >= 1 { sec_repro_ok = true } }
-        let rt = exec_with_status("grep -cE '\\\\begin\\{tabular\\}|\\\\begin\\{table\\}' " + _shq(main_tex) + " 2>/dev/null")
+        // counts SUMMED across main.tex + every \input'd / appendix .tex (#1 fix)
+        let rt = exec_with_status("grep -hcE '\\\\begin\\{tabular\\}|\\\\begin\\{table\\}' " + tex_files + " 2>/dev/null | awk '{s+=$1} END{print s+0}'")
         if rt[1] == 0 { tables_n = to_int(_trim(rt[0])) }
-        let rf = exec_with_status("grep -cE '\\\\includegraphics|\\\\begin\\{tikzpicture\\}' " + _shq(main_tex) + " 2>/dev/null")
+        let rf = exec_with_status("grep -hcE '\\\\includegraphics|\\\\begin\\{tikzpicture\\}' " + tex_files + " 2>/dev/null | awk '{s+=$1} END{print s+0}'")
         if rf[1] == 0 { figures_n = to_int(_trim(rf[0])) }
     }
     let tables_ok  = tables_n  >= 1
-    let figures_ok = figures_n >= 2
+    let figures_ok = figures_n >= min_figs
+
+    // "comparison ⇒ chart" heuristic — warn-only
+    let comparison_n = _lint_comparison_tables(tex_files)
 
     // bib entry count + emoji guard
     let mut bib_entries = 0
@@ -381,11 +485,11 @@ fn _cmd_lint(args: array) {
     let bib_count_ok = bib_entries >= 10
     let bib_emoji_ok = bib_emoji_lines == 0
 
-    // unresolved \cite{KEY} — warn-list (does NOT fail the lint)
+    // unresolved \cite{KEY} — warn-list (does NOT fail the lint), scans body
     let mut unresolved = ""
     if main_present && bib_present {
         let cmd = "awk 'match($0, /\\\\cite[pt]?\\{[^}]+\\}/) { s=substr($0,RSTART,RLENGTH); sub(/\\\\cite[pt]?\\{/,\"\",s); sub(/\\}.*/,\"\",s); n=split(s,a,\",\"); for(i=1;i<=n;i++){gsub(/[ \\t]/,\"\",a[i]); print a[i]} }' "
-            + _shq(main_tex)
+            + tex_files
             + " | sort -u | while read k; do "
             + "  if [ -n \"$k\" ] && ! grep -qE \"^@[A-Za-z]+\\{$k,\" " + _shq(bib) + "; then echo \"$k\"; fi; "
             + "done"
@@ -393,10 +497,18 @@ fn _cmd_lint(args: array) {
         if ru[1] == 0 { unresolved = _trim(ru[0]) }
     }
 
-    println("paper lint (commons @D g51 — extended v0.6) — " + dir)
+    let mut tier_name = "paper"
+    if monograph { tier_name = "monograph" }
+    println("paper lint (commons @D g51 — v0.9 · tier=" + tier_name + ") — " + dir)
+    if monograph {
+        println("  · monograph tier auto-detected (\\appendix + " + to_string(appendix_n) + " \\input appendix files; thresholds >=30p / >=6 figs / companion/)")
+    }
+    if main_present {
+        println("  · body fileset traversed: main.tex + " + to_string(appendix_n) + " appendix/\\input file(s)")
+    }
     if pdf_present {
-        if pages_ok { println("  ✓ pages: " + to_string(pages) + " (>=10)") }
-        else { println("  ✗ pages: " + to_string(pages) + " (<10, need >=10)") }
+        if pages_ok { println("  ✓ pages: " + to_string(pages) + " (>=" + to_string(min_pages) + ")") }
+        else { println("  ✗ pages: " + to_string(pages) + " (<" + to_string(min_pages) + ", need >=" + to_string(min_pages) + ")") }
     } else {
         println("  ✗ pages: main.pdf not found — run `/paper compile " + dir + "` first")
     }
@@ -412,12 +524,22 @@ fn _cmd_lint(args: array) {
         else { println("  ✗ section: \\section{Limitations...} missing") }
         if sec_repro_ok { println("  ✓ section: Reproducibility present") }
         else { println("  ✗ section: \\section{Reproducibility...} missing") }
-        if tables_ok { println("  ✓ tables: " + to_string(tables_n) + " (>=1)") }
+        if tables_ok { println("  ✓ tables: " + to_string(tables_n) + " (>=1, body-wide)") }
         else { println("  ✗ tables: " + to_string(tables_n) + " (<1, need >=1 \\begin{tabular} or \\begin{table})") }
-        if figures_ok { println("  ✓ figures: " + to_string(figures_n) + " (>=2 includegraphics or tikz)") }
-        else { println("  ✗ figures: " + to_string(figures_n) + " (<2, need >=2 \\includegraphics or \\begin{tikzpicture})") }
+        if figures_ok { println("  ✓ figures: " + to_string(figures_n) + " (>=" + to_string(min_figs) + " includegraphics or tikz, body-wide)") }
+        else { println("  ✗ figures: " + to_string(figures_n) + " (<" + to_string(min_figs) + ", need >=" + to_string(min_figs) + " \\includegraphics or \\begin{tikzpicture})") }
     } else {
         println("  ✗ main.tex not found at " + main_tex)
+    }
+    if monograph {
+        if companion_present { println("  ✓ companion/: present") }
+        else { println("  ✗ companion/: missing (monograph tier expects a companion/ data-record dir — `/paper companion init`)") }
+    }
+    // "comparison ⇒ chart" heuristic — warn-only nudge
+    if comparison_n > 0 && figures_n == 0 {
+        println("  ⚠ comparison ⇒ chart (warn-only): " + to_string(comparison_n)
+            + " file(s) carry a comparison-style tabular but the doc has 0 figures —")
+        println("      consider a chart (a comparison reads faster as a bar/line plot than a table).")
     }
     if bib_present {
         if bib_count_ok { println("  ✓ bibtex entries: " + to_string(bib_entries) + " (>=10)") }
@@ -438,10 +560,11 @@ fn _cmd_lint(args: array) {
         }
     }
 
-    let all_ok = pages_ok && fal_ok
+    let mut all_ok = pages_ok && fal_ok
         && main_present && sec_pipeline_ok && sec_limits_ok && sec_repro_ok
         && tables_ok && figures_ok
         && bib_present && bib_count_ok && bib_emoji_ok
+    if monograph && !companion_present { all_ok = false }
     if all_ok { exit(0) }
     exit(1)
 }
@@ -450,12 +573,19 @@ fn _cmd_lint(args: array) {
 // v0.7 verbs
 // =====================================================================
 
-// /paper companion init — scaffold companion/ in cwd if missing.
+// /paper companion {init|sync} — scaffold or refresh companion/ in cwd.
 fn _cmd_companion(root: string, args: array) {
     let mut sub = ""
     if len(args) >= 1 { sub = args[0] }
+    if sub == "sync" {
+        let mut rest = []
+        let mut z = 1
+        while z < len(args) { rest.push(args[z]); z = z + 1 }
+        _cmd_companion_sync(rest)
+        return
+    }
     if sub != "init" {
-        eprintln("paper companion: usage: /paper companion init")
+        eprintln("paper companion: usage: /paper companion {init|sync}")
         exit(2)
     }
     let src = root + "/template/companion"
@@ -856,6 +986,222 @@ fn _cmd_arxiv_prep(args: array) {
     print(to_string(exec("tar -tzf " + _shq(tar))))
 }
 
+// =====================================================================
+// v0.9 verbs — monograph mode
+// =====================================================================
+
+// appendix letter for index i (0->A, 1->B, ...). Wraps past Z with A1, B1, ...
+fn _ap_letter(i: int) -> string {
+    let alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    if i < 26 { return alpha.substring(i, i + 1) }
+    let lead = alpha.substring(i % 26, i % 26 + 1)
+    return lead + to_string(i / 26)
+}
+
+// /paper monograph-init <slug> [N] — scaffold a monograph from template/ plus
+// an N-appendix \appendix spine + companion/ (the HEXA-FUSION 58p structure).
+fn _cmd_monograph_init(root: string, args: array) {
+    if len(args) < 1 || _trim(args[0]) == "" {
+        eprintln("paper monograph-init: usage: /paper monograph-init <slug> [N]")
+        eprintln("  N = number of appendix files to stub (default 12)")
+        exit(2)
+    }
+    let slug = args[0]
+    if _bad_slug(slug) {
+        eprintln("paper monograph-init: <slug> must be a simple name (no slashes / no leading dot)")
+        exit(2)
+    }
+    let mut n = 12
+    if len(args) >= 2 && _trim(args[1]) != "" {
+        let parsed = to_int(_trim(args[1]))
+        if parsed >= 1 { n = parsed }
+    }
+    if _path_exists("./" + slug) {
+        eprintln("paper monograph-init: ./" + slug + " already exists — refusing to overwrite")
+        exit(2)
+    }
+    let template_dir = root + "/template"
+    if !_dir_exists(template_dir) {
+        eprintln("paper monograph-init: template/ missing at " + template_dir)
+        exit(1)
+    }
+    // 1. seed from template (gets main.tex · Makefile · references.bib · figures/ · companion/)
+    let cp = exec_with_status("cp -R " + _shq(template_dir) + " " + _shq("./" + slug))
+    if cp[1] != 0 {
+        eprintln("paper monograph-init: copy failed — " + _trim(to_string(cp[0])))
+        exit(1)
+    }
+    // 2. appendix/ dir + N stub files
+    let _ = exec("mkdir -p " + _shq("./" + slug + "/appendix"))
+    let mut inputs = ""
+    let mut k = 0
+    while k < n {
+        let L = _ap_letter(k)
+        let fname = L + "_appendix_" + to_string(k + 1)
+        let path = "./" + slug + "/appendix/" + fname + ".tex"
+        let body = "% Appendix " + L + " — TODO: title this appendix.\n"
+            + "% Filled standalone, then \\input'd by main.tex (see \\appendix block).\n"
+            + "% Compile check: `make` (the Makefile's APPENDIX wildcard picks this up).\n"
+            + "\\section{Appendix " + L + " --- TODO appendix title}\n"
+            + "\\label{app:" + L + "}\n"
+            + "\n"
+            + "% TODO: appendix " + L + " body. Each appendix is a self-contained\n"
+            + "% chapter — figures, tables, verify blocks. Cite atoms / DOIs inline.\n"
+        let w = exec_with_status("cat > " + _shq(path) + " <<'PAPER_EOF'\n" + body + "PAPER_EOF")
+        if w[1] != 0 {
+            eprintln("paper monograph-init: failed to write " + path)
+            exit(1)
+        }
+        if inputs != "" { inputs = inputs + "\n" }
+        inputs = inputs + "\\input{appendix/" + fname + "}"
+        k = k + 1
+    }
+    // 3. wire \appendix block into main.tex (before \end{document})
+    let main_tex = "./" + slug + "/main.tex"
+    let block = "\n% =========================================================================\n"
+        + "% MONOGRAPH APPENDICES (scaffolded by /paper monograph-init).\n"
+        + "% Each \\input target is a self-contained chapter under appendix/.\n"
+        + "% Fill one at a time with `/paper fill <letter>`; recompile with `make`.\n"
+        + "\\appendix\n"
+        + inputs + "\n\n"
+    // insert before the final \end{document}
+    let ins = exec_with_status(
+        "perl -0pi -e 's/\\\\end\\{document\\}/" + "PAPER_APX_MARKER" + "\\\\end{document}/' " + _shq(main_tex))
+    if ins[1] != 0 {
+        // fallback: append (perl missing) — still valid since block precedes nothing required
+        eprintln("paper monograph-init: note — perl unavailable, appending appendix block (verify placement)")
+        let _ = exec("printf '%s' " + _shq(block) + " >> " + _shq(main_tex))
+    } else {
+        // replace the marker with the real block (use a heredoc to a temp + sed-free swap)
+        let tmp = "./" + slug + "/.apx_block"
+        let _ = exec_with_status("cat > " + _shq(tmp) + " <<'PAPER_EOF'\n" + block + "PAPER_EOF")
+        // python-free replacement: use awk to swap the marker line for the file contents
+        let swap = "awk 'BEGIN{while((getline l < \"" + tmp + "\")>0) b=b l ORS} "
+            + "{ if (index($0,\"PAPER_APX_MARKER\")>0) { sub(/PAPER_APX_MARKER/, \"\"); printf \"%s\", b } print }' "
+            + _shq(main_tex) + " > " + _shq(main_tex + ".new") + " && mv " + _shq(main_tex + ".new") + " " + _shq(main_tex)
+            + " && rm -f " + _shq(tmp)
+        let sw = exec_with_status(swap)
+        if sw[1] != 0 {
+            eprintln("paper monograph-init: appendix wiring swap failed — appending instead")
+            let _ = exec("printf '%s' " + _shq(block) + " >> " + _shq(main_tex))
+            let _2 = exec("rm -f " + _shq(tmp))
+        }
+    }
+    println("[paper] scaffolded monograph ./" + slug + "/ (" + to_string(n) + " appendices A.." + _ap_letter(n - 1) + ")")
+    println("        · main.tex   — template spine + \\appendix block wiring " + to_string(n) + " \\input files")
+    println("        · appendix/  — " + to_string(n) + " stub .tex (each \\section + \\label + % TODO)")
+    println("        · companion/ — verify-ledger · pr-roll · adapter-defect-catalog · session-journal · README")
+    println("        seed reference: `/paper sample sample-fusion-7gate` (the §Full Pipeline pattern)")
+    println("        next: `/paper fill A` for the per-appendix runbook · `make` to compile · `/paper lint " + slug + "`")
+    print(to_string(exec("ls -1 " + _shq("./" + slug) + " && echo '  appendix/:' && ls -1 " + _shq("./" + slug + "/appendix"))))
+}
+
+// /paper fill <appendix-letter> — print the fill runbook for one appendix.
+fn _cmd_fill(args: array) {
+    if len(args) < 1 || _trim(args[0]) == "" {
+        eprintln("paper fill: usage: /paper fill <appendix-letter>   (e.g. /paper fill A)")
+        exit(2)
+    }
+    let L = args[0]
+    // locate the appendix file (cwd-relative; tolerate <L>_*.tex)
+    let mut found = ""
+    if _dir_exists("./appendix") {
+        let r = exec_with_status("ls -1 ./appendix/" + L + "_*.tex 2>/dev/null | head -1")
+        if r[1] == 0 { found = _trim(to_string(r[0])) }
+        if found == "" {
+            let r2 = exec_with_status("ls -1 ./appendix/" + L + ".tex 2>/dev/null | head -1")
+            if r2[1] == 0 { found = _trim(to_string(r2[0])) }
+        }
+    }
+    println("[paper] fill runbook — appendix " + L)
+    println("")
+    if found != "" {
+        println("  1. SOURCE: edit " + found)
+        let todo = exec_with_status("grep -nE '% TODO|TODO appendix title' " + _shq(found) + " 2>/dev/null")
+        let tbody = _trim(to_string(todo[0]))
+        if tbody != "" {
+            println("     % TODO markers:")
+            let lines = tbody.split("\n")
+            let mut i = 0
+            while i < len(lines) {
+                let l = _trim(lines[i])
+                if l != "" { println("       " + l) }
+                i = i + 1
+            }
+        }
+    } else {
+        println("  1. SOURCE: appendix/" + L + "_*.tex not found in cwd")
+        println("     (run from the monograph dir, or `/paper monograph-init <slug>` first)")
+    }
+    println("")
+    println("  2. \\input WIRING CHECK — confirm main.tex \\input's this appendix:")
+    if _path_exists("./main.tex") {
+        let wired = exec_with_status("grep -nE '\\\\(input|include)\\{appendix/" + L + "_' ./main.tex 2>/dev/null")
+        let wbody = _trim(to_string(wired[0]))
+        if wbody != "" { println("     ✓ wired: " + wbody) }
+        else { println("     ✗ NOT wired — add `\\input{appendix/" + L + "_<name>}` inside the \\appendix block of main.tex") }
+    } else {
+        println("     (no ./main.tex in cwd)")
+    }
+    println("")
+    println("  3. RECOMPILE: `make` (the v0.9 Makefile lists appendix/*.tex + figures/*.pdf")
+    println("     as $(DOC).pdf prerequisites — editing this appendix now triggers a rebuild,")
+    println("     no `make distclean` needed). Then `/paper lint .` (monograph tier).")
+    println("")
+    println("  Per-appendix figs: drop figures/_scripts/figNN_<name>.{py,tex}; \\includegraphics")
+    println("  the compiled figures/figNN.pdf (NOT \\input of a standalone-\\documentclass .tex).")
+}
+
+// /paper companion sync — best-effort rebuild of companion/{pr-roll,verify-ledger}.json
+fn _cmd_companion_sync(args: array) {
+    if !_dir_exists("./companion") {
+        eprintln("paper companion sync: no ./companion/ in cwd — run `/paper companion init` first")
+        exit(2)
+    }
+    let mut did_any = false
+    // 1. pr-roll.json from gh pr list
+    if _has_cmd("gh") {
+        // best-effort repo inference from git remote; else leave a note
+        let repo_r = exec_with_status("gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null")
+        let repo = _trim(to_string(repo_r[0]))
+        if repo != "" {
+            let cmd = "gh pr list --repo " + _shq(repo)
+                + " --state merged --json number,title,mergedAt --limit 200 2>/dev/null"
+            let r = exec_with_status(cmd)
+            if r[1] == 0 && _trim(to_string(r[0])) != "" {
+                let json = _trim(to_string(r[0]))
+                let w = exec_with_status("printf %s " + _shq(json) + " > ./companion/pr-roll.json")
+                if w[1] == 0 {
+                    println("[paper] companion sync: pr-roll.json ← gh pr list (" + repo + ", " + to_string(len(json)) + " bytes)")
+                    did_any = true
+                }
+            } else {
+                println("[paper] companion sync: gh pr list returned nothing for " + repo + " — pr-roll.json unchanged")
+            }
+        } else {
+            println("[paper] companion sync: could not infer repo (gh repo view) — pr-roll.json unchanged")
+        }
+    } else {
+        println("[paper] companion sync: gh not on PATH — pr-roll.json unchanged")
+    }
+    // 2. verify-ledger.json from a hexa verify atom scan (best-effort)
+    let hexabin = _hexa_bin()
+    let scan = exec_with_status(_shq(hexabin) + " atlas stats --audit --format=json 2>/dev/null")
+    if scan[1] == 0 && _trim(to_string(scan[0])) != "" {
+        let json = _trim(to_string(scan[0]))
+        let w = exec_with_status("printf %s " + _shq(json) + " > ./companion/verify-ledger.json")
+        if w[1] == 0 {
+            println("[paper] companion sync: verify-ledger.json ← hexa atlas stats --audit (" + to_string(len(json)) + " bytes)")
+            did_any = true
+        }
+    } else {
+        println("[paper] companion sync: hexa atlas scan unavailable — verify-ledger.json unchanged")
+        println("        (populate manually from your `/paper verify-block` runs; this verb is best-effort)")
+    }
+    if did_any { println("[paper] companion sync: done.") }
+    else { println("[paper] companion sync: nothing updated (no reachable data source).") }
+}
+
 fn main() {
     let raw = argv()
     let mut root = ""
@@ -899,6 +1245,10 @@ fn main() {
         _cmd_list(root)
     } else if verb == "companion" {
         _cmd_companion(root, rest)
+    } else if verb == "monograph-init" {
+        _cmd_monograph_init(root, rest)
+    } else if verb == "fill" {
+        _cmd_fill(rest)
     } else if verb == "outline" {
         _cmd_outline(rest)
     } else if verb == "pipeline" {

@@ -19,4 +19,4 @@ M agents launched (cycle-full · phase 0 brainstorm depleted at round N): <item 
 Next: `/cycle` to enumerate + fan out the next round once results land (no re-brainstorming).
 ```
 
-Guardrails (per `cycle` SKILL.md): self-enumerate only when next work is genuinely inferable (else ask); disjoint items only; no destructive fan-out; cap >8 with confirm; no nesting; never silently drop a SKIP — always print the precheck reason. Phase 0 (brainstorm) runs ONCE per goal — subsequent rounds use plain `/cycle` (current context derives next-list).
+Guardrails (per `cycle` SKILL.md): self-enumerate only when next work is genuinely inferable (else ask); disjoint items only; no destructive fan-out; cap >8 with confirm; no nesting; never silently drop a SKIP — always print the precheck reason. Phase 0 (brainstorm) runs ONCE per goal — subsequent rounds use plain `/cycle`, which on an empty next-list auto-seeds from the domain's `## deferred` section first (Stage 1a PRIMARY signal), so the loop drains the declared backlog batch-by-batch to depletion.

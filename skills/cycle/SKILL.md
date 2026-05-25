@@ -5,8 +5,8 @@ allowed-tools: Agent, Bash, Read
 ---
 
 @D cycle := "autonomous loop — active-domain next-list → plan → fan-out → loop" :: skill
-  do   = "enumerate active <NAME>.md `- [ ]` milestones (g58) · auto-seed ≤3 from context signals (prior /gap shortlist · user hint · log tail) when next-list is empty · print plan table · fan 1 bg Agent per item, one msg"
-  dont = "off-domain enumerate · fabricate seeds with no signal (stop with steer-options instead) · poll/sleep · fan destructive ops · nest /cycle · serialize disjoint items"
+  do   = "enumerate active <NAME>.md `- [ ]` milestones (g58) · when next-list empty auto-seed ≤N (default 3) — PRIMARY signal = the domain's own `## deferred` section (promote next batch into the milestone board + drain from deferred), then user hint · prior /gap shortlist · log tail · print plan table · fan 1 bg Agent per item, one msg"
+  dont = "off-domain enumerate · fabricate seeds with no signal (stop with steer-options when zero milestones + empty deferred + no signal) · poll/sleep · fan destructive ops · nest /cycle · serialize disjoint items · re-seed an already-promoted deferred item (drain it from deferred when promoting)"
 
 @D dup_race_precheck := "auto-skip already-resolved INBOX handoffs before fan-out" :: skill [required active]
   do   = "between next-list and plan: for each item naming an INBOX handoff (slug/header present in INBOX.log.md), grep its entry status + `gh pr list --search <slug>` + `git log --all --grep=<slug>` · mark SKIP if any signal resolved-class (fixed · resolved · closed · landed · shipped · absorbed · superseded · merged · `- [x]`) · mark PROCEED otherwise · render judgement column in plan table · only PROCEED rows get an Agent"

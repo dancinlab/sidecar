@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-25 — cycle 0.6.0: `## deferred` 를 1급 seed 소스로 승격 + 루프 변종에 DEPLETION 종료 조건
+
+`/cycle` 패밀리가 도메인을 **고갈(depletion)** 까지 자동으로 비울 수 있게 함 — 라운드마다 steering 을 위해 멈추는 대신, 도메인이 선언한 backlog 를 스스로 떠먹으며(self-feed) 끝까지 march.
+
+- **`## deferred` = Stage 1a auto-seed 의 PRIMARY 신호** — 활성 `<NAME>.md` 의 `## deferred` (또는 `## deferred (다음 라운드)`) 섹션을 가장 높은 우선순위의 seed 소스로 승격(기존의 느슨한 "log tail" 신호보다 위). open milestone 이 0개일 때, `deferred` 에서 다음 배치(cap N, 기본 3)를 꺼내 `## 진행 (milestones)` 보드에 `- [ ]` milestone 으로 `/domain milestone <text>` 로 승격하고, **승격한 항목을 `deferred` 섹션에서 같은 편집으로 제거(drain)** → backlog 가 단조 감소하고 동일 항목이 재-seed 되지 않음. 도메인이 자신의 선언된 backlog 로 루프를 self-feed 하는 load-bearing 변경.
+- **DEPLETION 종료 조건 (`cycle-loop` · `cycle-full-loop`)** — 루프 변종은 **(1) open milestone = 0 AND (2) `deferred` 비어있음(섹션 없음 또는 미해소 항목 0개) AND (3) 다른 seed 신호 없음(user mention · 직전턴 `/gap` shortlist · `/check`/`/end` follow-up · `<NAME>.log.md` tail open thread)** — 셋 다 충족할 때만 ScheduleWakeup 을 생략하고 종료. 그 전까지는 도메인이 아직 안 비워진 것이므로 계속 cycle. 종료 조건을 두 `*-loop` SKILL prose 에 명시.
+- **라운드당 cap 유지 (기본 3)** — cap 은 라운드당 **WIDTH** 를 throttle 해 각 라운드를 리뷰 가능하게 유지하고, 루프가 **DEPTH** 를 제공(라운드 간 auto-continue) → cap × loop 로 backlog 전체를 배치별로 고갈. disjoint-items · dup-race-precheck · leak-guard 가드레일은 불변.
+- **bare `/cycle` 동작 보존** — 단일 라운드 `/cycle` 는 여전히 cap 후 멈춰 user steering 을 보장. depletion 은 `*-loop` 변종의 역할로만 추가 — steering 기본값을 깨지 않음.
+- **표면 lockstep**(@D ship · g22): `skills/cycle/SKILL.md` (`@D cycle` do/dont) · `skills/cycle/commands/cycle.md` (Stage 1a) · `cycle-loop.md` · `cycle-full-loop.md` (depletion 종료) · `cycle-full.md` (loop tail 주석) · `skills/cycle/.claude-plugin/plugin.json` 0.5.2 → 0.6.0 · `.claude-plugin/marketplace.json` cycle 0.5.2 → 0.6.0 · `README.md` 표 cell + Commands 섹션 4줄.
+
 ## 2026-05-25 — commons 0.10.7: g61 stdlib-SSOT 범위확장 (primitives → + domain engines)
 
 `g61` 을 "general primitives" 에서 **"shared code — primitives + domain engines"** 로 확장.

@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — worktree-guard 0.1.0 (격리 워크트리 유실 방지 advisory)
+
+격리 워크트리에서 작업하다 **디렉터리가 통째로 사라져 미커밋 편집을 잃는** 사고를 막는다. 동시 에이전트가 많은 repo(예: hexa-lang)나 동기화 워크스페이스에서 다른 에이전트의 `git worktree prune` · 워크스페이스 sync · macOS `/tmp` reaper 가 워크트리 디렉터리를 지우면, origin 에 push 되지 않은 커밋·미커밋분이 함께 증발한다. 이 세션에서 hexa-lang 작업 중 워크트리가 두 번 사라져 편집을 재적용해야 했던 통증을 가드로 제도화(@D s7: 룰+enforcement 동시 출하).
+
+- **worktree-guard 0.1.0 (신규 hook · `core`)** — `PreToolUse(Bash)` advisory. `git worktree add` 감지 시 non-blocking additionalContext 로 durable-worktree 수칙 주입: 편집 직후 commit+push(미커밋분을 턴에 걸쳐 들고 있지 않기) · 랜딩 순서(편집→stage→commit→push→PR→`git worktree remove`, 검증 빌드는 commit 뒤) · 경로가 `/tmp`·`/private/tmp`·`/var/folders` 면 더 휘발적이라는 강한 경고. hexa-lang(`_worktree_guard.hexa`) · opt-out 없음. workdir-guard(공유 트리 SessionStart)·worktree-gc(merged prune)의 자매.
+- marketplace.json · profiles.json(`core`) · README(60 plugins · core 26 · 표) 락스텝(@D ship · g22).
+
 ## 2026-05-26 — all-bg-go 폐기 (cycle와 중복)
 
 reactive fan-out(`/all-bg-go`)은 `/cycle`의 self-generating fan-out과 기능이 겹쳐(commons g41이 "sister of /cycle"로 명시) 별도 플러그인 가치가 낮다 → 폐기. 직전 턴 가지 발사는 모델이 직접(Agent 툴) 또는 `/cycle`로 처리.

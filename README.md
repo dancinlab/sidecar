@@ -170,7 +170,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-59 plugins across `{hook · command · skill · mcp}` — one concept each (25 `core` · 17 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+60 plugins across `{hook · command · skill · mcp}` — one concept each (26 `core` · 17 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -198,6 +198,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`sidecar`](commands/sidecar/) | command | `core` | 0.5.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
 | [`step-by-step`](commands/step-by-step/) | command | `core` | 0.1.0 | plan-first sequential runbook |
 | [`workdir-guard`](hooks/workdir-guard/) | hook | `core` | 0.1.0 | SessionStart advisory (hexa-lang `_workdir_guard.hexa`, via `hexa run`) that fires once per session, and only when the… |
+| [`worktree-guard`](hooks/worktree-guard/) | hook | `core` | 0.1.0 | PreToolUse(Bash) advisory on `git worktree add` — durable-worktree drill: commit+push promptly, a sibling prune / sync / tmp-reaper can delete the worktree + uncommitted edits |
 | [`worktree-gc`](hooks/worktree-gc/) | hook | `core` | 0.1.0 | SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_w… |
 | [`atlas`](skills/atlas/) | command + skill | `hexa` | 0.1.1 | wraps `hexa atlas` (atlas SSOT surface) |
 | [`cloud`](skills/cloud/) | command + skill | `hexa` | 0.3.2 | wraps `hexa cloud` (runpod / vast.ai dispatch · canonical subcommand form, structured argv |

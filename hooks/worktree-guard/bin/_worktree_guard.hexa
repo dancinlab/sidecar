@@ -1,0 +1,80 @@
+// _worktree_guard.hexa — PreToolUse(Bash) advisory for `git worktree add`.
+//
+// Fires when a Bash command creates a git worktree (`git worktree add`).
+// Emits non-blocking additionalContext with the durable-worktree drill: in a
+// heavily-concurrent or synced repo, an isolated worktree dir can be removed
+// out from under you (a sibling agent's `git worktree prune`, a workspace
+// sync, or the macOS /tmp reaper) — and any UNCOMMITTED edits vanish with it.
+// So: commit + push promptly after editing; don't hold uncommitted work across
+// turns; land via PR then `git worktree remove`. Adds a stronger note when the
+// target path sits under a volatile location (/tmp · /private/tmp ·
+// /var/folders) which is both tmp-reaped and outside the synced workspace.
+//
+// Advisory-only (per guards-narrow-scope: non-blocking additionalContext beats
+// a deny for hygiene). NO opt-out by design — no env var, no config, no
+// exception list. Sister of workdir-guard (shared-tree SessionStart advisory)
+// and worktree-gc (merged-worktree prune).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "Bash" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd0 = ti["command"]
+    if type_of(cmd0) != "string" { _allow() }
+    let cmd = cmd0
+
+    // `git worktree add` — the verb pair is distinctive (only git has it).
+    if !cmd.contains("worktree add") { _allow() }
+
+    let volatile = cmd.contains("/tmp/") || cmd.contains("/private/tmp") || cmd.contains("/var/folders")
+
+    let mut hints = []
+    hints.push("  • 편집 직후 commit+push 하라 — 미커밋 편집을 턴에 걸쳐 들고 있지 마라. 동시 에이전트의 `git worktree prune` / 워크스페이스 sync 가 워크트리 디렉터리를 통째로 지우면 미커밋분이 함께 증발한다 (origin 에 올라간 커밋만 안전).")
+    hints.push("  • 랜딩 순서: 편집 → stage → commit → push → PR → `git worktree remove`. 검증 빌드/테스트는 commit 뒤에 (빌드 실패해도 작업은 origin 에 보존).")
+    if volatile {
+        hints.push("  • ⚠ 경로가 /tmp·/private/tmp·/var/folders 아래 — macOS tmp reaper + 비동기화 위치라 더 휘발적. repo 형제 경로(`<repo>-<slug>`)나 commit-즉시 전략 권장.")
+    }
+
+    let body = "⚠ git worktree add 감지 — durable-worktree 수칙 (격리 워크트리 유실 방지):\n" + hints.join("\n")
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_str(body) + "}}"
+    println(out)
+    exit(0)
+}

@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — install.hexa: 은퇴 플러그인 prune (stale enable 키 → /doctor 에러 차단)
+
+`sidecar sync` 가 마켓에서 사라진 플러그인의 `<name>@sidecar` 키를 `installed_plugins.json` · `settings.enabledPlugins` 에 그대로 남겨, Claude Code 가 `/doctor` 에서 "Plugin <name> not found in marketplace sidecar" 로드 에러를 내던 문제. (실사례: all-bg-go 폐기 후 enable 키 잔존 → 로드 에러.) install.hexa 의 enable 루프는 ADD/UPDATE 만 하고 제거를 안 했음.
+
+- **install.hexa prune 패스 추가** — enable 루프가 현재 marketplace 의 `<name>@sidecar` 키 집합(`valid`)을 만들고, 루프 뒤 `installed_plugins.json` + `settings.enabledPlugins` 에서 `_is_sidecar_key` 면서 `valid` 에 없는 키를 일괄 제거(비-sidecar 키 + 유효 키는 통과). 제거 시 `pruned N retired plugin(s)` 한 줄 출력. 이제 플러그인이 마켓에서 빠지면 다음 `sidecar sync` 가 자동 self-heal.
+- 이 fix 는 로컬 작업트리에 작성돼 있었으나 origin 에 미커밋 상태라 sync(=origin/main 실행)가 못 쓰던 것 — 커밋·푸시로 활성화.
+
 ## 2026-05-26 — throttle-guard 0.1.0 (transient rate-limit 별도 플러그인 분리)
 
 여러 세션/와이드 fan-out이 동시에 API를 두드려 터지는 **일시적 서버 throttle**("temporarily limiting requests · not your usage limit")을 limit-guard(usage/session 한도)에서 **별도 플러그인으로 분리** — 신호도 처리도 달라 s1 개념 분리.

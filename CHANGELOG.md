@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — all-bg-go 폐기 (cycle와 중복)
+
+reactive fan-out(`/all-bg-go`)은 `/cycle`의 self-generating fan-out과 기능이 겹쳐(commons g41이 "sister of /cycle"로 명시) 별도 플러그인 가치가 낮다 → 폐기. 직전 턴 가지 발사는 모델이 직접(Agent 툴) 또는 `/cycle`로 처리.
+
+- `skills/all-bg-go/` 제거 · marketplace.json · profiles.json · README(60→59 plugins · core 26→25 · 표 · 명령 카탈로그) · COMMANDS.md · **commons g41 제거**(sign-gated).
+- 로컬 shadow override·bare 미러 정리(다음 sync 꼬리 shadow 재열거가 marker에서 자동 제외).
+- 잔여(추후): cycle/micro-exp 설명의 "distinct from all-bg-go" 개념 대비 prose는 유지 — 명령 링크가 아니라 reactive↔self-generating 대비 설명이라 무해.
+
 ## 2026-05-26 — cycle 0.8.0 (자율-루프 형식 고정 + 린터)
 
 이번 세션의 자율 진행 방식(라운드마다 disjoint fan-out → 결과보고 → 다음 라운드, checkpoint-resume, oversized-split, handoff-debt 추적)을 `cycle-loop`/`cycle-full-loop` 의 **FIXED per-round 형식**으로 명문화 + 린터(`round_lint`) 추가. 3 신규 @D (`SKILL.md`):

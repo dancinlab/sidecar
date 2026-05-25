@@ -99,7 +99,6 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 /brainstorm:brainstorm <seed>     width-first idea exhaustion (rounds until depletion)
 
 # ── Fan-out / loop ──────────────────────────────────────────
-/all-bg-go:all-bg-go              reactive single fan-out of the prior turn's branches
 /cycle:cycle                      autonomous loop: self-enumerate (empty → seed from `## deferred`) → plan → fan-out → auto-continue to depletion
 /cycle:cycle-full <goal>          /cycle:cycle + a one-time phase-0 depletion brainstorm, then auto-continue to depletion
 /cycle:cycle-loop                 /cycle:cycle via the /loop skill — explicit continuous-intent pacing surface (same depletion end-state)
@@ -171,11 +170,10 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-60 plugins across `{hook · command · skill · mcp}` — one concept each (26 `core` · 17 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+59 plugins across `{hook · command · skill · mcp}` — one concept each (25 `core` · 17 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
-| [`all-bg-go`](skills/all-bg-go/) | command + skill | `core` | 0.4.1 | Parallel fan-out trigger |
 | [`brainstorm`](skills/brainstorm/) | command + skill | `core` | 0.1.1 | Iterative brainstorming |
 | [`bypass`](skills/bypass/) | skill | `core` | 0.2.1 | Anti-punt |
 | [`check`](skills/check/) | command + skill | `core` | 0.1.0 | Task dashboard skill |

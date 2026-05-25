@@ -1,0 +1,9 @@
+{
+  "name": "prefs",
+  "description": "/prefs — view or set language preferences. 3 axes: code authoring (.tape · .hexa · .py · ...) · doc authoring (.md · README · CHANGELOG · ...) · response language to user. /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Writes the FIXED SSOT `~/.claude/plugins/data/prefs-sidecar/prefs.json` (defaults code=english · docs=english · response=korean) via `_prefs.hexa` (shipped in the `prefs-hook` plugin). The `prefs-hook` plugin reads the same SSOT and auto-injects current values every turn. Command half of the prefs split (the injection hook is the `prefs-hook` plugin).",
+  "version": "0.4.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "prefs", "language", "preferences"]
+}

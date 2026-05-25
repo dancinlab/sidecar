@@ -1,0 +1,9 @@
+{
+  "name": "pr-cycle",
+  "description": "/pr-cycle — one-shot PR cycle command. Pushes the current branch (`git push -u origin HEAD`) then `gh pr create --fill`; the `pr-cycle-hook` plugin's PreToolUse hook then auto-appends ` && gh pr merge --squash --admin --delete-branch` (+ worktree/branch cleanup when run from a linked worktree) — so one command does create → merge → clean. Refuses on main/master. Pass extra gh flags as args (e.g. --title \"...\" --body \"...\"). Command half of the pr-cycle split (the routing PreToolUse hook is the `pr-cycle-hook` plugin).",
+  "version": "0.4.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "gh", "pr", "cycle"]
+}

@@ -65,8 +65,10 @@ fn _event_of(payload: map) -> string {
 }
 
 fn _prefs_dir() -> string {
-    let d = env_var("CLAUDE_PLUGIN_DATA")
-    if d != "" { return d }
+    // FIXED SSOT (NOT $CLAUDE_PLUGIN_DATA) so the `prefs` command plugin (writer)
+    // and the `prefs-hook` hook plugin (reader) share ONE prefs.json regardless
+    // of which plugin runs this script — split-safe. Both resolve here; the bare
+    // command mirror (empty $CLAUDE_PLUGIN_DATA) already fell back to this path.
     return env_var("HOME") + "/.claude/plugins/data/prefs-sidecar"
 }
 

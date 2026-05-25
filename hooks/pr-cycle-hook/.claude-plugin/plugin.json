@@ -1,0 +1,9 @@
+{
+  "name": "pr-cycle-hook",
+  "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, in hexa-lang (`_pr_cycle.hexa`, via `hexa run`). Whitespace-tokenizes the command and scans for the `gh pr create` 3-gram anywhere — catches bare `gh pr create …` and chained `git push && gh pr create …`. When matched (not draft, not already merging), rewrites via the `updatedInput` field (emitted with `permissionDecision: allow` in the same hookSpecificOutput — REQUIRED, else Claude Code ignores the rewrite) to append ` && gh pr merge --squash --admin --delete-branch` and, IF cwd is a linked git worktree, additionally ` && (cd <main-wt> && git worktree remove <this-wt> --force; git branch -D <branch>)` — transparent atomic create → merge → worktree+branch cleanup. Cross-repo `--repo X` routes the appended merge to X and skips local worktree cleanup. Enforces commons @D g47 (PR ship discipline). Skip: `--draft` · command already contains `gh pr merge`. Hook half of the pr-cycle split — the `/pr-cycle` manual trigger lives in the `pr-cycle` command plugin. NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "gh", "pr", "automerge", "worktree", "hexa"]
+}

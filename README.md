@@ -171,7 +171,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-60 plugins across `{hook · command · skill · mcp}` — one concept each (26 `core` · 17 `hexa` · 17 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+62 plugins across `{hook · command · skill · mcp}` — one concept each (27 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -190,7 +190,8 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
 | [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
 | [`pool-mcp`](mcps/pool-mcp/) | mcp | `core` | 0.1.1 | stdio MCP server exposing pool hosts as Claude Code MCP tools |
-| [`prefs`](hooks/prefs/) | hook + command | `core` | 0.3.4 | User language preferences |
+| [`prefs`](commands/prefs/) | command | `core` | 0.4.0 | /prefs view/set language prefs (code · docs · response) — writes the fixed prefs.json SSOT |
+| [`prefs-hook`](hooks/prefs-hook/) | hook | `core` | 0.1.0 | UserPromptSubmit+SessionStart+PreCompact+PostCompact — injects language prefs from the fixed SSOT (prefs split) |
 | [`question`](skills/question/) | command + skill | `core` | 0.2.0 | Quick side-question alias for Claude Code's built-in `/btw` |
 | [`quota`](skills/quota/) | command + skill | `core` | 0.10.0 | Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames |
 | [`quota-autoadd`](hooks/quota-autoadd/) | hook | `core` | 0.1.1 | SessionStart hook |
@@ -227,7 +228,8 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`inject`](skills/inject/) | command + skill | `personal` | 0.2.0 | Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install… |
 | [`plist-guard`](hooks/plist-guard/) | hook | `personal` | 0.1.2 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, inv… |
 | [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.7.0 | PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, i… |
-| [`pr-cycle`](hooks/pr-cycle/) | hook + command | `personal` | 0.3.6 | PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hex… |
+| [`pr-cycle`](commands/pr-cycle/) | command | `personal` | 0.4.0 | /pr-cycle one-shot PR cycle (push + create; the pr-cycle-hook plugin appends merge + worktree-clean) |
+| [`pr-cycle-hook`](hooks/pr-cycle-hook/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) router — appends merge + worktree/branch cleanup to `gh pr create` (commons @D g47; pr-cycle split) |
 | [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |

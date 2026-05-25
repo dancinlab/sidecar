@@ -1,9 +1,0 @@
-{
-  "name": "prefs",
-  "description": "User language preferences — 3 axes (code authoring · doc authoring · response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values as additionalContext; UserPromptSubmit re-injects every turn so the preference never fades from context. /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences.",
-  "version": "0.3.4",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hook", "command", "prefs", "language", "preferences"]
-}

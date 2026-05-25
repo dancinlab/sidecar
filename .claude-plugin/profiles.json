@@ -9,6 +9,7 @@
   "default": "full",
   "tiers": {
     "prefs": "core",
+    "prefs-hook": "core",
     "git-guard": "core",
     "workdir-guard": "core",
     "worktree-guard": "core",
@@ -69,6 +70,7 @@
     "easy": "personal",
     "easy-auto": "personal",
     "pr-cycle": "personal",
+    "pr-cycle-hook": "personal",
     "ship": "personal",
     "inject": "personal",
     "imagine": "personal"

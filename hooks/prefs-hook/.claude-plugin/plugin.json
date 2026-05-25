@@ -1,0 +1,9 @@
+{
+  "name": "prefs-hook",
+  "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects the user's current language preferences (3 axes: code authoring · doc authoring · response language) as additionalContext from the FIXED SSOT `~/.claude/plugins/data/prefs-sidecar/prefs.json` (written by the `prefs` command plugin); UserPromptSubmit re-injects every turn so the preference never fades from context. Implemented in hexa-lang (`_prefs.hexa inject`, via `hexa run`). Hook half of the prefs split — the `/prefs` show/set command is the `prefs` command plugin, reading/writing the same fixed prefs.json SSOT so split-safe. NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "prefs", "language", "hexa"]
+}

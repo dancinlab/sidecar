@@ -16,9 +16,15 @@
     },
     {
       "name": "prefs",
-      "source": "./hooks/prefs",
-      "description": "User language preferences \u2014 3 axes (code authoring \u00b7 doc authoring \u00b7 response language to user). UserPromptSubmit + SessionStart + PreCompact + PostCompact hook auto-injects current values; UserPromptSubmit re-injects every turn so the preference never fades. /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Storage at $CLAUDE_PLUGIN_DATA/prefs.json. Defaults: code=english, docs=english, response=korean. SSOT for language preferences. Each prefs.json field is type-gated on read (0.3.3) \u2014 a non-string value falls back to the default instead of breaking injection. /prefs command body now carries a $CLAUDE_PLUGIN_ROOT \u2192 ~/.claude/plugins/cache/sidecar/prefs/<latest> fallback (0.3.4) so the bare-invocable user-level mirror works.",
-      "version": "0.3.4"
+      "source": "./commands/prefs",
+      "description": "/prefs \u2014 view or set language preferences (3 axes: code authoring \u00b7 doc authoring \u00b7 response language to user). /prefs show \u00b7 /prefs code <lang> \u00b7 /prefs docs <lang> \u00b7 /prefs response <lang>. Writes the FIXED SSOT ~/.claude/plugins/data/prefs-sidecar/prefs.json (defaults code=english \u00b7 docs=english \u00b7 response=korean) via `_prefs.hexa` (shipped in `prefs-hook`). The `prefs-hook` plugin reads the same SSOT and auto-injects current values every turn. Command half of the prefs split.",
+      "version": "0.4.0"
+    },
+    {
+      "name": "prefs-hook",
+      "source": "./hooks/prefs-hook",
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects the user's current language preferences (code \u00b7 docs \u00b7 response axes) as additionalContext from the FIXED SSOT ~/.claude/plugins/data/prefs-sidecar/prefs.json (written by the `prefs` command plugin); re-injects every turn so the preference never fades from context. Type-gated on read (a non-string field falls back to the default). hexa-lang (`_prefs.hexa inject`, via `hexa run`). Hook half of the prefs split. NO opt-out by design.",
+      "version": "0.1.0"
     },
     {
       "name": "hexa-lsp",
@@ -142,9 +148,15 @@
     },
     {
       "name": "pr-cycle",
-      "source": "./hooks/pr-cycle",
-      "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, implemented in hexa-lang (`_pr_cycle.hexa`, invoked via `hexa run`). Quote-aware tokenizer strips single- and double-quoted regions before scanning, then looks for the `gh pr create` 3-gram anywhere \u2014 catches bare `gh pr create \u2026` and chained forms like `git push && gh pr create \u2026`, while test payloads with the trigger inside quotes do NOT fire. When matched (and not draft / not already merging), rewrites via the hook `updatedInput` field (emitted with `permissionDecision: allow` in the same hookSpecificOutput \u2014 REQUIRED, else Claude Code ignores the rewrite and the PR is created but never merged; the 0.3.5 fix) to append ` && gh pr merge --squash --admin --delete-branch` and, IF cwd is a linked git worktree (not the main one), additionally appends ` && (cd <main-wt> && git worktree remove <this-wt> --force 2>/dev/null && git branch -D <branch> 2>/dev/null || true)` \u2014 transparent atomic create \u2192 merge \u2192 worktree+branch cleanup. The worktree+branch are detected at hook-time (`git rev-parse --show-toplevel` \u00b7 `git worktree list --porcelain` first entry \u00b7 `git rev-parse --abbrev-ref HEAD`), so cleanup targets the exact context the PR was issued from. Enforces commons @D g47 (PR ship discipline \u2014 no unmerged stacks, no dead worktrees). Skip conditions: `--draft` flag present \u00b7 command already contains `gh pr merge`. NO opt-out by design. Also ships a `/pr-cycle` command (manual one-shot trigger): pushes the current branch then `gh pr create --fill` \u2014 the hook auto-appends merge + cleanup, so one command does create \u2192 merge \u2192 clean. Refuses on main/master.",
-      "version": "0.3.6"
+      "source": "./commands/pr-cycle",
+      "description": "/pr-cycle \u2014 one-shot PR cycle command. Pushes the current branch (`git push -u origin HEAD`) then `gh pr create --fill`; the `pr-cycle-hook` plugin's PreToolUse hook then auto-appends ` && gh pr merge --squash --admin --delete-branch` (+ worktree/branch cleanup when run from a linked worktree) \u2014 one command does create \u2192 merge \u2192 clean. Refuses on main/master. Pass extra gh flags as args. Command half of the pr-cycle split (routing hook = `pr-cycle-hook`).",
+      "version": "0.4.0"
+    },
+    {
+      "name": "pr-cycle-hook",
+      "source": "./hooks/pr-cycle-hook",
+      "description": "PreToolUse(Bash) PR full-cycle router for `gh pr create`, in hexa-lang (`_pr_cycle.hexa`, via `hexa run`). Quote-aware tokenizer scans for the `gh pr create` 3-gram anywhere \u2014 catches bare and chained (`git push && gh pr create \u2026`) forms. When matched (not draft / not already merging), rewrites via the `updatedInput` field (emitted with `permissionDecision: allow` in the same hookSpecificOutput \u2014 REQUIRED or the rewrite is ignored) to append ` && gh pr merge --squash --admin --delete-branch` and, IF cwd is a linked worktree, ` && (cd <main-wt> && git worktree remove <this-wt> --force; git branch -D <branch>)` \u2014 atomic create \u2192 merge \u2192 worktree+branch cleanup. Cross-repo `--repo X` routes the merge to X, skips local cleanup. Enforces commons @D g47. Skip: `--draft` \u00b7 already contains `gh pr merge`. Hook half of the pr-cycle split. NO opt-out by design.",
+      "version": "0.1.0"
     },
     {
       "name": "tape-lint",

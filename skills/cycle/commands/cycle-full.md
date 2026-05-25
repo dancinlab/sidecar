@@ -36,12 +36,12 @@ Engage the `cycle` skill, but precede the next-list step with a **depletion brai
      ⏩ domain not depleted (open: <count> · deferred: <count>) — scheduled next round (plain /cycle, no re-brainstorm).
      ```
 
-   - **DEPLETED** (all three hold) → do NOT ScheduleWakeup. Report closure and end with:
+   - **$0-RUNNABLE LANE EXHAUSTED** (all three hold) → do NOT ScheduleWakeup. **PAUSE, not "100% done" (@D depletion_not_terminal · `feedback-closure-is-physical-limit`)** — "no cheap runnable task" ≠ "domain complete"; the frontier toward the physical/math limit stays open. End with:
 
      ```
      M agents launched (cycle-full · phase 0 brainstorm depleted at round N): <item labels>  [K skipped: <skipped labels with reasons>]
 
-     ✅ domain depleted (open milestones 0 · deferred empty · no other signal) — loop terminates. (Extend: /domain milestone <text> · switch: /domain set <other> · close: /end)
+     ⏸️ $0-runnable lane exhausted (open milestones 0 · deferred empty · no $0 seed) — loop PAUSES (not 100%-done; frontier toward the physical/math limit stays open). Remaining paths ABOVE the $0 lane: cost-bearing fire · new spec · intractable-limit note · switch: /domain set <other> · close: /end. (Reserve a literal ✅ done ONLY for a finite-scope domain with no open physical-limit frontier.)
      ```
 
    (The per-round cap throttles WIDTH so each round stays reviewable; the auto-continue marches DEPTH-wise through the whole declared backlog. The user can interrupt at any round.)

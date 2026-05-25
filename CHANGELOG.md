@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — cycle 0.7.6 — depletion = PAUSE, not "100% done" (@D depletion_not_terminal)
+
+`/cycle` 의 depletion 분기가 `✅ domain depleted — loop terminates` 로 binary-checkbox 닫힘을 선언해, cross-cutting 원칙 `feedback-closure-is-physical-limit` ("끝은 없어 · 100% 도달불가 · 끝 = 물리·수학 한계 + 계속 탐구")와 정면 충돌. 실증: anima LIFE(IIT4-Φ) 도메인 /cycle 이 "domain depleted / terminal" 선언했으나 large-N faithful-Φ(intractable) + full-IIT4-CES(대형 spec) frontier 는 여전히 OPEN — **$0-runnable lane 만 비었지 도메인이 끝난 게 아니었음**. 정형화:
+
+- **`@D depletion_not_terminal`** 신설: depletion test(open 0 · deferred empty · no $0 seed)가 떠도 그건 **lane PAUSE, not 100%-done**. exploratory/perf/limit-bounded 도메인은 $0 lane 이 비어도 물리·수학 한계 frontier 가 열려 있음.
+- 메시지 reframe: `✅ domain depleted — loop terminates` → `⏸️ $0-runnable lane exhausted — loop PAUSES (not 100%-done; frontier toward the physical/math limit stays open)` + above-$0 paths (cost-bearing fire · new spec · intractable-limit note · switch/close).
+- 리터럴 `✅ done/terminal` 은 **진짜 finite-scope + no open physical-limit frontier** 도메인에만 (rare). 애매하면 PAUSE.
+- `commands/cycle.md` Stage 5 + `cycle-full.md` 동일 reframe · plugin.json 0.7.5→0.7.6 · marketplace version 미러.
+
+비파괴 — 동작(ScheduleWakeup 여부)은 그대로, 종료 메시지 framing 만 원칙-정합으로 교정.
+
+---
+
 ## 2026-05-26 — pool-route 0.7.0: `mini-equal` 토글 — macOS 풀 호스트를 일반 워커로 옵트인
 
 `mini`(macOS 풀 호스트)를 OS-무관 general-heavy 라운드로빈에 **사용자 토글로** 합류시킬 수 있게 함. 기존 0.6.6 정책(general-heavy = Linux 전용)을 옵트인 시에만 완화.

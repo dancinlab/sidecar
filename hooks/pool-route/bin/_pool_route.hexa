@@ -424,7 +424,16 @@ fn main() {
     // pool host fails because the cache lives only on the workstation. Trusted
     // surface (sidecar slash commands), so no sign gate.
     if cmd.contains("$CLAUDE_PLUGIN_ROOT") || cmd.contains("$CLAUDE_PLUGIN_DATA") { _allow() }
-    if cmd.contains("/Users/") || cmd.contains("/home/") {
+    // home-dotstate pin (0.6.9): `~/.` and `$HOME/.` references point at
+    // per-host HIDDEN state (`~/.zsh_history` · `~/.hexa-cache` · `~/.pool` ·
+    // `~/.sidecar` · `~/.config` · …) that is NOT user-synced. Routing them to a
+    // pool host reads the WRONG host's state — the recurring failure: a probe
+    // like `grep ~/.zsh_history` or `cat ~/.hexa-cache/...` shipped to ubu-2
+    // returned that host's history / dispatch cache instead of the Mac's. They
+    // join the local-bound set alongside `/Users/`·`/home/`. SYNCED workdirs
+    // (`~/core/...`) are deliberately excluded — they keep routing (the
+    // documented `find ~/core/anima` big-tree pattern still dispatches).
+    if cmd.contains("/Users/") || cmd.contains("/home/") || cmd.contains("~/.") || cmd.contains("$HOME/.") {
         // Sign gate (0.6.4): local-bound HEAVY invocations (hexa · python ·
         // bash/sh <script>) on absolute host paths are the canonical mac
         // fork-storm trigger — multiple sessions racing dispatch caches +

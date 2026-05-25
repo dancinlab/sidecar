@@ -15,6 +15,7 @@ The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** wheneve
 
 - `git` / `gh` commands — operate on the local working tree + remotes
 - any command containing a `/Users/` or `/home/` absolute-path literal — host-specific
+- any command containing a `~/.` or `$HOME/.` **home-dotstate** reference (0.6.9) — `~/.zsh_history` · `~/.hexa-cache` · `~/.pool` · `~/.sidecar` · `~/.config` · … are per-host hidden state that is **not** user-synced, so routing them to a pool host reads the wrong host's history / cache. Synced workdirs (`~/core/...`) are deliberately excluded and keep routing — the `find ~/core/anima` big-tree pattern still dispatches.
 - any command containing `$CLAUDE_PLUGIN_ROOT` or `$CLAUDE_PLUGIN_DATA` literals — resolve via the dispatching bash to the workstation's plugin cache, which only exists on the local Mac (sidecar slash commands like `/quota:quota`, `/pool:pool`, … all match)
 
 These run local unconditionally; they're version-control / local-fs / trusted-plugin ops, never the heavy compute the pool exists for.

@@ -29,11 +29,19 @@ FIG_PDFS_PY     = $(patsubst figures/_scripts/%.py,figures/%.pdf,$(FIG_SCRIPTS_P
 FIG_PDFS_TEX    = $(patsubst figures/_scripts/%.tex,figures/%.pdf,$(FIG_SCRIPTS_TEX))
 FIG_PDFS        = $(FIG_PDFS_PY) $(FIG_PDFS_TEX)
 
+# Edit-triggers-rebuild deps (v0.9): the 58p monograph build proved that
+# editing an \input'd appendix OR a committed figure PDF did NOT rebuild
+# main.pdf — the dep list omitted them, forcing `make distclean && make`.
+# APPENDIX = every \input'd chapter; FIG_PDFS_EXISTING = figure PDFs already
+# present (dropped in directly, not script-generated). Both now prereqs below.
+APPENDIX           = $(wildcard appendix/*.tex)
+FIG_PDFS_EXISTING  = $(wildcard figures/*.pdf)
+
 .PHONY: all figures figures-clean wordcount pages lint arxiv-tar clean distclean
 
 all: $(DOC).pdf
 
-$(DOC).pdf: $(DOC).tex references.bib $(FIG_PDFS)
+$(DOC).pdf: $(DOC).tex references.bib $(FIG_PDFS) $(FIG_PDFS_EXISTING) $(APPENDIX)
 	$(LATEX) $(DOC).tex
 	$(BIBTEX) $(DOC) || true
 	$(LATEX) $(DOC).tex

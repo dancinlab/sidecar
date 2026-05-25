@@ -11,6 +11,11 @@
 \usepackage[numbers,sort&compress]{natbib}
 \usepackage{tikz}
 \usetikzlibrary{positioning,arrows.meta}
+% pgfplots — shipped by default (the 58p monograph build had every agent add
+% this by hand + `sudo tlmgr install pgfplots`). The fig02_line.tex standalone
+% uses it; the compat line is pinned so axis behaviour is deterministic.
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
 \usepackage{caption}
 \usepackage{listings}
 \usepackage{array}

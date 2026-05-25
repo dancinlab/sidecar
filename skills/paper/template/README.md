@@ -56,6 +56,13 @@ Drop other figure sources under `figures/`:
 - raster: `.png` (cover / teaser / AI-generated schematics only)
 - TikZ: inline in `main.tex` OR standalone under `_scripts/*.tex`
 
+**Standalone figure pattern (working pattern from the 58p monograph build).**
+A `_scripts/*.tex` figure is a *standalone* document (its own `\documentclass`).
+The correct wiring in `main.tex` is `\includegraphics{figures/figNN.pdf}` of the
+**compiled** PDF — NOT `\input{figures/_scripts/figNN.tex}`. `\input`-ing a
+standalone pulls a second `\documentclass` into your paper and breaks the build.
+`make figures` compiles each standalone to `figures/figNN.pdf` for you.
+
 For AI-generated figures, keep the verbatim prompt under
 `figures/_prompts/<name>.txt` so provenance is reproducible. See
 `figures/_prompts/cover.template.txt` for a fal.ai prompt-design guide.
@@ -70,6 +77,48 @@ Generate a fal.ai cover via the sidecar plugin:
 For a richer reference paper with multiple figures, tables, and 18 real
 bibtex entries, see `/paper sample <slug>` (copies the bundled
 `sample-nb-bcs-absorbed` verbatim).
+
+## TeX Live dependencies
+
+The preamble ships with `pgfplots` (used by the standalone TikZ figures and
+shipped by default in v0.9 — the 58p monograph build had every agent add it by
+hand). On a minimal BasicTeX install it is not bundled; install it once:
+
+```bash
+sudo tlmgr install pgfplots
+```
+
+Other preamble packages (`siunitx`, `booktabs`, `natbib`, `caption`, `listings`)
+are in the standard TeX Live / BasicTeX `scheme-medium`; `tlmgr install <pkg>`
+any that are missing.
+
+## Monograph mode (v0.9)
+
+For a book-length document (the HEXA-FUSION 58-page monograph pattern), scaffold
+with `monograph-init` instead of `new`:
+
+```bash
+/paper monograph-init <slug> [N]   # default N=12 appendices
+```
+
+This produces the `new` template spine PLUS an `\appendix` block in `main.tex`
+that `\input`s N self-contained chapters under `appendix/<L>_*.tex` (each a
+`\section` + `\label` + `% TODO` stub), alongside the `companion/` data-record
+dir. Fill one appendix at a time:
+
+```bash
+/paper fill A           # prints the per-appendix fill runbook (source · \input
+                        # wiring check · recompile note)
+/paper companion sync   # best-effort refresh of companion/{pr-roll,verify-ledger}.json
+```
+
+The Makefile's `$(DOC).pdf` prerequisite list includes `appendix/*.tex` and the
+figure PDFs (v0.9), so editing an appendix or a figure triggers a rebuild on the
+next `make` — no `make distclean` needed. `/paper lint` auto-detects the
+monograph tier (`\appendix` + ≥6 `\input` appendix files) and raises the bar to
+≥30 pages, ≥6 figures, and a present `companion/` dir; figure and table counts
+traverse main.tex AND every `\input`'d appendix file. The seed reference is
+`/paper sample sample-fusion-7gate` (the §Full Pipeline pattern).
 
 ## Honest stance
 

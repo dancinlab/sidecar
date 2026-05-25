@@ -12,3 +12,7 @@ Two stages:
 The per-round cap (default 3) throttles batch WIDTH so each round stays reviewable; the loop provides the DEPTH by auto-continuing across rounds to depletion.
 
 **DEPLETION termination (omit ScheduleWakeup) — only when ALL of:** (1) open milestones = 0 (no `- [ ]` left in the snapshot), AND (2) `deferred` is empty (no `## deferred` section, or no still-open backlog item — all promoted + drained), AND (3) no other seed signal (user mention · prior-turn `/gap` shortlist · `/check`/`/end` follow-up · `<NAME>.log.md` tail open thread). Until ALL three hold, the domain is NOT drained — keep cycling. User can interrupt any time.
+
+## Round discipline — the FIXED per-round shape (with linter)
+
+Both stages (the phase-0 brainstorm fan-out AND every subsequent plain-/cycle round) end with the SAME canonical autonomous-loop format that `/cycle-loop` fixes — see that command's **Round discipline** section. Each round closes with: (1) result report (status glyph + PR# + honest tier + 7-element easy + progress bar), (2) debt + split tracking (@D handoff_debt_ledger · @D oversized_split), (3) the `🔍 round-lint: <N>/10 ✓` linter line (@D round_lint), (4) loop tail (agents launched + ScheduleWakeup OR the lane-pause/perpetual form, never a bare `✅ 100% done` for an exploratory/perpetual domain).

@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — cycle 0.8.0 (자율-루프 형식 고정 + 린터)
+
+이번 세션의 자율 진행 방식(라운드마다 disjoint fan-out → 결과보고 → 다음 라운드, checkpoint-resume, oversized-split, handoff-debt 추적)을 `cycle-loop`/`cycle-full-loop` 의 **FIXED per-round 형식**으로 명문화 + 린터(`round_lint`) 추가. 3 신규 @D (`SKILL.md`):
+
+- **`@D oversized_split`** — 한 milestone 이 **2연속 throttle 死** 하면 통째 재발사 금지, 독립 landable sub-slice 로 분할. 입증: VERIFY-KIT V5(IIT 엔진)가 122/107 tool-use 에서 2연속 rate-limit 死 → V5.1 promote / V5.2 wire / V5.3 calibrate 로 분할, 각자 단독 landing.
+- **`@D handoff_debt_ledger`** — target repo dirty tree 에 미커밋된 cross-repo handoff INBOX edit 을 **부채로 추적**, dirty tree 강제 commit 금지, 격리 worktree(target origin/main)로 정리. 입증: ARXIV A2/A3/A4 가 anima/demiurge/phanes INBOX 를 working-copy edit → A6 가 격리 worktree 로 3건 정리(g48).
+- **`@D round_lint`** (린터 본체) — 매 루프 라운드 종료 시 `🔍 round-lint: N/10 ✓` 한 줄로 10항 계약 self-audit (resource-partition · checkpoint-clause · dup-race precheck · leak-sweep · ≤cap · handoff-debt · oversized-split · honest-tier+progress · SSOT-freshness · perpetual-no-terminal). ✗ 는 표면화+교정, rubber-stamp 금지.
+
+`commands/cycle-loop.md` · `cycle-full-loop.md` 에 FIXED per-round shape 명문화: 결과보고(status glyph + PR# + honest tier + 7요소 easy + progress bar) → debt/split tracking → round-lint line → loop tail (exploratory/perpetual 도메인엔 bare `✅ 100% done` 금지). plugin.json + marketplace.json 0.7.7 → 0.8.0 락스텝(g22).
+
 ## 2026-05-26 — kosmos-lsp · n6-lsp · hxc-lsp 0.1.0 (sister-format LSP 3종 출하)
 
 `hexa-lsp`/`tape-lsp`가 깐 패턴(plugin-root `.lsp.json`로 PATH 위 LSP 서버를 `extensionToLanguage`에 와이어링)을 sister-format 3종으로 확장한다. DESIGN.log 의 "tape/n6/hxc/kosmos sister-format LSP 는 각각 별도 미래 플러그인" 항목을 닫는다.

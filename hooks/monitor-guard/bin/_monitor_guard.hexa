@@ -83,6 +83,99 @@ fn _is_env_assign(t: string) -> bool {
     return false
 }
 
+// _starts_with — string prefix check (small helper, used by _has_log_pos).
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+// _ends_with — string suffix check.
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let nx = len(suffix)
+    if nx > ns { return false }
+    return s.substring(ns - nx, ns) == suffix
+}
+
+// _redirect_targets — quote-aware scan for `>` / `>>` redirect targets.
+// Returns the path tokens that follow each unquoted `>` (excluding `>&`
+// fd-dup forms). Pre-0.1.5 has_log used `cmd.contains(".log")` substring
+// which fired on commands merely mentioning a log path (e.g.
+// `grep ... /var/log/foo.log`); this extracts the actual redirect TARGET
+// instead, so log-suffix in an unrelated arg is ignored.
+fn _redirect_targets(cmd: string) -> array {
+    let n = len(cmd)
+    let mut i = 0
+    let mut out = []
+    let mut q = ""
+    while i < n {
+        let c = cmd.substring(i, i + 1)
+        if q != "" {
+            if c == q { q = "" }
+            i = i + 1
+            continue
+        }
+        if c == "\"" || c == "'" { q = c; i = i + 1; continue }
+        if c == ">" {
+            i = i + 1
+            while i < n && cmd.substring(i, i + 1) == ">" { i = i + 1 }
+            while i < n && (cmd.substring(i, i + 1) == " " || cmd.substring(i, i + 1) == "\t") { i = i + 1 }
+            // `>&` (fd dup, e.g. 2>&1) — skip, not a file redirect
+            if i < n && cmd.substring(i, i + 1) == "&" { continue }
+            let mut tok = ""
+            let mut tq = ""
+            while i < n {
+                let d = cmd.substring(i, i + 1)
+                if tq != "" {
+                    if d == tq { tq = "" } else { tok = tok + d }
+                    i = i + 1
+                    continue
+                }
+                if d == "\"" || d == "'" { tq = d; i = i + 1; continue }
+                if d == " " || d == "\t" || d == ";" || d == "|" || d == "&" || d == "<" || d == ">" || d == "(" || d == ")" || d == "\n" || d == "\r" { break }
+                tok = tok + d
+                i = i + 1
+            }
+            if len(tok) > 0 { out.push(tok) }
+            continue
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// _has_log_pos — TRUE iff a real durable progress sink is present:
+//   - heredoc input (`<<` — inline doc), OR
+//   - any `>`/`>>` redirect to a non-/dev/null file, OR
+//   - `tee` token followed by a file arg (pipeline log tap)
+// Replaces the pre-0.1.5 substring check (cmd.contains(".log") /
+// cmd.contains("tee ") / cmd.contains(">>")) which fired on commands that
+// only MENTIONED those words in unrelated args (e.g. `grep nohup /var/log/foo.log`).
+fn _has_log_pos(cmd: string, toks: array) -> bool {
+    if cmd.contains("<<") { return true }
+    let rt = _redirect_targets(cmd)
+    let mut i = 0
+    while i < len(rt) {
+        let t = rt[i]
+        if t != "" && t != "/dev/null" { return true }
+        i = i + 1
+    }
+    // tee at any pipeline position with a file arg (skip flags like `-a`)
+    let mut j = 0
+    while j < len(toks) {
+        if toks[j] == "tee" {
+            let mut k = j + 1
+            while k < len(toks) {
+                let nxt = toks[k]
+                if !_starts_with(nxt, "-") { return true }
+                k = k + 1
+            }
+        }
+        j = j + 1
+    }
+    return false
+}
+
 // _has_detach_pos — TRUE iff `nohup`/`setsid` sits at command position past
 // any env-var prefix, OR `disown` appears as a standalone token (bash builtin
 // invoked later in a pipeline, not a substring of a path). Substring matches
@@ -167,8 +260,12 @@ fn main() {
     let is_cloud_pod = _is_cloud_pod(cmd)
     if !is_bg && !is_cloud_pod { _allow() }
 
-    // durable progress sink — a real file, append, or tee (not /dev/null).
-    let has_log = cmd.contains(".log") || cmd.contains(".out") || cmd.contains("tee ") || cmd.contains(">>")
+    // durable progress sink — a real `>`/`>>` redirect target (not /dev/null),
+    // a `tee` invocation with a file arg, or a `<<` heredoc. 0.1.5 — token-
+    // position via _has_log_pos (was substring `cmd.contains(".log")` which
+    // fired on commands merely mentioning a log path in an unrelated arg).
+    let _has_log_toks = _tokens(cmd)
+    let has_log = _has_log_pos(cmd, _has_log_toks)
 
     // run_in_background is harness-detached, so it counts as detached.
     let need_detach = !has_detach && !run_bg

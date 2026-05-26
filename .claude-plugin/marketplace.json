@@ -179,8 +179,8 @@
     {
       "name": "limit-guard",
       "source": "./hooks/limit-guard",
-      "description": "PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) \u2014 detects a session/usage-limit signal in a subagent result and injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out and switch to sequential commit-per-unit work. Signal match is case-insensitive (0.1.3). NO opt-out by design.",
-      "version": "0.1.3"
+      "description": "PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) \u2014 detects a session/usage-limit signal in a subagent result, AUTO-SNAPSHOTS uncommitted work non-destructively (`git diff HEAD` \u2192 `.claude/limit-snapshots/<ts>.patch` + status sidecar; no commit/push/stash/index mutation \u2014 shared-worktree safe; recover via `git apply`), then injects a non-blocking checkpoint directive: report progress (committed SHAs vs uncommitted), commit + push uncommitted work, write a `.claude/RESUME.md` resume manifest, stop parallel fan-out and switch to sequential commit-per-unit work. Signal match is case-insensitive (0.1.4). NO opt-out by design.",
+      "version": "0.1.4"
     },
     {
       "name": "question",

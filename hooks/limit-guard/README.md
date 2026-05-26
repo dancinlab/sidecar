@@ -4,8 +4,9 @@ PostToolUse(Task) hook — catches a session/usage-limit signal in a subagent re
 
 ## What it does
 
-When a subagent (`Task` tool) completes, the hook scans its result for a session/usage-limit signal (`hit your session limit`, `hit your usage limit`, or `session limit` + `resets`). On a match it emits a non-blocking `additionalContext` instructing the agent to:
+When a subagent (`Task` tool) completes, the hook scans its result for a session/usage-limit signal (`hit your session limit`, `hit your usage limit`, or `session limit` + `resets`). On a match it first **auto-snapshots uncommitted work** (0.1.4), then emits a non-blocking `additionalContext` instructing the agent to:
 
+0. **Auto-snapshot (done by the hook)** — `git diff HEAD` is saved to `.claude/limit-snapshots/<ts>.patch` plus a `.status.txt` sidecar (branch · HEAD · `git status --porcelain` · untracked list). **Non-destructive**: no commit, no push, no stash, no index mutation — safe in a shared/concurrent working tree (a shared `.git/index` must never be auto-mutated), no `git add -A`, no branch switch. Recover a lost tracked change with `git apply <patch>`. Untracked files are listed (not captured) in the sidecar.
 1. **Report how far it got** — per work item, what is committed (with SHAs) vs uncommitted, and where work stopped.
 2. **Commit + push uncommitted work** — a limit hit mid-edit loses uncommitted work.
 3. **Write `.claude/RESUME.md`** — a resume manifest: done items, remaining items, the limit reset time, the next concrete step.

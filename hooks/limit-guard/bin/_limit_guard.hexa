@@ -45,6 +45,31 @@ fn _contains(hay: string, needle: string) -> bool {
     return hay.index_of(needle) >= 0
 }
 
+// I7: non-destructive auto-preserve of uncommitted work on a limit signal.
+// Snapshots `git diff HEAD` to .claude/limit-snapshots/<ts>.patch + a status
+// sidecar. NO commit / push / stash / index mutation -- a shared .git/index
+// (concurrent agents) must never be auto-mutated; no `git add -A`, no branch
+// switch, no push to a possibly-stale base. Pure read of git state + write of
+// snapshot files. Recover a lost tracked change with `git apply <patch>`.
+// Returns the patch path, or "" when not a repo / nothing uncommitted.
+fn _snapshot_uncommitted() -> string {
+    let inrepo = to_string(exec("git rev-parse --is-inside-work-tree 2>/dev/null"))
+    if inrepo.index_of("true") < 0 { return "" }
+    let ts = to_string(exec("date +%Y%m%dT%H%M%S")).replace("\n", "")
+    let dir = ".claude/limit-snapshots"
+    let _m = exec("mkdir -p " + dir + " 2>/dev/null")
+    let patch = dir + "/" + ts + ".patch"
+    let _d = exec("git diff HEAD > " + patch + " 2>/dev/null")
+    let sz = to_string(exec("wc -c < " + patch + " 2>/dev/null")).replace("\n", "").replace(" ", "")
+    let unt = to_string(exec("git ls-files --others --exclude-standard 2>/dev/null")).replace("\n", "").replace(" ", "")
+    if sz == "0" && len(unt) == 0 {
+        let _r = exec("rm -f " + patch + " 2>/dev/null")
+        return ""
+    }
+    let _s = exec("( git rev-parse --abbrev-ref HEAD; git rev-parse --short HEAD; echo '--- git status --porcelain ---'; git status --porcelain; echo '--- untracked (NOT in .patch) ---'; git ls-files --others --exclude-standard; echo '--- recover tracked changes: git apply " + patch + " ---' ) > " + dir + "/" + ts + ".status.txt 2>/dev/null")
+    return patch
+}
+
 fn main() {
     let raw = _read_stdin()
     let lo = raw.to_lower()   // case-insensitive — real limit messages vary in casing
@@ -60,7 +85,10 @@ fn main() {
         || (_contains(lo, "usage limit") && _contains(lo, "resets"))
     if !hit { _allow() }
 
-    let ctx = "SESSION-LIMIT SIGNAL detected in a tool result -- a usage/session limit was hit (a subagent likely stopped mid-work). Before anything else:\n\n1. REPORT how far you got: per work item, state what is COMMITTED (list commit SHAs) vs UNCOMMITTED, and exactly where work stopped.\n2. COMMIT + PUSH uncommitted work now -- stage explicit paths; a limit hit mid-edit loses uncommitted work.\n3. Write .claude/RESUME.md -- a resume manifest: done items, remaining items, the limit reset time if visible, and the next concrete step.\n4. STOP remaining parallel fan-out -- do not spawn more background agents; switch to sequential foreground work, one committed increment at a time.\n\nWhy: parallel subagent fan-outs burn quota fast -- when the limit hits, N agents fail at once and uncommitted work is lost. Sequential + commit-per-unit caps the loss at one unit."
+    let snap = _snapshot_uncommitted()
+    let snap_line = if len(snap) > 0 { "0. AUTO-SNAPSHOT (done): uncommitted work was saved non-destructively to " + snap + " (+ a .status.txt sibling) -- a safety net; recover a lost tracked change with `git apply " + snap + "`. It is NOT a commit and was NOT pushed -- still commit properly below.\n" } else { "" }
+
+    let ctx = "SESSION-LIMIT SIGNAL detected in a tool result -- a usage/session limit was hit (a subagent likely stopped mid-work). Before anything else:\n\n" + snap_line + "1. REPORT how far you got: per work item, state what is COMMITTED (list commit SHAs) vs UNCOMMITTED, and exactly where work stopped.\n2. COMMIT + PUSH uncommitted work now -- stage explicit paths; a limit hit mid-edit loses uncommitted work.\n3. Write .claude/RESUME.md -- a resume manifest: done items, remaining items, the limit reset time if visible, and the next concrete step.\n4. STOP remaining parallel fan-out -- do not spawn more background agents; switch to sequential foreground work, one committed increment at a time.\n\nWhy: parallel subagent fan-outs burn quota fast -- when the limit hits, N agents fail at once and uncommitted work is lost. Sequential + commit-per-unit caps the loss at one unit."
 
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(ctx) + "}}"
     println(payload)

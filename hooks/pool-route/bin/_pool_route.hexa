@@ -475,6 +475,13 @@ fn _local_heavy_interp(cmd: string, toks: array) -> bool {
     // (where it collides with the `.tsx` file extension). Including it here.
     if t0_basename == "node" || t0_basename == "deno" || t0_basename == "bun" { return true }
     if t0_basename == "tsx" || t0_basename == "ts-node" { return true }
+    // 0.7.8 — JVM 계열 (POOL-OFFLOAD m3): `java`/`javac`/`kotlinc`/`scalac`/`sbt`
+    // first-token basename match — abs-path `/usr/bin/java -jar /Users/.../app.jar`
+    // is the canonical JVM fork-storm trigger (each invocation forks the JVM).
+    // Safe at first-token layer regardless of name length (`java`/`sbt` 4/3-char
+    // substring-collide in heavy_words; first-token is precise EXEC-only match).
+    if t0_basename == "java" || t0_basename == "javac" { return true }
+    if t0_basename == "kotlinc" || t0_basename == "scalac" || t0_basename == "sbt" { return true }
     // 0.6.12 — C/C++ compiler drivers: an absolute-path compile (e.g.
     // `/usr/bin/gcc /Users/…/x.c`) is the same fork-storm trigger as a heavy
     // interpreter — multi-session re-fork of the compiler on the workstation.
@@ -798,7 +805,12 @@ fn main() {
     // (3-char, file-extension collision: `cat foo.tsx` would match `_has_word`
     // due to `.` non-word prev boundary); a first-token-only classifier is
     // the right fix, deferred. npm/pnpm/yarn stay LOCAL (cwd-dependent, 0.7.4).
-    let heavy_words = ["make", "cargo", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc", "node", "deno", "bun", "ts-node"]
+    // 0.7.8 — JVM 계열 컴파일러 (POOL-OFFLOAD m3): `javac`/`kotlinc`/`scalac` are
+    // canonical Java/Kotlin/Scala compilers (5-7 char, specific). `java` and
+    // `sbt` use PAIR-based matching only (4-char/3-char with frequent false-pos
+    // risk: `cat /tmp/java-tools.txt`/`sbt-output.log` would substring-match);
+    // pairs like `java -jar`/`sbt compile` are precise. mvn/gradle already in.
+    let heavy_words = ["make", "cargo", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc", "node", "deno", "bun", "ts-node", "javac", "kotlinc", "scalac"]
     // hexa-native heavy subverbs (kick-storm 2026-05-23 Mac kill: /kick = `hexa kick --seed`,
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)
@@ -832,7 +844,8 @@ fn main() {
                        "hexa", "chain",
                        "hexa", "omega", "hexa", "surge", "hexa", "dream", "hexa", "swarm",
                        "hexa", "reign", "hexa", "molt", "hexa", "wake", "hexa", "forge",
-                       "hexa", "canon", "hexa", "debate", "hexa", "revive"]
+                       "hexa", "canon", "hexa", "debate", "hexa", "revive",
+                       "java", "-jar", "sbt", "compile", "sbt", "test", "sbt", "run"]
     // big-tree find substring — multi-session `find $HOME/core/anima` (~458GB tree)
     // is the documented Mac-kill pattern (267% CPU from 3× concurrent bfs). Route
     // when the cmd contains `find <user>/core/anima`; preflight test -d gates the

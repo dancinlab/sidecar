@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.7.8: JVM 계열 (POOL-OFFLOAD m3)
+
+POOL-OFFLOAD 마일스톤 3 — Java/Kotlin/Scala/sbt 컴파일·실행을 heavy 로 인식. Mac 에서 `javac Foo.java`·`java -jar app.jar`·`sbt compile` 같은 JVM fork-storm 을 ubu pool 로 위임.
+
+- **pool-route 0.7.7 → 0.7.8** — 3 레이어 확장:
+  - `heavy_words` +3: `javac` · `kotlinc` · `scalac` (5-7 char, specific compilers — 단어경계 안전)
+  - `heavy_pairs` +4: `java -jar` · `sbt compile` · `sbt test` · `sbt run` (pair-only — `java`(4-char)·`sbt`(3-char) 는 `cat /tmp/java-tools.txt`·`sbt-log` 같은 substring false-pos 위험 → 동작 토큰과 결합)
+  - `_local_heavy_interp` first-token +5: `java` · `javac` · `kotlinc` · `scalac` · `sbt` (abs-path sign-gate · first-token 매치는 EXEC-only 정밀)
+- **lein 보류** — Clojure 사용 환경 미확인, 필요시 다음 라운드.
+- 파싱 검증: `hexa parse` → OK.
+- plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.7.7: Node 생태계 런타임 분류 (POOL-OFFLOAD m2)
 
 POOL-OFFLOAD 마일스톤 2 — `node`/`deno`/`bun`/`ts-node` JS·TS 인터프리터를 heavy 로 인식. Mac 워크스테이션에서 `node big-build.js` · `bun script.ts` 같은 V8/Bun/Deno fork-storm 을 ubu pool 로 위임.

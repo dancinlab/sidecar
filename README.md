@@ -187,7 +187,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`memory-lint`](hooks/memory-lint/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memo… |
 | [`drift-guard`](hooks/drift-guard/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory — design-drift → memory sync; nudges mirroring SSOT (`.tape`/`CLAUDE.md`) · `decisions/` · `@design-change` edits into auto-memory before the next session regresses |
 | [`throttle-guard`](hooks/throttle-guard/) | hook | `core` | 0.1.0 | PostToolUse(Task\|Agent) cross-session transient-throttle coordinator — shared cooldown marker + jitter backoff + WIDTH cut (distinct from limit-guard's usage cap) |
-| [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.1 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10); 0.1.1 adds cloud-bridge hint when `hexa cloud nohup`/`fire` is detected (logfile path → `hexa cloud tail` → Monitor attach, commons @D g57) |
+| [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.2 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10); 0.1.2 points cloud-bridge hint at the shipped atomic workflow `hexa cloud fire <host> -- <argv>` → grep `__MONITOR_HANDLE__=` → Monitor attach (hexa-lang PR #1306 + #1309) |
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
 | [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
 | [`prefs`](commands/prefs/) | command | `core` | 0.4.0 | /prefs view/set language prefs (code · docs · response) — writes the fixed prefs.json SSOT |
@@ -203,7 +203,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`worktree-guard`](hooks/worktree-guard/) | hook | `core` | 0.1.0 | PreToolUse(Bash) advisory on `git worktree add` — durable-worktree drill: commit+push promptly, a sibling prune / sync / tmp-reaper can delete the worktree + uncommitted edits |
 | [`worktree-gc`](hooks/worktree-gc/) | hook | `core` | 0.1.0 | SessionStart hook that prunes merged-but-undeleted LINKED git worktrees in the cwd repo, implemented in hexa-lang (`_w… |
 | [`atlas`](skills/atlas/) | command + skill | `hexa` | 0.1.1 | wraps `hexa atlas` (atlas SSOT surface) |
-| [`cloud`](skills/cloud/) | command + skill | `hexa` | 0.3.4 | wraps `hexa cloud` (runpod / vast.ai dispatch); 0.3.4 documents the explicit 3-step monitor handoff (nohup→tail→Monitor) + tail exit-code semantics, pending the `cloud_fire` + `__MONITOR_HANDLE__={…}` JSON-line contract (inbox RFC) |
+| [`cloud`](skills/cloud/) | command + skill | `hexa` | 0.3.5 | wraps `hexa cloud` (runpod / vast.ai dispatch); 0.3.5 documents the atomic `hexa cloud fire <host> [--log <path>] -- <argv>` workflow + `__MONITOR_HANDLE__={…}` JSON-line contract — both SHIPPED upstream (hexa-lang PR #1306 + #1309) |
 | [`cloud-guard`](hooks/cloud-guard/) | hook | `hexa` | 0.2.2 | PreToolUse(Bash) hard block for raw rented-GPU pod dispatch (commons @D g8) |
 | [`hexa-help`](skills/hexa-help/) | command + skill | `hexa` | 0.2.1 | wraps `hexa --help` (no arg, top-level catalog) or `hexa <verb> --help` (verb-specific) |
 | [`hexa-lsp`](hooks/hexa-lsp/) | hook | `hexa` | 0.1.1 | Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files |

@@ -113,7 +113,7 @@ fn main() {
     hints.push("  • 🛰️ Monitor는 LOG 파일에 붙여라 (live 프로세스 아님) — 토큰 경량·세션 부활 시 재첨부; liveness는 detached `while kill -0 $!; do …; sleep N; done &` heartbeat (모델 sleep-poll 금지)")
     // hexa cloud nohup/fire 패턴 — 원격 pod 작업의 Monitor bridge는 hexa cloud tail (commons @D g57)
     if is_cloud_pod {
-        hints.push("  • hexa cloud nohup/fire 감지 — 원격 pod 작업: caller가 지정한 logfile path 기억 → `hexa cloud tail <host> <logfile>` 가 그 LOG의 line-by-line stdout stream (Monitor attach point, commons g57). 계획 RFC: inbox/rfc_drafts/cloud-fire-monitor-handle.md — nohup/fire 가 `__MONITOR_HANDLE__={…}` JSON 한 줄을 stdout에 echo → caller grep 으로 tail_cmd 추출 (도입 전엔 logfile 경로를 caller가 직접 관리)")
+        hints.push("  • hexa cloud nohup/fire 감지 — 원격 pod 작업의 atomic 패턴 (commons g57 · hexa-lang PR #1306 · #1309 shipped): (1) `hexa cloud fire <host> -- <argv>` → stdout 에 `__MONITOR_HANDLE__={\"host\":...,\"pid\":N,\"log\":...,\"tail_cmd\":...}` JSON 한 줄 echo (logfile path auto-gen `/tmp/cloud-<unix_ts>.log` 또는 `--log <path>` 명시) (2) caller 가 `grep '^__MONITOR_HANDLE__='` 로 tail_cmd 추출 (3) `hexa cloud tail <host> <log>` 가 Monitor attach point (line-by-line stdout stream · exit 0 = JOB DONE / 255 = ssh drop / other = pipe broke). `cloud nohup` 도 동일 handle line 을 emit — caller 가 logfile 을 미리 정한 경우.")
     }
 
     let body = "⚠ 배경 작업 감지 (commons @D g10 · rate-limit 생존) — while-monitor 패턴:\n" + hints.join("\n")

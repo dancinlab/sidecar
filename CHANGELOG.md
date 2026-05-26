@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — monitor↔hexa cloud bridge 명확화 step 3 (sidecar reference 갱신 — 업스트림 shipped)
+
+step 1 의 inbox RFC (`inbox/rfc_drafts/cloud-fire-monitor-handle.md`) 가 hexa-lang 측에서 두 PR (#1306 PR1 = `CloudResult.logfile` 필드 + `__MONITOR_HANDLE__={…}` JSON echo + tail exit-code docs · #1309 PR2 = atomic `hexa cloud fire` verb + canonical `/tmp/cloud-<unix_ts>.log` auto-log) 로 머지됨. 이번 PR 은 sidecar 면의 advisory + skill docs 를 "pre-ship 3-step manual handoff" → "atomic 1-shot fire workflow" 로 갱신.
+
+- **`monitor-guard` 0.1.1 → 0.1.2** — `_monitor_guard.hexa` 의 cloud-bridge 힌트가 이제 live workflow 를 가리킨다: `hexa cloud fire <host> -- <argv>` → stdout 의 `__MONITOR_HANDLE__={"host":…,"pid":N,"log":…,"tail_cmd":…}` 한 줄 → caller grep → `tail_cmd` 로 Monitor attach. nohup (caller 가 logfile 미리 정한 경우) 도 동일 handle line.
+- **`cloud` skill 0.3.4 → 0.3.5** — SKILL.md 가 동일하게 atomic workflow 로 갱신, "skip handle line" / "batched 동시호출 시 unix_ts 충돌" 두 don't 추가.
+- README 행 정정 + marketplace lockstep.
+- `inbox/rfc_drafts/cloud-fire-monitor-handle.md` 는 보존 (역사적 출처 — 다음 inbox sweep 에서 archive 또는 notes/ 이동 결정).
+
+hexa-lang 측 두 PR 의 module-loader 회귀 노트 — PR2 에서 `cloud_fire_opts`/`cloud_fire` 두 함수를 cloud.hexa 에 stdlib export 로 추가했더니 hexa module-loader 가 expanded.tmp 에서 그 두 함수만 통째로 누락 (원인 미상, 다른 함수 정의는 정상). 우회 = CLI-side 인라인 (cloud_cli.hexa 의 fire handler 안에서 `cloud_nohup_opts` 직접 호출 + ts auto-gen). public API 표면은 `cloud_nohup_opts` 만 유지.
+
 ## 2026-05-26 — monitor↔hexa cloud bridge 명확화 step 1 (sidecar 측 advisory · docs · RFC inbox)
 
 사용자 보고 "monitor, hexa cloud 연결이 코드수준으로 명확하지 않는듯" 에 대한 sidecar 측 응답. 코드 감사로 J건의 갭(nohup이 logfile 경로를 머신-파스 형식으로 echo 안 함 · CloudResult.logfile 필드 부재 · atomic fire verb 없음 · tail/early-life-check exit-code 미문서 등)을 짚었고, 이번 PR 은 sidecar 면을 닫고 hexa-lang 측 작업 명세를 inbox 로 전달한다.

@@ -31,6 +31,49 @@
 
 let MARK = "__SIDECAR_POOL__"
 
+// `_pool_advisory_text()` — canonical advisory shown when a useless env-prefix
+// is detected (0.7.11 — POOL-OFFLOAD m7 prep · agent education). Emitted via
+// `additionalContext` on the eventual exit so the agent learns these are no-op
+// without a counterfactual silent allow. ASCII-only to survive JSON escaping.
+fn _pool_advisory_text() -> string {
+    return "pool-route advisory: SIDECAR_NO_POOL / SIDECAR_NO_POOL_ROUTE / POOL_DISABLE / SIDECAR_POOL_DISABLE env-prefix are NO-OP since 0.7.3 (POSIX env-prefix stripped before the classifier reads the real verb). For genuine local-force, the USER must run `! sidecar sign local` in the TUI prompt (5-min token, agent-self-mint forbidden). This cmd proceeds per actual classification; the env-prefix had zero effect on routing."
+}
+
+// `_is_useless_pool_env(name)` — name (without `=`) matches one of the canonical
+// useless prefixes? Listed by name, NOT recognition of behavior (we don't honor
+// these vars — they're no-ops); the list exists ONLY to identify when to emit
+// the educational advisory. Adding a name here does not change routing.
+fn _is_useless_pool_env(name: string) -> bool {
+    if name == "SIDECAR_NO_POOL" { return true }
+    if name == "SIDECAR_NO_POOL_ROUTE" { return true }
+    if name == "POOL_DISABLE" { return true }
+    if name == "SIDECAR_POOL_DISABLE" { return true }
+    return false
+}
+
+// `_has_useless_pool_env_prefix(toks)` — scan POSIX env-var prefix tokens
+// (`IDENT=value`) at the head of toks for any of the useless pool-disable
+// names. Returns true if found — caller decides to emit advisory.
+fn _has_useless_pool_env_prefix(toks: array) -> bool {
+    let mut i = 0
+    while i < len(toks) && _is_env_assign(toks[i]) {
+        let t = toks[i]
+        let eq = t.index_of("=")
+        if eq > 0 {
+            let name = t.substring(0, eq)
+            if _is_useless_pool_env(name) { return true }
+        }
+        i = i + 1
+    }
+    return false
+}
+
+// Module-level mutable holding the advisory string for THIS invocation. Set
+// once at main entry when a useless env-prefix is detected; consumed by every
+// exit fn (_allow_count · _deny_count · _emit) which appends it to the JSON
+// `additionalContext` field. NULL → no advisory.
+let mut _ADVISORY = ""
+
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
 }
@@ -44,7 +87,9 @@ fn _allow() {
 // (must go to the pool) but every routing path failed — running locally
 // would silently violate the "pool-only resources" contract.
 fn _deny(reason: string) {
-    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_str(reason) + "}}"
+    let mut body = "\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_str(reason)
+    if _ADVISORY != "" { body = body + ",\"additionalContext\":" + _json_str(_ADVISORY) }
+    let out = "{\"hookSpecificOutput\":{" + body + "}}"
     println(out)
     exit(0)
 }
@@ -101,9 +146,15 @@ fn _tally(category: string) {
 
 // `_allow_count(cat)` / `_deny_count(reason, cat)` — counted exits. Use
 // at meaningful classifier-decision sites only; plain _allow/_deny stays
-// for non-classifier noise (non-Bash · empty · MARK · etc).
+// for non-classifier noise (non-Bash · empty · MARK · etc). When _ADVISORY
+// is set (e.g. useless env-prefix detected), emits permissionDecision:allow
+// + additionalContext so the agent sees the advisory inline on this cmd.
 fn _allow_count(cat: string) {
     _tally(cat)
+    if _ADVISORY != "" {
+        let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"additionalContext\":" + _json_str(_ADVISORY) + "}}"
+        println(out)
+    }
     exit(0)
 }
 fn _deny_count(reason: string, cat: string) {
@@ -528,7 +579,8 @@ fn _emit(ti: map, new_cmd: string, note: string) {
         i = i + 1
     }
     let updated = "{" + parts.join(",") + "}"
-    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    let final_note = if _ADVISORY != "" { _ADVISORY + "\n\n--- routing note ---\n" + note } else { note }
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(final_note) + "}}"
     println(out)
     exit(0)
 }
@@ -637,6 +689,19 @@ fn main() {
     if cmd.contains("<<") { _allow() }
     if cmd.ends_with("&") { _allow() }
     if cmd.starts_with("ssh ") { _allow() }
+
+    // 0.7.11 — useless env-prefix advisory (POOL-OFFLOAD m7 prep · agent
+    // education). Scan POSIX env-var prefix at the head of the cmd for
+    // SIDECAR_NO_POOL / SIDECAR_NO_POOL_ROUTE / POOL_DISABLE /
+    // SIDECAR_POOL_DISABLE — all no-op since 0.7.3 (env-prefix is stripped
+    // before classification, by design per s11). Set _ADVISORY so the
+    // eventual exit fn emits an inline additionalContext explaining the
+    // no-op + pointing to `! sidecar sign local` as the only legitimate
+    // local-force path. Does NOT change routing behavior — purely educational.
+    let early_toks = _tokens(cmd)
+    if _has_useless_pool_env_prefix(early_toks) {
+        _ADVISORY = _pool_advisory_text()
+    }
 
     // single local-execution gate (0.7.2): a fresh `local` sign token forces
     // EVERY command to run HERE — the one deliberate, user-minted "run this on

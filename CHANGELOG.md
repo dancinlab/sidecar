@@ -6,6 +6,26 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.7.11: 무용한 env-prefix advisory (agent 학습)
+
+배경 — 0.7.3 의 env-prefix stripping 이후 `SIDECAR_NO_POOL=1 / POOL_DISABLE=1` 같은 시도는 모두 no-op 이지만, **silent allow** 라 agent 가 "통과됐다" 착각하고 매 cmd 마다 같은 prefix 반복. 다른 세션 관찰 결과 agent 가 동일 우회 시도를 수십번 반복 — 학습 신호 부재.
+
+해법 — env-prefix 감지 시 `additionalContext` 로 advisory emit. agent 가 다음 턴에 hook 결과로 메시지 보고 학습 → 우회 시도 중단.
+
+- **pool-route 0.7.10 → 0.7.11** — 4 추가:
+  - `_pool_advisory_text()` — canonical advisory 문자열 (ASCII-only, JSON-safe)
+  - `_is_useless_pool_env(name)` — 4개 이름 화이트리스트 (SIDECAR_NO_POOL · SIDECAR_NO_POOL_ROUTE · POOL_DISABLE · SIDECAR_POOL_DISABLE)
+  - `_has_useless_pool_env_prefix(toks)` — POSIX env-prefix 토큰 스캔
+  - `let mut _ADVISORY` 모듈-레벨 mutable — 한 invocation 동안 advisory 상태 유지
+- **exit fn 들 advisory 소비**:
+  - `_allow_count(cat)` — `_ADVISORY != ""` 일 때 `permissionDecision:allow` + `additionalContext:_ADVISORY` emit
+  - `_deny(reason)` — body 에 `additionalContext` 추가 (advisory 있을 때)
+  - `_emit(ti, cmd, note)` — advisory 를 note 앞에 prepend
+- **main 진입점 감지** — 초기 noise exit (MARK/heredoc/ssh) 직후, `_local_signed` 게이트 직전에 `_tokens(cmd)` → `_has_useless_pool_env_prefix` → `_ADVISORY` 설정.
+- **라우팅 행동 불변** — env-prefix 가 라우팅을 enable/disable 하지 않음 (그것이 s11 의 원칙). 단지 agent 에게 알림만 추가.
+- 파싱 검증: `hexa parse` → OK.
+- plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.7.10: big-tree find 일반화 (POOL-OFFLOAD m5)
 
 POOL-OFFLOAD 마일스톤 5 — `find $HOME/core/anima` 단일 substring 을 `~/core/*` 전체로 일반화. 어떤 dancinlab 패밀리 repo (anima · hexa-lang · demiurge · phanes · sidecar · ...) 든 big-tree find 가 자동 라우팅.

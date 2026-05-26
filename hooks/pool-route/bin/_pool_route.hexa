@@ -583,6 +583,13 @@ fn main() {
     // These are read/version-control/local-fs ops, never the heavy compute the
     // pool exists for, so an early _allow() is always correct.
     if _has_word(cmd, "git") || _has_word(cmd, "gh") || _has_word(cmd, "pool") { _allow() }
+    // node-package installers (0.7.4): npm/pnpm/yarn read package.json + write
+    // node_modules in CWD — they are inherently cwd-bound, so routing them to a
+    // pool host (where the CWD usually doesn't exist) fails preflight with
+    // 'workdir missing' on every host and DENIES the command. The classifier
+    // counted these as heavy compute, but the install/build IS local to the
+    // project's CWD — there's no remote work to dispatch.
+    if _has_word(cmd, "npm") || _has_word(cmd, "pnpm") || _has_word(cmd, "yarn") { _allow() }
     // sidecar plugin pin (0.6.8): `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA`
     // literals always resolve to the LOCAL plugin cache — routing them to a
     // pool host fails because the cache lives only on the workstation. Trusted
@@ -710,7 +717,10 @@ fn main() {
     // the only 2-char driver — bounded by non-word chars, and git/gh + absolute-
     // path commands already returned local above, so a coincidental bare `cc`
     // token in an unrelated command is unlikely to reach here.
-    let heavy_words = ["make", "cargo", "npm", "pnpm", "yarn", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc"]
+    // 0.7.4 — npm/pnpm/yarn removed (now local-bound earlier in main: node-
+    // package installers are cwd-dependent; routing them to a pool host fails
+    // preflight with 'workdir missing').
+    let heavy_words = ["make", "cargo", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc"]
     // hexa-native heavy subverbs (kick-storm 2026-05-23 Mac kill: /kick = `hexa kick --seed`,
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)

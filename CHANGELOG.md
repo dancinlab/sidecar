@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — pool-route 0.7.4: npm/pnpm/yarn LOCAL-bound (preflight 'workdir missing' 막힘 해소)
+
+사용자 즉시 보고 — `npm i @google-cloud/vertexai ...` 가 pool-route 의 heavy classifier 에 잡혀 ubu-1/ubu-2 라우팅 시도, 두 host 모두 cwd(`~/core/demiurge/web`) 가 없어 preflight 실패 → 명령 자체 DENY. npm/pnpm/yarn 은 본질적으로 cwd-dependent (package.json 읽고 node_modules 를 CWD 에 씀) — pool host 로 보낼 일 자체가 없다.
+
+- **pool-route 0.7.3 → 0.7.4** — `_has_word(cmd, "npm") || _has_word(cmd, "pnpm") || _has_word(cmd, "yarn")` 을 local-bound early-_allow 체인에 추가(git/gh/pool 옆) · `heavy_words` 에서 npm/pnpm/yarn 제거 (이중 안전).
+- 검증 4/4 — `npm install`/`yarn add` LOCAL silent · `hexa kick` 여전히 routed · `gcc /Users/.../x.c` 여전히 sign-local DENY (회귀 없음).
+- README + marketplace lockstep.
+
 ## 2026-05-26 — monitor-guard 0.1.5: has_log 도 token-position (substring → redirect-target 추출)
 
 substring → token-position sweep 마무리. monitor-guard 의 `has_log` 도 `_has_log_pos` + `_redirect_targets` 헬퍼로 정밀화: quote-aware `>`/`>>` redirect target 추출(non-`/dev/null` 파일 = durable sink) + `tee <file>` (flag 옵션 skip) + `<<` heredoc. 이전 `cmd.contains(".log")` substring 은 `grep nohup /var/log/foo.log` 같이 `.log` 단어만 언급해도 sink 충족으로 잘못 판정.

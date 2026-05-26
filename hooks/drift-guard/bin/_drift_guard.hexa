@@ -95,6 +95,21 @@ fn _contains(hay: string, needle: string) -> bool {
     return hay.index_of(needle) >= 0
 }
 
+// _is_code_file — restrict sentinel scan to source-code extensions where the
+// `@design-change` token would be an intentional convention. Prose-heavy
+// files (docs / config) commonly carry the token in the marker's own
+// documentation (the sidecar marketplace.json / README / CHANGELOG describe
+// drift-guard's trigger set), which self-triggered the scan on every edit.
+fn _is_code_file(fp: string) -> bool {
+    let exts = [".hexa", ".py", ".sh", ".swift", ".c", ".cpp", ".rs", ".go", ".js", ".ts", ".java", ".rb", ".pl", ".bash", ".zsh", ".lua", ".h"]
+    let mut i = 0
+    while i < len(exts) {
+        if _ends_with(fp, exts[i]) { return true }
+        i = i + 1
+    }
+    return false
+}
+
 // djb2, modulo-bounded each step so it never overflows. Yields an all-digit
 // string -> shell-safe marker filename (no user data ever reaches the shell).
 fn _hash(s: string) -> string {
@@ -121,6 +136,11 @@ fn main() {
     // Skip the guard's own install dir — editing the hook is not project drift.
     let root = env_var("CLAUDE_PLUGIN_ROOT")
     if root != "" && _contains(fp, root) { _allow() }
+    // Also skip the guard's own dev location (the sidecar repo's
+    // hooks/drift-guard/ tree itself), since CLAUDE_PLUGIN_ROOT points at the
+    // cached install — editing the hook source in the sidecar repo wouldn't
+    // match `root` but is still a self-edit, not project drift. 0.1.1.
+    if _contains(fp, "/hooks/drift-guard/") { _allow() }
 
     // Skip the mirror targets themselves — writing memory IS closing the loop.
     if _contains(fp, "/memory/") { _allow() }
@@ -131,9 +151,14 @@ fn main() {
     let is_decision = _contains(fp, "/decisions/")
 
     // Sentinel needs the post-write content — only read it when the cheap path
-    // triggers both miss (avoids reading every written file).
+    // triggers both miss (avoids reading every written file). Restrict the
+    // scan to source-code extensions: the `@design-change` token appears in
+    // prose docs / config (marketplace.json · README.md · CHANGELOG.md · the
+    // marker's own SKILL.md) as documentation of the marker itself, which
+    // would self-trigger on every edit of those files. 0.1.1 — limit to
+    // code-file extensions where the token would be an intentional convention.
     let mut is_sentinel = false
-    if !is_ssot && !is_decision {
+    if !is_ssot && !is_decision && _is_code_file(fp) {
         let content = _read_file_safe(fp)
         if content != "" {
             is_sentinel = _contains(content.to_lower(), "@design-change")

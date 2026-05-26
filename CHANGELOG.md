@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — false-pos sweep C+E: drift-guard 0.1.1 (self-trigger) + monitor-guard 0.1.4 (has_detach)
+
+세션 누적 false-positive sweep 마무리 — 두 hook 의 substring-매치 잔재 정리.
+
+- **drift-guard 0.1.0 → 0.1.1** — sentinel scan 자기참조 종결: (a) `_is_code_file` 헬퍼 추가, sentinel 스캔을 `.hexa`/`.py`/`.sh`/`.swift`/`.c`/`.cpp`/`.rs`/`.go`/`.js`/`.ts`/`.java`/`.rb`/`.pl`/`.bash`/`.zsh`/`.lua`/`.h` source-code 확장자에만 적용 — prose-heavy 문서(marketplace.json/README.md/CHANGELOG.md/SKILL.md) 가 marker 토큰을 documentation 으로 가지고 있어도 self-trigger 안 함; (b) sidecar repo 의 own `/hooks/drift-guard/` tree skip 추가 (CLAUDE_PLUGIN_ROOT cache 외 dev source 도) — guard 자기 source 편집은 project drift 아님.
+- **monitor-guard 0.1.3 → 0.1.4** — `_has_detach_pos` 헬퍼 추가: nohup/setsid 가 command position(env-prefix 통과) 에 있을 때, disown 은 standalone 토큰일 때만 detach 로 인식. `cmd.contains("nohup ")` substring 이 `grep -n nohup /etc/foo` 같은 명령에 detach 로 판정해 [log] hint 띄우던 noise 제거.
+- 검증 5/5 — drift-guard marketplace/README/own-hexa edit silent · .py + sentinel 발화 보존 · monitor-guard grep silent · 진짜 nohup 발화 · env-prefix setsid 발화.
+- README + marketplace lockstep.
+
+이로써 이번 세션 false-positive sweep 모두 종결 (A+B = PR #179 · C+E = 본 PR · D pr-cycle = 복잡, 별도 작업).
+
 ## 2026-05-26 — cloud dispatch advisory 정밀화: pod-monitor 0.1.3 + monitor-guard 0.1.3 (substring → token-position)
 
 세션 누적 false-positive sweep — `pod-monitor` 와 `monitor-guard` 두 hook 의 `cmd.contains("hexa cloud nohup")` substring 체크가 commit 메시지·grep 패턴·docs 에서 phrase 만 언급해도 발화하던 noise 제거. 두 hook 다 **command-position token match** 로 정밀화: 첫 비-env-prefix 토큰이 `hexa` && 그 다음이 `cloud` && 그 다음이 dispatch verb (`nohup`/`fire`/`run`) 일 때만 발화. env-prefix(`FOO=bar hexa cloud …`) 도 정상 인식.

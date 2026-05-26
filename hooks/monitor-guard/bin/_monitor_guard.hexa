@@ -83,6 +83,26 @@ fn _is_env_assign(t: string) -> bool {
     return false
 }
 
+// _has_detach_pos — TRUE iff `nohup`/`setsid` sits at command position past
+// any env-var prefix, OR `disown` appears as a standalone token (bash builtin
+// invoked later in a pipeline, not a substring of a path). Substring matches
+// (the pre-0.1.4 form) fired on `grep ... nohup ...` and similar mentions.
+fn _has_detach_pos(cmd: string) -> bool {
+    let toks = _tokens(cmd)
+    let mut i = 0
+    while i < len(toks) && _is_env_assign(toks[i]) { i = i + 1 }
+    if i < len(toks) {
+        let t0 = toks[i]
+        if t0 == "nohup" || t0 == "setsid" { return true }
+    }
+    let mut j = 0
+    while j < len(toks) {
+        if toks[j] == "disown" { return true }
+        j = j + 1
+    }
+    return false
+}
+
 // _is_cloud_pod — TRUE iff the COMMAND is `hexa cloud {nohup,fire}` (the two
 // pod-fire verbs that warrant the cloud-bridge hint), in COMMAND POSITION
 // past any env-var prefix. Pre-0.1.3 used `cmd.contains("hexa cloud nohup")`
@@ -139,7 +159,7 @@ fn main() {
         if ti["run_in_background"] == true { run_bg = true }
     }
 
-    let has_detach = cmd.contains("nohup ") || cmd.contains("setsid ") || cmd.contains("disown")
+    let has_detach = _has_detach_pos(cmd)
     let is_bg = run_bg || has_detach || _ends_single_amp(cmd) || cmd.contains(" & ")
     // hexa cloud nohup/fire 가 명령 위치에 있으면 — 이미 inherently detached
     // (remote nohup) — is_bg 가 false 여도 cloud-bridge 힌트는 발화해야 caller

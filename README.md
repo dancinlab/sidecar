@@ -148,7 +148,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   cloud-guard    runpodctl/vastai exec/ssh → hexa cloud (g8)
 #   verify-guard   wolframscript / inline-sympy → hexa verify (g5)
 #   ai-api-guard   curl AI-host / inline AI-SDK → the CLI wrapper (g50)
-#   sign-guard     edits to commons.tape/project.tape until `sidecar sign` (s13)
+#   sign-guard     edits to commons.tape/project.tape/.gitignore until `sidecar sign` (s13)
 #   git-guard      force-push (+ stale-base push advisory)
 #   tape-lint      .tape edits (fields · length · authoring-language)
 # REWRITE / ROUTE:
@@ -235,7 +235,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |
 | [`sidecar-auto-sync`](hooks/sidecar-auto-sync/) | hook | `personal` | 0.2.0 | SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync… |
 | [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.7.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |
-| [`sign-guard`](hooks/sign-guard/) | hook | `personal` | 0.1.4 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) sign-gate for governance-SSOT files, implemented in hexa-lang (`_sign_guard.h… |
+| [`sign-guard`](hooks/sign-guard/) | hook | `personal` | 0.1.6 | PreToolUse(Write\|Edit\|NotebookEdit\|Bash) sign-gate for sign-gated files (commons.tape · project.tape · .gitignore), in hexa-lang — agent edits need a fresh `sidecar sign <key>` token; hard-denies self-mint |
 | [`subagent-route`](hooks/subagent-route/) | hook | `personal` | 0.1.0 | [POC] PreToolUse(Task\|Agent) observation hook + SessionStart observation-log snapshot, implemented in hexa-lang (`_sub… |
 
 ## Governance

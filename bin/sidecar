@@ -4,7 +4,7 @@
 # usage:
 #   sidecar init        Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
 #   sidecar sync        Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
-#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated SSOT file (commons · project) for 5 min.
+#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated file (commons · project · gitignore) for 5 min.
 #   sidecar profile [<name>]  Show, or set, the enable profile (minimal · hexa · full). Set re-applies the install.
 #   sidecar enable <plugin>   Force-enable one plugin regardless of profile (per-plugin override). Re-applies.
 #   sidecar disable <plugin>  Force-disable one plugin regardless of profile (per-plugin override). Re-applies.
@@ -211,17 +211,17 @@ TAPE
     ;;
   sign)
     # User sign-off gate. The sign-guard hook hard-denies agent edits to a
-    # gated governance SSOT file (commons.tape · project.tape) unless a fresh
+    # gated file (commons.tape · project.tape · .gitignore) unless a fresh
     # token exists. This mints / lists / clears those tokens.
     #
-    #   sidecar sign <key>          mint a 5-min token for <key>  (commons · project)
+    #   sidecar sign <key>          mint a 5-min token for <key>  (commons · project · gitignore)
     #   sidecar sign  | --list      show active tokens + remaining validity
     #   sidecar sign clear [<key>]  remove one / all tokens
     SUB="${1:-}"
     case "$SUB" in
       ""|--list|list|status)
         echo "sidecar sign — gated governance files need YOUR sign-off before the agent may edit them."
-        echo "  mint:   sidecar sign <key>       (keys: commons · project)"
+        echo "  mint:   sidecar sign <key>       (keys: commons · project · gitignore)"
         echo "  clear:  sidecar sign clear [<key>]"
         now=$(date +%s)
         found=0

@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — sign-guard 0.1.6: `.gitignore` 도 sign-gate에 편입
+
+`.gitignore` 는 버전 관리에 무엇이 들어갈지를 조용히 결정한다 — 에이전트가 몰래 고치면 시크릿을 un-ignore 하거나 파일을 리뷰에서 숨길 수 있다. 그래서 `commons.tape`/`project.tape` 와 동일한 USER sign-off 게이트로 묶는다.
+
+- **sign-guard `_gated()`** 에 `["gitignore", "/.gitignore"]` 한 줄 추가 (0.1.5→0.1.6). 경로 suffix `/.gitignore` 매칭이라 루트·중첩 `.gitignore` 모두 게이트. 에이전트가 `.gitignore` 를 Write/Edit/Bash-redirect 로 건드리면, 유저가 `! sidecar sign gitignore` 로 5분 토큰을 발급하기 전까지 hard-deny.
+- 메커니즘은 기존 그대로 — 토큰이 유일 전제조건(s11), self-mint 코드-차단(s13), opt-out 없음. `bin/sidecar sign` 은 키 화이트리스트가 없어 로직 변경 불필요(임의 키 수용).
+- **surface lockstep** — `bin/sidecar` usage 3곳(`commons · project · gitignore`) · plugin.json/marketplace.json 설명 + 키 목록 · README sign-guard 행(0.1.4 표기 정정 → 0.1.6) + 가드 요약 주석.
+- deny 메시지 문구 `SIGN-GATED governance SSOT` → `a SIGN-GATED file` 로 일반화(.gitignore 에도 정확).
+- 검증 — `.gitignore` no-token DENY · 토큰 발급 후 ALLOW · `commons.tape` 회귀 게이트 유지 · 출력 JSON 유효.
+
 ## 2026-05-26 — drift-guard 0.1.0: 설계 변경 → 메모리 미러 누락 회귀 방지 hook
 
 설계가 코드/설정에서 바뀌었는데 `MEMORY.md` + `CLAUDE.md`/project.tape 가 안 따라가서, 다음 세션이 (시작 시 diff 가 아니라 메모리를 읽으므로) 옛 설계로 **회귀**하던 문제를 막는 신규 hook. 같은 세션 안에서 루프를 닫도록 비차단 안내를 주입한다.

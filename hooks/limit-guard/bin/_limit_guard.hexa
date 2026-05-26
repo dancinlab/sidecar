@@ -55,17 +55,18 @@ fn _contains(hay: string, needle: string) -> bool {
 fn _snapshot_uncommitted() -> string {
     let inrepo = to_string(exec("git rev-parse --is-inside-work-tree 2>/dev/null"))
     if inrepo.index_of("true") < 0 { return "" }
+    // Decide whether there is real uncommitted work BEFORE writing anything
+    // into the tree -- else the snapshot dir/patch we are about to create would
+    // itself be counted as untracked work (false "saved" on a clean repo whose
+    // .claude/ is not gitignored).
+    let difsz = to_string(exec("git diff HEAD 2>/dev/null | wc -c")).replace("\n", "").replace(" ", "")
+    let unt = to_string(exec("git ls-files --others --exclude-standard 2>/dev/null")).replace("\n", "").replace(" ", "")
+    if difsz == "0" && len(unt) == 0 { return "" }
     let ts = to_string(exec("date +%Y%m%dT%H%M%S")).replace("\n", "")
     let dir = ".claude/limit-snapshots"
     let _m = exec("mkdir -p " + dir + " 2>/dev/null")
     let patch = dir + "/" + ts + ".patch"
     let _d = exec("git diff HEAD > " + patch + " 2>/dev/null")
-    let sz = to_string(exec("wc -c < " + patch + " 2>/dev/null")).replace("\n", "").replace(" ", "")
-    let unt = to_string(exec("git ls-files --others --exclude-standard 2>/dev/null")).replace("\n", "").replace(" ", "")
-    if sz == "0" && len(unt) == 0 {
-        let _r = exec("rm -f " + patch + " 2>/dev/null")
-        return ""
-    }
     let _s = exec("( git rev-parse --abbrev-ref HEAD; git rev-parse --short HEAD; echo '--- git status --porcelain ---'; git status --porcelain; echo '--- untracked (NOT in .patch) ---'; git ls-files --others --exclude-standard; echo '--- recover tracked changes: git apply " + patch + " ---' ) > " + dir + "/" + ts + ".status.txt 2>/dev/null")
     return patch
 }

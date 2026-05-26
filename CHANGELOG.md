@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — drift-guard 0.1.0: 설계 변경 → 메모리 미러 누락 회귀 방지 hook
+
+설계가 코드/설정에서 바뀌었는데 `MEMORY.md` + `CLAUDE.md`/project.tape 가 안 따라가서, 다음 세션이 (시작 시 diff 가 아니라 메모리를 읽으므로) 옛 설계로 **회귀**하던 문제를 막는 신규 hook. 같은 세션 안에서 루프를 닫도록 비차단 안내를 주입한다.
+
+- **`drift-guard` (신규 · 0.1.0)** — `PostToolUse(Write|Edit)`, hexa-lang(`_drift_guard.hexa`, `hexa run`). 트리거 3종(하나라도): (1) SSOT 파일 — 경로가 `.tape` 또는 `/CLAUDE.md` 로 끝남, (2) `decisions/` 폴더의 새 산출물, (3) 편집 후 내용에 `@design-change` 마커. 미러 타깃 자신(`/memory/`·`MEMORY.md`)과 가드 자신의 설치 디렉토리(`CLAUDE_PLUGIN_ROOT`)는 skip. 발화 시 "다음 세션은 이 diff 가 아니라 메모리를 읽는다 → 지금 `memory/` 에 미러하라(메모리 파일 + `MEMORY.md` 포인터), cross-project 룰이면 `sidecar sign` 후 commons/project.tape" 안내. `(session, file)` 당 1회 dedup — `CLAUDE_PLUGIN_DATA` 마커. advisory-only(guards-narrow-scope), **opt-out 없음**(s11 — 트리거 셋이 전제조건이지 스위치가 아님).
+- `memory-lint` 와 상호보완 — memory-lint = 메모리 파일 **쓸 때** 위생 검사 / drift-guard = **다른 설계 surface 를 고쳤는데** 메모리 미갱신을 잡음(역방향).
+- **profiles.json** — `drift-guard: core` 태깅(어느 repo 에서나 유용, `memory-lint`/`limit-guard` 와 동급). 공개 집계 62 → 63(28 `core` · 17 `hexa` · 18 `personal`, master 제외).
+- 검증 — 7 시나리오(트리거 3종 발화 · dedup · 미러타깃/평범파일/자기디렉토리 skip) · 출력 JSON 유효 · sidecar-lint check 3(버전 정합)·6(티어) 통과.
+
 ## 2026-05-26 — commons g72: minimal role-name 식별자 (버전/세대 마커 금지) + sidecar-lint 0.7.0 check 8
 
 식별자·파일·바이너리 이름에서 버전/세대 마커를 추방하는 cross-project 규칙. `_v2`·`_v3`·`_mk2`·`_c2`·`stage0`·`_new`·`_old`·`_final`·`-fixNNNN` 류 금지 — 이름은 **역할 기반 minimal**(Rust snake_case), 버전은 semver/git tag 에 산다(이름엔 절대 안 박음). Go식 `/vN` import-path 버저닝도 금지(마커는 메타데이터지 이름이 아니다). 기존 `hexa_v2` 등은 grandfather(빌드 깨짐 방지) — 신규만 차단.

@@ -1,0 +1,174 @@
+// _drift_guard.hexa — PostToolUse(Write|Edit) advisory: design-drift -> memory sync.
+//
+// PROBLEM: a design change lands in code/config but MEMORY.md + CLAUDE.md /
+// project.tape are NOT updated. The next session loads memory at startup, not
+// this diff, so it REGRESSES to the old design. This hook closes the loop in
+// the same session: on a design-defining edit it injects a non-blocking nudge
+// to mirror the change into the project auto-memory.
+//
+// TRIGGERS (any one fires the nudge):
+//   1. SSOT file edit      — path ends in `.tape` or `/CLAUDE.md`
+//   2. decisions/ artifact — path contains a `/decisions/` segment
+//   3. sentinel marker     — post-write file content contains `@design-change`
+//
+// SKIPS (not project drift): the mirror targets themselves (`/memory/`,
+// MEMORY.md) and the guard's own install dir (CLAUDE_PLUGIN_ROOT).
+//
+// De-dupes once per (session, file) via a marker under CLAUDE_PLUGIN_DATA, so a
+// file touched repeatedly in one session nudges only once.
+//
+// Advisory-only (per guards-narrow-scope: non-blocking additionalContext >
+// deny). NO opt-out by design — the trigger set IS the precondition, not a
+// switch; a disable flag would just be auto-flipped to silence the guard.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _emit(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// Extract a JSON string field by raw substring scan. Sufficient for
+// tool_input.file_path / session_id which carry no embedded quotes in practice.
+fn _json_str_field(body: string, key: string) -> string {
+    let needle = "\"" + key + "\""
+    let n = len(body)
+    let p = body.index_of(needle)
+    if p < 0 { return "" }
+    let mut i = p + len(needle)
+    while i < n && (body[i] == " " || body[i] == "\t" || body[i] == ":") { i = i + 1 }
+    if i >= n || body[i] != "\"" { return "" }
+    i = i + 1
+    let start = i
+    while i < n && body[i] != "\"" {
+        if body[i] == "\\" && i + 1 < n { i = i + 2 }
+        else { i = i + 1 }
+    }
+    return body.substring(start, i)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let nx = len(suffix)
+    if nx > ns { return false }
+    return s.substring(ns - nx, ns) == suffix
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    return hay.index_of(needle) >= 0
+}
+
+// djb2, modulo-bounded each step so it never overflows. Yields an all-digit
+// string -> shell-safe marker filename (no user data ever reaches the shell).
+fn _hash(s: string) -> string {
+    let n = len(s)
+    let mut h = 5381
+    let mut i = 0
+    while i < n {
+        h = (h * 33 + char_code(s[i], 0)) % 1000000007
+        i = i + 1
+    }
+    return to_string(h)
+}
+
+fn main() {
+    let body = _read_stdin()
+    if body == "" { _allow() }
+
+    let tool = _json_str_field(body, "tool_name")
+    if tool != "Write" && tool != "Edit" { _allow() }
+
+    let fp = _json_str_field(body, "file_path")
+    if fp == "" { _allow() }
+
+    // Skip the guard's own install dir — editing the hook is not project drift.
+    let root = env_var("CLAUDE_PLUGIN_ROOT")
+    if root != "" && _contains(fp, root) { _allow() }
+
+    // Skip the mirror targets themselves — writing memory IS closing the loop.
+    if _contains(fp, "/memory/") { _allow() }
+    if _ends_with(fp, "/MEMORY.md") || _ends_with(fp, "/MEMORY.archive.md") { _allow() }
+
+    // Cheap path-based triggers first.
+    let is_ssot = _ends_with(fp, ".tape") || _ends_with(fp, "/CLAUDE.md")
+    let is_decision = _contains(fp, "/decisions/")
+
+    // Sentinel needs the post-write content — only read it when the cheap path
+    // triggers both miss (avoids reading every written file).
+    let mut is_sentinel = false
+    if !is_ssot && !is_decision {
+        let content = _read_file_safe(fp)
+        if content != "" {
+            is_sentinel = _contains(content.to_lower(), "@design-change")
+        }
+    }
+
+    if !is_ssot && !is_decision && !is_sentinel { _allow() }
+
+    // De-dupe once per (session, file).
+    let sid = _json_str_field(body, "session_id")
+    let mut data = env_var("CLAUDE_PLUGIN_DATA")
+    if data == "" {
+        let home = env_var("HOME")
+        if home != "" { data = home + "/.claude/plugins/data/drift-guard" }
+        else { data = "/tmp/drift-guard" }
+    }
+    let seen_dir = data + "/seen"
+    let marker = seen_dir + "/" + _hash(sid + "::" + fp)
+    let seen = to_string(exec("test -f \"" + marker + "\" && echo Y || echo N"))
+    if _contains(seen, "Y") { _allow() }
+    let _mk = exec("mkdir -p \"" + seen_dir + "\" 2>/dev/null; : > \"" + marker + "\" 2>/dev/null")
+
+    // Build the reason list.
+    let mut reasons = []
+    if is_ssot { reasons.push("a governance/SSOT file (`.tape` / `CLAUDE.md`)") }
+    if is_decision { reasons.push("a new artifact under a `decisions/` folder") }
+    if is_sentinel { reasons.push("an explicit `@design-change` marker in the content") }
+    let why = reasons.join(" + ")
+
+    let ctx = "DESIGN-DRIFT signal: you just edited a design-defining surface -- " + why + " -- at " + fp + ".\n\n"
+        + "The NEXT session loads MEMORY.md + CLAUDE.md / project.tape at startup, NOT this diff. If the design changed but memory does not, the next session REGRESSES to the old design. Close the loop now:\n\n"
+        + "1. Decide: did this change a DECISION / CONVENTION / DEFAULT a future session must know, that is NOT derivable from the code or git history? If no -> skip (do not duplicate what the repo already records).\n"
+        + "2. If yes -> mirror it into the project auto-memory: write or update one memory file under the project's `memory/` dir + add/update its one-line pointer in MEMORY.md. Keep it TLDR (verb + nouns).\n"
+        + "3. If it is a CROSS-PROJECT governance rule it belongs in commons.tape / project.tape -- those are sign-gated: ask the user to run `! sidecar sign <key>` first (you cannot self-mint the token).\n\n"
+        + "(drift-guard: fires once per file per session; advisory-only, never blocks.)"
+
+    _emit(ctx)
+}

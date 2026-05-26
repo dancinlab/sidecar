@@ -170,7 +170,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-62 plugins across `{hook · command · skill}` — one concept each (27 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+63 plugins across `{hook · command · skill}` — one concept each (28 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -185,6 +185,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`git-guard`](hooks/git-guard/) | hook | `core` | 0.5.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`) |
 | [`limit-guard`](hooks/limit-guard/) | hook | `core` | 0.1.3 | PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) |
 | [`memory-lint`](hooks/memory-lint/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memo… |
+| [`drift-guard`](hooks/drift-guard/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory — design-drift → memory sync; nudges mirroring SSOT (`.tape`/`CLAUDE.md`) · `decisions/` · `@design-change` edits into auto-memory before the next session regresses |
 | [`throttle-guard`](hooks/throttle-guard/) | hook | `core` | 0.1.0 | PostToolUse(Task\|Agent) cross-session transient-throttle coordinator — shared cooldown marker + jitter backoff + WIDTH cut (distinct from limit-guard's usage cap) |
 | [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.0 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10, rate-limit survival); proactive sister of limit-guard |
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |

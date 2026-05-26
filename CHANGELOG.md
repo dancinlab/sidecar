@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — monitor↔hexa cloud bridge 명확화 step 1 (sidecar 측 advisory · docs · RFC inbox)
+
+사용자 보고 "monitor, hexa cloud 연결이 코드수준으로 명확하지 않는듯" 에 대한 sidecar 측 응답. 코드 감사로 J건의 갭(nohup이 logfile 경로를 머신-파스 형식으로 echo 안 함 · CloudResult.logfile 필드 부재 · atomic fire verb 없음 · tail/early-life-check exit-code 미문서 등)을 짚었고, 이번 PR 은 sidecar 면을 닫고 hexa-lang 측 작업 명세를 inbox 로 전달한다.
+
+- **`inbox/rfc_drafts/cloud-fire-monitor-handle.md` (신규)** — hexa-lang `stdlib/cloud/` 작업 명세 RFC. `CloudResult.logfile` 필드 + `cloud_nohup`/`cloud_fire` 의 `__MONITOR_HANDLE__={…}` JSON 한 줄 stdout echo + atomic `hexa cloud fire` verb + canonical 로그 경로(`/tmp/cloud-<host>-<ts>.log`) + `tail`/`--early-life-check` exit-code 문서화. g4 분할: PR1(필드+JSON+docs ~80줄) · PR2(fire verb ~100줄). 별도 hexa-lang 세션이 main 깨끗한 base 에서 픽업해 PR.
+- **`monitor-guard` 0.1.0 → 0.1.1** — `_monitor_guard.hexa` 가 `hexa cloud nohup`/`hexa cloud fire` 패턴을 별도 감지. 기본 detach+log 인바리언트가 이미 충족돼 있어도 (그 verb 자체가 두 조건을 내포) cloud workflow 의 별개 요건 — caller 가 logfile 경로를 `hexa cloud tail` 로 thread 해야 Monitor 가 붙음 — 을 advisory 로 못박는다. 회귀 없음(평범 detach+log 케이스는 여전히 조기 _allow). 검증 7/7.
+- **`cloud` skill 0.3.3 → 0.3.4** — `SKILL.md` 에 현행 3-step monitor handoff(`nohup` → `tail` → Monitor) 명시 + `tail` exit-code 의미(0/255/other) 명시 + caller 가 logfile 경로를 nohup/tail 사이에 thread 해야 한다는 don't 추가. `cloud_fire` 도입 후 자동화될 항목을 RFC 로 reference.
+- **README** 행 정정 — monitor-guard 0.1.0→0.1.1 · cloud 0.3.2(표기 stale) → 0.3.4 + 요약 갱신.
+- 비-목표(별도 작업) — commons `@D g57` amend(sign-gated, 사용자 `! sidecar sign commons` 후) · `eval 'cmd'` 파싱(실제 shell parser 필요) · `cloud run` 동기 verb 변경.
+
 ## 2026-05-26 — pool-route 0.7.3: sign-local 게이트 단일성 방어 (env-prefix + wrapper 우회 차단)
 
 `sign local` 토큰이 abs-path heavy 호출의 유일 게이트라는 0.7.2 의 약속이 **POSIX env-var prefix + 명령 wrapper** 22개 벡터로 새고 있던 것을 막는다. `_local_heavy_interp` 가 `_basename(toks[0])` 만 보고 hexa/python/gcc 를 판정하던 게 원인 — `POOL_DISABLE=1 hexa run /Users/x.hexa` · `env hexa run /Users/x.hexa` · `nice -n 10 hexa run /Users/x.hexa` 등에서 toks[0] 이 진짜 인터프리터가 아니라 prefix/wrapper 라 분류가 미스되고 silent ALLOW.

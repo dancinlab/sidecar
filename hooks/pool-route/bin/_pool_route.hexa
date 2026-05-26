@@ -467,6 +467,14 @@ fn _local_heavy_interp(cmd: string, toks: array) -> bool {
     if t0_basename == "hexadrv" { return true }
     if t0_basename == "hxv2" { return true }
     if t0_basename == "python" || t0_basename == "python3" || t0_basename == "py" { return true }
+    // 0.7.7 — Node/JS interpreters (POOL-OFFLOAD m2): node/deno/bun/ts-node are
+    // the canonical JS/TS fork-storm sources on abs-path invocation, mirroring
+    // python/hexa. `tsx` would belong here too (it's a real heavy interpreter
+    // for `.ts/.tsx` execution) and is SAFE at the first-token-basename layer —
+    // false-positive only exists in the substring-matched heavy_words layer
+    // (where it collides with the `.tsx` file extension). Including it here.
+    if t0_basename == "node" || t0_basename == "deno" || t0_basename == "bun" { return true }
+    if t0_basename == "tsx" || t0_basename == "ts-node" { return true }
     // 0.6.12 — C/C++ compiler drivers: an absolute-path compile (e.g.
     // `/usr/bin/gcc /Users/…/x.c`) is the same fork-storm trigger as a heavy
     // interpreter — multi-session re-fork of the compiler on the workstation.
@@ -782,7 +790,15 @@ fn main() {
     // 0.7.4 — npm/pnpm/yarn removed (now local-bound earlier in main: node-
     // package installers are cwd-dependent; routing them to a pool host fails
     // preflight with 'workdir missing').
-    let heavy_words = ["make", "cargo", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc"]
+    // 0.7.7 — Node 생태계 런타임 (POOL-OFFLOAD m2): `node`/`deno`/`bun`/`ts-node`
+    // are JS/TS interpreters that fork the V8/Deno/Bun runtime locally per
+    // invocation — same fork-storm pattern as python/hexa on multi-session.
+    // 4-char+ words with word-boundary check survive `node_modules`/`node.js`
+    // (`_`/`.` non-word boundaries reject those). `tsx` deliberately EXCLUDED
+    // (3-char, file-extension collision: `cat foo.tsx` would match `_has_word`
+    // due to `.` non-word prev boundary); a first-token-only classifier is
+    // the right fix, deferred. npm/pnpm/yarn stay LOCAL (cwd-dependent, 0.7.4).
+    let heavy_words = ["make", "cargo", "gradle", "mvn", "bazel", "cmake", "ctest", "tox", "pytest", "jest", "vitest", "webpack", "gcc", "g++", "clang", "clang++", "cc", "c++", "xcodebuild", "xcrun", "swiftc", "nvidia-smi", "train", "aprime_cc", "node", "deno", "bun", "ts-node"]
     // hexa-native heavy subverbs (kick-storm 2026-05-23 Mac kill: /kick = `hexa kick --seed`,
     // multi-agent local fire drove load 80+. drill = kick alias. loop = RFC 080 DFS+LLM cycle.
     // cc = full transpiler bootstrap.)

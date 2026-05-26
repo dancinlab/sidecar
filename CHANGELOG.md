@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.7.7: Node 생태계 런타임 분류 (POOL-OFFLOAD m2)
+
+POOL-OFFLOAD 마일스톤 2 — `node`/`deno`/`bun`/`ts-node` JS·TS 인터프리터를 heavy 로 인식. Mac 워크스테이션에서 `node big-build.js` · `bun script.ts` 같은 V8/Bun/Deno fork-storm 을 ubu pool 로 위임.
+
+- **pool-route 0.7.6 → 0.7.7** — 두 레이어 동시 확장:
+  - `heavy_words` +4: `node` · `deno` · `bun` · `ts-node` (4-char+ 길이 · `_has_word` 단어경계로 `node_modules`·`node.js`·`bunzip2` 안전)
+  - `_local_heavy_interp` first-token basename +5: 위 4개 + `tsx` (sign-gate 일관성 · python/hexa/gcc 와 동급)
+- **tsx 제외 (heavy_words 한정)** — 3-char 짧고 `.tsx` 파일 확장자와 충돌. `cat foo.tsx` 가 `_has_word` 의 `.`(non-word) prev boundary + EOS post boundary 통과해 false-pos. first-token-basename 레이어에는 안전(EXEC 만 매치), 거기서만 추가.
+- **npm/pnpm/yarn** 은 0.7.4 의 cwd-dependent local-bound 정책 그대로 유지.
+- 파싱 검증: `hexa parse /tmp/_pool_route_test.hexa` → OK.
+- plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.7.6: heavy hexa verb sweep (POOL-OFFLOAD m6)
 
 POOL-OFFLOAD 마일스톤 6 — `hexa --help` 80+ verb 카탈로그 전체를 훑어 fork-storm 잠재 verb 19개를 `heavy_pairs` 에 합류. Mac 워크스테이션이 `hexa test`/`hexa smash --seed`/`hexa omega` 같은 verb 를 로컬에서 돌리지 않고 ubu pool 로 위임하게 됨.

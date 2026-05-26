@@ -259,9 +259,146 @@ fn _local_signed() -> bool {
 // 0.6.4 used `_has_word(cmd, "hexa")` which `cat /Users/.../hexa-lang/foo`
 // also matched (the `-` in `hexa-lang` is a word boundary), gating bare
 // reads. The first token IS the invoked verb; matching there is sound.
+// POSIX env-var prefix detection. `IDENT=value` is a leading assignment, not
+// a command; several `IDENT=val cmd args` may stack. The sign-gate MUST skip
+// these before reading the real command — otherwise ANY env-var prefix
+// (POOL_DISABLE, SIDECAR_POOL_DISABLE, FOO=bar, …) shifts toks[0] off the
+// real interpreter and silently bypasses the gate. This is parser
+// correctness, NOT recognition of any specific var — there is nothing to
+// opt out of (s11); the prefix is simply not the command.
+fn _is_env_assign(t: string) -> bool {
+    let n = len(t)
+    if n < 2 { return false }
+    let c0 = char_code(t[0], 0)
+    let is_id_start = (c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122) || c0 == 95
+    if !is_id_start { return false }
+    let mut i = 1
+    while i < n {
+        let c = t[i]
+        if c == "=" { return true }
+        let k = char_code(c, 0)
+        let is_id_cont = (k >= 48 && k <= 57) || (k >= 65 && k <= 90) || (k >= 97 && k <= 122) || k == 95
+        if !is_id_cont { return false }
+        i = i + 1
+    }
+    return false
+}
+
+fn _strip_env_prefix(toks: array) -> array {
+    let mut i = 0
+    while i < len(toks) && _is_env_assign(toks[i]) { i = i + 1 }
+    if i == 0 { return toks }
+    let mut out = []
+    let mut j = i
+    while j < len(toks) { out.push(toks[j]); j = j + 1 }
+    return out
+}
+
+// Known leading-position wrappers that exec a "real" command after their own
+// args. The sign-gate skips them so `env`/`exec`/`nice`/`timeout`/`command`/
+// `sudo`/`nohup`/`stdbuf`/`ionice` wrapping cannot disguise a heavy
+// interpreter (audit found 8 realistic wrapper vectors silently ALLOW'd
+// pre-0.7.3 on abs-path heavy invocations). NOT recognition of specific
+// behavior — these are well-known POSIX/shell helpers whose argv ends in the
+// real command. `eval` is out of scope (its arg is a quoted shell string
+// requiring a real parser).
+fn _is_wrapper(b: string) -> bool {
+    return b == "env" || b == "exec" || b == "nice" || b == "timeout"
+        || b == "command" || b == "sudo" || b == "nohup" || b == "stdbuf"
+        || b == "ionice"
+}
+
+// Short options that consume the NEXT argv token as their value, per wrapper.
+// Anything not listed is treated as a self-contained flag (no following arg).
+// Long options use `--name=value` form and are handled by the bare `--` token
+// terminator (we just skip the option token itself).
+fn _opt_takes_arg(wrap: string, opt: string) -> bool {
+    if wrap == "nice"    && opt == "-n" { return true }
+    if wrap == "env"     && (opt == "-u" || opt == "-S") { return true }
+    if wrap == "ionice"  && (opt == "-c" || opt == "-n" || opt == "-p" || opt == "-P" || opt == "-u") { return true }
+    if wrap == "stdbuf"  && (opt == "-i" || opt == "-o" || opt == "-e" || opt == "-I" || opt == "-O" || opt == "-E") { return true }
+    if wrap == "sudo"    && (opt == "-u" || opt == "-g" || opt == "-h" || opt == "-p" || opt == "-D" || opt == "-r" || opt == "-t" || opt == "-T") { return true }
+    if wrap == "timeout" && (opt == "-s" || opt == "-k") { return true }
+    return false
+}
+
+// Skip the wrapper word + its options + (for `timeout`) the positional
+// DURATION, returning the index of the first token of the real command.
+fn _strip_wrapper_args(toks: array, start: int) -> int {
+    let wrap = _basename(toks[start])
+    let mut k = start + 1
+    while k < len(toks) {
+        let t = toks[k]
+        if len(t) == 0 { k = k + 1; continue }
+        if t == "--" { k = k + 1; break }
+        if t.substring(0, 1) == "-" {
+            // long --name / --name=value → skip the token itself
+            if len(t) >= 2 && t.substring(1, 2) == "-" { k = k + 1; continue }
+            // short -X: skip, and consume one following arg if this option
+            // takes one AND the value isn't already attached (`-oL` vs `-o L`).
+            let opt2 = if len(t) >= 2 { t.substring(0, 2) } else { t }
+            k = k + 1
+            if _opt_takes_arg(wrap, opt2) && len(t) == 2 && k < len(toks) {
+                let n = toks[k]
+                if len(n) > 0 && n.substring(0, 1) != "-" && !_is_env_assign(n) {
+                    k = k + 1
+                }
+            }
+            continue
+        }
+        break
+    }
+    // `timeout DURATION cmd` — DURATION is a positional non-flag arg before cmd
+    if wrap == "timeout" && k < len(toks) { k = k + 1 }
+    return k
+}
+
+// Strip POSIX env-prefix + recognized wrappers + a single leading backslash
+// (POSIX literal/alias-bypass, e.g. `\hexa`) so the heavy classifier reads
+// the REAL command verb. Bounded recursion (depth 8) guards against
+// pathological stacking.
+fn _unwrap_to_real(toks0: array) -> array {
+    let mut toks = _strip_env_prefix(toks0)
+    let mut depth = 0
+    while depth < 8 && len(toks) > 0 {
+        let first = _basename(toks[0])
+        let mut first_clean = first
+        while len(first_clean) > 1 && first_clean.substring(0, 1) == "\\" {
+            first_clean = first_clean.substring(1, len(first_clean))
+        }
+        if !_is_wrapper(first_clean) {
+            if first_clean != first {
+                // rewrite leading token with the unescaped basename so the caller's
+                // basename match (already done via _basename(real[0])) sees `hexa`
+                // instead of `\hexa`.
+                let mut out = [first_clean]
+                let mut k = 1
+                while k < len(toks) { out.push(toks[k]); k = k + 1 }
+                return out
+            }
+            return toks
+        }
+        let next = _strip_wrapper_args(toks, 0)
+        if next >= len(toks) { return [] }
+        let mut tail = []
+        let mut p = next
+        while p < len(toks) { tail.push(toks[p]); p = p + 1 }
+        toks = _strip_env_prefix(tail)
+        depth = depth + 1
+    }
+    return toks
+}
+
 fn _local_heavy_interp(cmd: string, toks: array) -> bool {
-    if len(toks) == 0 { return false }
-    let t0_basename = _basename(toks[0])
+    // 0.7.3 — unwrap POSIX env-var prefix + known wrappers (env · exec · nice ·
+    // timeout · command · sudo · nohup · stdbuf · ionice) + leading backslash
+    // so the classifier reads the REAL verb. Pre-0.7.3 any IDENT=val prefix
+    // OR any of those wrappers silently bypassed the sign-gate on abs-path
+    // heavy invocations. `eval 'cmd'` remains out of scope (quoted shell
+    // string requires a real parser).
+    let real = _unwrap_to_real(toks)
+    if len(real) == 0 { return false }
+    let t0_basename = _basename(real[0])
     if t0_basename == "hexa" { return true }
     if t0_basename == "hexa.real" { return true }
     if t0_basename == "hexac" { return true }
@@ -277,8 +414,8 @@ fn _local_heavy_interp(cmd: string, toks: array) -> bool {
     if t0_basename == "clang" || t0_basename == "clang++" { return true }
     if t0_basename == "cc" || t0_basename == "c++" { return true }
     if t0_basename == "bash" || t0_basename == "sh" {
-        if len(toks) >= 2 {
-            let t1 = toks[1]
+        if len(real) >= 2 {
+            let t1 = real[1]
             // skip `bash -c "..."` / `sh -c "..."` — those are shell wrappers
             if len(t1) > 0 && t1.substring(0, 1) != "-" { return true }
         }

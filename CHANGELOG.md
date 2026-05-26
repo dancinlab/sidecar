@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — pool-route 0.7.3: sign-local 게이트 단일성 방어 (env-prefix + wrapper 우회 차단)
+
+`sign local` 토큰이 abs-path heavy 호출의 유일 게이트라는 0.7.2 의 약속이 **POSIX env-var prefix + 명령 wrapper** 22개 벡터로 새고 있던 것을 막는다. `_local_heavy_interp` 가 `_basename(toks[0])` 만 보고 hexa/python/gcc 를 판정하던 게 원인 — `POOL_DISABLE=1 hexa run /Users/x.hexa` · `env hexa run /Users/x.hexa` · `nice -n 10 hexa run /Users/x.hexa` 등에서 toks[0] 이 진짜 인터프리터가 아니라 prefix/wrapper 라 분류가 미스되고 silent ALLOW.
+
+- **누수 확인 (사용자 보고)** — `POOL_DISABLE=1` · `SIDECAR_POOL_DISABLE=1` · `FOO=bar` · `A=1 B=2` · `URL=http://x?a=b` (env-prefix 5종) + `env [-i|-u VAR]` · `exec` · `nice [-n N]` · `timeout [N|-k 5 60]` · `command` · `sudo [-u USER]` · `nohup` · `stdbuf -oL` · `\hexa` (POSIX alias-bypass) + 스택드 (`env nice -n 5 hexa` · `FOO=1 env hexa`) 등 22 벡터가 sign 없이 abs-path heavy 호출 통과.
+- **fix `_local_heavy_interp`** — 헬퍼 3종 추가: `_is_env_assign(token)` (POSIX IDENT=val 형식 판별), `_strip_env_prefix(toks)` (선두 env-assign 토큰 제거), `_unwrap_to_real(toks)` (env-prefix + wrapper 셋(`env`·`exec`·`nice`·`timeout`·`command`·`sudo`·`nohup`·`stdbuf`·`ionice`, per-wrapper option-arg 인식 + `timeout DURATION` 처리) + leading `\` strip, depth ≤ 8 보호). 분류기는 unwrap 후 실제 verb 로 판정.
+- **변수 이름 인식 아님** — `POOL_DISABLE` 이 특별취급되는 게 아니라 **모든 IDENT=val prefix** 가 동일하게 strip. 파서 정정이지 opt-out 추가가 아님(s11 부합).
+- **검증 34/34** — env-prefix 5 + wrapper 17(stdbuf -oL attached-value 처리 포함) + backslash 3 + baseline 4 + no-false-positive 5. 메인 라우팅 분류기(`_any_word`/`_any_adjacent`, 전체 스캔)는 영향 없음 — 누수는 sign-gate 한 곳이었음.
+- **알려진 한계** — `eval 'hexa run /Users/x.hexa'` 는 인자가 quoted shell string 이라 토큰 분석 불가; 실제 shell 파서 필요(별도 작업). 일반 사용 빈도 매우 낮음.
+- surface lockstep — `plugin.json`/`marketplace.json` 설명 + 버전 0.7.2→0.7.3 · README 행(0.7.1 표기 stale → 0.7.3 정정 + 요약 갱신).
+
 ## 2026-05-26 — sign-guard 0.1.6: `.gitignore` 도 sign-gate에 편입
 
 `.gitignore` 는 버전 관리에 무엇이 들어갈지를 조용히 결정한다 — 에이전트가 몰래 고치면 시크릿을 un-ignore 하거나 파일을 리뷰에서 숨길 수 있다. 그래서 `commons.tape`/`project.tape` 와 동일한 USER sign-off 게이트로 묶는다.

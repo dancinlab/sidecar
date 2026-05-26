@@ -27,6 +27,7 @@
     "domain": "core",
     "question": "core",
     "check": "core",
+    "draft": "core",
     "end": "core",
     "cycle": "core",
     "brainstorm": "core",

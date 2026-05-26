@@ -6,6 +6,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — draft 0.1.0: ephemeral scratchpad scaffolder
+
+`/draft <slug>` — 임시 working notes 를 `drafts/<slug>.md` 로 scaffold. `drafts/` 는 자동으로 `.gitignore` 에 추가돼서 파일이 실수로 commit 되지 않음. 폐기 시 `rm -rf drafts/` 한 줄.
+
+- **새 명령어** `/draft`
+  - bare / `list` — `drafts/*.md` mtime-정렬 enumerate
+  - `<slug>` — `drafts/<slug>.md` scaffold (template: context · observations · ideas · TODO + timestamp). slug = alnum/dash/underscore/dot.
+  - `clean` — rm 후보 표시 (read-only; user 가 직접 `rm`)
+- **`/inbox` 와의 구분**:
+  - `/inbox new <kind> <slug>` — 타입화 분류 (notes/patches/poc/rfc_drafts), 결국 RFC 로 승격될 정도의 본격 문서
+  - `/draft <slug>` — 명시적으로 throwaway, gitignored, 폐기 의도
+- **이번 세션 동기** — pool-route env-prefix 우회 시도 정리 같은 ephemeral 작업이 root `DRAFT.md` litter 또는 inbox 잘못 사용으로 흘러가는 패턴 해소.
+- profiles.json `draft: core` + marketplace.json 등록 + README plugin table 갱신.
+
 ## 2026-05-27 — pool-route 0.7.11: 무용한 env-prefix advisory (agent 학습)
 
 배경 — 0.7.3 의 env-prefix stripping 이후 `SIDECAR_NO_POOL=1 / POOL_DISABLE=1` 같은 시도는 모두 no-op 이지만, **silent allow** 라 agent 가 "통과됐다" 착각하고 매 cmd 마다 같은 prefix 반복. 다른 세션 관찰 결과 agent 가 동일 우회 시도를 수십번 반복 — 학습 신호 부재.

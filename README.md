@@ -179,6 +179,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`check`](skills/check/) | command + skill | `core` | 0.1.0 | Task dashboard skill |
 | [`cycle`](skills/cycle/) | command + skill | `core` | 0.7.0 | Autonomous work-loop driver (whole family auto-drains to depletion) |
 | [`domain`](skills/domain/) | command + skill | `core` | 0.8.7 | Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) · `/domain list` repo-wide index (DOMAINS.tape roster — domains at any path)… |
+| [`draft`](skills/draft/) | command + skill | `core` | 0.1.0 | Ephemeral scratchpad — `/draft <slug>` scaffolds `drafts/<slug>.md` for temporary working notes designed to be discarded; `drafts/` is auto-gitignored so files never commit by accident; distinct from `/inbox` (typed taxonomy for eventual upgrade) |
 | [`end`](skills/end/) | command + skill | `core` | 0.2.0 | Session closure safety check |
 | [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |
 | [`gh-stack`](skills/gh-stack/) | skill | `core` | 0.1.1 | Stacked-PR workflow skill |

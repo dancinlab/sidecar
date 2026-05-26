@@ -201,6 +201,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "draft",
+      "source": "./skills/draft",
+      "description": "Ephemeral scratchpad scaffolder — `/draft <slug>` creates `drafts/<slug>.md` for temporary working notes designed to be discarded. The `drafts/` dir is auto-added to .gitignore so files never commit by accident. Verbs — bare = list current drafts (mtime-sorted) + usage hint · `<slug>` = scaffold a new draft with a timestamped template (context · observations · ideas · TODO) · `list` = same as bare · `clean` = list `rm` candidates (read-only; user runs `rm -rf drafts` or `rm drafts/<slug>.md`). Distinct from `/inbox` (which scaffolds into a typed taxonomy `notes`/`patches`/`poc`/`rfc_drafts` intended for eventual upgrade): `/draft` files are explicitly throwaway. Slug accepts alnum / dash / underscore / dot only. Plugin command (markdown-only, no script). Triggers: /draft · 드래프트 · draft 만들어 · 임시 메모 · scratchpad · 정리 노트 · 나중 폐기.",
+      "version": "0.1.0"
+    },
+    {
       "name": "end",
       "source": "./skills/end",
       "description": "Session closure safety check \u2014 /end prints a single-shot dashboard of dangling residue in the current repo (uncommitted \u00b7 unpushed \u00b7 stash \u00b7 open PRs by `@me` \u00b7 marketplace.json \u2194 plugin.json version drift \u00b7 merged-but-undeleted local branches \u00b7 linked git worktrees) with per-item \u2713/\u26a0/\u25cb marks + recommended actions, and a closing \u2705 `100% closure \u2014 safe to end` verdict only when every line is green. Read-only \u2014 no commit / push / branch delete / worktree remove. Pairs with /ship (the actor) \u2014 /end is the verifier. Triggers: /end \u00b7 \ub05d \u00b7 \ub9c8\ubb34\ub9ac \u00b7 \uc885\ub8cc \u00b7 \ud074\ub85c\uc800 \u00b7 close out \u00b7 wrap up \u00b7 100% closure.",

@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — monitor-guard 0.1.5: has_log 도 token-position (substring → redirect-target 추출)
+
+substring → token-position sweep 마무리. monitor-guard 의 `has_log` 도 `_has_log_pos` + `_redirect_targets` 헬퍼로 정밀화: quote-aware `>`/`>>` redirect target 추출(non-`/dev/null` 파일 = durable sink) + `tee <file>` (flag 옵션 skip) + `<<` heredoc. 이전 `cmd.contains(".log")` substring 은 `grep nohup /var/log/foo.log` 같이 `.log` 단어만 언급해도 sink 충족으로 잘못 판정.
+
+- **monitor-guard 0.1.4 → 0.1.5** — `_starts_with`/`_ends_with`/`_redirect_targets`/`_has_log_pos` 헬퍼 추가, main 의 `let has_log = cmd.contains(...)` 4-항 substring chain 을 `_has_log_pos(cmd, toks)` 한 줄로 교체. `_tokens` 는 이미 0.1.3에서 추가됨.
+- 검증 8/8 — `nohup ... > /tmp/foo.log &` ALLOW · `nohup ... > /tmp/foo.txt &` ALLOW (redirect target = durable) · `nohup ... > /dev/null &` log-warn · `nohup ... | tee /tmp/out.log &` ALLOW · `nohup ... | tee -a /tmp/x &` ALLOW (flag skip) · `grep nohup /var/log/foo.log` ALLOW (no detach) · `cat /etc/foo.log` ALLOW (no detach).
+- README + marketplace lockstep.
+
+이로써 이번 세션 substring 잔재 모두 token-position 으로 sweep — monitor-guard·pod-monitor 의 모든 trigger 가 command position 매치, false-pos 표면 0.
+
 ## 2026-05-26 — false-pos sweep C+E: drift-guard 0.1.1 (self-trigger) + monitor-guard 0.1.4 (has_detach)
 
 세션 누적 false-positive sweep 마무리 — 두 hook 의 substring-매치 잔재 정리.

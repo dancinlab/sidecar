@@ -45,6 +45,60 @@ fn _json_str(s: string) -> string {
     return parts.join("")
 }
 
+// _tokens — whitespace-split the command string into argv-like tokens.
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s.substring(i, i + 1)
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+// _is_env_assign — POSIX IDENT=value leading prefix.
+fn _is_env_assign(t: string) -> bool {
+    let n = len(t)
+    if n < 2 { return false }
+    let c0 = char_code(t.substring(0, 1), 0)
+    let is_id = (c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122) || c0 == 95
+    if !is_id { return false }
+    let mut i = 1
+    while i < n {
+        let c = t.substring(i, i + 1)
+        if c == "=" { return true }
+        let k = char_code(c, 0)
+        let ok = (k >= 48 && k <= 57) || (k >= 65 && k <= 90) || (k >= 97 && k <= 122) || k == 95
+        if !ok { return false }
+        i = i + 1
+    }
+    return false
+}
+
+// _is_cloud_pod — TRUE iff the COMMAND is `hexa cloud {nohup,fire}` (the two
+// pod-fire verbs that warrant the cloud-bridge hint), in COMMAND POSITION
+// past any env-var prefix. Pre-0.1.3 used `cmd.contains("hexa cloud nohup")`
+// which also fired when those phrases appeared in commit messages, grep
+// patterns, or docs that merely reference the verb — pure noise.
+fn _is_cloud_pod(cmd: string) -> bool {
+    let toks = _tokens(cmd)
+    let mut i = 0
+    while i < len(toks) && _is_env_assign(toks[i]) { i = i + 1 }
+    if i + 2 >= len(toks) { return false }
+    if toks[i] != "hexa" { return false }
+    if toks[i + 1] != "cloud" { return false }
+    let v = toks[i + 2]
+    return v == "nohup" || v == "fire"
+}
+
 fn _trim_end(s: string) -> string {
     let mut n = len(s)
     while n > 0 {
@@ -87,7 +141,11 @@ fn main() {
 
     let has_detach = cmd.contains("nohup ") || cmd.contains("setsid ") || cmd.contains("disown")
     let is_bg = run_bg || has_detach || _ends_single_amp(cmd) || cmd.contains(" & ")
-    if !is_bg { _allow() }
+    // hexa cloud nohup/fire 가 명령 위치에 있으면 — 이미 inherently detached
+    // (remote nohup) — is_bg 가 false 여도 cloud-bridge 힌트는 발화해야 caller
+    // 가 logfile/handle 을 thread 함. is_bg 조기 종료 전에 cloud-pod 체크.
+    let is_cloud_pod = _is_cloud_pod(cmd)
+    if !is_bg && !is_cloud_pod { _allow() }
 
     // durable progress sink — a real file, append, or tee (not /dev/null).
     let has_log = cmd.contains(".log") || cmd.contains(".out") || cmd.contains("tee ") || cmd.contains(">>")
@@ -95,12 +153,9 @@ fn main() {
     // run_in_background is harness-detached, so it counts as detached.
     let need_detach = !has_detach && !run_bg
     let need_log = !has_log
-    // hexa cloud nohup/fire ALWAYS gets the cloud-bridge hint — the basic detach+log
-    // pattern is inherent to the verb (so the generic advisory wouldn't otherwise
-    // fire), but the cloud workflow has a SEPARATE requirement: the caller must
-    // thread the logfile path from `nohup` into a `tail` call so Monitor can
-    // attach. Skip the early _allow() when this pattern is present.
-    let is_cloud_pod = cmd.contains("hexa cloud nohup") || cmd.contains("hexa cloud fire")
+    // cloud-pod 도 동일 — basic detach+log inherent 라 generic advisory 조기
+    // 종료되지만, cloud workflow 의 SEPARATE requirement (logfile thread) 때문에
+    // 항상 cloud-bridge 힌트 발화.
     if !need_detach && !need_log && !is_cloud_pod { _allow() }
 
     let mut hints = []

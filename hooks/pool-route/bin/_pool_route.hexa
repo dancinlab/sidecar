@@ -790,7 +790,33 @@ fn main() {
     // env-hash diff was the canonical mac fork-storm (measured load 130+ when
     // multi-session ran `hexa run <script>` on absolute host paths). Routing them
     // through the pool eliminates the fork loop on the workstation Mac entirely.
-    let heavy_pairs = ["go", "test", "go", "build", "swift", "build", "swift", "test", "docker", "build", "hexa", "kick", "hexa", "drill", "hexa", "loop", "hexa", "cc", "hexa", "run", "hexa", "build"]
+    // 0.7.6 — heavy hexa verb sweep (POOL-OFFLOAD m6): hexa CLI exposes 80+ verbs;
+    // the canonical fork-storm sources beyond run/build/cc/kick/drill/loop are:
+    //   (a) toolchain: `hexa test` (native @test runner — pytest/jest analog) ·
+    //       `hexa bench` (wall/RSS/alloc benchmark — by definition CPU-bound)
+    //   (b) math verifiers: `hexa absolute` (Mk.VIII Δ₀-absolute classifier) ·
+    //       `hexa meta-closure` (Mk.IX self-ref fixpoint H1+H2+H3)
+    //   (c) math discovery: `hexa smash` (9-phase singularity drill, ~414 candidates
+    //       per --depth 3) · `hexa free` (DFS compose 5-module) ·
+    //       `hexa hyperarithmetic` (Mk.IX Π₀² 5-system reverse-math classifier)
+    //   (d) discovery extras: `hexa chain` (L3 cross-engine pipeline)
+    //   (e) drill variants (11 — each composes drill with a different orchestration
+    //       pattern, all fork-storm class): omega · surge · dream · swarm · reign ·
+    //       molt · wake · forge · canon · debate · revive (kick is already covered)
+    // Excluded (light read/lookup): atlas hash/stats/lookup/dump/verify · qrng status
+    // · 29 annotation analyzers (pure-check/memo-check/catalog/…) · 16 data bridges
+    // (wikipedia/oeis/arxiv/…, HTTP-only) · lattice verify · gpu lint/disasm.
+    // Excluded (3-token pair — needs richer classifier, deferred): hexa gpu fire ·
+    // hexa sim-universe <X> · hexa qmirror <X> · hexa atlas register --from-drill.
+    let heavy_pairs = ["go", "test", "go", "build", "swift", "build", "swift", "test", "docker", "build",
+                       "hexa", "kick", "hexa", "drill", "hexa", "loop", "hexa", "cc", "hexa", "run", "hexa", "build",
+                       "hexa", "test", "hexa", "bench",
+                       "hexa", "absolute", "hexa", "meta-closure",
+                       "hexa", "smash", "hexa", "free", "hexa", "hyperarithmetic",
+                       "hexa", "chain",
+                       "hexa", "omega", "hexa", "surge", "hexa", "dream", "hexa", "swarm",
+                       "hexa", "reign", "hexa", "molt", "hexa", "wake", "hexa", "forge",
+                       "hexa", "canon", "hexa", "debate", "hexa", "revive"]
     // big-tree find substring — multi-session `find $HOME/core/anima` (~458GB tree)
     // is the documented Mac-kill pattern (267% CPU from 3× concurrent bfs). Route
     // when the cmd contains `find <user>/core/anima`; preflight test -d gates the

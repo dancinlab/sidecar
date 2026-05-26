@@ -9,5 +9,5 @@
 - [ ] JVM 계열 컴파일/실행 분류 추가 — java/javac/kotlinc/scalac/sbt heavy 인식 (gradle/mvn 은 이미 있음)
 - [ ] 미디어 도구 분류 추가 — ffmpeg/magick/convert/sox/imagemagick heavy 인식 (Mac 인코딩 부하 큰 작업)
 - [ ] big-tree find 일반화 — 현재 ~/core/anima 단일 substring → ~/core/* 전체 + rg/fd 큰 트리 스캔까지 확장 (preflight test -d 로 비-mirrored 호스트 자동 스킵 유지)
-- [ ] 추가 hexa 무거운 verb 분류 — hexa cycle / hexa atlas register --from-drill / hexa-fast 등 fork-storm 잠재 verb 식별 후 heavy_pairs 합류
+- [x] 추가 hexa 무거운 verb 분류 — hexa cycle / hexa atlas register --from-drill / hexa-fast 등 fork-storm 잠재 verb 식별 후 heavy_pairs 합류
 - [ ] false-positive 회귀 검증 — 각 분류기 확장 PR 머지 후 24시간 route-log.jsonl 모니터링, local-bound 오라우팅 0건 확인 + 회귀 시 즉시 word/pair 후퇴

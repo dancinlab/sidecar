@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.7.6: heavy hexa verb sweep (POOL-OFFLOAD m6)
+
+POOL-OFFLOAD 마일스톤 6 — `hexa --help` 80+ verb 카탈로그 전체를 훑어 fork-storm 잠재 verb 19개를 `heavy_pairs` 에 합류. Mac 워크스테이션이 `hexa test`/`hexa smash --seed`/`hexa omega` 같은 verb 를 로컬에서 돌리지 않고 ubu pool 로 위임하게 됨.
+
+- **pool-route 0.7.5 → 0.7.6** — `heavy_pairs` +19 entries (총 36 페어):
+  - **toolchain (2)**: `hexa test` (네이티브 @test 러너 = pytest/jest 동급) · `hexa bench` (wall/RSS/alloc 벤치)
+  - **math verifiers (2)**: `hexa absolute` (Mk.VIII Δ₀-absolute classifier) · `hexa meta-closure` (Mk.IX 자기참조 fixpoint H1+H2+H3)
+  - **math discovery (3)**: `hexa smash` (9-phase singularity drill — `--depth 3` 으로 ~414 candidates) · `hexa free` (DFS compose 5-module) · `hexa hyperarithmetic` (Mk.IX Π₀² 5-system reverse-math)
+  - **discovery extras (1)**: `hexa chain` (L3 cross-engine pipeline)
+  - **drill variants (11)**: omega · surge · dream · swarm · reign · molt · wake · forge · canon · debate · revive — `kick` 은 이미 0.6.x 부터, `drill` 도 이미 포함
+- **제외(가벼움)**: atlas hash/stats/lookup/dump/verify · 29 annotation analyzers (pure-check/memo-check/catalog/…) · 16 HTTP data bridges (wikipedia/oeis/arxiv/…) · `hexa lattice verify` · `hexa gpu lint`/`disasm`.
+- **제외(3-token, 다음 라운드)**: `hexa gpu fire <kernel>` · `hexa sim-universe <X>` · `hexa qmirror <X>` · `hexa atlas register --from-drill` — 현재 분류기는 2-토큰 페어만 지원, 3-토큰 검출 메커니즘은 후속 마일스톤.
+- 파싱 검증: `hexa parse /tmp/_pool_route_test.hexa` → OK.
+- plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.7.5: routing-rate baseline counters (POOL-OFFLOAD m1)
 
 POOL-OFFLOAD 도메인 마일스톤 1 — Mac→Linux pool 위임 확장의 기준선 측정 도구. 분류기 verdict 4종을 카운트해서 "실제로 몇 % 가 pool 로 갔는가" 를 `/check` 로 노출.

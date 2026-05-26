@@ -227,7 +227,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`inbox-log-lint`](hooks/inbox-log-lint/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the INBOX domain log (`INBOX.log.md`) |
 | [`inject`](skills/inject/) | command + skill | `personal` | 0.2.0 | Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install… |
 | [`plist-guard`](hooks/plist-guard/) | hook | `personal` | 0.1.2 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, inv… |
-| [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.7.1 | PreToolUse(Bash) pool auto-router + SessionStart routing-log snapshot, implemented in hexa-lang (`_pool_route.hexa`, i… |
+| [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.7.3 | PreToolUse(Bash) pool auto-router + sign-local single-gate; 0.7.3 hardens the abs-path sign-gate against POSIX env-var prefix (`POOL_DISABLE=1`/`FOO=bar`/…) + wrappers (`env`/`exec`/`nice`/`timeout`/`command`/`sudo`/`nohup`/`stdbuf`/`ionice`) + `\\` escape so the heavy-interp classifier reads the REAL verb |
 | [`pr-cycle`](commands/pr-cycle/) | command | `personal` | 0.4.0 | /pr-cycle one-shot PR cycle (push + create; the pr-cycle-hook plugin appends merge + worktree-clean) |
 | [`pr-cycle-hook`](hooks/pr-cycle-hook/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) router — appends merge + worktree/branch cleanup to `gh pr create` (commons @D g47; pr-cycle split) |
 | [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |

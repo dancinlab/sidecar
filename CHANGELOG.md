@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-26 — cloud dispatch advisory 정밀화: pod-monitor 0.1.3 + monitor-guard 0.1.3 (substring → token-position)
+
+세션 누적 false-positive sweep — `pod-monitor` 와 `monitor-guard` 두 hook 의 `cmd.contains("hexa cloud nohup")` substring 체크가 commit 메시지·grep 패턴·docs 에서 phrase 만 언급해도 발화하던 noise 제거. 두 hook 다 **command-position token match** 로 정밀화: 첫 비-env-prefix 토큰이 `hexa` && 그 다음이 `cloud` && 그 다음이 dispatch verb (`nohup`/`fire`/`run`) 일 때만 발화. env-prefix(`FOO=bar hexa cloud …`) 도 정상 인식.
+
+- **pod-monitor 0.1.2 → 0.1.3** — `_has_pod_fire` 가 substring 매치에서 토큰-위치 매치로 변경. `_tokens` + `_is_env_assign` 헬퍼 추가. `fire` verb (hexa-lang PR #1309 도입) 도 match set 에 포함.
+- **monitor-guard 0.1.2 → 0.1.3** — `is_cloud_pod` 도 동일 방식. 추가로 `if !is_bg && !is_cloud_pod { _allow() }` — cloud fire/nohup 은 inherent dispatch 라 trailing `&` 없어도 cloud-bridge 힌트 발화.
+- 검증 8/8 — false-positive 4종(grep · commit msg · echo · 평범 cmd) ALLOW, 진짜 dispatch 4종(nohup · fire · env-prefix run · nohup+& ) 정확 발화.
+- 알려진 잔여 — `has_detach` (monitor-guard) 가 여전히 `cmd.contains("nohup ")` substring 사용 → `grep ... nohup ...` 같은 명령에 [log] 힌트 발화. 별도 PR 후보.
+- README + marketplace lockstep.
+
 ## 2026-05-26 — monitor↔hexa cloud bridge 명확화 step 3 (sidecar reference 갱신 — 업스트림 shipped)
 
 step 1 의 inbox RFC (`inbox/rfc_drafts/cloud-fire-monitor-handle.md`) 가 hexa-lang 측에서 두 PR (#1306 PR1 = `CloudResult.logfile` 필드 + `__MONITOR_HANDLE__={…}` JSON echo + tail exit-code docs · #1309 PR2 = atomic `hexa cloud fire` verb + canonical `/tmp/cloud-<unix_ts>.log` auto-log) 로 머지됨. 이번 PR 은 sidecar 면의 advisory + skill docs 를 "pre-ship 3-step manual handoff" → "atomic 1-shot fire workflow" 로 갱신.

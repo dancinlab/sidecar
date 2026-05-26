@@ -187,7 +187,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`memory-lint`](hooks/memory-lint/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memo… |
 | [`drift-guard`](hooks/drift-guard/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory — design-drift → memory sync; nudges mirroring SSOT (`.tape`/`CLAUDE.md`) · `decisions/` · `@design-change` edits into auto-memory before the next session regresses |
 | [`throttle-guard`](hooks/throttle-guard/) | hook | `core` | 0.1.0 | PostToolUse(Task\|Agent) cross-session transient-throttle coordinator — shared cooldown marker + jitter backoff + WIDTH cut (distinct from limit-guard's usage cap) |
-| [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.2 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10); 0.1.2 points cloud-bridge hint at the shipped atomic workflow `hexa cloud fire <host> -- <argv>` → grep `__MONITOR_HANDLE__=` → Monitor attach (hexa-lang PR #1306 + #1309) |
+| [`monitor-guard`](hooks/monitor-guard/) | hook | `core` | 0.1.3 | PreToolUse(Bash) advisory for bg/long shell launches — detach + log + Monitor-on-log (commons @D g10); 0.1.3 uses token-position match for cloud-bridge trigger (kills false-positive on commit messages / grep patterns merely mentioning `hexa cloud nohup`/`fire`) + fires hint regardless of is_bg short-circuit |
 | [`output-trim`](hooks/output-trim/) | hook | `core` | 0.1.3 | PreToolUse(Bash) stdout trimmer |
 | [`pool`](skills/pool/) | command + skill | `core` | 0.2.2 | wraps the `pool` CLI (host roster + remote exec |
 | [`prefs`](commands/prefs/) | command | `core` | 0.4.0 | /prefs view/set language prefs (code · docs · response) — writes the fixed prefs.json SSOT |
@@ -214,7 +214,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`micro-exp`](skills/micro-exp/) | command + skill | `hexa` | 0.2.0 | context-driven micro-experiment sweep orchestrator (self-enumerate → pod budget → monitor → parse → atlas auto-fold) |
 | [`n6-lsp`](hooks/n6-lsp/) | hook | `hexa` | 0.1.0 | Wire `n6-lsp` (NEXUS-6 knowledge-atlas grammar LSP — diagnostics + hover) for `.n6` files |
 | [`paper`](skills/paper/) | command + skill | `hexa` | 0.5.3 | arxiv-style LaTeX paper scaffolder |
-| [`pod-monitor`](hooks/pod-monitor/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) advisory hook for GPU pod fires (`hexa cloud nohup` / `hexa cloud run`) |
+| [`pod-monitor`](hooks/pod-monitor/) | hook | `hexa` | 0.1.3 | PreToolUse(Bash) advisory hook for GPU pod fires (`hexa cloud nohup` / `fire` / `run`); 0.1.3 token-position match (no longer fires on commit/grep mentions) |
 | [`tape-lint`](hooks/tape-lint/) | hook | `hexa` | 0.5.1 | PreToolUse(Edit\|Write) deny for `.tape` edits, implemented in hexa-lang (`_tape_lint.hexa`, invoked via `hexa run` |
 | [`tape-lsp`](hooks/tape-lsp/) | hook | `hexa` | 0.1.1 | Wire `tape-lsp` (canonical .tape v1.2 LSP |
 | [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |

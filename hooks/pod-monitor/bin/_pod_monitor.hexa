@@ -43,10 +43,59 @@ fn _json_str(s: string) -> string {
     return parts.join("")
 }
 
-fn _has_pod_fire(cmd: string) -> bool {
-    if cmd.contains("hexa cloud nohup") { return true }
-    if cmd.contains("hexa cloud run") { return true }
+// _tokens — whitespace-split the command string into argv-like tokens.
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s.substring(i, i + 1)
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+// _is_env_assign — POSIX IDENT=value leading prefix (`FOO=bar hexa cloud …`).
+// Skipped so the real command verb is read past env prefixes.
+fn _is_env_assign(t: string) -> bool {
+    let n = len(t)
+    if n < 2 { return false }
+    let c0 = char_code(t.substring(0, 1), 0)
+    let is_id = (c0 >= 65 && c0 <= 90) || (c0 >= 97 && c0 <= 122) || c0 == 95
+    if !is_id { return false }
+    let mut i = 1
+    while i < n {
+        let c = t.substring(i, i + 1)
+        if c == "=" { return true }
+        let k = char_code(c, 0)
+        let ok = (k >= 48 && k <= 57) || (k >= 65 && k <= 90) || (k >= 97 && k <= 122) || k == 95
+        if !ok { return false }
+        i = i + 1
+    }
     return false
+}
+
+// _has_pod_fire — TRUE iff the COMMAND is `hexa cloud {nohup,fire,run}`
+// (token-position match past any env-var prefix), NOT a mere substring of the
+// command string. Pre-0.1.1 used `cmd.contains("hexa cloud nohup")` which
+// also fired on commit messages, grep patterns, and docs that only mention
+// the phrase. 0.1.1 matches the actual dispatch verb.
+fn _has_pod_fire(cmd: string) -> bool {
+    let toks = _tokens(cmd)
+    let mut i = 0
+    while i < len(toks) && _is_env_assign(toks[i]) { i = i + 1 }
+    if i + 2 >= len(toks) { return false }
+    if toks[i] != "hexa" { return false }
+    if toks[i + 1] != "cloud" { return false }
+    let v = toks[i + 2]
+    return v == "nohup" || v == "fire" || v == "run"
 }
 
 fn main() {

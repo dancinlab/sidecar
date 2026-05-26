@@ -1,7 +1,7 @@
 {
   "name": "pod-monitor",
-  "description": "PreToolUse(Bash) advisory hook that fires when a Bash command contains a GPU pod launch (`hexa cloud nohup` / `hexa cloud run`). Emits non-blocking additionalContext reminding the agent of commons @D g57 — 🛰️ Monitor tool attached to the streaming log AND `SAVE_POD=1` envar set AND ⏱ walltime estimated upfront with pod-hours headroom. Closes the R8a-LOST class (pod terminated mid-run before result.json reached the operator) by enforcing the 3 invariants at fire time. Implemented in hexa-lang (`_pod_monitor.hexa`, invoked via `hexa run`). Sister of cloud-guard (which blocks raw runpodctl/vastai); pod-monitor advises on the wrapped `hexa cloud` path.",
-  "version": "0.1.2",
+  "description": "PreToolUse(Bash) advisory hook that fires when a Bash command launches a GPU pod (`hexa cloud nohup` / `hexa cloud fire` / `hexa cloud run`). Emits non-blocking additionalContext reminding the agent of commons @D g57 — 🛰️ Monitor tool attached to the streaming log AND `SAVE_POD=1` envar set AND ⏱ walltime estimated upfront with pod-hours headroom. Closes the R8a-LOST class (pod terminated mid-run before result.json reached the operator). Implemented in hexa-lang (`_pod_monitor.hexa`, invoked via `hexa run`). 0.1.3 — `_has_pod_fire` now uses token-position match past env-var prefix (the cloud verb must SIT at command position, not be a substring of the cmd) so commit messages / grep patterns / docs that merely mention the phrase no longer trigger noise. `fire` verb (hexa-lang PR #1309) added to the match set.",
+  "version": "0.1.3",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

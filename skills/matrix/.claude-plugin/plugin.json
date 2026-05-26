@@ -1,0 +1,9 @@
+{
+  "name": "matrix",
+  "description": "Axis cross-product coverage tracker — `/matrix` manages a combinatorial coverage matrix (axis × axis hypothesis/experiment grid) via a cwd-local `MATRIX.tape` SSOT, the same declarative pattern as DOMAINS.tape. Two modes: SQUARE (one axis set via `axes <a…>`; cells = upper-triangle + diagonal pairs, total N·(N+1)/2) and RECTANGULAR (separate `rows <a…>` × `cols <a…>`, e.g. BIO mechanisms × anima axes, total R·C). Verbs — bare/`show` renders the full grid with ✓/· marks when small (rows≤14 ∧ cols≤14, or square N≤12) else falls back to per-row coverage bars ▓▓▓░░, always printing coverage % + the next 5 unfilled cells · `done <i> <j>` marks a cell filled (explicit toggle like /domain milestones; square pairs are auto-sorted to a canonical key so order doesn't matter) · `undone <i> <j>` unmarks · `next [N]` lists the next N unfilled cells (default 10) · `help`. Purpose — drive a systematic combinatorial sweep (fill the matrix row-by-row) without tracking coverage in prose each round; the SSOT survives across sessions. Cells are explicit (not auto-detected from artifacts) so the matrix is workflow-agnostic. Plugin command (markdown-only, no script). Triggers: /matrix · 매트릭스 · matrix 만들어 · 교차곱 매트릭스 · cross-product matrix · coverage 추적 · 다음 셀 · 어디 채울 차례.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "matrix", "coverage", "cross-product", "tracker", "combinatorial"]
+}

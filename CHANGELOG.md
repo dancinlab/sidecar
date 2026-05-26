@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — matrix 0.1.0: axis cross-product 커버리지 추적기
+
+`/matrix` — axis × axis 교차곱 커버리지 매트릭스를 cwd-local `MATRIX.tape` SSOT 로 관리 (DOMAINS.tape 와 동일한 선언적 패턴). anima UNIVERSE 의 손-추적 매트릭스(10×10 axis-pair · BIO × anima cross) 워크플로를 도구화 — 매 round prose 로 "어느 row 완료, 다음 셀 뭐" 추적하던 것을 대체.
+
+- **2 모드**:
+  - SQUARE — `/matrix axes <a…>`: 한 축집합, 셀 = upper-triangle + diagonal (총 N·(N+1)/2). `done` 시 pair 자동 정렬(canonical key)이라 순서 무관.
+  - RECTANGULAR — `/matrix rows <a…>` + `cols <a…>`: 별개 행/열 축 (예: BIO 메커니즘 × anima 축, 총 R·C).
+- **verbs**: bare/`show` (그리드 렌더 — 작으면 ✓/· 풀그리드, 크면 per-row ▓▓▓░░ 바 + 커버리지 % + 다음 5 unfilled) · `done <i> <j>` / `undone <i> <j>` (명시적 토글, /domain milestone 방식) · `next [N]` (미충전 N개, 기본 10) · `help`.
+- **셀은 명시적** — 외부 artifact 자동탐지 없음 → workflow-agnostic. SSOT 가 세션 넘어 생존.
+- 로컬 검증: rectangular(3×3) + square(3) 시나리오 — dedup · 대각 · canonical 정렬 · undone · next 전부 OK.
+- profiles.json `matrix: core` + marketplace.json 등록 + README plugin table 갱신.
+
 ## 2026-05-27 — draft 0.2.0: add/rm verbs + LLM 자동 등록
 
 `/draft` 에 `add`/`rm` verb 추가 + SKILL.md 가 LLM 에게 자연어 신호 인식 → 자동 `/draft add` 호출하도록 지시. 이제 사용자가 "이거 등록해줘" 한 마디면 LLM 이 대화 맥락에서 slug + content 추론해 자동 기록.

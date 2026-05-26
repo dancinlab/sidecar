@@ -28,6 +28,7 @@
     "question": "core",
     "check": "core",
     "draft": "core",
+    "matrix": "core",
     "end": "core",
     "cycle": "core",
     "brainstorm": "core",

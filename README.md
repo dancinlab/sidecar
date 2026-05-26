@@ -181,6 +181,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`domain`](skills/domain/) | command + skill | `core` | 0.8.7 | Maintain UPPERCASE <NAME>.md (snapshot = final-goal milestone checkboxes) + sister <NAME>.log.md (append-only step log) · `/domain list` repo-wide index (DOMAINS.tape roster — domains at any path)… |
 | [`draft`](skills/draft/) | command + skill | `core` | 0.2.0 | Ephemeral scratchpad — `/draft <slug>` scaffolds `drafts/<slug>.md`; `add <slug> <content>` appends timestamped bullet; `rm <slug>` deletes one; `drafts/` auto-gitignored; LLM AUTO-REGISTERS on natural-language signals (\"이거 등록해줘\"/\"메모\"/\"register this\") by picking a slug from context and running `/draft add`; symmetric deletion triggers (\"삭제\"/\"지워\") map to `/draft rm` |
 | [`end`](skills/end/) | command + skill | `core` | 0.2.0 | Session closure safety check |
+| [`matrix`](skills/matrix/) | command + skill | `core` | 0.1.0 | Axis cross-product coverage tracker — `/matrix` manages an axis × axis grid via cwd-local `MATRIX.tape` (SQUARE: one axis set, pairs · RECTANGULAR: `rows` × `cols`); `done <i> <j>` toggles a cell, bare renders the grid (small) or per-row coverage bars (large) + coverage % + next unfilled cells |
 | [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |
 | [`gh-stack`](skills/gh-stack/) | skill | `core` | 0.1.1 | Stacked-PR workflow skill |
 | [`git-guard`](hooks/git-guard/) | hook | `core` | 0.5.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`) |

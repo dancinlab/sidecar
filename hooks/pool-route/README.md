@@ -105,3 +105,29 @@ A command that is already routed (carries the `__SIDECAR_POOL__` marker), a here
 ## No opt-out
 
 There is none — no env var, no config file, no exception list. A guard you can switch off is a guard you will switch off. Routing is inert until `~/.pool/pool.json` has an enabled host; if `pool-route` is wrong for your workflow, clear the roster (via the `pool` CLI) or uninstall the plugin rather than routing around it.
+
+### 자주 시도되지만 작동하지 않는 우회 (0.7.3 기준)
+
+다음은 모두 **no-op** — pool-route 의 `_local_heavy_interp` 가 POSIX env-var prefix(`IDENT=value`) + leading wrapper (`env`/`exec`/`nice`/`timeout`/`command`/`sudo`/`nohup`/`stdbuf`/`ionice`) + 백슬래시 escape(`\hexa`) 를 모두 stripping 후 **진짜 verb** 로 분류한다.
+
+| 시도 | 결과 | 이유 |
+|---|---|---|
+| `SIDECAR_NO_POOL=1 hexa run x.hexa` | ❌ 라우팅 그대로 | env prefix stripped → `hexa run` 감지 |
+| `SIDECAR_NO_POOL_ROUTE=1 hexa run x.hexa` | ❌ 라우팅 그대로 | 동일 |
+| `POOL_DISABLE=1 hexa run x.hexa` | ❌ 라우팅 그대로 | 동일 |
+| `FOO=bar hexa run x.hexa` | ❌ 라우팅 그대로 | 동일 (어떤 IDENT=val 도 stripped) |
+| `env hexa run x.hexa` | ❌ 라우팅 그대로 | wrapper stripped |
+| `nice -n 10 hexa run x.hexa` | ❌ 라우팅 그대로 | wrapper + per-flag arg awareness |
+| `\hexa run x.hexa` | ❌ 라우팅 그대로 | leading backslash stripped |
+
+### 유일한 정식 로컬 강제 경로 — `! sidecar sign local`
+
+위 우회들은 의도적 차단(s11 — 게이트는 끌 수 없음). 실제로 로컬 강제가 필요할 때는:
+
+```bash
+! sidecar sign local      # TUI bang prompt — 사용자만 발급 가능, 5분 토큰
+```
+
+발급 후 5분 동안 **모든** Bash 명령이 로컬 실행 (라우팅 완전 suppress). `~/.sidecar/signs/local.sign` 의 mint epoch 가 토큰. 토큰 만료/소진 시 자연 재게이트.
+
+> 에이전트는 이 토큰을 자가 발급할 수 없다(sign-guard 의 tool-boundary 강제). 사용자가 직접 TUI 의 `!` bang 으로만 mint 가능 — 다중 세션 fork-storm 방지의 마지막 단단한 line.

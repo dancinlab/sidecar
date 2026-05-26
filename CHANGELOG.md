@@ -6,6 +6,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — draft 0.2.0: add/rm verbs + LLM 자동 등록
+
+`/draft` 에 `add`/`rm` verb 추가 + SKILL.md 가 LLM 에게 자연어 신호 인식 → 자동 `/draft add` 호출하도록 지시. 이제 사용자가 "이거 등록해줘" 한 마디면 LLM 이 대화 맥락에서 slug + content 추론해 자동 기록.
+
+- **새 verbs**:
+  - `/draft add <slug> <content...>` — drafts/<slug>.md 에 `- <ISO timestamp> — <content>` bullet append. 파일 없으면 자동 scaffold (single-call create-and-add).
+  - `/draft rm <slug>` — drafts/<slug>.md 삭제 (drafts 가 throwaway 이므로 confirm 없음).
+- **scaffold template 변경**: context/observations/ideas/TODO 4-섹션 → `## entries` 단일 섹션 (add 가 timestamped bullet 누적, 자유 형식).
+- **LLM 자동 등록 가이드** — SKILL.md description 에 명시:
+  - 인식: "이거 등록해줘"·"메모"·"적어둬"·"기록"·"register this"·"jot down"·"이것도"
+  - 행동 3단계: (1) 직전 대화에서 SUBJECT 추출 (2) slug 결정 — 기존 draft 확인(`ls drafts/`) 후 관련 있으면 재사용, 없으면 kebab-case 도출 (3) `/draft add <slug> <distilled one-line>` 실행
+  - 삭제 인식: "삭제"·"지워"·"폐기"·"delete that note"·"그 메모 지워" → `/draft rm <slug>`
+- plugin.json + marketplace.json + README + SKILL.md + CHANGELOG lockstep.
+
 ## 2026-05-27 — draft 0.1.0: ephemeral scratchpad scaffolder
 
 `/draft <slug>` — 임시 working notes 를 `drafts/<slug>.md` 로 scaffold. `drafts/` 는 자동으로 `.gitignore` 에 추가돼서 파일이 실수로 commit 되지 않음. 폐기 시 `rm -rf drafts/` 한 줄.

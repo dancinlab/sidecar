@@ -1,9 +1,9 @@
 ---
 name: draft
-description: Ephemeral scratchpad scaffolder — /draft <slug> creates `drafts/<slug>.md` for temporary working notes (designed to be discarded). The `drafts/` dir is gitignored so files never commit by accident. Verbs — bare = list current drafts · `<slug>` = scaffold a new draft · `list` = enumerate · `clean` = list rm candidates (no auto-rm; user runs `rm`). Distinct from `/inbox` (which scaffolds into a typed taxonomy intended for eventual upgrade). Triggers — "/draft", "드래프트", "draft 만들어", "임시 메모", "scratchpad", "정리 노트", "나중에 폐기".
+description: Ephemeral scratchpad scaffolder — `/draft <slug>` creates `drafts/<slug>.md` for temporary working notes (designed to be discarded). The `drafts/` dir is gitignored so files never commit by accident. Verbs — bare/`list` = enumerate · `<slug>` = scaffold · `add <slug> <content...>` = append timestamped bullet (auto-scaffold if missing) · `rm <slug>` = delete one · `clean` = list rm candidates (read-only). LLM AUTO-REGISTRATION — when the user says "이거 등록해줘"/"메모"/"적어둬"/"기록"/"register this"/"jot this down"/"이것도", the LLM should: (1) identify the SUBJECT from prior conversation (the immediately-referenced fact/finding/idea), (2) pick a slug — reuse an EXISTING related draft (run `ls drafts/` first), else derive a kebab-case slug from the subject domain (e.g. `pool-bypass` · `gpu-fork-storm`), (3) run `/draft add <slug> <distilled one-line content>`. For deletion — when the user says "삭제"/"지워"/"폐기"/"delete that note"/"throw out that draft", the LLM should run `/draft rm <slug>` for the most-recently-referenced or named draft. Distinct from `/inbox` (typed taxonomy for eventual upgrade); `/draft` is explicitly throwaway. Triggers — "/draft", "드래프트", "draft 만들어", "임시 메모", "scratchpad", "정리 노트", "나중에 폐기", "이거 등록해줘", "메모해줘", "적어둬", "기록해놔", "register this", "jot down", "delete that note", "그 메모 지워".
 allowed-tools: Bash
 ---
 
-@D draft := "ephemeral scratchpad — drafts/ is gitignored, designed to be discarded" :: skill
-  do   = "`/draft <slug>` scaffolds drafts/<slug>.md for temporary notes · `list`/`clean` for housekeeping · drafts/ in .gitignore"
-  dont = "wing a custom DRAFT.md at repo root (litter risk · forgotten in commits) when /draft has one gitignored dir"
+@D draft := "ephemeral scratchpad — drafts/ is gitignored, designed to be discarded · LLM auto-registers on natural-language signals" :: skill
+  do   = "`/draft <slug>` scaffolds · `add <slug> <content>` appends timestamped bullet · `rm <slug>` deletes one · LLM picks slug from context (existing first, else kebab-case derive)"
+  dont = "wing a custom DRAFT.md at repo root · ask user for slug when conversation context clearly implies one · auto-add without distilling content first"

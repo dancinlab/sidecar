@@ -49,6 +49,68 @@ fn _deny(reason: string) {
     exit(0)
 }
 
+// `_tally(category)` — increment a single category counter in
+// ~/.pool/route-counters.tally. Categories: "routed" (heavy → pool host)
+// · "local_bound" (early-exit local-only path: git/gh/pool/npm/~/.X) ·
+// "light_allowed" (passed classifier but not heavy → stayed local) ·
+// "heavy_failed" (heavy but every eligible host failed preflight). Counts
+// the MEANINGFUL classifier verdicts only — early-exit noise (non-Bash,
+// empty cmd, MARK, heredoc, ssh-already, sign-local) is NOT counted, so
+// the ratio reflects real routing decisions. Format: one `KEY=N` per line.
+// Race-tolerant: lossy under concurrent Claude sessions but adequate for
+// baseline-rate measurement (POOL-OFFLOAD m1).
+fn _tally(category: string) {
+    let home = _env("HOME")
+    if home == "" { return }
+    let path = home + "/.pool/route-counters.tally"
+    let mut routed = 0
+    let mut local_bound = 0
+    let mut light_allowed = 0
+    let mut heavy_failed = 0
+    let mut raw = ""
+    try { raw = read_file(path) } catch e { raw = "" }
+    let lines = raw.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i].trim()
+        if ln != "" {
+            let eq = ln.index_of("=")
+            if eq > 0 {
+                let k = ln.substring(0, eq)
+                let v = to_int(ln.substring(eq + 1, len(ln)).trim())
+                if k == "routed" { routed = v }
+                else if k == "local_bound" { local_bound = v }
+                else if k == "light_allowed" { light_allowed = v }
+                else if k == "heavy_failed" { heavy_failed = v }
+            }
+        }
+        i = i + 1
+    }
+    if category == "routed" { routed = routed + 1 }
+    else if category == "local_bound" { local_bound = local_bound + 1 }
+    else if category == "light_allowed" { light_allowed = light_allowed + 1 }
+    else if category == "heavy_failed" { heavy_failed = heavy_failed + 1 }
+    let total = routed + local_bound + light_allowed + heavy_failed
+    let body = "routed=" + to_string(routed) + "\n"
+             + "local_bound=" + to_string(local_bound) + "\n"
+             + "light_allowed=" + to_string(light_allowed) + "\n"
+             + "heavy_failed=" + to_string(heavy_failed) + "\n"
+             + "total=" + to_string(total) + "\n"
+    try { write_file(path, body) } catch e { }
+}
+
+// `_allow_count(cat)` / `_deny_count(reason, cat)` — counted exits. Use
+// at meaningful classifier-decision sites only; plain _allow/_deny stays
+// for non-classifier noise (non-Bash · empty · MARK · etc).
+fn _allow_count(cat: string) {
+    _tally(cat)
+    exit(0)
+}
+fn _deny_count(reason: string, cat: string) {
+    _tally(cat)
+    _deny(reason)
+}
+
 // JSON-escape a string and wrap it in double quotes.
 fn _json_str(s: string) -> string {
     let n = len(s)
@@ -565,7 +627,7 @@ fn main() {
     // NOT an env-var/config opt-out (s11). Subsumes the abs-path-heavy sign gate
     // below: when signed, this returns first; when unsigned, that gate still
     // bites (fork-storm protection), so unsigned behaviour is unchanged.
-    if _local_signed() { _allow() }
+    if _local_signed() { _allow_count("local_bound") }
 
     // local-bound guard (pool-route 0.6.0): commands inherently tied to THIS
     // host's filesystem / repo state must NEVER route — they break on a remote
@@ -582,19 +644,19 @@ fn main() {
     //   - /Users/ or /home/ literal : host-specific absolute path
     // These are read/version-control/local-fs ops, never the heavy compute the
     // pool exists for, so an early _allow() is always correct.
-    if _has_word(cmd, "git") || _has_word(cmd, "gh") || _has_word(cmd, "pool") { _allow() }
+    if _has_word(cmd, "git") || _has_word(cmd, "gh") || _has_word(cmd, "pool") { _allow_count("local_bound") }
     // node-package installers (0.7.4): npm/pnpm/yarn read package.json + write
     // node_modules in CWD — they are inherently cwd-bound, so routing them to a
     // pool host (where the CWD usually doesn't exist) fails preflight with
     // 'workdir missing' on every host and DENIES the command. The classifier
     // counted these as heavy compute, but the install/build IS local to the
     // project's CWD — there's no remote work to dispatch.
-    if _has_word(cmd, "npm") || _has_word(cmd, "pnpm") || _has_word(cmd, "yarn") { _allow() }
+    if _has_word(cmd, "npm") || _has_word(cmd, "pnpm") || _has_word(cmd, "yarn") { _allow_count("local_bound") }
     // sidecar plugin pin (0.6.8): `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA`
     // literals always resolve to the LOCAL plugin cache — routing them to a
     // pool host fails because the cache lives only on the workstation. Trusted
     // surface (sidecar slash commands), so no sign gate.
-    if cmd.contains("$CLAUDE_PLUGIN_ROOT") || cmd.contains("$CLAUDE_PLUGIN_DATA") { _allow() }
+    if cmd.contains("$CLAUDE_PLUGIN_ROOT") || cmd.contains("$CLAUDE_PLUGIN_DATA") { _allow_count("local_bound") }
     // home-dotstate pin (0.6.9): `~/.` and `$HOME/.` references point at
     // per-host HIDDEN state (`~/.zsh_history` · `~/.hexa-cache` · `~/.pool` ·
     // `~/.sidecar` · `~/.config` · …) that is NOT user-synced. Routing them to a
@@ -616,10 +678,10 @@ fn main() {
         let toks = _tokens(cmd)
         if _local_heavy_interp(cmd, toks) {
             if !_local_signed() {
-                _deny("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.")
+                _deny_count("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.", "heavy_failed")
             }
         }
-        _allow()
+        _allow_count("local_bound")
     }
 
     let home = _env("HOME")
@@ -700,7 +762,7 @@ fn main() {
     // local. Mirrors the heavy detector's adjacency + substring robustness so
     // a zsh-snapshot-wrapped `hexa cloud` is caught too. (INBOX hexa-lang
     // 2026-05-25T06:37Z — pool-route double-routes hexa cloud.)
-    if _any_adjacent(toks, ["hexa", "cloud"]) || _any_pair_substring(stripped, ["hexa", "cloud"]) { _allow() }
+    if _any_adjacent(toks, ["hexa", "cloud"]) || _any_pair_substring(stripped, ["hexa", "cloud"]) { _allow_count("local_bound") }
 
     // heavy classifier — build / test / package / train commands
     // 0.6.7 — `aprime_cc` added: hexa-lang's in-tree self-host native codegen
@@ -753,7 +815,7 @@ fn main() {
     let sudo_words = ["apt", "apt-get", "dpkg", "dpkg-deb", "add-apt-repository", "yum", "dnf", "rpm", "pacman", "systemctl", "ldconfig", "setcap", "update-alternatives"]
     let needs_sudo = _any_word(cmd, sudo_words)
 
-    if !heavy && !needs_sudo { _allow() }
+    if !heavy && !needs_sudo { _allow_count("light_allowed") }
 
     // capability filter — restrict to a platform when the command demands one
     // 0.6.7 — `aprime_cc` also added to macos_words: the in-tree binary is
@@ -811,7 +873,7 @@ fn main() {
             }
         }
     }
-    if len(elig) == 0 { _allow() }
+    if len(elig) == 0 { _allow_count("heavy_failed") }
 
     // round-robin across the eligible hosts
     let rr_path = dd + "/.pool-route.rr"
@@ -968,6 +1030,7 @@ fn main() {
             note = note + " (" + why + sudo_note + "; " + to_string(len(h_name)) + "-host roster)."
             if li > 0 { note = note + " [skipped " + to_string(li) + " host(s) on preflight: " + tried.join(", ") + "]" }
             _log_route(host_i, cmd)
+            _tally("routed")
             _emit(ti, new_cmd, note)
             routed = true
         }
@@ -990,6 +1053,6 @@ fn main() {
                  + "+ a built build/hexa_interp (`cd ~/core/hexa-lang && hexa cc --regen`); "
                  + "for C/C++, ensure the compiler (gcc/clang) is installed on a host; "
                  + "for any command, ensure the workdir (" + wd_remote + ") exists on at least one host."
-        _deny(body)
+        _deny_count(body, "heavy_failed")
     }
 }

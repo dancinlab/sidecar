@@ -6,7 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
-## 2026-05-26 — pool-route 0.7.4: npm/pnpm/yarn LOCAL-bound (preflight 'workdir missing' 막힘 해소)
+## 2026-05-27 — pool-route 0.7.5: routing-rate baseline counters (POOL-OFFLOAD m1)
+
+POOL-OFFLOAD 도메인 마일스톤 1 — Mac→Linux pool 위임 확장의 기준선 측정 도구. 분류기 verdict 4종을 카운트해서 "실제로 몇 % 가 pool 로 갔는가" 를 `/check` 로 노출.
+
+- **pool-route 0.7.4 → 0.7.5** — `_tally(category)` 헬퍼 + `_allow_count(cat)`/`_deny_count(reason, cat)` 래퍼 추가. 의미있는 분기 9개 사이트만 카운트(local-sign · git/gh/pool · npm/pnpm/yarn · $CLAUDE_PLUGIN_ROOT · $HOME/dotstate · hexa cloud · light-allowed · routed-emit · exhausted-deny). 비-분류기 exit(non-Bash · empty · MARK · heredoc · already-ssh)는 카운트 제외 → 비율이 실제 라우팅 결정만 반영.
+- **counter 파일** `~/.pool/route-counters.tally` — 라인당 `KEY=N` (routed/local_bound/light_allowed/heavy_failed/total). 동시 세션 race 는 lossy 허용(베이스라인 측정 목적).
+- **/check 확장** — `═══ pool-route counters` 섹션 추가, 4종 verdict + 비율 + 총합 출력. tally 파일 없으면 안내 라인.
+- plugin.json + marketplace.json + CHANGELOG lockstep.
+
+
 
 사용자 즉시 보고 — `npm i @google-cloud/vertexai ...` 가 pool-route 의 heavy classifier 에 잡혀 ubu-1/ubu-2 라우팅 시도, 두 host 모두 cwd(`~/core/demiurge/web`) 가 없어 preflight 실패 → 명령 자체 DENY. npm/pnpm/yarn 은 본질적으로 cwd-dependent (package.json 읽고 node_modules 를 CWD 에 씀) — pool host 로 보낼 일 자체가 없다.
 

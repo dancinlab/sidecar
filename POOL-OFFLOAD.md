@@ -4,7 +4,7 @@
 @title: 🚚 POOL-OFFLOAD — Mac 짐 덜기 (Linux pool 위임 확장)
 
 (edit me — describe current state in completed-form; no history, no changelog inside this file)
-- [ ] 베이스라인 측정 도구 — 최근 N개 Bash 중 routed/local-bound/heavy-but-failed 비율 집계 (route-log.jsonl 확장 + /check 노출)
+- [x] 베이스라인 측정 도구 — 최근 N개 Bash 중 routed/local-bound/heavy-but-failed 비율 집계 (route-log.jsonl 확장 + /check 노출)
 - [ ] Node 생태계 런타임 분류 추가 — node/tsx/ts-node/deno/bun script 실행을 heavy로 인식 (npm/pnpm/yarn 은 0.7.4 처럼 local-bound 유지)
 - [ ] JVM 계열 컴파일/실행 분류 추가 — java/javac/kotlinc/scalac/sbt heavy 인식 (gradle/mvn 은 이미 있음)
 - [ ] 미디어 도구 분류 추가 — ffmpeg/magick/convert/sox/imagemagick heavy 인식 (Mac 인코딩 부하 큰 작업)

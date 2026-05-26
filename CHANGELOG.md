@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.7.9: 미디어 도구 (POOL-OFFLOAD m4)
+
+POOL-OFFLOAD 마일스톤 4 — `ffmpeg`/`magick`/`convert`/`sox` 미디어 트랜스폼을 heavy 로 인식. Mac 에서 비디오 인코딩·이미지 배치 변환·오디오 처리 같은 CPU-heavy 부하를 ubu pool 로 위임.
+
+- **pool-route 0.7.8 → 0.7.9** — 2 레이어 확장:
+  - `heavy_words` +2: `ffmpeg` · `magick` (6-char specific, ImageMagick 7+ canonical binary)
+  - `_local_heavy_interp` first-token +4: `ffmpeg` · `magick` · `convert` · `sox` (abs-path EXEC-only 정밀 매치)
+- **convert/sox 는 first-token-only** — `convert`(7-char 영어 일반어)·`sox`(3-char) 는 `cat docs/convert.md` 같은 substring false-pos 위험 → heavy_words 미포함, abs-path EXEC 만 보호.
+- **imagemagick 보류** — 패키지명, 실제 bin 호출은 `magick` (또는 legacy `convert`).
+- 파싱 검증: `hexa parse` → OK.
+- plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.7.8: JVM 계열 (POOL-OFFLOAD m3)
 
 POOL-OFFLOAD 마일스톤 3 — Java/Kotlin/Scala/sbt 컴파일·실행을 heavy 로 인식. Mac 에서 `javac Foo.java`·`java -jar app.jar`·`sbt compile` 같은 JVM fork-storm 을 ubu pool 로 위임.

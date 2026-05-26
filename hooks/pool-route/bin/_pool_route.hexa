@@ -418,6 +418,18 @@ fn main() {
     if cmd.ends_with("&") { _allow() }
     if cmd.starts_with("ssh ") { _allow() }
 
+    // single local-execution gate (0.7.2): a fresh `local` sign token forces
+    // EVERY command to run HERE — the one deliberate, user-minted "run this on
+    // the workstation, do NOT route" path (`! sidecar sign local`, 5min TTL).
+    // Consolidates local-exec control to one sign-gated channel: when the router
+    // mis-classifies a local-bound command (a diagnostic `ps`/`awk`, a local-fs
+    // fix) and ships it to a peer host, the user signs ONCE and all routing is
+    // suppressed for the window. A sanctioned, time-boxed, user-minted token —
+    // NOT an env-var/config opt-out (s11). Subsumes the abs-path-heavy sign gate
+    // below: when signed, this returns first; when unsigned, that gate still
+    // bites (fork-storm protection), so unsigned behaviour is unchanged.
+    if _local_signed() { _allow() }
+
     // local-bound guard (pool-route 0.6.0): commands inherently tied to THIS
     // host's filesystem / repo state must NEVER route — they break on a remote
     // where the path / repo / binary doesn't exist. The recurring failure mode:

@@ -858,13 +858,18 @@ fn main() {
                        "hexa", "reign", "hexa", "molt", "hexa", "wake", "hexa", "forge",
                        "hexa", "canon", "hexa", "debate", "hexa", "revive",
                        "java", "-jar", "sbt", "compile", "sbt", "test", "sbt", "run"]
-    // big-tree find substring — multi-session `find $HOME/core/anima` (~458GB tree)
-    // is the documented Mac-kill pattern (267% CPU from 3× concurrent bfs). Route
-    // when the cmd contains `find <user>/core/anima`; preflight test -d gates the
-    // host so non-mirrored hosts fall through to local. $HOME-relative so other
-    // installs that lack the tree never match (substring is empty).
+    // big-tree find substring — multi-session `find $HOME/core/<any>` is the
+    // documented Mac-kill pattern (anima ~458GB tree drives 267% CPU from 3×
+    // concurrent bfs; other dancinlab repos like hexa-lang are similarly large).
+    // 0.7.10 generalizes from single `~/core/anima` to ALL `~/core/*` siblings,
+    // matching BOTH the expanded `<HOME>/core/` prefix AND the tilde `~/core/`
+    // form (commands typed by the user usually carry the tilde; commands
+    // composed by tools usually expand $HOME). Preflight test -d still gates
+    // each host — non-mirrored hosts fall through. Small repos (sidecar) pay a
+    // marginal SSH overhead for short finds; that trade-off keeps the Mac clean.
     let mut heavy_find_subs = []
-    if home != "" { heavy_find_subs.push("find " + home + "/core/anima") }
+    if home != "" { heavy_find_subs.push("find " + home + "/core/") }
+    heavy_find_subs.push("find ~/core/")
     let heavy = _any_word(stripped, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(stripped, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
 
     // NOTE (pool-route 0.6.0): the load-aware escalation gate (0.5.7 #96) was

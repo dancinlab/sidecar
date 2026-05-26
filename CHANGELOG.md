@@ -6,6 +6,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.7.10: big-tree find 일반화 (POOL-OFFLOAD m5)
+
+POOL-OFFLOAD 마일스톤 5 — `find $HOME/core/anima` 단일 substring 을 `~/core/*` 전체로 일반화. 어떤 dancinlab 패밀리 repo (anima · hexa-lang · demiurge · phanes · sidecar · ...) 든 big-tree find 가 자동 라우팅.
+
+- **pool-route 0.7.9 → 0.7.10** — `heavy_find_subs` 2-substring:
+  - `find <HOME>/core/` (expanded form, 도구가 합성한 명령에 흔함)
+  - `find ~/core/` (tilde form, 사용자 직접 타이핑 흔함)
+- **이전 패턴**: anima 1개 substring만 → 너무 좁음 (hexa-lang 같은 큰 트리 누락)
+- **safety net**: preflight `test -d` 가 비-mirrored 호스트 자동 스킵 (기존 동작 그대로). 모든 호스트가 미러 부족하면 deny + per-host breakdown.
+- **trade-off**: 작은 repo(sidecar 등)의 짧은 find 도 SSH 라운드트립 비용을 지불. Mac 청결 유지가 더 가치 — 사용자가 강제 로컬화 원하면 `! sidecar sign local`.
+- **rg/fd 보류**: 인수 순서가 `rg pattern path` 형태라 단순 substring 매치 어려움. 다음 라운드 별도 메커니즘.
+- 파싱 검증: `hexa parse` → OK.
+- plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.7.9: 미디어 도구 (POOL-OFFLOAD m4)
 
 POOL-OFFLOAD 마일스톤 4 — `ffmpeg`/`magick`/`convert`/`sox` 미디어 트랜스폼을 heavy 로 인식. Mac 에서 비디오 인코딩·이미지 배치 변환·오디오 처리 같은 CPU-heavy 부하를 ubu pool 로 위임.

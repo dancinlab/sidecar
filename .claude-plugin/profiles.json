@@ -16,6 +16,7 @@
     "worktree-gc": "core",
     "output-trim": "core",
     "memory-lint": "core",
+    "drift-guard": "core",
     "limit-guard": "core",
     "monitor-guard": "core",
     "throttle-guard": "core",

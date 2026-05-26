@@ -1,0 +1,9 @@
+{
+  "name": "drift-guard",
+  "description": "PostToolUse(Write|Edit) advisory that prevents design-drift regression — when a design-defining surface is edited but MEMORY.md + CLAUDE.md/project.tape are not, the next session (which loads memory at startup, not the diff) regresses to the old design. Implemented in hexa-lang (`_drift_guard.hexa`, invoked via `hexa run`). Fires on any of: (1) SSOT file edit — path ends in `.tape` or `/CLAUDE.md`; (2) a new artifact under a `decisions/` folder; (3) an explicit `@design-change` marker in the post-write content. Skips the mirror targets themselves (`/memory/`, MEMORY.md) and the guard's own install dir. Emits non-blocking additionalContext nudging the model to mirror the change into the project auto-memory (memory file + MEMORY.md pointer), or — for a cross-project governance rule — to ask the user to `sidecar sign` commons.tape/project.tape. De-dupes once per (session, file) via a CLAUDE_PLUGIN_DATA marker. Advisory-only (per guards-narrow-scope). NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "memory", "drift", "regression", "design", "hexa"]
+}

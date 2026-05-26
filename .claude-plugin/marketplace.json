@@ -87,6 +87,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "drift-guard",
+      "source": "./hooks/drift-guard",
+      "description": "PostToolUse(Write|Edit) advisory that prevents design-drift regression \u2014 when a design-defining surface is edited but MEMORY.md + CLAUDE.md/project.tape are not, the next session (which loads memory at startup, not the diff) regresses to the old design. Implemented in hexa-lang (`_drift_guard.hexa`, invoked via `hexa run`). Fires on any of: (1) SSOT file edit \u2014 path ends in `.tape` or `/CLAUDE.md`; (2) a new artifact under a `decisions/` folder; (3) an explicit `@design-change` marker in the post-write content. Skips the mirror targets themselves (`/memory/`, MEMORY.md) and the guard's own install dir. Emits non-blocking additionalContext nudging the model to mirror the change into the project auto-memory (memory file + MEMORY.md pointer), or \u2014 for a cross-project governance rule \u2014 to ask the user to `sidecar sign` commons.tape/project.tape. De-dupes once per (session, file) via a CLAUDE_PLUGIN_DATA marker. Advisory-only (per guards-narrow-scope). NO opt-out by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "inbox-log-lint",
       "source": "./hooks/inbox-log-lint",
       "description": "PostToolUse(Write|Edit) advisory for the INBOX domain log (`INBOX.log.md`). Fires when tool_input.file_path ends in `INBOX.log.md` and reads the post-write file to emit non-blocking additionalContext when the cross-project handoff log piles up: entry count (`## ` headers) > 20 (soft cap) \u00b7 fully-resolved entries (>=1 `- [x]`, zero `- [ ]`) > 12 \u00b7 non-blank lines > 250 \u2014 each suggests moving closed handoffs to a sibling `INBOX.archive.log.md` so the active log stays open + recent. Implemented in hexa-lang (`_inbox_log_lint.hexa`, invoked via `hexa run`). Advisory-only by design (per the guards-narrow-scope policy: non-blocking additionalContext > deny for hygiene). Sister of memory-lint (same pattern for memory/MEMORY.md).",

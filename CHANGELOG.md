@@ -6,6 +6,29 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.8.4: 'whitelist' 용어 정정 (= local-execution allowlist · sign-gated)
+
+사용자 지적 — "pool 화이트리스트는 로컬 실행 화이트리스트를 뜻함" + "화이트리스트 등록은 sign 필요". 0.8.0의 `HEXA WHITELIST` 표현이 의미 반대였음: 실제로는 "ANY hexa → pool"이라는 **POOL-DISPATCH 셋**을 정의했는데, 'whitelist'는 통상적으로 "이 리스트에 있는 것은 허용/예외" (= pool-route 맥락에서는 **LOCAL-EXEC** = 로컬에 머무름) 의미여야 함. 이 두 개념은 정반대.
+
+**docs only** — code 변경 없음, 동작 동일. 명명+CHANGELOG로 의미 교정.
+
+- **POOL-DISPATCH** (0.8.0의 'HEXA WHITELIST'에서 개명): ANY hexa 실행 → pool. 0.8.1 atlas register · 0.8.3 canon 환경 그대로.
+- **LOCAL-EXECUTION WHITELIST** (진짜 whitelist): pool dispatch를 ESCAPE하고 로컬에 머무는 패턴들. 멤버:
+  1. `$CLAUDE_PLUGIN_ROOT` / `$CLAUDE_PLUGIN_DATA` (sidecar self-hook · workstation-only cache)
+  2. `hexa cloud *` (자체가 remote dispatcher)
+  3. `hexa atlas register` (로컬 SSOT embedded.gen.hexa 쓰기)
+  4. `/Users/` · `/home/` abs-path heavy interp (sign-gated · 피어 호스트에 경로 부재)
+  5. `~/.` · `$HOME/.` dotstate (~/.zsh_history · ~/.hexa-cache · ~/.pool · ~/.sidecar · per-host hidden state, NOT user-synced)
+  6. `git` · `gh` 명령 (repo-local state)
+  7. `npm` · `pnpm` · `yarn` (cwd-dependent package installer)
+  8. `! sidecar sign local` 5min runtime token (`~/.sidecar/signs/local.sign`)
+- **registration = sign-gated** (commons @D s13 · 새 메커니즘 없이 기존 sign 인프라로 충족):
+  - 구조적 exemption 추가 = `_pool_route.hexa` 편집 + project.tape 룰 = project.tape sign-gate (`sidecar sign project`)
+  - runtime force-local 토큰 minting = USER TUI `!` bang (`! sidecar sign local`)만 — agent 자가민팅 path 없음
+- env-var/config opt-out 없음 (commons @D s11) · 이미 enforced
+
+새 runtime verb (`pool wl add/list/rm` 등) 옵션은 유저가 "용어+도큐먼트만" 선택 — Occam 적용, 기존 인프라로 충분.
+
 ## 2026-05-27 — inbox-guard 0.1.0: `inbox/` 폴더 쓰기 차단 + 레거시 `inbox` 스킬 폐기
 
 사용자 지적 — "INBOX.md 시스템이 아니라 inbox/ 폴더도 자꾸 사용해 막아줘". 진단: cross-project handoff SSOT는 `INBOX.md` (repo 루트 단일 .md · `- [ ]` 열린 항목 + sibling `INBOX.log.md` 해소이력 — anima·demiurge·hexa-lang·sidecar 4개 repo 모두 보유)인데, 레거시 `inbox` skill이 `inbox/<kind>/<slug>.md` (kind ∈ notes/patches/poc/rfc_drafts) 폴더 엔트리를 양산해서 활성 handoff 상태가 단일 SSOT 대신 여러 파일에 파편화.

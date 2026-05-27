@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.8.2: 폐기된 `hexa_interp` preflight probe 제거 (hexa=컴파일언어)
+
+사용자 지적 — "hexa는 컴파일언어, 인터프리터 폐기됨". pool-route preflight가 호스트 hexa 가용성을 `test -x ~/core/hexa-lang/build/hexa_interp` 로 판정했는데, 이 인터프리터 아티팩트는 **폐기**돼서 컴파일 hexa가 멀쩡한 호스트를 잘못 skip. 결과: ubu-2(hexa·hexa_cli_driver·hexa_v2 완비, leftover interp 없음)가 preflight 실패 → round-robin skip → agent가 pool 못 쓰고 로컬 sign-gate로 회귀.
+
+- **pool-route 0.8.1 → 0.8.2** — preflight tool_probe 에서 `&& test -x "$HOME/core/hexa-lang/build/hexa_interp"` 제거. readiness = `command -v hexa` + `hexa <verb> --help`(live 컴파일 경로 실제 태움) 만으로 판정 — build-dir 아티팩트 이름 의존 제거.
+- deny trailer 의 stale "build a built build/hexa_interp (`hexa cc --regen`)" 안내도 "runnable compiled hexa on PATH (hexa is compiled, interpreter DEPRECATED)" 로 교정.
+- 효과: ubu-1·ubu-2 둘 다 preflight 통과 → round-robin 부하분산 복원, hexa 라우팅 신뢰성 ↑.
+- 메모리 `reference:hexa-lang-mac-build-loop` 에 "컴파일전용·인터프리터 폐기·readiness probe서 hexa_interp 보지말것" 박음.
+- 파싱 검증 OK · plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — cycle 0.8.2: `/cycle-all` — 추천/선택 없이 전부 진행
 
 사용자 directive — "/cycle 이 next-list 뽑고 '추천 우선순위 + 어느 거 dispatch?' 게이트를 띄우는 대신 전부 진행하는 명령어". `/cycle` 의 5-스테이지를 그대로 쓰되 2가지 override.

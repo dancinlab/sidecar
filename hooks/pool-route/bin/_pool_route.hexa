@@ -1151,7 +1151,17 @@ fn main() {
             if hverb == "kick" || hverb == "drill" || hverb == "loop" || hverb == "cc" { hexa_subverb = hverb }
             let mut help_cmd = "hexa --help"
             if hverb != "" && hverb.substring(0, 1) != "-" { help_cmd = "hexa " + hverb + " --help" }
-            tool_probe = "command -v hexa >/dev/null 2>&1 && test -x \"$HOME/core/hexa-lang/build/hexa_interp\" && PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_LANG=\"$HOME/core/hexa-lang\" " + help_cmd + " >/dev/null 2>&1"
+            // 0.8.2 — drop the obsolete `test -x build/hexa_interp` gate. hexa is a
+            // COMPILED toolchain; the tree-walking interpreter (build/hexa_interp)
+            // was DEPRECATED, so probing for it wrongly SKIPS hosts that have a
+            // perfectly working compiled hexa (e.g. ubu-2 has hexa on PATH +
+            // hexa_cli_driver + hexa_v2 but no leftover hexa_interp → was rejected;
+            // ubu-1 only passed on a stale leftover binary). Readiness now = the
+            // binary resolves (`command -v hexa`) AND a cheap real invocation
+            // (`hexa <verb> --help`, which compiles+runs through the live
+            // toolchain) succeeds — that exercises the actual compile path, no
+            // dependence on a specific build-dir artifact name.
+            tool_probe = "command -v hexa >/dev/null 2>&1 && PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_LANG=\"$HOME/core/hexa-lang\" " + help_cmd + " >/dev/null 2>&1"
             tool_label = help_cmd
         } else if t0b == "gcc" || t0b == "g++" || t0b == "clang" || t0b == "clang++" || t0b == "cc" || t0b == "c++" {
             tool_probe = "command -v " + t0b + " >/dev/null 2>&1"
@@ -1231,7 +1241,8 @@ fn main() {
                  + "  tried   : " + tried.join(", ") + "\n"
                  + "  failures:\n    " + reasons.join("\n    ") + "\n"
                  + "  fix     : for hexa, ensure each pool host has the hexa-lang repo at ~/core/hexa-lang "
-                 + "+ a built build/hexa_interp (`cd ~/core/hexa-lang && hexa cc --regen`); "
+                 + "+ a runnable compiled `hexa` on PATH (`command -v hexa` + `hexa --help` must succeed — "
+                 + "hexa is compiled, the build/hexa_interp interpreter is DEPRECATED, do NOT probe for it); "
                  + "for C/C++, ensure the compiler (gcc/clang) is installed on a host; "
                  + "for any command, ensure the workdir (" + wd_remote + ") exists on at least one host."
         _deny_count(body, "heavy_failed")

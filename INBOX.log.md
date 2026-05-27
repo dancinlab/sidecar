@@ -437,3 +437,77 @@ bare /domain:
 - demiurge #382 (mining.md v2 정리 본체 — phase 그룹 + 단일 closure)
 
 **우선순위**: medium · 발산/수렴 완성된 sidecar #190/#191 후 자연 다음 step. 누적 doc의 가독성·유지보수성 직격.
+
+## 2026-05-27 — ~/.pool/pods.json 활성 POD 매니페스트 (update-form, from demiurge RTSC)
+
+호스트 roster용 `~/.pool/pool.json` (이미 존재 · update-form)의 sibling — 활성 DFT/dispatch POD 상태를 *append 아닌 update 형식*으로 관리.
+
+**상황**: demiurge RTSC 캠페인에서 8 DFT job + 8 background watcher 동시 진행. 현재 상태가 산재:
+- background watcher PID (bfvsatagh, b8tw784iy, ...)는 `/private/tmp/.../tasks/*.output` (chronological append)
+- pod-에 dispatched 정보는 `exports/sweep/<batch>/state.json` + `ledger.json` (cycle별 append)
+- 한눈에 "지금 무엇이 어디서 진행중"이 안 보임 → 매 사이클 sweep 명령 반복 필요
+
+**제안 파일**: `~/.pool/pods.json` (또는 `~/.pool/dispatch.json`)
+
+```json
+{
+  "version": "1.0",
+  "last_updated_utc": "2026-05-27T14:15:00Z",
+  "pods": {
+    "vast-ysbh6-pod-41837": {
+      "host": "77.104.167.149:41837",
+      "provider": "vast.ai", 
+      "ssh_key": "id_vast_anima",
+      "cores": 80,
+      "qe_env": "/root/miniforge3/envs/qe",
+      "rented_since": "2026-05-25T..."
+    }
+  },
+  "jobs": {
+    "mgb2_pure": {
+      "pod": "vast-ysbh6-pod-41837",
+      "dir": "~/mgb2_pure",
+      "kind": "dft-elph",
+      "stage": "ph",
+      "started_utc": "2026-05-27T07:38:18Z",
+      "pid": 10975,
+      "watcher": "bpl3k1l8m",
+      "watcher_output": "/private/tmp/.../bpl3k1l8m.output",
+      "last_progress": {"iter": 16, "cpu_s": 22504},
+      "anchor_tc_K": 39,
+      "verdict": "PENDING"
+    },
+    "cah6_decompress": {"pod": "vast-ysbh6-pod-41837", "kind": "dft-vc-relax+ph",
+       "stage": "vc-relax", "watcher": "bfvsatagh", ...},
+    ...
+  }
+}
+```
+
+**update-form 의미**:
+- 각 job/pod entry는 *전체 덮어쓰기*로 갱신 (`jq` merge 또는 atomic write).
+- 같은 watcher 재무장하면 entry 갱신 (append 안 함).
+- pod down/job 종료 시 `verdict` 필드만 갱신, entry 보존.
+- JSON Patch (RFC 6902)로 idempotent merge: `jq -s '.[0] * .[1]' pods.json patch.json > pods.json.new && mv`.
+
+**제안 `pool` CLI 확장**:
+- `pool pods` (or `pool dispatch`) — pods.json render (테이블).
+- `pool dispatch add <id> <host> <dir> ...` — entry 추가/덮어쓰기.
+- `pool dispatch verdict <id> <status>` — verdict 필드 갱신.
+- `pool dispatch rm <id>` — entry 제거.
+- `pool dispatch active` — verdict=PENDING entry만.
+- `pool dispatch tree` — pod별 job 트리 ASCII.
+
+**디자인 노트**:
+- `.json` 선택: `~/.pool/pool.json` 선례 + `jq` 표준 merge + 모든 도구 paseable.
+- `.tape` 거부 이유: 발산/누적 지향(project.tape, mining.tape), update form 아님.
+- 위치 `~/.pool/`: pool 생태계 sibling 자명.
+- `last_updated_utc` 트래킹: stale detection.
+- `watcher_output` 경로: monitor 재첨부 지점 (commons @D g10).
+
+**관련**:
+- 기존 `~/.pool/pool.json` (호스트 roster, update-form 선례)
+- demiurge `exports/sweep/<batch>/{state,ledger}.json` (batch별 append, sibling 위치)
+- sidecar #189/#190/#191/#192 (`<NAME>.brainstorm/.mining` + `/mining` 3종)
+
+**우선순위**: medium-high · 현재 8 DFT 동시 진행 + 향후 wave-3 dispatch 시 매니페스트 부재가 가시성 병목. 멱등 update-form이 mining의 chronological log와 자연 분리(상태 vs 역사).

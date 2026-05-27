@@ -627,3 +627,44 @@ demiurge `/sbs full web gui ,cli 로 8verb 처리과정 구현계획 잡자` →
 - demiurge PR#388 (PR#0 stdlib-matrix-index merged)
 
 **우선순위**: medium · 다음 `/sbs full` 사용 시 즉시 적용 가능 · 코드 변경 없음 (skill 문서 + style guide 갱신만).
+
+---
+
+## 2026-05-28 — handoff 모드 = stacked-PR plan 완료 후 자동 HANDOFF.md 생성 (from demiurge Web GUI fire)
+
+PR #195 (/sbs full 18-round 보강) 자매 entry. demiurge `/sbs full` → 9-step stacked PR plan 자율 fire (PR#0~PR#8, 7 merged) 직후 운용 중 드러난 보강.
+
+**관찰**:
+demiurge Web GUI: 18 라운드 합의 → PR#0 (design SSOT 4 manifest) → PR#1~PR#7 (code 7 PR, ~1300 LOC, 0 npm, 0 GPU) → PR#8 (HANDOFF.md). 마지막 PR이 명시적 인계 문서가 아니면 다음 세션이 7 PR 결과를 재구성하느라 두 번 일함.
+
+**제안 보강** (sbs FULL 모드 한정 · `/sbs full` + `handoff` 키워드 트리거):
+
+1. **plan 완료 직후 = HANDOFF doc PR 자동 추가** — N-step plan 의 마지막 PR로 `domains/HANDOFF.md` (또는 repo 컨벤션 위치) 한 PR 강제. 한 문서에 9 섹션:
+   - § PR 진행 상태 매트릭스 (번호 · 제목 · 상태 · merged 일시 · 핵심)
+   - § 설계 SSOT 파일 인덱스 (먼저 읽을 파일들)
+   - § 새 API surface (method · path · 역할 · 권한 표)
+   - § 새 컴포넌트/lib 트리 (디렉토리 스케치)
+   - § 환경 변수 (활성 전 필수)
+   - § 다음 우선순위 (정렬된 todo list)
+   - § 알려진 한계 + guard rule
+   - § memory/CLAUDE.md 인덱스
+   - § 한 줄 시작 가이드 (다음 세션 첫 명령)
+
+2. **handoff trigger 키워드** — 사용자가 "handoff 모드 · 완전 구현" / "완전한 handoff" 발화 시 9-step fire 끝까지 자동 + 마지막 PR로 HANDOFF doc 강제.
+
+3. **HANDOFF.md memory 미러** — `memory/project_<slug>_handoff.md` 한 줄 pointer 자동 등록 + `MEMORY.md` 한 줄 추가. drift-guard와 합치.
+
+4. **"PR cycle 자동" 패턴 명시** — 단일 worktree (`~/core/<repo>-pr-cycle`) 안에서 branch 갈아끼우는 패턴이 N 회 worktree 생성/제거보다 5-10× 빠름 (실측: 7 PR 6 분). 매 PR `reset --hard origin/main + checkout -b` 사이클.
+
+5. **PR-create hook 자동 merge 깨짐 보정** — cross-repo `--repo X` 사용 시 hook이 `gh pr merge --repo X` 만 append 하고 PR 번호 누락 → exit 1. fix: skill 이 PR 번호를 캡처해 명시적 `gh pr merge <N> --repo X` 폴백 발사.
+
+**왜 지금**:
+이번 demiurge fire 9 PR (#388~#397) 전부 PR-create hook의 number-누락 merge 실패 발생 → 명시적 merge 콜 반복. 패턴화 가치 있음.
+
+**관련**:
+- PR #194 (FULL chat+analogy)
+- PR #195 (/sbs full 18-round 보강)
+- demiurge `domains/HANDOFF.md` (이 entry 의 reference impl)
+- demiurge PR#388/389/391/392/393/394/395/396/397 (9 stacked PR cycle 실측)
+
+**우선순위**: medium-high · skill 갱신 + style guide 한 줄. 다음 `/sbs full handoff` 즉시 적용 가능.

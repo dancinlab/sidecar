@@ -4,6 +4,20 @@ argument-hint: "[scope hint]"
 allowed-tools: Bash, Read, Edit, Write
 ---
 
+**STICKY MODE (Stage -1, run FIRST).** `/cycle-fg` is not one-shot — it sets the
+session's cycle execution mode to **foreground** and PERSISTS it, so subsequent
+bare `/cycle` rounds ALSO run foreground until the user flips back with
+`/cycle-bg`. Write the marker before anything else:
+
+```
+mkdir -p ~/.sidecar && printf fg > ~/.sidecar/cycle-mode
+```
+
+(`~/.sidecar/cycle-mode` ∈ {`fg`, `bg`} · per-host dotstate · default `bg` when
+absent.) Bare `/cycle` reads this marker at its Stage 0 and dispatches to the
+matching execution mode. `/cycle-fg` = set `fg` + run · `/cycle-bg` = set `bg` +
+run · neither resets on its own — the mode is sticky across the session.
+
 Engage the `cycle` skill in **FOREGROUND-SEQUENTIAL mode** — identical to `/cycle`
 in the enumeration, precheck, and planning stages (run Stages 0-3 unchanged), with
 ONE deliberate override at Stage 4:
@@ -70,7 +84,8 @@ Stage 5.
 
 **One-line mode banner** before Stage 1:
 `mode: cycle-fg (foreground sequential · 1-at-a-time · no Agent fan-out · halt
-on failure)`.
+on failure) · sticky → ~/.sidecar/cycle-mode=fg (subsequent /cycle stays fg until
+/cycle-bg)`.
 
 NL triggers: /cycle-fg · 사이클 포그라운드 · 사이클 순차 · 사이클 직접 ·
 foreground cycle · sequential cycle · inline cycle · 한 단계씩 사이클.

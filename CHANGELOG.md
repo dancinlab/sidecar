@@ -28,6 +28,28 @@ For the full audit trail, see `git log`.
 
 둘 다 profiles.json tier=`core` (cross-tier 유용성).
 
+## 2026-05-27 — cycle 0.9.1: `/cycle-bg` + fg/bg STICKY 실행모드 토글
+
+사용자 — "cycle-bg도 만들어줘" + "cycle-fg 이후에는 cycle도 fg, -bg는 이후에도 bg". 즉 fg/bg를 일회성이 아니라 **세션 sticky 모드 토글**로.
+
+- **마커**: `~/.sidecar/cycle-mode` ∈ {`fg`, `bg`} (per-host dotstate · default `bg` 부재시).
+- **`/cycle-fg`** — 마커 `=fg` 세팅 + 이번 라운드 foreground 순차 실행. 이후 bare `/cycle`도 fg 유지.
+- **`/cycle-bg`** (신규) — 마커 `=bg` 세팅 + 이번 라운드 background 병렬 fan-out + auto-continue (= 원래 기본 /cycle 동작). `/cycle-fg` 세션 후 병렬로 되돌릴 때 사용.
+- **bare `/cycle`** — Stage -1에서 마커 읽어(default bg) 해당 모드로 Stage 4 dispatch. Stages 0-3 + Stage 5는 모드 무관 동일.
+
+```
+command       마커 set   이번 라운드        이후 bare /cycle
+/cycle-fg     fg         foreground 순차    foreground (sticky)
+/cycle-bg     bg         background 병렬    background (sticky)
+bare /cycle   (유지)     마커 읽음(기본 bg)  마커 추종
+```
+
+- fg = 디버깅 · 조심스러운 리뷰 · cwd 공유/단일-스레드 리소스 작업 · bg (기본) = 격리 필요한 독립 병렬 버스트
+- 양쪽 모두 ALL guardrails 유지 (SSOT-freshness · dup-race SKIP · leak-sweep · resource-serialization)
+- **7개 명령** 패밀리 (`/cycle` · `/cycle-full` · `/cycle-loop` · `/cycle-full-loop` · `/cycle-all` · `/cycle-fg` · `/cycle-bg`)
+
+NL triggers 확장: `사이클 백그라운드` · `사이클 병렬` · `background cycle` · `parallel cycle` · `bg 모드로` · `다시 백그라운드`.
+
 ## 2026-05-27 — cycle 0.9.0: `/cycle-fg` — foreground 순차진행 변형
 
 사용자 요청 — "사이클 명령어 포그라운드 순차진행 명령어 필요". 기존 cycle family는 전부 백그라운드 Agent fan-out (병렬 실행). 디버깅 · 조심스러운 리뷰 · cwd 공유 작업처럼 인-세션 가시성이 필요한 경우 — cycle의 자동 enumeration + plan은 유지하되 Stage 4 execution을 foreground sequential로 바꾼 변형 필요.

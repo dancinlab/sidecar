@@ -6,6 +6,11 @@ allowed-tools: Agent, Bash, Read
 
 Engage the `cycle` skill. In ONE message run all five stages:
 
+**-1. Execution-mode marker (sticky fg/bg, run FIRST).** Read `~/.sidecar/cycle-mode` (`cat ~/.sidecar/cycle-mode 2>/dev/null`, default `bg` when absent/empty). This marker is set by `/cycle-fg` (→ `fg`) / `/cycle-bg` (→ `bg`) and is STICKY across the session:
+   - marker = `fg` → run THIS round as `/cycle-fg` (foreground sequential · execute each PROCEED row inline one-at-a-time · halt on failure · NO background Agent fan-out). Banner: `mode: cycle (sticky fg ← ~/.sidecar/cycle-mode)`.
+   - marker = `bg` (or absent) → run THIS round in the default background mode described below (parallel Agent fan-out + auto-continue). Banner: `mode: cycle (bg)`.
+   The marker only changes how Stage 4 executes (fg=inline-sequential vs bg=Agent-fan-out); Stages 0-3 + Stage 5 are identical either way. Flip with `/cycle-fg` / `/cycle-bg`.
+
 **0. SSOT-freshness pre-check (@D ssot_freshness) — RUN FIRST, before reading any milestone.** The whole loop trusts the working-tree `<NAME>.md`; if that is a stale/untracked shadow, the next-list AND the depletion verdict are both wrong. Fail-open probe (skip silently outside a git repo / no origin/main ref):
    - **untracked?** `git ls-files --error-unmatch <NAME>.md` nonzero ⇒ local-only copy shadowing the committed SSOT.
    - **behind main?** `git log --oneline HEAD..origin/main -- <NAME>.md` non-empty ⇒ origin/main has newer milestones/@goal your tree lacks.

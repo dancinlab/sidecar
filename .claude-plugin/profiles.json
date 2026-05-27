@@ -66,6 +66,8 @@
     "stdlib": "master",
     "inbox-log-lint": "personal",
     "inbox-guard": "personal",
+    "go": "core",
+    "roi": "core",
     "pool-route": "personal",
     "s9-guard": "personal",
     "plist-guard": "personal",

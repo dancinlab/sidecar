@@ -6,6 +6,28 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — go 0.1.0 + roi 0.1.0: 2개 신규 스킬
+
+사용자 — "go 명령어, 자연어 캐치도 필요해 'go' only" + "roi 명령어도 필요해 무손실 성능/자원/속도 개선 할일 목록 뽑기, 특정 부분 지정 메시지 뒤로".
+
+### `skills/go/` 0.1.0
+`/go [hint]` — 가장 최근 제안 / 일시중지된 flow를 추가 확인 없이 진행. **bare `go` 단일 단어 메시지도 NL 트리거**. stateless continuation token (runbook 아님).
+
+- 인터프리테이션 케이스: 직전 plan/runbook 실행 · 추천 우선순위 선택 · `/sbs` MANUAL 다음 step · `/cycle-fg` 실패 step 재시도/skip · `/cycle` 다음 라운드 발화 · AskUserQuestion 미답 → recommended 디폴트
+- `$ARGUMENTS` 힌트: `retry`/`skip`/`all`/host-name 등으로 모호 케이스 disambiguation
+- 최근 제안 없으면 fabricate 금지 — 한 줄 질문으로 stop
+- 트리거: `/go`, bare `go` (단일 단어), `진행`, `계속`, `proceed`, `continue`, `ok go`, `yes go`
+
+### `skills/roi/` 0.1.0
+`/roi [scope]` — LOSSLESS (기능 손실 없음) perf · resource · speed · efficiency 개선 후보 ranked TODO list. 카테고리 ⚡speed · 🧠perf · 💾resource · 🔋efficiency. **risk=low ONLY 게이트** — risk≥medium 후보는 LOSSLESS 정의 위반이라 drop, drop-count 함께 surface.
+
+- Scope: bare `/roi` = active domain (있으면) ELSE cwd repo · `/roi <message>` = scope 한정 (file path · subdirectory · feature name · layer · language · hot path)
+- 발견 방법: anti-pattern grep (N+1 · re-parse-per-call · O(n²) where O(n log n) trivial · unbounded growth · sync I/O on hot path · sort+take-1 vs min · regex recompile per loop · dict lookup not hoisted · …) → bench-grounded where measurable (`feedback:bench-kernel-choices` 적용) → impact/effort 비율로 정렬
+- 출력: `| # | category | item | impact | effort | risk | how | evidence |` 단일 테이블 · cap top 10/category
+- 트리거: `/roi`, `/roi <scope>`, `roi 뽑아`, `roi list`, `무손실 개선 할일`, `성능 개선 할일`, `자원 개선 할일`, `속도 개선 할일`, `효율 개선 할일`, `lossless improvements`, `perf wins`
+
+둘 다 profiles.json tier=`core` (cross-tier 유용성).
+
 ## 2026-05-27 — cycle 0.9.0: `/cycle-fg` — foreground 순차진행 변형
 
 사용자 요청 — "사이클 명령어 포그라운드 순차진행 명령어 필요". 기존 cycle family는 전부 백그라운드 Agent fan-out (병렬 실행). 디버깅 · 조심스러운 리뷰 · cwd 공유 작업처럼 인-세션 가시성이 필요한 경우 — cycle의 자동 enumeration + plan은 유지하되 Stage 4 execution을 foreground sequential로 바꾼 변형 필요.

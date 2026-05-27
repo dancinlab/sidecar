@@ -297,6 +297,18 @@
       "version": "0.8.8"
     },
     {
+      "name": "go",
+      "source": "./skills/go",
+      "description": "/go [hint] — proceed with the most-recently proposed action / continue the paused flow without further confirmation. Bare \"go\" single-word user message also catches as natural-language alias. Identical semantics to '그냥 진행해' / 'continue' / 'just run it' — re-read the last agent message, identify what was proposed/paused/awaiting (a plan · a recommended option · the next /sbs step · the next /cycle round · a /cycle-fg halted item · an AskUserQuestion default), and execute it verbatim. Optional `/go <hint>` disambiguates (e.g. `/go ubu-2` selects host, `/go retry` re-fires a failed step, `/go skip` advances past, `/go all` applies to every candidate). NO new plan, NO re-question — stateless continuation token. If no recent proposal exists, ask one short line rather than fabricate. Distinct from /sbs (plan-first sequential) and /cycle (autonomous fan-out): /go is a token, not a runbook. Triggers — '/go', bare 'go' (single-word), '진행', '계속', '다음 진행', 'proceed', 'continue', 'ok go', 'yes go'.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "roi",
+      "source": "./skills/roi",
+      "description": "/roi [scope] — enumerate LOSSLESS performance/resource/speed improvement candidates as a ranked TODO list. \"Lossless\" = no functional regression, no API breakage, no semantic change, no test failures — only HOW the same behavior is achieved more efficiently. Scope: bare /roi = active domain (if set) ELSE cwd repo · /roi <message> restricts to that scope (file path · subdirectory · feature name · layer · language · hot path). Output is a single ranked table `| # | category | item | impact | effort | risk | how | evidence |` where category ∈ {⚡ speed · 🧠 perf (CPU/algo) · 💾 resource (mem/disk/network) · 🔋 efficiency}, sorted by impact-to-effort ratio (highest ROI first), risk=low ONLY (any candidate that could risk behavior change is dropped — that's NOT lossless). Discovery: scope read → anti-pattern grep (N+1, re-parse-per-call, O(n²) where O(n log n) trivially applies, unbounded growth, sync I/O on hot path, sort+take-1 vs min, regex recompile per loop, dict lookup not hoisted, …) → bench-ground claims where measurable (@D bench_kernel_choices, 가정 말고 벤치) → rank. Cap default top 10/category. Drop-count surfaced when items excluded for risk≥medium. Triggers — '/roi', '/roi <scope>', 'roi 뽑아', 'roi list', '무손실 개선 할일', '성능 개선 할일', '자원 개선 할일', '속도 개선 할일', '효율 개선 할일', 'lossless improvements', 'perf wins'.",
+      "version": "0.1.0"
+    },
+    {
       "name": "gap",
       "source": "./commands/gap",
       "description": "/gap \u2014 multi-axis gap exploration. 42 breakthrough-strategy lenses \u00b7 8 families (F4 + F6 each have 6 lenses; `occams-razor` lives in both \u2014 hypothesis side and design side). Bare /gap = inline-triage + deep-dive only hot families. /gap full = exhaustive 8-subagent fan-out. /gap <scope> targets the sweep. /gap list prints the catalogue. Surfaces + prioritises gaps; never fixes.",

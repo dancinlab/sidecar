@@ -1,0 +1,9 @@
+{
+  "name": "roi",
+  "description": "/roi [scope] — enumerate LOSSLESS performance / resource / speed improvement candidates as a prioritized TODO list. \"Lossless\" = no functional regression, no API breakage, no semantic change, no test failures — only how the same behavior is achieved more efficiently. Scope: bare `/roi` = active domain / cwd repo · `/roi <scope-message>` = the scope-message restricts focus (file path, subdirectory, feature name, layer, language, hot path, …). Output is a single ranked table `| # | category | item | impact | effort | risk | how | evidence |` where category ∈ {⚡ speed · 🧠 perf (CPU/algo) · 💾 resource (mem/disk/network) · 🔋 efficiency (battery/cost)}, sorted by impact-to-effort ratio (highest ROI first), with a `risk` column gating LOSSLESS-only candidates (risk=low only — any risk≥medium that could change behavior is OUT). Discovery method: (a) read scope · (b) look for canonical anti-patterns (N+1 query · re-parse-per-call · unbounded growth · synchronous I/O on hot path · sort-then-pick-1 instead of partial · allocate-then-discard · re-compute idempotent inputs · cache-misses on stable lookups · O(n²) where O(n log n) trivially applies · …) · (c) cross-reference @D bench_kernel_choices (가정 말고 벤치) — claims are bench-grounded where measurable, else marked 🟠 INSUFFICIENT (no recompute path). Output exclusively items that pass LOSSLESS sniff test. NL triggers — '/roi', '/roi <scope>', 'roi 뽑아', 'roi list', '무손실 개선 할일', '성능 개선 할일', '자원 개선 할일', '속도 개선 할일', '효율 개선 할일', 'lossless improvements', 'perf wins'.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "skill", "roi", "performance", "lossless"]
+}

@@ -1,0 +1,9 @@
+{
+  "name": "go",
+  "description": "/go — proceed with the most-recently proposed action / continue the paused flow, without further confirmation. Bare \"go\" natural-language alias also catches (single-word message). Identical semantics to '그냥 진행해' / 'continue' / 'just run it' — re-read the last agent message, identify what was proposed or paused (a plan · a recommended option · the next /sbs step · the next /cycle round · a /cycle-fg halted item · an AskUserQuestion that the user implicitly accepts), and execute it verbatim. With optional arg `/go <hint>`, use the hint to disambiguate (e.g. `/go ubu-2` selects host, `/go skip` advances past a failed step). NO new plan, NO re-question — just proceed. If no recent proposal exists, ask one short line (what to go on) rather than invent. Distinct from /sbs (which is plan-first sequential): /go is a stateless continuation token. Triggers — '/go', bare 'go' (single-word user message), '진행', '계속', '다음 진행', 'proceed', 'continue', 'ok go', 'yes go'.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "skill", "continue", "proceed", "alias"]
+}

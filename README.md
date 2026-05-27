@@ -199,6 +199,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`quota`](skills/quota/) | command + skill | `core` | 0.10.0 | Claude account 5h/7d usage limits + multi-account registry + live credential swap + per-account nicknames |
 | [`quota-autoadd`](hooks/quota-autoadd/) | hook | `core` | 0.1.1 | SessionStart hook |
 | [`research`](skills/research/) | command + skill | `core` | 0.2.4 | Research-fetch tools |
+| [`roi`](skills/roi/) | command + skill | `core` | 0.1.0 | /roi [scope] — LOSSLESS perf/resource/speed 개선 후보 ranked TODO. Scope bare=active-domain/cwd · `/roi <message>`=file/dir/feature 한정. risk=low ONLY (functional regression 없음만). 카테고리 ⚡speed · 🧠perf · 💾resource · 🔋efficiency. impact/effort 비율로 정렬, 벤치 가능 항목은 @D bench_kernel_choices로 grounded |
 | [`secret`](skills/secret/) | command + skill | `core` | 0.4.1 | wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync) |
 | [`sidecar`](commands/sidecar/) | command | `core` | 0.5.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
 | [`step-by-step`](commands/step-by-step/) | command + alias `/sbs` | `core` | 0.2.0 | plan-first sequential runbook · TWO modes — MANUAL (default: pause + consult after each step) · AUTO (`auto` token: run straight through). First arg `manual`\|`auto` picks mode |
@@ -226,6 +227,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`commons`](hooks/commons/) | hook | `personal` | 0.10.14 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
+| [`go`](skills/go/) | command + skill | `core` | 0.1.0 | /go [hint] — proceed with most-recently proposed action / continue paused flow without further confirmation. Bare "go" single-word message catches as NL alias. Stateless continuation token (not a runbook). Optional hint: `retry`/`skip`/`all`/host-name |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
 | [`inbox-guard`](hooks/inbox-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for any write into an `inbox/` folder — the canonical handoff SSOT is `INBOX.md` (single file + sibling `INBOX.log.md`); folder-style `inbox/<kind>/<slug>.md` fragments active state and is refused. No opt-out by design. Companion: legacy `inbox` skill retired |
 | [`inbox-log-lint`](hooks/inbox-log-lint/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the INBOX domain log (`INBOX.log.md`) |

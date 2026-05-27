@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — cloud 0.4.1: `commands/cloud.md` frontmatter 동기화 (ROOT CAUSE — agent 인지 갭)
+
+🚨 cloud@0.4.0 ship 시 `plugin.json` description + `SKILL.md` frontmatter 는 fire/pods/dispatch 추가했으나, agent slash command 의 source 인 **`skills/cloud/commands/cloud.md` frontmatter** 갱신을 빠뜨림 → `sidecar mirror` 가 stale source 를 그대로 `~/.claude/commands/cloud.md` 로 복사 → **Claude Code skill listing 에 fire/pods/dispatch 트리거 누락** → agent 가 verb 의 존재 자체를 인지 못 함 (ANIMA caller session 의 ghost-pod 양산 root cause).
+
+- **`skills/cloud/commands/cloud.md` frontmatter** — subverb 목록에 `fire · pods · dispatch` 추가 · NL trigger 에 `fire`/`cloud pods`/`cloud dispatch`/`활성 pod`/`작업 매니페스트`/`verdict 갱신`/`pod tree`/`dispatch add` 노출 · "fire 후 caller MUST dispatch add" 명시 강조.
+- **L1 인지 갭 해소 (마지막 layer)**: 이제 3-layer 모두 닫힘 — L1 인지 (cloud.md frontmatter) · L2 자동화 (hexa-lang outbound PR #1757 진행 중) · L3 advisory (pod-monitor 0.1.4 commit 788a657).
+- 발견 경로: 사용자 "pods.json 인지는 시켰어?" → 3-way diff (cache plugin.json ✅ / SKILL.md frontmatter ✅ / commands/cloud.md frontmatter 🔴) → mirror 가 source-stale 복제했음을 확인.
+
+---
+
 ## 2026-05-28 — pr-cycle-hook 0.3.0: 명시 PR# 캡처 (`gh pr view --json number`)
 
 INBOX 5-제안 deferred 잔여 1건 — pr-cycle hook 의 auto-merge tail 에 명시 PR# 추가. 직전 cycle 에서 hexa-lang PR #1757 작성 시 main worktree 충돌로 `gh pr merge` 의 `--delete-branch` 가 local cleanup 시도 → fail; 같은 클래스의 robustness 향상.

@@ -17,6 +17,15 @@ For the full audit trail, see `git log`.
   - `/draft`(cwd-local throwaway) · `/domain`(in-repo milestone SSOT) 과 구분되는 메인 흐름 이탈 STACK (intra-repo + 크로스레포 공통).
 - **commons.tape 1.2 → 1.3 · 신규 `@D g74`** — "main-flow deviation — breadcrumb the return path on ANY side-task (intra/cross-repo · g11/g59/g60 companion)". LLM 자동 사용 지시: 활성 목표에서 임의 side-task(intra-repo 곁가지/sub-fix 또는 크로스레포/업스트림)로 피벗 → `/trail push <return-target>` 후 진입 · 닫히면 `/trail pop` 후 부모 흐름 복귀. s7(룰 + 집행기 동반 ship) 충족 — g74(룰) + trail(메커니즘) 동일 배치.
 
+## 2026-05-27 — pool-route 0.8.1: `hexa atlas register` 로컬 예외 (4번째 structural)
+
+0.8.0 화이트리스트가 `hexa atlas register` 도 pool 로 보내던 문제 수정. `register --from-verify/--from-drill` 는 로컬 SSOT `compiler/atlas/embedded.gen.hexa` 를 in-place 수정 후 로컬 `git commit` 으로 공유하는 op — peer 로 라우팅하면 peer 의 atlas 만 바뀌고 로컬 파일은 그대로 → 이어지는 로컬 `git add embedded.gen.hexa` 가 빈 commit (조용히 깨진 share). git/gh 와 동일한 local-mutation 논리.
+
+- **pool-route 0.8.0 → 0.8.1** — `hexa cloud` 예외 옆에 `_any_adjacent(toks, ["atlas","register"]) || _any_pair_substring(...)` 추가 → `hexa atlas register …` 는 분류기 도달 전 local 반환.
+- **narrow**: `register` WRITE 서브버브만 핀. read 폼(atlas lookup/stats/hash/dump)은 화이트리스트대로 pool 라우팅(read-only, peer staleness 허용).
+- 4 structural local-exemption 완성: $CLAUDE_PLUGIN_ROOT · hexa cloud · abs-path · atlas register.
+- 파싱 검증: `hexa parse` → OK. plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — pool-route 0.8.0: HEXA 화이트리스트 (blacklist → whitelist 전환)
 
 사용자 directive "heavy 말고 블랙리스트 말고 화이트리스트로 — 모든 hexa 실행 pool 로". 배경: heavy-VERB 블랙리스트(kick/drill/run/build/… 만 라우팅)가 `hexa verify --expr` · `hexa atlas register` · `hexa parse` · `hexa honesty` 등을 누락 → 병렬 anima 자율 루프가 이것들을 로컬 대량 fork → **1600+ hexa 프로세스 Mac fork-storm** (load avg 12+, clang/atlas-parse 폭주). 블랙리스트는 새 verb 마다 새는 구조라 화이트리스트로 전환.

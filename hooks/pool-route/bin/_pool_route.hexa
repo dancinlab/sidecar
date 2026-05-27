@@ -877,6 +877,18 @@ fn main() {
     // 2026-05-25T06:37Z — pool-route double-routes hexa cloud.)
     if _any_adjacent(toks, ["hexa", "cloud"]) || _any_pair_substring(stripped, ["hexa", "cloud"]) { _allow_count("local_bound") }
 
+    // atlas-register pin (0.8.1 — 4th structural local-exemption to the 0.8.0
+    // hexa whitelist): `hexa atlas register --from-verify/--from-drill/--auto-pr`
+    // MUTATES the local SSOT `compiler/atlas/embedded.gen.hexa` in place, which is
+    // then shared via a normal local `git commit`. Routing it to a peer host
+    // writes the PEER's atlas and leaves the LOCAL file untouched → the following
+    // local `git add embedded.gen.hexa` captures nothing (silently broken share).
+    // Same local-mutation rationale as the git/gh exemption — a write to the cwd
+    // repo's tracked SSOT must run where the commit happens. Narrow: only the
+    // `register` WRITE subverb is pinned; read forms (atlas lookup/stats/hash/dump)
+    // still route under the whitelist (read-only, peer staleness acceptable).
+    if _any_adjacent(toks, ["atlas", "register"]) || _any_pair_substring(stripped, ["atlas", "register"]) { _allow_count("local_bound") }
+
     // heavy classifier — build / test / package / train commands
     // 0.6.7 — `aprime_cc` added: hexa-lang's in-tree self-host native codegen
     // (build/aprime_cc, Mach-O arm64 ~1.2MB · invoked as `./build/aprime_cc <x>.hexa

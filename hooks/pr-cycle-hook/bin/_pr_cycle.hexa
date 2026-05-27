@@ -29,10 +29,29 @@
 // Atomic — if any preceding step (including `gh pr create`) fails, the
 // merge never runs; if the merge fails, the worktree never gets removed.
 //
+// DELETION-SANITY GATE (stale-base regression guard — anima #1105):
+// before appending the auto-merge tail, probe `gh pr diff --name-status`
+// for the PR's deletion count. A stale-base squash-merge can silently
+// revert-delete the bulk of main (anima #1105 deleted 35190 files while
+// the legit change was 3 files). When the diff shows a mass deletion —
+// D-count over MAX_DELETIONS, OR deletions dwarf additions (>= 10x and
+// > 20 abs) — the auto-merge is BLOCKED (permissionDecision: deny) with
+// guidance to inspect for a stale base and merge by hand if intended.
+// A normal PR (few deletions, or deletions < additions) passes through.
+//
 // No opt-out by design — no env var, no config file, no exception list.
 
 let MARK = "__SIDECAR_PR_CYCLE__"
 let MERGE_TAIL = " && gh pr merge --squash --admin --delete-branch"
+
+// Absolute deletion ceiling for an auto-merge. Above this the PR is a
+// mass-deletion outlier — the 35190-file stale-base regression sits far
+// above it; a real refactor rarely deletes this many files in one PR.
+let MAX_DELETIONS = 50
+// Asymmetry trip: deletions >= this multiple of additions (and over the
+// abs floor below) is the silent-revert fingerprint even under the cap.
+let DEL_RATIO = 10
+let DEL_RATIO_FLOOR = 20
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -207,6 +226,80 @@ fn _repo_flag(toks: array) -> string {
     return ""
 }
 
+// `--repo <X>` form for the deletion probe (mirrors _repo_flag) — empty
+// when the create targets the cwd repo.
+fn _repo_arg(toks: array) -> string {
+    let repo = _repo_flag(toks)
+    if repo == "" { return "" }
+    return " --repo " + repo
+}
+
+// Tally D (deleted) and A (added/new) lines in name-status porcelain.
+// Each line is `<status>\t<path>` (R/C carry a 3rd col); we key only off
+// the leading status char. Returns [D, A].
+fn _tally_name_status(out: string) -> array {
+    let lines = out.split("\n")
+    let n = len(lines)
+    let mut d = 0
+    let mut a = 0
+    let mut i = 0
+    while i < n {
+        let line = lines[i].trim()
+        if len(line) > 0 {
+            let c0 = line[0]
+            if c0 == "D" { d = d + 1 }
+            else if c0 == "A" { a = a + 1 }
+        }
+        i = i + 1
+    }
+    return [d, a]
+}
+
+// Deletion / addition counts for the diff this merge will apply. Primary
+// probe is `git diff --name-status <merge-base(origin/main,HEAD)>...HEAD`
+// — works at create-time (BEFORE the PR exists, which is exactly when this
+// hook fires) and reflects what a squash-merge into main lands. For a
+// cross-repo create (repo_arg set) the local HEAD is unrelated to the PR,
+// so we fall back to `gh pr diff --repo X`. On any probe failure returns
+// [-1, -1] so the caller treats it as "unknown → do not block" (fail-open:
+// a flaky probe must never wedge a legit merge).
+fn _deletion_counts(repo_arg: string) -> array {
+    if repo_arg == "" {
+        // local same-repo branch: diff the squash payload against main
+        let probe = "{ mb=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base origin/master HEAD 2>/dev/null); [ -n \"$mb\" ] && git diff --name-status \"$mb\"...HEAD 2>/dev/null; }"
+        let r = exec_with_status(probe)
+        if r[1] != 0 { return [-1, -1] }
+        let out = to_string(r[0])
+        if out.trim() == "" { return [-1, -1] }
+        return _tally_name_status(out)
+    }
+    // cross-repo: the open PR's own diff
+    let r2 = exec_with_status("gh pr diff" + repo_arg + " --name-status 2>/dev/null")
+    if r2[1] != 0 { return [-1, -1] }
+    let out2 = to_string(r2[0])
+    if out2.trim() == "" { return [-1, -1] }
+    return _tally_name_status(out2)
+}
+
+// True when the deletion profile is a mass-deletion outlier (stale-base
+// regression fingerprint). Counts of [-1,-1] (probe failed) are NOT a hit.
+fn _is_mass_deletion(counts: array) -> bool {
+    let d = counts[0]
+    let a = counts[1]
+    if d < 0 { return false }
+    if d > MAX_DELETIONS { return true }
+    if d > DEL_RATIO_FLOOR && d >= a * DEL_RATIO { return true }
+    return false
+}
+
+// Block the auto-merge: deny the rewritten command (the PR is created, but
+// the dangerous squash-merge is withheld for human inspection).
+fn _deny(reason: string) {
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_str(reason) + "}}"
+    println(out)
+    exit(0)
+}
+
 // rebuild tool_input with command swapped, emit updatedInput JSON.
 fn _emit(ti: map, new_cmd: string, note: string) {
     let ks = keys(ti)
@@ -258,6 +351,20 @@ fn main() {
 
     // skip — draft PR (user wants review, not immediate merge)
     if cmd.contains("--draft") { _allow() }
+
+    // DELETION-SANITY GATE (anima #1105 stale-base regression guard): probe
+    // the PR's name-status for a mass-deletion outlier BEFORE appending the
+    // auto-merge. The probe targets the same repo as the create (--repo X if
+    // cross-repo). Fail-open on probe failure ([-1,-1] → not a hit) so a
+    // flaky `gh` never wedges a legit merge; a true 35190-style outlier is
+    // a hard deny — the PR stays created, the squash-merge is withheld.
+    let repo_arg = _repo_arg(toks)
+    let counts = _deletion_counts(repo_arg)
+    if _is_mass_deletion(counts) {
+        let d = counts[0]
+        let a = counts[1]
+        _deny("PR_CYCLE_MASS_DELETION_BLOCK { D=" + to_string(d) + ", A=" + to_string(a) + " — 이 PR 머지가 대량 파일 삭제(D=" + to_string(d) + ", 추가 A=" + to_string(a) + ")를 일으킴. stale-base squash-merge 회귀(anima #1105: 35190 파일 삭제)일 수 있음. 자동 머지 BLOCK — 의도된 삭제가 맞으면 stale base 여부를 확인한 뒤 `gh pr merge` 를 직접 수동 실행하세요 (pr-cycle 자동-tail 우회). 아니면 origin/main 최신에서 fresh 분기해 다시 PR. }")
+    }
 
     // cross-repo create (`--repo X`): merge THAT repo's PR, and do NOT touch
     // the local (cwd) worktree — it belongs to a different repo than the PR

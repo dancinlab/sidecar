@@ -6,6 +6,29 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.9.1: 0.8.3 canon 메커니즘 ROLLBACK (host-specific path resolution)
+
+ubu-2에 canon 설치 시도 중 발견 — **각 pool 호스트의 hexa binary가 host별로 다른 path-resolution 규칙**을 가짐:
+- **ubu-1**: `~/.hx/bin/hexa` = bash wrapper, `exec hexa_real` (sibling). HEXA_REAL_BIN env 무시.
+- **ubu-2**: `~/.hx/bin/hexa` = ELF 바이너리 (wrapper 아님). `argv[0]/self/native/hexat` + cwd + HEXA_LANG-relative로 hexat 검색. 게다가 `~/.hx/bin/self` symlink가 Mac path(`/Users/ghost/...`)로 되어 있어 broken (sidecar sync가 Mac symlink를 Linux 호스트에 그대로 복사).
+- **Mac**: 또 다른 패키지 구조 (`~/.hx/packages/hexa/hexa.real`).
+
+→ 0.8.3 canon binary 주입 (`HEXA_REAL_BIN=~/.hx/canon/build/hexa_linux`)은 ubu-1엔 무시되고 ubu-2엔 잘못된 hexat 경로로 가서 깨짐. `hexa parse`(syntax-only)는 ubu-1에서 작동했지만 `hexa run`(transpile+compile)은 두 호스트 모두 실패 — canon에 `self/native/hexat` 없음. 
+
+**0.9.1 ROLLBACK**:
+- `tool_probe` = `command -v hexa && hexa <verb> --help` (0.8.2 형태, canon binary 검사 제거)
+- `hexa_env` = `HEXA_LANG=$PWD` 또는 `$HOME/core/hexa-lang` (subverb일 때) — canon 주입 모두 제거
+- deny-trailer: 호스트별 ~/core/hexa-lang + 호스트 hexa 안내로 복원
+- 0.9.0 INVERSION (default=pool · 화이트리스트만 local) **유지** — 그 핵심은 동작 OK
+- `~/.hx/canon` + `~/.hx/canon-update.sh`는 호스트에 남아있는 scaffolding — pool-route는 더 이상 사용 안 함. 호스트 운영자가 정리.
+
+**남은 stdlib drift**: ubu-2의 `~/core/hexa-lang`이 660 commits 뒤 (#900) — 7개 untracked WIP collision (`stdlib/consciousness/iit4_*` · `compiler/atlas/calc_dispatch.hexa`)이 origin/main의 tracked 파일과 충돌해 `git pull --ff-only`불가. **anima 세션의 책임** — 자기 WIP 처리(commit 또는 stash) 후 pull. pool-route는 이 호스트 stdlib을 더 이상 우회하려 시도 안 함.
+
+ubu-2 host 부수효과 (canon 시도 중 적용된 것 — 영구):
+- `~/.hx/bin/self` Mac-path symlink → `/home/summer/core/hexa-lang/self` (Linux-local) 교체
+- `~/.hx/bin/tool` 동일
+- `~/core/hexa-lang/self/native/hexat` (canon dist binary 복사) — host hexa 검색 경로에 부재했던 transpiler 보충
+
 ## 2026-05-27 — pool-route 0.9.0: 분류기 INVERSION — default = pool · 화이트리스트만 local
 
 사용자 directive — "무조건 pool & 화이트리스트만 local 가능". 0.8.x까지는 default=local + heavy 패턴만 pool이라, 분류기에 안 잡힌 무거운 명령 (`find /` 루트 풀스캔 · anima 세션이 2:44+ 째 100%+ CPU)이 default-local fallthrough로 Mac에서 돎. 진단 직후 비-claude CPU 합 483% (8 코어 · load=86) — bfs(`find /`) 2개가 177% 차지.

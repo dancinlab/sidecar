@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.4.0: `upstream` verb — report the g59 upstream-reflex trail
+
+🔗 사용자 "system 플러그인에도 'hexa upstream fix in this session' 로 작업되게". 0.3.0 의 upstream-reflex(gap→INBOX 파일)의 짝 = 조회 verb.
+
+- **`upstream [<repo>]` verb** — 캠페인이 upstream repo(s) 에 파일한 INBOX 항목 + merged PR trail 보고. (1) `grep '^## .*(from <campaign>|tag)' <repo>/INBOX.log.md` → date·slug·status (2) `gh pr list --state merged --search "<tag>"` → PR#·title·mergedAt (3) `--since`/session-start 로 세션 스코프 (4) 테이블 렌더. read-only (파일은 reflex 가, 조회는 이 verb). 이번-turn gap 인데 미파일이면 `⚠ unfiled gap` flag.
+- repos = pods.json `upstream_repos` (default `~/core/hexa-lang`). `/system upstream <repo>` 로 단일 스코프.
+- 트리거 추가: "upstream fix in this session" · "hexa upstream fix" · "INBOX 올린 거" · "상류 기여".
+- "hit a gap → filed upstream → report what was filed" 루프 폐쇄. SKILL+command+plugin/marketplace 0.3.0→0.4.0.
+
+
 ## 2026-05-28 — system 0.3.0: exit-code-aware terminal taxonomy + upstream-reflex (g59)
 
 🔧 demiurge RTSC 라이브 교훈 — Mg₂IrH₆ phonon 이 22.5h walltime(`max_seconds=80000`) 도달 → QE 가 `Maximum CPU time exceeded` 후 **"JOB DONE."** 출력 + `STOP 1` (비정상 종료·재개필요). watcher 가 bare-marker grep("JOB DONE") 으로 SUCCESS 오판 1회. 사용자 "사전 방지 가능?" + "system 에 hexa upstream 개선 포함".

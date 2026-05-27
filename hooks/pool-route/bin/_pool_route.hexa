@@ -36,7 +36,7 @@ let MARK = "__SIDECAR_POOL__"
 // `additionalContext` on the eventual exit so the agent learns these are no-op
 // without a counterfactual silent allow. ASCII-only to survive JSON escaping.
 fn _pool_advisory_text() -> string {
-    return "pool-route advisory: SIDECAR_NO_POOL / SIDECAR_NO_POOL_ROUTE / POOL_DISABLE / SIDECAR_POOL_DISABLE env-prefix are NO-OP since 0.7.3 (POSIX env-prefix stripped before the classifier reads the real verb). For genuine local-force, the USER must run `! sidecar sign local` in the TUI prompt (5-min token, agent-self-mint forbidden). This cmd proceeds per actual classification; the env-prefix had zero effect on routing."
+    return "pool-route advisory: SIDECAR_NO_POOL / SIDECAR_NO_POOL_ROUTE / POOL_DISABLE / SIDECAR_POOL_DISABLE env-prefix are NO-OP since 0.7.3 (POSIX env-prefix stripped before the classifier reads the real verb). For genuine local-force, the USER must run `! sidecar sign local` in the TUI prompt (30-min token since 0.9.3 — build-covering, agent-self-mint forbidden). This cmd proceeds per actual classification; the env-prefix had zero effect on routing."
 }
 
 // `_is_useless_pool_env(name)` — name (without `=`) matches one of the canonical
@@ -343,12 +343,29 @@ fn _env(name: string) -> string {
     return r[0].trim()
 }
 
-// `_local_signed` — fresh `local` sign token (5min). Mirrors sign-guard's
-// TTL contract: the user mints with `! sidecar sign local` in the TUI
-// prompt; the file `~/.sidecar/signs/local.sign` holds the mint epoch.
-// pool-route's local-bound heavy gate (0.6.4) reads it to decide whether
-// to allow hexa/python/sh script invocations through the absolute-path
-// exemption.
+// `LOCAL_SIGN_TTL` — `local` sign token validity (seconds). 0.9.3: raised from
+// 300 (5min) to 1800 (30min) — anima PURE F-CURRICULA-1 showed a single
+// legitimate local build (corpus regen + compile) runs 10-20min, exceeding the
+// old 5min window, so a mid-build `hexa run` re-tripped the fork-storm gate when
+// the token expired (the user had to re-sign every 5min — unworkable friction).
+// 30min covers a realistic build with margin while staying a finite, user-minted
+// window. TRADE-OFF: the fork-storm protection window (sign-local SUPPRESSES the
+// abs-path heavy gate) is now 6× longer — during it, a multi-session
+// dispatch-cache race could re-fork the Mac unguarded. Accepted: the token is
+// explicit, user-minted (no agent self-mint path), single-key, and clearable
+// early (`sidecar sign clear local`); a build-covering window is the Occam fix
+// (commons g0) vs a sliding-window/session-marker mechanism. This TTL is the
+// `local` token ONLY (pool-route force-local) — it is INDEPENDENT of the
+// governance sign TTL (`SIGN_TTL=300` in bin/sidecar + hooks/sign-guard, which
+// gates agent EDITS to commons.tape/project.tape/.gitignore and stays at 5min).
+let LOCAL_SIGN_TTL = 1800
+
+// `_local_signed` — fresh `local` sign token (30min · LOCAL_SIGN_TTL). The user
+// mints with `! sidecar sign local` in the TUI prompt; the file
+// `~/.sidecar/signs/local.sign` holds the mint epoch. pool-route's local-bound
+// heavy gate (0.6.4) + the single force-local gate (0.7.2) read it to decide
+// whether to allow hexa/python/sh invocations through the absolute-path
+// exemption (resp. suppress routing for every command in the window).
 fn _local_signed() -> bool {
     let path = _env("HOME") + "/.sidecar/signs/local.sign"
     if !file_exists(path) { return false }
@@ -358,7 +375,7 @@ fn _local_signed() -> bool {
     if mint <= 0 { return false }
     let age = timestamp() - mint
     if age < 0 { return false }
-    return age <= 300
+    return age <= LOCAL_SIGN_TTL
 }
 
 // `_local_heavy_interp` — heavy interpreter/compiler invocation? These are
@@ -738,7 +755,7 @@ fn _emit_session_start() {
                + "  - ANY `hexa <verb>` → pool (0.8.0 POOL-DISPATCH; structural local-exemptions only: $CLAUDE_PLUGIN_ROOT/DATA · `hexa cloud` · `hexa atlas register` · /Users//home abs-path sign-gated)\n"
                + "  - non-hexa default also → pool (0.9.0 inversion); LOCAL-EXEC WHITELIST stays local: git/gh/pool · npm/pnpm/yarn · ~/. dotstate · host-introspection (ps/top/uptime/df/lsof/pgrep/kill/…)\n"
                + "  - whitelist 추가 = sign-gated (project.tape commons @D s13 · `! sidecar sign project`)\n"
-               + "  - `! sidecar sign local` (5min TUI bang) → 모든 명령 로컬 강제 (단일 force-local gate · agent 자가민팅 deny)\n"
+               + "  - `! sidecar sign local` (30min TUI bang since 0.9.3 — build-covering) → 모든 명령 로컬 강제 (단일 force-local gate · agent 자가민팅 deny)\n"
 
     let path = home + "/.pool/route-log.jsonl"
     let mut raw = ""
@@ -825,7 +842,7 @@ fn main() {
 
     // single local-execution gate (0.7.2): a fresh `local` sign token forces
     // EVERY command to run HERE — the one deliberate, user-minted "run this on
-    // the workstation, do NOT route" path (`! sidecar sign local`, 5min TTL).
+    // the workstation, do NOT route" path (`! sidecar sign local`, 30min TTL).
     // Consolidates local-exec control to one sign-gated channel: when the router
     // mis-classifies a local-bound command (a diagnostic `ps`/`awk`, a local-fs
     // fix) and ships it to a peer host, the user signs ONCE and all routing is
@@ -877,14 +894,14 @@ fn main() {
         // bash/sh <script>) on absolute host paths are the canonical mac
         // fork-storm trigger — multiple sessions racing dispatch caches +
         // re-fork on every env-hash miss. Require a fresh user sign-off
-        // (`! sidecar sign local`, 5min token, mints freely from the TUI
-        // bang) before honoring the absolute-path exemption. Bare reads
+        // (`! sidecar sign local`, 30min token since 0.9.3, mints freely from
+        // the TUI bang) before honoring the absolute-path exemption. Bare reads
         // (ls/cat/grep/find/...) on absolute paths stay free — the gate
         // narrows to interpreters/compilers only.
         let toks = _tokens(cmd)
         if _local_heavy_interp(cmd, toks) {
             if !_local_signed() {
-                _deny_count("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.", "heavy_failed")
+                _deny_count("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (30min token — covers a full build), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.", "heavy_failed")
             }
         }
         _allow_count("local_bound")

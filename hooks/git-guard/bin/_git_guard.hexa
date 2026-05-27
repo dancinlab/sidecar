@@ -14,6 +14,15 @@
 // the fingerprint of a concurrent agent swapping HEAD out from under
 // you. Push still proceeds; this only surfaces the risk.
 //
+// (3) ADVISORY (non-blocking) — stale-base MERGE (anima #1105). The
+// push-time check (2) is a backstop, but a `gh pr merge` (squash)
+// reached main with a 35190-file revert-delete because no merge-time
+// check existed. So when the command contains `gh pr merge` (and no
+// `git push`), run the same divergence probe and warn before the merge
+// lands. Stays advisory (guards-narrow-scope) — the real deny on mass
+// deletion lives in pr-cycle-hook's deletion-sanity gate. Cross-repo
+// (`--repo X`) merges are skipped (cwd HEAD is unrelated to that base).
+//
 // NO opt-out by design — no env var, no config file, no exception
 // list. A guard you can switch off is a guard you will switch off;
 // a mis-firing guard is fixed at the guard.
@@ -161,6 +170,64 @@ fn _stale_base_advisory(toks: array, gp: int) {
     _emit_advisory(msg)
 }
 
+// first `gh pr merge` token adjacency in the command, -1 when absent.
+fn _gh_pr_merge_idx(toks: array) -> int {
+    let n = len(toks)
+    let mut i = 0
+    while i + 2 < n {
+        if toks[i] == "gh" && toks[i + 1] == "pr" && toks[i + 2] == "merge" {
+            return i
+        }
+        i = i + 1
+    }
+    return -1
+}
+
+// Non-blocking stale-base advisory for the MERGE path (anima #1105): the
+// push-time stale-base check is a backstop, but a `gh pr merge` (squash)
+// reached main with a 35190-file revert-delete because no merge-time check
+// existed. Here we probe the same divergence (current branch behind the
+// remote default base) and warn before the merge lands. The merge-time
+// deny on mass deletion lives in pr-cycle-hook's deletion-sanity gate;
+// this guard stays advisory (guards-narrow-scope). Cross-repo (`--repo X`)
+// merges are skipped — the cwd branch is unrelated to that PR's base.
+fn _stale_base_merge_advisory(toks: array) {
+    // skip cross-repo merges (cwd HEAD ≠ the --repo X PR's branch)
+    let mut k = 0
+    while k + 1 < len(toks) {
+        if toks[k] == "--repo" { return }
+        k = k + 1
+    }
+    let body = "{ b=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); d=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main); c=$(git rev-list --left-right --count \"$d\"...HEAD 2>/dev/null); printf '%s\\n%s\\n%s\\n' \"$b\" \"$d\" \"$c\"; }"
+
+    let mut out = ""
+    try { out = to_string(exec(body)) } catch e { return }
+    let lines = out.split("\n")
+    if len(lines) < 3 { return }
+
+    let branch = lines[0].trim()
+    let base = lines[1].trim()
+    let counts = lines[2].trim()
+    if branch == "" || branch == "HEAD" { return }
+    if counts == "" { return }
+
+    let mut base_name = base
+    let slash = base.index_of("/")
+    if slash >= 0 { base_name = base.substring(slash + 1, len(base)) }
+    if branch == base_name { return }
+
+    let parts = _tokens(counts)
+    if len(parts) < 2 { return }
+    let mut behind = 0
+    let mut ahead = 0
+    try { behind = to_int(parts[0]) } catch e { return }
+    try { ahead = to_int(parts[1]) } catch e { ahead = 0 }
+    if behind < STALE_BEHIND { return }
+
+    let msg = "⚠ STALE-BASE MERGE — 머지하려는 브랜치 '" + branch + "'는 " + base + "보다 " + to_string(behind) + "커밋 뒤처짐 (ahead " + to_string(ahead) + "). stale base 에서 분기한 PR 의 squash-merge 는 " + base + "에서 그 이후 바뀐/추가된 파일을 대량 회귀삭제할 수 있음 (anima #1105: 35190 파일 삭제). 머지 전 `gh pr diff --name-status` 의 D(삭제) 라인 수를 확인하고, 의도치 않은 대량 삭제면 origin/main 최신에서 fresh 분기해 다시 PR 하세요. (non-blocking · 실질 차단은 pr-cycle deletion-sanity gate 담당)"
+    _emit_advisory(msg)
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -189,7 +256,13 @@ fn main() {
         }
         i = i + 1
     }
-    if gp < 0 { _allow() }
+    if gp < 0 {
+        // No `git push` — but a `gh pr merge` reaches main via a path the
+        // push-time stale-base check never saw (anima #1105). Surface the
+        // merge-time stale-base advisory, then allow.
+        if _gh_pr_merge_idx(toks) >= 0 { _stale_base_merge_advisory(toks) }
+        _allow()
+    }
 
     let mut label = ""
     let mut j = gp + 2

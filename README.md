@@ -227,7 +227,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
 | [`commons`](hooks/commons/) | hook | `personal` | 0.10.14 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
-| [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
+| [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.2.0 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook; 0.2.0 adds 한국어 substring NL 트리거 '설명'/'쉽게' (UserPromptSubmit · verb/noun/adverb 어형 catch) + 발동 시 1줄 banner emit (always-on inject는 그대로) |
 | [`go`](skills/go/) | command + skill | `core` | 0.1.0 | /go [hint] — proceed with most-recently proposed action / continue paused flow without further confirmation. Bare "go" single-word message catches as NL alias. Stateless continuation token (not a runbook). Optional hint: `retry`/`skip`/`all`/host-name |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
 | [`inbox-guard`](hooks/inbox-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for any write into an `inbox/` folder — the canonical handoff SSOT is `INBOX.md` (single file + sibling `INBOX.log.md`); folder-style `inbox/<kind>/<slug>.md` fragments active state and is refused. No opt-out by design. Companion: legacy `inbox` skill retired |

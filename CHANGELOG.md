@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.6.0: g56 campaign progress block (ASCII % bar)
+
+📊 사용자 "진행 척도 ASCII % 있어야하고 블럭". status/drive/closure 가 commons g56(다단계 작업 = % bar) 정합되도록 progress block 추가.
+
+- **campaign progress block** — status/drive tick LEAD: `📊 campaign ▓▓▓▓▓▓░░░░ NN% · jobs <terminal>/<total> · queue <done>/<Q> · budget ▓▓░░ $<s>/$<c>`. % = (terminal_jobs+done_queue)/(total_jobs+Q)×100, 10-cell bar. 🔴 FALSIFIED 도 progress 로 카운트(axis closed = 전진, g63). raw fraction 병기(감사가능).
+- **per-job bar** — 각 행 `▓▓▓░░ <p%>` (metric_parser cheap signal: dyn/n_q · epoch/total · scf-iter/maxiter). fractional 신호 없으면 3-state coarse(`░░░`queued·`▓▓░`running·`▓▓▓`terminal) — bar 항상 존재(g56).
+- **budget sub-bar** — `▓▓░░ $<s>/$<c> (<b%>)` 10-cell.
+- **closure line** — 모든 verb 종료 줄이 `▓▓▓▓▓▓░░░░ NN%` 로 시작(g56 — status/drive 뿐 아니라 전 verb).
+- drive tick % monotone-non-decreasing (하락 = manifest drift 신호). SKILL+command+meta 0.5.0→0.6.0.
+
 ## 2026-05-28 — system 0.5.0: `drive` verb — autonomous self-driving campaign (sticky cross-turn)
 
 🚗 사용자 "시스템 개선해줘 자율주행하게". 기존 `auto` = 1회 in-session 패스 (시간당 도는 DFT/training 잡엔 부족). `drive` = `auto` 를 턴 가로질러 persistent 화 — 예산+큐 걸고 walk away.

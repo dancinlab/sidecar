@@ -61,17 +61,26 @@ Read `./pods.json`. For each job marked `running`, probe liveness on its surface
 - **pool** host: `pool on <host> '<probe>'`.
 - **local**: the probe directly.
 
-Render:
+Render (lead with the **campaign progress block** per commons g56 — a 10-cell ASCII bar + % + fraction, ALWAYS):
 ```
 🛰️ <campaign> — control tower (<ISO>)
 ═══════════════════════════════════════
+📊 campaign  ▓▓▓▓▓▓░░░░ NN% · jobs <terminal>/<total> · queue <done>/<qtotal> · budget ▓▓░░ $<spent>/$<cap> (<b%>)
+
 <surface> <host> (<cores>c · $<rate>/hr)
-   <job-id>     <stage>   <progress-bar>   <verdict>
+   <job-id>     <stage>   ▓▓▓░░ <p%>   <verdict>
    ...
-─── queue: <N> candidates · budget: ▓▓░░ $<spent>/$<cap> (<pct>%) ───
+─── queue: <N> candidates · verdicts 🟢n 🟠n 🔴n ───
 ⚠ ghost: <jobs manifest=running but surface contradicts>
 ```
-Read-only. Each job's `progress` is derived from its `metric_parser`'s cheap signal (iter count · dyn files · epoch · % — whatever the kind exposes). NEVER infer a verdict here (status ≠ harvest).
+
+**Campaign progress % (g56)** — the single headline number = `(terminal_jobs + done_queue) / (total_jobs + total_queue)` × 100, rendered as a 10-cell bar `▓`×round(pct/10) + `░`×rest. "terminal" = any job with a verdict (🟢/🟠/🔴) OR resolved-resumable; counts a 🔴 FALSIFIED as progress (an axis closed IS progress, g63). Also show the raw fractions so the bar is auditable: `jobs <terminal>/<total>` + `queue <done>/<qtotal>`.
+
+**Per-job bar** — each row gets its own `▓▓▓░░ <p%>` from the `metric_parser`'s cheap signal (DFT: dyn-files/n_q or scf-iter/maxiter · training: epoch/total · build: steps). If the kind exposes no fractional signal, show a 3-state coarse bar (`░░░` queued · `▓▓░` running · `▓▓▓` terminal) rather than omitting it — a bar is always present (g56).
+
+**Budget sub-bar** — `▓▓░░ $<spent>/$<cap> (<b%>)` 10-cell on the budget axis (g56 applies to the cost axis too).
+
+Read-only. NEVER infer a verdict here (status ≠ harvest) — the per-job bar is PROGRESS (how far), not VERDICT (pass/fail).
 
 ## watch — arm event-driven watchers (commons g10 · g57)
 
@@ -153,6 +162,8 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 
 **Distinction**: `auto` = one pass now (interactive). `drive` = the campaign drives itself to its physical limit (budget/drain) across hours/days, hands back only on a halt condition. This is "set the budget + queue, walk away."
 
+**Each drive tick LEADS with the campaign progress block** (g56) so every wake reports forward motion as a %: `📊 campaign ▓▓▓▓▓▓░░░░ NN% · jobs <t>/<T> · queue <d>/<Q> · budget ▓▓░░ $<s>/$<c>`. The % MUST be monotone-non-decreasing across ticks (a tick only adds terminals/done) — a drop signals a manifest drift to investigate.
+
 ## stop / drive off — disengage self-driving
 
 Clear the `pods.json` `drive.on` marker + cancel the pending ScheduleWakeup intent. Print `🛑 drive disengaged · <N> jobs still running (watchers stay armed) · queue <M> preserved`. Running jobs + watchers continue (stop only ends the AUTO re-dispatch loop, not the in-flight work).
@@ -217,10 +228,11 @@ This makes the upstream contribution auditable: every cloud/tooling gap the camp
 - Reuses **`/cloud` (pods.json)** + **`/micro-exp` (sweep launch)** + **/atlas** + **/verify** — `/system` is the orchestration layer ABOVE them, not a replacement.
 
 ## Closure
-End every verb with one status line:
+End every verb with one status line — LEAD with the g56 progress bar + %:
 ```
-🛰️ system: <campaign> · jobs <running>/<total> · queue <N> · budget $<spent>/$<cap> · verdicts <🟢n 🟠n 🔴n> · loop <idle|watching|draining>
+🛰️ system: <campaign> ▓▓▓▓▓▓░░░░ NN% · jobs <terminal>/<total> · queue <N> · budget ▓▓░░ $<spent>/$<cap> · verdicts <🟢n 🟠n 🔴n> · loop <idle|watching|driving|draining>
 ```
+The leading `▓▓▓▓▓▓░░░░ NN%` (10-cell bar + %) is mandatory on EVERY verb's closure (g56 — multi-step work always shows a % bar), not just status/drive.
 
 Triggers — `/system`, `관제탑`, `캠페인 현황`, `전체 잡 현황`, `mission control`, `campaign status`,
 `upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `INBOX 올린 거`, `상류 기여`,

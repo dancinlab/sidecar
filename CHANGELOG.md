@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — hexa-lsp 0.1.2: cwd-bound LSP boot fix (`self/lsp.hexa` not found 종결)
+
+🚨 `/doctor` 가 `hexa-lsp` 를 crash trail 로 분류하던 false-alarm 의 진짜 원인 종결. upstream hexa-lang 의 `hexa lsp` 가 내부적으로 `hexa build self/lsp.hexa` 를 cwd 기준 상대 경로로 호출 → Claude Code 가 LSP 서버를 spawn 할 때 cwd 가 사용자 프로젝트(예: cwd=`/tmp` · cwd=다른 레포)면 "source file not found: self/lsp.hexa" 로 부팅 실패. hexa-lang main 에는 파일이 875줄로 명백히 존재(hexa-lang PR #1769 확인); cwd resolution 만의 문제.
+
+- **`hooks/hexa-lsp/.lsp.json`** — `command: "hexa", args: ["lsp"]` → `command: "sh", args: ["-c", "cd \"$HOME/.hx/packages/hexa-lang\" 2>/dev/null || cd \"${HEXA_LANG:-.}\" 2>/dev/null; exec hexa lsp"]`. cwd 우선순위 — `$HOME/.hx/packages/hexa-lang` (canonical hx 설치) → `$HEXA_LANG` (upstream override) → 현재 cwd (no-op, upstream 원본 에러 그대로 노출). `exec` 로 sh 프로세스 대체 → stdin/stdout JSON-RPC forwarding 무손실.
+- **portable (commons s3)**: `$HOME` 만 사용, abs path 없음. **no opt-out (s11)**: 모든 case 에 cd 시도, 환경변수 우회 없음.
+- 재현: cwd ≠ hexa-lang repo 에서 `printf '' | hexa lsp` → "source file not found: self/lsp.hexa". fix 후 cwd 무관하게 LSP boot 정상.
+- `hooks/hexa-lsp/.claude-plugin/plugin.json` 0.1.1 → 0.1.2 · marketplace 0.1.1 → 0.1.2 lockstep (g22).
+
+---
+
 ## 2026-05-28 — cloud 0.4.1: `commands/cloud.md` frontmatter 동기화 (ROOT CAUSE — agent 인지 갭)
 
 🚨 cloud@0.4.0 ship 시 `plugin.json` description + `SKILL.md` frontmatter 는 fire/pods/dispatch 추가했으나, agent slash command 의 source 인 **`skills/cloud/commands/cloud.md` frontmatter** 갱신을 빠뜨림 → `sidecar mirror` 가 stale source 를 그대로 `~/.claude/commands/cloud.md` 로 복사 → **Claude Code skill listing 에 fire/pods/dispatch 트리거 누락** → agent 가 verb 의 존재 자체를 인지 못 함 (ANIMA caller session 의 ghost-pod 양산 root cause).

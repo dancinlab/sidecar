@@ -1,7 +1,10 @@
 {
   "hexa": {
-    "command": "hexa",
-    "args": ["lsp"],
+    "command": "sh",
+    "args": [
+      "-c",
+      "cd \"$HOME/.hx/packages/hexa-lang\" 2>/dev/null || cd \"${HEXA_LANG:-.}\" 2>/dev/null; exec hexa lsp"
+    ],
     "extensionToLanguage": {
       ".hexa": "hexa"
     }

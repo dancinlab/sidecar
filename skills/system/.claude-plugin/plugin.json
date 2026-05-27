@@ -1,0 +1,9 @@
+{
+  "name": "system",
+  "description": "/system — campaign control-tower (domain-agnostic). One persistent mission-control over EVERY in-flight job of a long-running campaign across ANY execution surface (rented pods via cloud · pool hosts · local procs). Ties the manifest (cwd ./pods.json) + event-driven watchers + harvest+verdict + the autonomous harvest→re-dispatch loop into one command. NOT domain-locked — DFT sweeps · ML training fleets · build matrices · render farms · any N-parallel-job campaign with a queued backlog. Verbs: bare/status (unified dashboard) · watch (arm event-driven watchers, no ScheduleWakeup, rate-limit-survivable) · harvest [<id>] (terminal job → parse metric + g5 verdict tier · persist ledger) · next/redispatch (autonomous harvest→atlas-register→fire-next-queued loop, no user gate) · auto (full loop to backlog-drain / budget-hit / interrupt) · cost (budget tracker) · queue [add|rm|ls]. Abstract job model (terminal_marker / metric_parser per kind — no domain assumptions). Reuses ./pods.json (cloud dispatch SSOT), does NOT duplicate /cloud pods or /micro-exp (that launches a fresh sweep; /system is the control tower over already-running jobs). Triggers: /system · 관제탑 · 캠페인 현황 · mission control · campaign status · 결과보고 추가발사 · 자율 재발사 루프 · control tower.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "system", "campaign", "control-tower", "harvest", "dispatch", "watcher", "autonomous"]
+}

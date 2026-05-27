@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — pod-monitor 0.1.4: `pods.json` ledger 환기 hint 추가 (ghost-pod class 닫기)
+
+L1/L3 gap-filler — agent 가 GPU pod 발사 후 `hexa cloud dispatch add` 호출을 잊어 cwd 의 `./pods.json` 에 entry 미작성 → **ghost pod** (billing 추적 ⊘ · verdict 갱신 ⊘ · per-project 활성 작업 view ⊘) 발생. L2 (hexa-lang `cloud fire/nohup` 의 auto-attach) 가 본질적 fix 지만 upstream 변경이 필요해 별 INBOX entry 로 outbound. 본 ship 은 advisory hint 로 caller 책임을 매번 환기.
+
+- **`hooks/pod-monitor/` 0.1.3 → 0.1.4** — 4번째 invariant 추가:
+  - 기존 3: SAVE_POD=1 · 🛰️ Monitor · ⏱ walltime
+  - 신규: `📋 발사 직후 hexa cloud dispatch add <jid> <pid> <dir> 호출 — cwd 의 ./pods.json 자동 추적 (안 하면 ghost pod · billing/verdict 손실)`
+- **상위 발견** (2026-05-28 ANIMA caller session): agent 가 `pods.json` 의 존재 자체를 모름. cloud@0.4.0 + hexa-lang PR #1699 가 spec 은 land 했으나 caller agent 의 인지 부재가 ghost-pod 양산. advisory 환기로 매 fire 마다 강제 노출.
+- pre-0.1.4 fix 클래스 (R8a-LOST · SSH-drop → result LOST) 와 직교 — ghost-pod 는 fire 성공 + result 회수 후에도 ledger 부재로 추적이 끊기는 별 클래스.
+
+---
+
 ## 2026-05-28 — commons 0.10.15: `@D g75` 추가 (candidate orchestration build/fire split · domain-agnostic)
 
 micro-exp 0.4.0 + cycle 0.9.2 + commons g75 3-개 surface가 한 governance 패키지를 이룬다 — INBOX 5-제안의 ② commons.tape g7N (당시 sign-deferred) 항목 해소. 사용자 `! sidecar sign commons` 후 land.

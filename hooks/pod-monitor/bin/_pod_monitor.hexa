@@ -122,6 +122,10 @@ fn main() {
     hints.push("  • 🛰️ 발사 직후 Monitor 도구로 stream 감시 (tail -f / sleep-poll 금지)")
     // walltime / pod-hours도 cmd 형식이 verb별로 달라 신뢰성 있게 감지 못함 — 항상 권고
     hints.push("  • ⏱ walltime 산정 — 예상 ETA + 여유 pod-hours 확보 (timeout = pod 자동 종료 = result LOST)")
+    // 0.1.4 — per-project pods.json ledger 환기 (cloud@0.4.0 + hexa-lang PR #1699)
+    // hexa cloud {fire|nohup|run} 가 자동 dispatch add 안 함 → caller 가 명시 호출해야
+    // 빠뜨리면 ghost pod (billing 추적 ⊘ / verdict 갱신 ⊘ / 본 repo 의 활성 작업 view ⊘)
+    hints.push("  • 📋 발사 직후 `hexa cloud dispatch add <jid> <pid> <dir>` 호출 — cwd 의 ./pods.json 자동 추적 (안 하면 ghost pod · billing/verdict 손실)")
 
     if len(hints) == 0 { _allow() }
 

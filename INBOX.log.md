@@ -568,3 +568,32 @@ bare /domain:
 - sidecar #189/#190/#191/#192 (`<NAME>.brainstorm/.mining` + `/mining` 3종)
 
 **우선순위**: medium-high · 현재 8 DFT 동시 진행 + 향후 wave-3 dispatch 시 매니페스트 부재가 가시성 병목. 멱등 update-form이 mining의 chronological log와 자연 분리(상태 vs 역사).
+
+---
+
+## 2026-05-28 — /sbs full 18-round 진행 패턴 보강 (from demiurge Web GUI 설계)
+
+PR #194 (FULL chat+analogy) 후속. 18 라운드 disambiguation 실세션 운용 중 드러난 보강 거리.
+
+**컨텍스트**:
+demiurge `/sbs full web gui ,cli 로 8verb 처리과정 구현계획 잡자` → 18 라운드 Q-disambiguation → 청사진+9-step PR plan 합의 → PR#0 design SSOT (4 manifest) merge. 인터럽트 빈번 · 의도 변화 (예: starter → public-domain library) · 카테고리 변경 (6→5).
+
+**제안 보강** (FULL 모드 한정):
+
+1. **Q 매트릭스 매 답변 갱신** — `Q1~Q15 ✅ · Q16~ ❓` 한 줄로 상단 고정. 사용자 진행 가시성 + AI 망각 방지.
+2. **결정 즉시 SSOT 저장** — N 라운드 결정될 때마다 `<topic>_DESIGN.md`에 누적 기록 (drift-guard 자동 발화에만 의존 X). 컨텍스트 압축 시 안전망.
+3. **fork 라운드 명시 처리** — 사용자가 직전 결정 변경 (예: "X말고 Y") → 새 라운드 (Qn′ 또는 Qn-revised)로 번호 부여 · 기록 보존. 폐기된 결정은 ~~strikethrough~~ 로 트레이서빌리티 유지.
+4. **최종 단계 = 청사진 + N-step plan 합성** — 모호함 0 도달 직후 자동: (a) ASCII 한 화면 청사진 (b) g4 stacked PR plan (≤200 LOC × N단계) (c) PR#0 = design SSOT manifest (코드 0 · 비용 0).
+5. **카테고리/도메인 fork 시 4-place 동기 갱신** — 매니페스트 (.tape) + 디자인 SSOT (.md) + memory + MEMORY.md 포인터, 한 사이클로.
+6. **guard rule 등록** — 사용자가 "X는 건들이지마" 발언 시 (예: 랜딩페이지) Q 형태로 명시 (예: `Q17 = guard · 랜딩페이지 무변경`). 후속 PR에서 자동 회피.
+7. **응답 분량 g3** — 한 라운드 답변은 7요소(easy.ko) + 표 + ASCII + 옵션 3개 (A·B·C) + 추천 1개 + 한 줄 다음 Q. 50~70 라인 cap.
+
+**왜 지금**: 18 라운드 / 인터럽트 12회 / 의도 fork 3회 / 매니페스트 갱신 7회 — 패턴이 안정화됨. 다음 사용자가 `/sbs full` 쓸 때 동일 효율 보장.
+
+**관련**:
+- PR #194 (FULL chat+analogy) — 이 보강의 base
+- demiurge `domains/WEB_GUI_DESIGN.md` (18-round 실세션 산출물)
+- demiurge `domains/STDLIB_MATRIX.tape` + `CATEGORIES.tape` + `PUBLIC_DOMAINS.tape` (PR#0 design SSOT)
+- demiurge PR#388 (PR#0 stdlib-matrix-index merged)
+
+**우선순위**: medium · 다음 `/sbs full` 사용 시 즉시 적용 가능 · 코드 변경 없음 (skill 문서 + style guide 갱신만).

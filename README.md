@@ -149,11 +149,11 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   verify-guard   wolframscript / inline-sympy → hexa verify (g5)
 #   ai-api-guard   curl AI-host / inline AI-SDK → the CLI wrapper (g50)
 #   sign-guard     edits to commons.tape/project.tape/.gitignore until `sidecar sign` (s13)
-#   git-guard      force-push (+ stale-base push advisory)
+#   git-guard      force-push (+ stale-base push & merge advisory)
 #   tape-lint      .tape edits (fields · length · authoring-language)
 # REWRITE / ROUTE:
 #   pool-route     heavy Bash → ssh to a pool host
-#   pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47)
+#   pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47); DENIES auto-merge on mass-deletion outlier (deletion-sanity gate, anima #1105)
 #   output-trim    >8000-char Bash stdout → dedup + truncate
 # ADVISORY (non-blocking additionalContext):
 #   sidecar-lint   git-commit: stale-history · hardpath · version drift · CHANGELOG · profiles tier · mcp-ban
@@ -185,7 +185,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`trail`](skills/trail/) | command + skill | `core` | 0.1.0 | Main-flow return stack (LIFO) — `/trail push <target>` records where to climb back when deviating into ANY side-task (intra-repo tangent/sub-fix OR cross-repo/upstream fix — not only cross-repo); `pop` closes the top detour + shows what to resume; bare renders the ladder (deepest = ★ NOW); HOME-global `~/.sidecar/trail.tape` (one stack for the current dive, survives `cd`); LLM auto-uses per commons g74 |
 | [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |
 | [`gh-stack`](skills/gh-stack/) | skill | `core` | 0.1.1 | Stacked-PR workflow skill |
-| [`git-guard`](hooks/git-guard/) | hook | `core` | 0.5.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`) |
+| [`git-guard`](hooks/git-guard/) | hook | `core` | 0.6.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`); 0.6.0 adds a non-blocking stale-base MERGE advisory (warns when a `gh pr merge` lands a branch >= 20 commits behind origin/main — anima #1105 stale-base path) |
 | [`limit-guard`](hooks/limit-guard/) | hook | `core` | 0.1.3 | PostToolUse(Task) hook, implemented in hexa-lang (`_limit_guard.hexa`, invoked via `hexa run`) |
 | [`memory-lint`](hooks/memory-lint/) | hook | `core` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the auto-memory index file (`memory/MEMORY.md`), implemented in hexa-lang (`_memo… |
 | [`drift-guard`](hooks/drift-guard/) | hook | `core` | 0.1.1 | PostToolUse(Write\|Edit) advisory — design-drift → memory sync; 0.1.1 limits sentinel scan to source-code extensions + skips sidecar repo's own `/hooks/drift-guard/` tree (kills self-trigger noise from prose docs that documented the marker) |
@@ -204,7 +204,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`sidecar`](commands/sidecar/) | command | `core` | 0.5.0 | thin wrapper over the `sidecar` marketplace CLI (host-local, on PATH via `hx install sidecar`) |
 | [`step-by-step`](commands/step-by-step/) | command + alias `/sbs` | `core` | 0.2.0 | plan-first sequential runbook · TWO modes — MANUAL (default: pause + consult after each step) · AUTO (`auto` token: run straight through). First arg `manual`\|`auto` picks mode |
 | [`workdir-guard`](hooks/workdir-guard/) | hook | `core` | 0.1.0 | SessionStart advisory (hexa-lang `_workdir_guard.hexa`, via `hexa run`) that fires once per session, and only when the… |
-| [`worktree-guard`](hooks/worktree-guard/) | hook | `core` | 0.1.0 | PreToolUse(Bash) advisory on `git worktree add` — durable-worktree drill: commit+push promptly, a sibling prune / sync / tmp-reaper can delete the worktree + uncommitted edits |
+| [`worktree-guard`](hooks/worktree-guard/) | hook | `core` | 0.2.0 | PreToolUse(Bash) advisory on `git worktree add` — durable-worktree drill: commit+push promptly, a sibling prune / sync / tmp-reaper can delete the worktree + uncommitted edits; 0.2.0 adds a branch-reuse advisory (`add -b <br>` reusing an existing/local-only-stale branch — anima #1105 stale-base risk) |
 | [`worktree-gc`](hooks/worktree-gc/) | hook | `core` | 0.2.0 | SessionStart hook that prunes merged-but-undeleted LINKED git worktrees (hexa-lang `_worktree_gc.hexa`). Prunes only when HEAD truly landed on origin/main; FOUR live-work guards (dirty · recent-mtime <1h · cwd-in-use · HEAD-ancestor) + atomic prune so an active worktree is never wiped mid-task |
 | [`atlas`](skills/atlas/) | command + skill | `hexa` | 0.1.1 | wraps `hexa atlas` (atlas SSOT surface) |
 | [`cloud`](skills/cloud/) | command + skill | `hexa` | 0.3.5 | wraps `hexa cloud` (runpod / vast.ai dispatch); 0.3.5 documents the atomic `hexa cloud fire <host> [--log <path>] -- <argv>` workflow + `__MONITOR_HANDLE__={…}` JSON-line contract — both SHIPPED upstream (hexa-lang PR #1306 + #1309) |
@@ -235,7 +235,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`plist-guard`](hooks/plist-guard/) | hook | `personal` | 0.1.2 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, inv… |
 | [`pool-route`](hooks/pool-route/) | hook | `personal` | 0.9.2 | PreToolUse(Bash) pool auto-router + sign-local single-gate. **0.9.0 POLICY INVERSION** — 유저 directive "무조건 pool · 화이트리스트만 local 가능": default = **POOL** (the `light_allowed` fallthrough is REMOVED). Only LOCAL-EXECUTION WHITELIST hits stay local — additions sign-gated (project.tape s13 / TUI `!`). Whitelist members: $CLAUDE_PLUGIN_ROOT/DATA · hexa cloud · hexa atlas register · git/gh/pool · /Users//home abs-path (sign-gated) · ~/. dotstate · npm/pnpm/yarn · **0.9.0 host-introspection** (ps/top/uptime/w/who/df/du/free/vmstat/iostat/uname/sysctl/launchctl/systemctl/pgrep/pkill/kill/killall/stat/lsof/netstat/ifconfig/ip/arp/route/dscl/scutil/sw_vers — these MEASURE THIS host's state; routing returns peer state, semantically broken; first-token basename match) · `! sidecar sign local` 5min runtime token. Pre-0.9.0 heavy classifier kept only for OS-capability hints (is_macos/is_linux). The `find /` root-tree case (anima 100%+ CPU 2:44+ on Mac) now routes by default. SSH overhead accepted by policy. **0.8.3 pool-canonical `~/.hx/canon`** — pool dispatch pins hexa to pool-owned origin/main checkout via `HEXA_REAL_BIN` + `HEXA_LANG=$HOME/.hx/canon` + `HEXA_DAEMON=0` (bootstrap via `~/.hx/canon-update.sh`) |
 | [`pr-cycle`](commands/pr-cycle/) | command | `personal` | 0.4.0 | /pr-cycle one-shot PR cycle (push + create; the pr-cycle-hook plugin appends merge + worktree-clean) |
-| [`pr-cycle-hook`](hooks/pr-cycle-hook/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) router — appends merge + worktree/branch cleanup to `gh pr create` (commons @D g47; pr-cycle split) |
+| [`pr-cycle-hook`](hooks/pr-cycle-hook/) | hook | `personal` | 0.2.0 | PreToolUse(Bash) router — appends merge + worktree/branch cleanup to `gh pr create` (commons @D g47; pr-cycle split); 0.2.0 adds a deletion-sanity gate that DENIES the auto-merge on a mass-deletion outlier (D>50 or deletions >= 10x additions — anima #1105's 35190-file stale-base regression) |
 | [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |

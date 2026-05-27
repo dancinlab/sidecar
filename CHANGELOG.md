@@ -6,6 +6,31 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — stale-base squash-merge 35190-삭제 방어 (3-가드 · anima #1105)
+
+INBOX 핸드오프 (anima 2026-05-27) — anima PR #1105(`decoder-m4b-gpu2-arch`)가 극도로 stale 한 base 에서 분기 → `gh pr merge --squash --admin` 시 main 의 **35190 파일**(state/·archive/·HEXAD/·docs/·AGENT/·training/·.hexarc 등 거의 전체 repo)을 회귀삭제. 정당한 변경은 `CORE/DECODER/v3_moe_arch.hexa` + smoke 2파일뿐. **자동 머지가 35190-삭제를 무경고 통과**시킨 게 핵심 위험. root: worktree 재사용으로 stale base 보유 + git-guard 의 stale-base 경고가 `git push` 시점 backstop 인데 `gh pr merge`(squash) 경로엔 미동작.
+
+3개 가드를 lockstep 으로 추가 (모두 unconditional · opt-out env 없음 · commons @D s11 · hexa-native):
+
+### `hooks/pr-cycle-hook/` 0.1.0 → 0.2.0 — 삭제-수 sanity gate (실질 deny · 최우선)
+- pr-cycle 이 `gh pr create` 에 auto-merge tail 을 append 하기 **전에**, squash payload(`git diff --name-status <merge-base(origin/main,HEAD)>...HEAD` · cross-repo 는 `gh pr diff --repo X`)의 D(삭제)/A(추가) 라인을 셈.
+- **대량삭제 이상치면 머지 BLOCK** (`permissionDecision: deny`): D-count > 50, **또는** 삭제 ≫ 추가(삭제 >= 추가의 10배 **이고** 삭제 > 20). PR 은 생성되되 위험한 squash-merge 만 보류 → 한국어 트레일러로 "대량삭제 의심(D=<n>) — stale-base 회귀일 수 있음. 의도된 거면 수동 `gh pr merge` 직접 실행" 안내.
+- **fail-open**: probe 실패([-1,-1])는 hit 아님 — flaky `gh`/git 이 정당 머지를 막지 않음. 35190 같은 명백 이상치는 확실히 deny, 정상 PR(소수 삭제 또는 삭제<추가)은 통과.
+
+### `hooks/worktree-guard/` 0.1.0 → 0.2.0 — 브랜치 재사용 advisory
+- `git worktree add -b <br>` 의 `<br>` 가 이미 존재하면 non-blocking additionalContext 경고. 특히 **로컬-only stale 브랜치**(origin 엔 없음 = rejected/미푸시 이전 turn 잔재)면 stale-base 위험이 가장 커 별도 강조.
+- 매 PR fresh 분기 권장: `git worktree add -b <br>-$(date +%s) <path> origin/main`. advisory-only(guards-narrow-scope).
+
+### `hooks/git-guard/` 0.5.0 → 0.6.0 — stale-base MERGE advisory (push-time 경고를 머지경로로 확장)
+- 기존 stale-base **push** advisory(0.5.0)에 더해, 명령에 `gh pr merge` 가 있고 `git push` 는 없을 때(= pr-cycle auto-append 또는 수동 bare merge) 동일한 divergence probe 를 돌려 머지 직전 경고. 머지 브랜치가 origin/main(/HEAD) 보다 >= 20커밋 뒤처지면 fire. cross-repo(`--repo X`)는 cwd HEAD 가 해당 PR base 와 무관하므로 skip.
+- advisory-only — 실질 deny 는 pr-cycle 의 deletion-sanity gate 가 담당(guards-narrow-scope).
+
+### 검증
+- 3개 `.hexa` 모두 `hexa parse` → parses cleanly.
+- 가드① D-count 로직 standalone smoke(7 케이스 PASS): 35190 D/3 A → **DENY** · 60 D/2 A(over cap) → DENY · 30 D/1 A(asymmetry) → DENY · 50 D/0 A(pure deletion) → DENY · 3 D/5 A(정상) → allow · 10 D/40 A(refactor) → allow · probe-failure [-1,-1] → fail-open allow.
+- 가드② worktree-guard: 기존 로컬+origin 브랜치(`main`) 재사용 → reuse 경고 fire · 신규 브랜치 → reuse 경고 0건(false-positive 없음).
+- 가드③ git-guard: force-push 여전히 deny · 현재 브랜치(behind 0) `gh pr merge` → false advisory 없음.
+
 ## 2026-05-27 — worktree-gc 0.2.0: 활성 worktree mid-task wipe 방어
 
 INBOX 핸드오프 (demiurge monograph fan-out 2026-05-26) — `worktree-gc` 0.1.0 이 *작업 중* worktree 를 prune 해서 라이브 작업을 파괴. `wt-*-mono` worktree 의 `.git` 링크 + `main.tex`/`Makefile`/`appendix/` 가 mid-build 로 소실 (`companion/`+`cover.png` 만 생존). CERN(#220)·ANTIMATTER(#222) 둘 다 발생, checkpoint-commit 으로만 복구.

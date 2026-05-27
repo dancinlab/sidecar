@@ -4,6 +4,8 @@
 
 (현재 상태만 기록 — 열린 handoff는 `- [ ]` 로, 처리 이력은 `INBOX.log.md` 로)
 
+- [x] **stale-base squash-merge 35190-삭제 방어** ✅ — pr-cycle deletion-sanity-gate (0.2.0 · 실질 deny) + worktree-guard 브랜치재사용 advisory (0.2.0) + git-guard stale-base 머지경로 advisory (0.6.0) (from anima #1105 2026-05-27). 35190 D/3 A 이상치 smoke DENY 확인 · 정상 PR pass. 상세 → `INBOX.log.md`.
+
 - [x] **`pool` CLI 회귀 — 모든 subcommand 미실행, `OK: <첫-인자>` stub 만 출력** ✅ 로컬 해소 (from hexa-lang RUNTIME 2026-05-26) — **근본원인**: shim 의 implicit-run(`hexa <file>`)이 Darwin 에서 build 출력을 `/tmp` 로 잡아 → 커널패닉 가드가 build **REFUSE** → 실패 경로가 `bin/pool.hexa` 소스를 259B C stub 로 **clobber**(매 호출마다 소스 자가파괴). m3b 툴체인 교체(`~/.hx/bin/hexa.real`→hxv2 컴파일러, 05-26 05:47)가 AOT 캐시를 무효화 → 강제 recompile → 이 게이트에 매번 충돌. (shim·HEXA resolution 은 정상이었음 — 핸드오프 1차추정 정정.) **로컬 fix**: pool 을 네이티브 바이너리로 선컴파일(`HEXA_MAC_BUILD_OK=1 HEXA_LANG=… hexa-run build … -o ~/.hx/bin/pool.bin`) 후 `~/.hx/bin/pool` shim 을 그 바이너리 직접 exec 로 repoint(원본 shim → `pool.shim-bak-2026-05-26`). `pool list`/`status`/`on ubu-2` 전부 정상, 소스 무손상, g9 offload 복구. **남은 상류 debt**(sibling repo): (1) hexa-lang run-driver — Mac 기본 build 출력 `/tmp` 회피 + **build 실패 시 소스 clobber 금지**, (2) `dancinlab/pool` install.hexa — 첫 설치에 네이티브 선컴파일(현 shim 의 implicit-run 의존 제거). 상세 → `INBOX.log.md`.
 
 - [x] **`/micro-exp` (context-driven sweep) + commons.tape g63-g66** ✅ (from demiurge RTSC 2026-05-25) — skill 0.2.0 **context-driven 재설계** land (manifest 파일 없이 `/cycle`처럼 맥락에서 candidate self-enumerate · 바=현재 맥락·인자=스코프) + commons.tape **g63 honest-sweep · g64 budget-cap · g65 aggregation · g66 pod≠agent-cap** land (유저 `sidecar sign commons` 후). 상세 → `INBOX.log.md`.

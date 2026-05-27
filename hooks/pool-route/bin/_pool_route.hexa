@@ -557,6 +557,33 @@ fn _local_heavy_interp(cmd: string, toks: array) -> bool {
     return false
 }
 
+// `_is_hexa_exec(toks)` — WHITELIST core (0.8.0 — POOL-OFFLOAD m8, user
+// directive "모든 hexa 실행 pool 로"): is the REAL invoked verb a hexa binary?
+// This flips pool-route from a heavy-VERB blacklist (which leaked verify ·
+// atlas · parse · honesty · … → multi-hundred-process Mac fork-storm) to a
+// WHITELIST: ANY hexa execution routes to the pool, full stop. Unwraps the
+// POSIX env-prefix + wrappers + backslash first (same hardening as the sign
+// gate) so `POOL_DISABLE=1 nice hexa verify …` is still caught. The 3
+// STRUCTURAL exemptions that must stay local are handled EARLIER in main and
+// never reach here: (1) `$CLAUDE_PLUGIN_ROOT`/`$CLAUDE_PLUGIN_DATA` (sidecar's
+// own hexa hooks/commands — routing the router is incoherent + the plugin
+// cache only exists on the workstation); (2) `hexa cloud` (itself a remote
+// dispatcher — double-dispatch is incoherent); (3) any `/Users/`·`/home/`·
+// `~/.` absolute-path hexa (sign-gated — the path may not exist on the peer).
+// Everything else hexa — verify · parse · run · build · kick · drill · loop ·
+// cc · test · bench · atlas (lookup/register/…) · smash · honesty · … — routes.
+fn _is_hexa_exec(toks: array) -> bool {
+    let real = _unwrap_to_real(toks)
+    if len(real) == 0 { return false }
+    let b = _basename(real[0])
+    if b == "hexa" { return true }
+    if b == "hexa.real" { return true }
+    if b == "hexac" { return true }
+    if b == "hexadrv" { return true }
+    if b == "hxv2" { return true }
+    return false
+}
+
 // `_basename` — strip directory prefix. `/Users/x/.hx/bin/hexa` → `hexa`.
 fn _basename(path: string) -> string {
     let i = path.last_index_of("/")
@@ -935,7 +962,12 @@ fn main() {
     let mut heavy_find_subs = []
     if home != "" { heavy_find_subs.push("find " + home + "/core/") }
     heavy_find_subs.push("find ~/core/")
-    let heavy = _any_word(stripped, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(stripped, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
+    // 0.8.0 — WHITELIST: ANY hexa execution routes (the heavy_words/pairs above
+    // remain for NON-hexa heavy compute: make · cargo · gcc · node · java · …).
+    // `_is_hexa_exec` makes the hexa-specific pairs (kick/run/verify/…) redundant
+    // but they are kept harmless; the structural local-exemptions ($CLAUDE_PLUGIN_
+    // ROOT · hexa cloud · abs-path sign-gate) already returned before this line.
+    let heavy = _is_hexa_exec(toks) || _any_word(stripped, heavy_words) || _any_adjacent(toks, heavy_pairs) || _any_pair_substring(stripped, heavy_pairs) || _any_contains(cmd, heavy_find_subs)
 
     // NOTE (pool-route 0.6.0): the load-aware escalation gate (0.5.7 #96) was
     // REMOVED. It promoted any non-trivial cmd to "heavy" when non-claude CPU

@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.8.0: HEXA 화이트리스트 (blacklist → whitelist 전환)
+
+사용자 directive "heavy 말고 블랙리스트 말고 화이트리스트로 — 모든 hexa 실행 pool 로". 배경: heavy-VERB 블랙리스트(kick/drill/run/build/… 만 라우팅)가 `hexa verify --expr` · `hexa atlas register` · `hexa parse` · `hexa honesty` 등을 누락 → 병렬 anima 자율 루프가 이것들을 로컬 대량 fork → **1600+ hexa 프로세스 Mac fork-storm** (load avg 12+, clang/atlas-parse 폭주). 블랙리스트는 새 verb 마다 새는 구조라 화이트리스트로 전환.
+
+- **pool-route 0.7.11 → 0.8.0** — `_is_hexa_exec(toks)` 추가: `_unwrap_to_real` 후 first-token basename 이 `hexa`/`hexa.real`/`hexac`/`hexadrv`/`hxv2` 면 true. `heavy` OR-체인 맨 앞에 `_is_hexa_exec(toks) || …` 합류 → **모든 hexa 실행이 pool 로 라우팅**.
+- **로컬 잔류 = 3 STRUCTURAL 예외만** (분류기 도달 전 early-return, "heavy/light 판단" 아님 · 라우팅이 구조적으로 불가능/무의미한 것만):
+  1. `$CLAUDE_PLUGIN_ROOT`/`$CLAUDE_PLUGIN_DATA` hexa — sidecar 자체 훅/명령. 라우터가 자기 자신을 라우팅 불가 + 플러그인 캐시는 워크스테이션에만 존재.
+  2. `hexa cloud` — 그 자체가 원격 디스패처(double-dispatch 무의미).
+  3. `/Users/`·`/home/`·`~/.` abs-path hexa — 기존 sign-gate(peer 에 경로 부재 가능).
+- **비-hexa heavy 분류기 유지** — make/cargo/gcc/node/java/ffmpeg 등 일반 heavy 는 기존 heavy_words/pairs 그대로. hexa-specific pairs(kick/run/verify/…)는 이제 `_is_hexa_exec` 에 포섭돼 redundant 지만 무해하게 잔존.
+- ⚠ trade-off: `hexa verify <id>`/`hexa atlas register` 도 pool 로 감 — verify --expr(수치, atlas-무관)은 안전하나, `atlas register`는 로컬 SSOT(embedded.gen.hexa) 변경 op라 ubu 에서 실행 시 로컬 미반영. 사용자 explicit "모든 hexa" directive 우선 — anima atlas 워크플로 영향 시 사용자 조정.
+- 파싱 검증: `hexa parse` → OK. plugin.json + marketplace.json + README + CHANGELOG lockstep.
+
 ## 2026-05-27 — step-by-step 0.2.0: manual(기본)/auto 2-모드
 
 `/sbs`(및 `/step-by-step`)가 fully-auto 라 "실제 상의하면서 진행"이 안 되고 자동 폭주하던 문제 수정. 이제 **MANUAL 이 기본** — 한 스텝씩 실행 후 멈춰서 사용자와 상의, go 받아야 다음 진행.

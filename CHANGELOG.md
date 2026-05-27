@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.3.0: exit-code-aware terminal taxonomy + upstream-reflex (g59)
+
+🔧 demiurge RTSC 라이브 교훈 — Mg₂IrH₆ phonon 이 22.5h walltime(`max_seconds=80000`) 도달 → QE 가 `Maximum CPU time exceeded` 후 **"JOB DONE."** 출력 + `STOP 1` (비정상 종료·재개필요). watcher 가 bare-marker grep("JOB DONE") 으로 SUCCESS 오판 1회. 사용자 "사전 방지 가능?" + "system 에 hexa upstream 개선 포함".
+
+- **exit-code-aware terminal taxonomy** (watch/harvest) — DONE(marker ∧ trailing STOP/error/Maximum-CPU 없음) · TIMEOUT-RESUMABLE(max_seconds → recover, marker 떠도 success 아님) · STUCK/CRASHED(STOP n≠0 / Error in routine) · GONE(2x debounce). **bare-marker 함정** 명문화: routine 이 비정상 walltime-stop 에도 마커 출력 → 반드시 trailing-STOP/error/exit 동반 스캔.
+- **transport 255 분류** — TRANSIENT-GATEWAY(TCP-open+contract-live → retry) vs POD-DOWN(TCP-closed). 단일 255 ≠ GONE.
+- **upstream-reflex (g59)** — watch/harvest 가 hexa cloud CLI gap(false-terminal·transport ambiguity·preflight 결손) 만나면 caller-side workaround 만 하지 말고 `~/core/hexa-lang/INBOX.log.md` SAME-TURN 파일. caller trailing-scan = STOPGAP, durable fix = CLI 3-tier exit code. 본 세션 hexa-lang #1828 (cloud 3-gap) 이 그 trail.
+- SKILL + commands/system.md + plugin/marketplace 0.2.0→0.3.0.
+
 ## 2026-05-28 — system 0.2.0: 자율 contract — queue status taxonomy + blocked:auto-resolve (no "awaiting-approval")
 
 🔧 demiurge RTSC 세션 라이브 교훈 — wave-3 잔여 4 candidate 를 "발사 대기 backlog" 로 프레이밍 → 사용자 "발사대기는 뭐지? 자율 아냐?" 지적. 실제 차단은 user 게이트가 아니라 H-cage 좌표 미확보(기술적 d6 halt). 자율 원칙(d17/d20)대로면 좌표를 자율 조사 후 발사해야 함. /system 0.2.0 이 이 anti-pattern 을 명령어에 못박음.

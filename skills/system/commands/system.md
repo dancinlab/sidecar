@@ -72,12 +72,19 @@ Read-only. Each job's `progress` is derived from its `metric_parser`'s cheap sig
 
 ## watch — arm event-driven watchers (commons g10 · g57)
 
-For each `running` job WITHOUT a live watcher, arm a background while-loop (one per job, `run_in_background: true`) that polls the job's durable log and terminates on a DEBOUNCED terminal:
-- `DONE` — `grep -q "<terminal_marker>"` in the log.
-- `STUCK` — `grep -qE "Error|Traceback|too many|OOM"` (kind-specific error set) in the log/stderr.
-- `GONE` — liveness probe = 0 for **2 consecutive** polls (debounce — a single transient ssh timeout is NOT terminal).
+For each `running` job WITHOUT a live watcher, arm a background while-loop (one per job, `run_in_background: true`) that polls the job's durable log and terminates on a DEBOUNCED, EXIT-CODE-AWARE terminal taxonomy (NOT a bare marker grep):
+- `DONE` — `<terminal_marker>` present **AND** no trailing `STOP <n≠0>` / `Error in routine` / `Maximum CPU time` / non-zero exit. A clean success.
+- `TIMEOUT-RESUMABLE` — `Maximum CPU time exceeded` / `max_seconds` / scheduler-walltime hit. The marker may ALSO appear (e.g. QE prints `JOB DONE.` then `STOP 1` on a walltime stop) — this is NOT success; if recovery state exists, `next` resumes (recover) rather than harvests.
+- `STUCK`/`CRASHED` — `STOP <n≠0>` / `Error in routine` / `Traceback` / `OOM` / non-zero prterun exit.
+- `GONE` — liveness probe = 0 for **2 consecutive** polls (debounce — a single transient ssh-255 is NOT terminal; see transport classification below).
+
+⚠ **Bare-marker trap** (the reason this is exit-code-aware): a terminal_marker like QE's `JOB DONE.` is printed by the routine even on a `max_seconds` walltime stop that exits non-zero with an incomplete result. Grepping ONLY the marker false-fires `DONE` on a resumable/crashed run. ALWAYS pair the marker check with a trailing-`STOP`/error/exit scan. (Evidence: a 22.5h phonon walltime-stop that printed `JOB DONE.`+`STOP 1` was mis-read as success once — hence this rule.) The hexa-lang `cloud poll`/`tail` 3-tier exit code (DONE/TIMEOUT-RESUMABLE/CRASHED) is the upstream fix (hexa-lang INBOX 2026-05-28); until it lands, the watcher does the trailing-scan itself.
+
+**Transport classification** — `cloud exec`/probe exit 255 with TCP-open + live contract = `TRANSIENT-GATEWAY` (retry-with-backoff, pod is fine); 255 with TCP-closed = `POD-DOWN`. A single 255 is NOT a `GONE` terminal (debounce 2x).
 
 The watcher writes its terminal verdict to its task-output (the durable Monitor attach point). NO ScheduleWakeup (interactive-pace, not a cron loop). Record each watcher id back into `pods.json` `jobs.<id>.watcher`. State: `armed N watchers · debounce 2x · cap <Nmin>`.
+
+**Upstream-reflex (g59) — fix hexa cloud at source, not just here:** when `/system`'s watch/harvest hits a `hexa cloud` CLI limitation (a false-terminal the CLI should have classified, a transport ambiguity, a missing preflight axis), file it to `~/core/hexa-lang/INBOX.log.md` (g59) SAME-TURN with verbatim evidence — do not silently bake a permanent workaround into the watcher. The caller-side trailing-scan is a STOPGAP; the durable fix is the CLI's 3-tier exit code. `/system` improvements that re-discover a cloud gap MUST leave an upstream trail.
 
 **Re-arm on TIMEOUT** — a watcher that hits its cap without a terminal is re-armed (the job is still grinding). A watcher that fires DONE/STUCK/GONE hands off to `harvest`.
 

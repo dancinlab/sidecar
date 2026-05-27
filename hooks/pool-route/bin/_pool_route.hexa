@@ -797,6 +797,28 @@ fn main() {
         _allow_count("local_bound")
     }
 
+    // 0.9.0 — host-introspection whitelist. These commands measure THIS
+    // host's state (CPU/load/processes/disk/network/kernel/users/files) —
+    // routing them to a pool host returns the PEER's state, which is
+    // incoherent for diagnostics (`ps -ax` of pool host != Mac's procs;
+    // `uptime` of pool host != Mac load; `kill <pid>` targets a different
+    // process namespace; `df` shows pool disk; `lsof` shows pool sockets).
+    // Extends the dotstate principle (per-host hidden state stays local)
+    // to host-introspection commands by semantic necessity, NOT convenience.
+    // Sign-gated additions (extending this list) go via project.tape rule
+    // edits (commons @D s13). Per user policy 0.9.0: "무조건 pool · 화이트
+    // 리스트만 local 가능" — strict default-pool, semantic-coherent local
+    // exceptions only.
+    let intro_list = ["ps", "top", "htop", "uptime", "w", "who", "users", "df", "du", "free", "vmstat", "iostat", "uname", "sysctl", "launchctl", "systemctl", "pgrep", "pkill", "kill", "killall", "stat", "lsof", "netstat", "ifconfig", "ip", "arp", "route", "dscl", "scutil", "sw_vers"]
+    if len(early_toks) >= 1 {
+        let t0i = _basename(early_toks[0])
+        let mut ii = 0
+        while ii < len(intro_list) {
+            if t0i == intro_list[ii] { _allow_count("local_bound") }
+            ii = ii + 1
+        }
+    }
+
     let home = _env("HOME")
 
     // roster — the `pool` CLI's single source of truth, ~/.pool/pool.json
@@ -996,7 +1018,18 @@ fn main() {
     let sudo_words = ["apt", "apt-get", "dpkg", "dpkg-deb", "add-apt-repository", "yum", "dnf", "rpm", "pacman", "systemctl", "ldconfig", "setcap", "update-alternatives"]
     let needs_sudo = _any_word(cmd, sudo_words)
 
-    if !heavy && !needs_sudo { _allow_count("light_allowed") }
+    // 0.9.0 — DEFAULT = POOL. The previous `light_allowed` fallthrough
+    // (allow local if !heavy && !needs_sudo) is REMOVED. Per user policy:
+    // "무조건 pool · 화이트리스트만 local 가능" — every command falls
+    // through to host-selection + routing unless it hit a LOCAL-EXECUTION
+    // WHITELIST entry above (sign-local · git/gh/pool · npm/pnpm/yarn ·
+    // $CLAUDE_PLUGIN_ROOT · abs-path heavy sign-gate · ~/. dotstate ·
+    // hexa cloud · hexa atlas register · host-introspection ps/top/uptime/…).
+    // The `heavy` flag stays computed for downstream OS-capability hints
+    // (is_macos / is_linux still gate which pool host) but no longer gates
+    // routing itself. Whitelist additions are sign-gated via project.tape
+    // (commons @D s13) — no env-var/config opt-out (commons @D s11).
+    let _heavy_unused = heavy   // silence unused warning if any
 
     // capability filter — restrict to a platform when the command demands one
     // 0.6.7 — `aprime_cc` also added to macos_words: the in-tree binary is

@@ -6,6 +6,28 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.9.0: 분류기 INVERSION — default = pool · 화이트리스트만 local
+
+사용자 directive — "무조건 pool & 화이트리스트만 local 가능". 0.8.x까지는 default=local + heavy 패턴만 pool이라, 분류기에 안 잡힌 무거운 명령 (`find /` 루트 풀스캔 · anima 세션이 2:44+ 째 100%+ CPU)이 default-local fallthrough로 Mac에서 돎. 진단 직후 비-claude CPU 합 483% (8 코어 · load=86) — bfs(`find /`) 2개가 177% 차지.
+
+**분류기 inversion**:
+
+```
+이전 (0.8.x):                          0.9.0:
+  sign-local → local                    sign-local → local
+  WHITELIST hit → local                 WHITELIST hit → local
+  heavy 패턴 매치 → pool                ──────────────────────
+  default → LOCAL  ← `find /` 여기로    default → POOL  ← `find /` 여기로
+```
+
+- **`_pool_route.hexa`** — `if !heavy && !needs_sudo { _allow_count("light_allowed") }` 한 줄 제거 → 모든 비-whitelist 명령이 라우팅 단계로 fall-through. `heavy` 플래그는 OS-capability hint (is_macos/is_linux로 어느 pool 호스트 선택할지)에만 잔존.
+- **HOST-INTROSPECTION 화이트리스트 추가 (0.9.0 신규)** — `ps · top · uptime · w · who · df · du · free · vmstat · iostat · uname · sysctl · launchctl · systemctl · pgrep · pkill · kill · killall · stat · lsof · netstat · ifconfig · ip · arp · route · dscl · scutil · sw_vers`. first-token basename 매치 (substring 충돌 방지). **의미적 필연**: 이 명령들은 호스트 상태를 측정 — pool 호스트로 라우팅하면 peer 상태가 나와서 진단 incoherent (ps 의 PID namespace · uptime 의 load · df 의 디스크 모두 호스트별 별개). dotstate 원칙의 자연 확장.
+- **화이트리스트 등록은 sign-gate**: 이 외 추가하려면 project.tape 룰 편집 → `sidecar sign project` 토큰 필요 (commons @D s13). agent 자가민팅 없음. env-var/config opt-out 없음 (s11).
+- **트레이드오프**: 라우팅된 모든 명령에 ~100-300ms SSH overhead. Mac load 보호가 우선이라 수용. 자주 쓰는 패턴이 SSH overhead 견디기 어려우면 → `! sidecar sign local` (5min batch token) 또는 sign-gated 화이트리스트 등록.
+- **즉시 효과**: `find / -path "*/stdlib/.../iit4_*.hexa"` 같은 anima 풀스캔이 0.9.0 sync 후 다음 invocation부터 pool로 자동 분산.
+
+기존 heavy_words/heavy_pairs/heavy_find_subs/hexa whitelist 코드는 그대로 — OS-capability filter (어느 pool 호스트로) 역할로 잔존. 다음 정리 라운드에 dead-code prune 가능.
+
 ## 2026-05-27 — pool-route 0.8.4: 'whitelist' 용어 정정 (= local-execution allowlist · sign-gated)
 
 사용자 지적 — "pool 화이트리스트는 로컬 실행 화이트리스트를 뜻함" + "화이트리스트 등록은 sign 필요". 0.8.0의 `HEXA WHITELIST` 표현이 의미 반대였음: 실제로는 "ANY hexa → pool"이라는 **POOL-DISPATCH 셋**을 정의했는데, 'whitelist'는 통상적으로 "이 리스트에 있는 것은 허용/예외" (= pool-route 맥락에서는 **LOCAL-EXEC** = 로컬에 머무름) 의미여야 함. 이 두 개념은 정반대.

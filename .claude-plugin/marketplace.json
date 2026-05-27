@@ -29,8 +29,8 @@
     {
       "name": "hexa-lsp",
       "source": "./hooks/hexa-lsp",
-      "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Minimal: only `.hexa` claimed.",
-      "version": "0.1.1"
+      "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Spawns via `sh -c` so cwd = `$HOME/.hx/packages/hexa-lang` before `exec hexa lsp` (upstream resolves `self/lsp.hexa` relative to cwd — fixes /doctor 'source file not found' crash trail). Minimal: only `.hexa` claimed.",
+      "version": "0.1.2"
     },
     {
       "name": "tape-lsp",

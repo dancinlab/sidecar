@@ -1,26 +1,26 @@
 ---
-description: /sbs — short alias for /step-by-step. Plan-first sequential runbook, FOUR modes on a question-density spectrum. GO (fewest Q) — no plan gate, execute end-to-end terse. AUTO — show plan, run straight through. MANUAL (default) — pause + consult per step. FULL (most Q) — disambiguate FIRST: keep asking until ZERO ambiguity, then run; re-ask on new mid-run ambiguity. First arg token `go`|`auto`|`manual`|`full` picks the mode (default manual); rest is the task. Sequential counterpart to /cycle.
-argument-hint: "[go|auto|manual|full] [<task> | empty = current task in context]"
+description: /sbs — short alias for /step-by-step. Plan-first sequential runbook, THREE modes on a question-density spectrum. AUTO (fewest Q) — show plan, run straight through. MANUAL (default) — pause + consult per step. FULL (most Q) — disambiguate FIRST: keep asking until ZERO ambiguity, then run; re-ask on new mid-run ambiguity. First arg token `auto`|`manual`|`full` picks the mode (default manual); rest is the task. Sequential counterpart to /cycle. (For "continue the paused flow" use the separate /go command.)
+argument-hint: "[auto|manual|full] [<task> | empty = current task in context]"
 ---
 
 # /sbs — alias for /step-by-step
 
 Input: `$ARGUMENTS`
 
-`/sbs` is the short alias for **`/step-by-step`** — identical semantics. FOUR
-modes, fewest → most questions: `go ── auto ── manual ── full`.
+`/sbs` is the short alias for **`/step-by-step`** — identical semantics. THREE
+modes, fewest → most questions: `auto ── manual ── full`.
 
-1. **Parse mode + target** — first token `go` → GO · `auto` → AUTO · `manual` →
-   MANUAL · `full` → FULL · anything else / empty → MANUAL (default). The rest
-   (or whole input) is the task; empty task → current work in context (state the
-   assumption, don't ask — EXCEPT FULL, which asks). Announce the mode in one line.
+1. **Parse mode + target** — first token `auto` → AUTO · `manual` → MANUAL ·
+   `full` → FULL · anything else / empty → MANUAL (default). The rest (or whole
+   input) is the task; empty task → current work in context (state the assumption,
+   don't ask — EXCEPT FULL, which asks). Announce the mode in one line. (`go` is
+   NOT a mode — `/go` is a separate continue-the-paused-flow command.)
 2. **(FULL only) Disambiguate** — before planning, run AskUserQuestion rounds
-   (≤4/round) until a scan finds ZERO remaining ambiguity (round after round —
-   "묻고 또 묻고"). State `🔍 disambiguation: <N> rounds · ambiguity → 0`.
-3. **Plan** — ordered, numbered, dependency-ordered steps (`📋 plan (N steps)`).
-   GO suppresses the shown plan (terse); AUTO/MANUAL/FULL show it. No approval gate.
+   (≤4/round) until a scan finds ZERO remaining ambiguity (round after round).
+   State `🔍 disambiguation: <N> rounds · ambiguity → 0`.
+3. **Plan** — ordered, numbered, dependency-ordered steps (`📋 plan (N steps)`),
+   shown in all modes. No approval gate.
 4. **Execute** — per step: `▶ i/N — <step>` → work → `✅` / `⚠` / `❌`.
-   - **GO**: no plan preamble, no pause — straight through, result lines only.
    - **AUTO**: no pause between steps — flow straight through.
    - **FULL**: run straight through, BUT stop + ask another round if a step
      surfaces NEW ambiguity (never guess past a fork), then resume.

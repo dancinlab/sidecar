@@ -2,6 +2,44 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-27 — /sbs (commands/step-by-step) FULL mode: chat+analogy 1Q + final "이거 맞아요?" ASCII confirm (UX 제안)
+
+> **사건**: demiurge 세션에서 `/sbs full web gui, cli 8verb 처리과정 구현계획` 으로 진입 → 모드는 disambiguate-first(FULL) 가 맞으나, AskUserQuestion 4-옵션 선택상자가 한 번에 4축을 묶어 던져 사용자 인지부하 ↑. 사용자 명시 요청: "선택상자 말고 비유하면서 채팅으로 진행". 채팅+비유 1문항씩으로 전환하니 흐름이 깔끔. 또한 disambiguate 종료시점에 "최종 원하는게 이거 맞아요?" 의 ASCII 구조 합의 화면 부재 — 사용자가 plan 진입 전 전체 결정셋을 한 눈에 보고 yes/no 할 surface 가 없음.
+
+> **갭 #1 — UX 형식 고정 1종**: FULL mode 가 AskUserQuestion(선택상자) 사실상 강제. 채팅+비유 1Q 방식이 더 적합한 케이스(설계 상담, 도메인 비전문가, 비유 매개 학습) 에 옵션 없음.
+
+> **갭 #2 — 합의 화면 부재**: disambiguate 라운드 N개 종료 후 plan 직행. 사용자 머리속의 결정셋과 실제 누적 결정셋 정렬 확인 단계 없음. → plan 실행 중 "어 이거 그 선택 아니었는데" 발견 시 되돌리기 비용 큼.
+
+**구현 제안 (`commands/step-by-step/SKILL.md` · `/sbs` 모드 spec)**
+- [ ] **(a) FULL 모드 sub-format 옵션 2종 추가**:
+  - `FULL` (default · 현행): AskUserQuestion 4-옵션 선택상자 round 반복
+  - `FULL-chat` (신규): 1문항씩 채팅으로 · 비유(🍳🍱🧶 등) + ASCII + 비교표 + 추천 한 줄 · 사용자는 자유응답(예: `A` / `B` / `다른 안 ...`). easy 응답 스타일과 자연 결합. 트리거: `/sbs full-chat <task>` 또는 사용자가 "선택상자 말고 채팅" 류 요청
+  - first-arg 토큰: `go|auto|manual|full|full-chat`
+- [ ] **(b) "최종 이거 맞아요?" 합의 화면 (모든 FULL 변종 공통)**:
+  - disambiguate 라운드 종료 시점(`ambiguity → 0`) 에 plan 으로 직행 ❌
+  - 대신 누적 결정셋을 ASCII 구조로 한 번에 펼침:
+    ```
+    🎯 합의된 결정셋 (N개)
+    ┌─ Q1: <축>  →  ✅ <선택>
+    ├─ Q2: <축>  →  ✅ <선택>
+    └─ Qn: ...
+    ```
+    + 한 줄 요약 + "맞으면 `go` · 수정은 `Qn=<다른선택>`"
+  - 사용자 `go` 떨어지면 plan 단계로 진입
+  - 도중 사용자가 `Qn=<X>` 적으면 그 결정만 갱신, 나머지는 유지하고 다시 합의 화면
+
+**비교 (현행 FULL vs 신규)**
+| 축 | 현행 FULL | FULL-chat | 합의 화면 |
+|---|---|---|---|
+| 인지부하 | 4축 동시 | 1축씩 | 누적 한 눈 |
+| 학습 친화 | 낮음 (옵션 텍스트만) | 높음 (비유+ASCII) | 합의 명시 |
+| 자유응답 | ❌ "Other" 슬롯 | ✅ 자연 자유 | ✅ 수정 |
+| plan 진입 정렬 | 가정 | 가정 | **명시 yes/no** |
+
+**우선순위**: (a) > (b). (a)만 있어도 사용자가 채팅 흐름 쓸 수 있음. (b)는 모든 FULL 변종에 공통 안전망 — 합의 후 plan 진입은 g0(Occam) 이자 d2(돌이키기 비용 최소).
+
+**참고**: easy-auto 스타일(7-요소 패턴) 과 자연 결합 — full-chat 의 각 라운드가 그대로 7-요소(아이콘·이름·별칭·평이·비유·ASCII·비교) 충족.
+
 ## 2026-05-27 — pool-route data-locality pin + sign-local TTL 30min ✅ 해소 (from anima PURE F-CURRICULA-1)
 
 > **사건**: anima PURE 도메인 F-CURRICULA-1 GPU fire 준비 중, local 입력파일(Mac session log 추출본 + Phase D corpus)에 의존하는 corpus build (`hexa run build_curriculum_corpus.hexa --corpus-path /Users/.../c.jsonl …`) 가 pool-route 의 두 라우팅 경로 모두에서 막혀 fire 가 2회 BLOCKED. 비용 0 정직 halt 였으나 자율 fire(`a_fire_autonomous`) + 상시 자원활용 흐름이 sign 게이트에 반복 차단되는 마찰.

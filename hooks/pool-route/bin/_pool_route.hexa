@@ -36,7 +36,7 @@ let MARK = "__SIDECAR_POOL__"
 // `additionalContext` on the eventual exit so the agent learns these are no-op
 // without a counterfactual silent allow. ASCII-only to survive JSON escaping.
 fn _pool_advisory_text() -> string {
-    return "pool-route advisory: SIDECAR_NO_POOL / SIDECAR_NO_POOL_ROUTE / POOL_DISABLE / SIDECAR_POOL_DISABLE env-prefix are NO-OP since 0.7.3 (POSIX env-prefix stripped before the classifier reads the real verb). For genuine local-force, the USER must run `! sidecar sign local` in the TUI prompt (5-min token, agent-self-mint forbidden). This cmd proceeds per actual classification; the env-prefix had zero effect on routing."
+    return "pool-route advisory: SIDECAR_NO_POOL / SIDECAR_NO_POOL_ROUTE / POOL_DISABLE / SIDECAR_POOL_DISABLE env-prefix are NO-OP since 0.7.3 (POSIX env-prefix stripped before the classifier reads the real verb). For genuine local-force, the USER must run `! sidecar sign local` in the TUI prompt (30-min token since 0.9.3 — build-covering, agent-self-mint forbidden). This cmd proceeds per actual classification; the env-prefix had zero effect on routing."
 }
 
 // `_is_useless_pool_env(name)` — name (without `=`) matches one of the canonical
@@ -343,12 +343,29 @@ fn _env(name: string) -> string {
     return r[0].trim()
 }
 
-// `_local_signed` — fresh `local` sign token (5min). Mirrors sign-guard's
-// TTL contract: the user mints with `! sidecar sign local` in the TUI
-// prompt; the file `~/.sidecar/signs/local.sign` holds the mint epoch.
-// pool-route's local-bound heavy gate (0.6.4) reads it to decide whether
-// to allow hexa/python/sh script invocations through the absolute-path
-// exemption.
+// `LOCAL_SIGN_TTL` — `local` sign token validity (seconds). 0.9.3: raised from
+// 300 (5min) to 1800 (30min) — anima PURE F-CURRICULA-1 showed a single
+// legitimate local build (corpus regen + compile) runs 10-20min, exceeding the
+// old 5min window, so a mid-build `hexa run` re-tripped the fork-storm gate when
+// the token expired (the user had to re-sign every 5min — unworkable friction).
+// 30min covers a realistic build with margin while staying a finite, user-minted
+// window. TRADE-OFF: the fork-storm protection window (sign-local SUPPRESSES the
+// abs-path heavy gate) is now 6× longer — during it, a multi-session
+// dispatch-cache race could re-fork the Mac unguarded. Accepted: the token is
+// explicit, user-minted (no agent self-mint path), single-key, and clearable
+// early (`sidecar sign clear local`); a build-covering window is the Occam fix
+// (commons g0) vs a sliding-window/session-marker mechanism. This TTL is the
+// `local` token ONLY (pool-route force-local) — it is INDEPENDENT of the
+// governance sign TTL (`SIGN_TTL=300` in bin/sidecar + hooks/sign-guard, which
+// gates agent EDITS to commons.tape/project.tape/.gitignore and stays at 5min).
+let LOCAL_SIGN_TTL = 1800
+
+// `_local_signed` — fresh `local` sign token (30min · LOCAL_SIGN_TTL). The user
+// mints with `! sidecar sign local` in the TUI prompt; the file
+// `~/.sidecar/signs/local.sign` holds the mint epoch. pool-route's local-bound
+// heavy gate (0.6.4) + the single force-local gate (0.7.2) read it to decide
+// whether to allow hexa/python/sh invocations through the absolute-path
+// exemption (resp. suppress routing for every command in the window).
 fn _local_signed() -> bool {
     let path = _env("HOME") + "/.sidecar/signs/local.sign"
     if !file_exists(path) { return false }
@@ -358,7 +375,7 @@ fn _local_signed() -> bool {
     if mint <= 0 { return false }
     let age = timestamp() - mint
     if age < 0 { return false }
-    return age <= 300
+    return age <= LOCAL_SIGN_TTL
 }
 
 // `_local_heavy_interp` — heavy interpreter/compiler invocation? These are
@@ -584,6 +601,82 @@ fn _is_hexa_exec(toks: array) -> bool {
     return false
 }
 
+// `_is_synced_workdir_path(p)` — does the path live inside a user-synced
+// `~/core/<repo>/` workdir (mirrored to every pool host)? Both the tilde form
+// (`~/core/…`) and the $HOME-expanded form (`<HOME>/core/…`) count. These are
+// the ONLY paths a peer host is guaranteed to also hold, so a data input there
+// can route; anything else (abs `/Users/`·`/home/` outside core, `/tmp`, a
+// bare relative file that resolves against a non-synced cwd) is local-only.
+fn _is_synced_workdir_path(p: string) -> bool {
+    if p.starts_with("~/core/") { return true }
+    let home = _env("HOME")
+    if home != "" && p.starts_with(home + "/core/") { return true }
+    return false
+}
+
+// `_is_data_input_flag(name)` — is `name` one of the canonical data-INPUT flags
+// whose VALUE is a path to local-only training/eval/corpus/weights data? A hexa
+// command carrying one of these, pointing at a NON-synced path, depends on data
+// that does NOT exist on a pool peer — routing it there reproduces the anima
+// PURE F-CURRICULA-1 failure (`source not found`, which is actually data-
+// absence misread as a compile error). Listed by NAME, the same data-locality
+// logic as the host-introspection whitelist (semantic necessity, not
+// convenience). Caller matches both `--flag value` and `--flag=value`.
+fn _is_data_input_flag(name: string) -> bool {
+    if name == "--corpus-path" { return true }
+    if name == "--corpus" { return true }
+    if name == "--data" { return true }
+    if name == "--data-path" { return true }
+    if name == "--dataset" { return true }
+    if name == "--input" { return true }
+    if name == "--train-data" { return true }
+    if name == "--eval-data" { return true }
+    if name == "--weights" { return true }
+    if name == "--ckpt" { return true }
+    if name == "--checkpoint" { return true }
+    return false
+}
+
+// `_has_local_data_input(toks)` — does a hexa command depend on a data-input
+// flag whose value is a LOCAL-ONLY path (not a synced `~/core/` workdir)? If so
+// it must stay local — the peer has no copy of that data (data-locality, the
+// same necessity as the host-introspection whitelist). Scans for each data-
+// input flag (both `--flag value` and `--flag=value`): the value is the next
+// token (space form) or the post-`=` substring (attached form). A value that is
+// a synced `~/core/` path is SAFE (the peer mirrors it) → keeps routing; a value
+// that is anything else (abs `/Users/`, `/tmp`, a bare relative path resolved
+// against a non-synced cwd) → local pin. Conservative: only fires when (a) the
+// verb is a hexa exec AND (b) a data flag is present AND (c) its value is NOT a
+// synced workdir path. NON-hexa heavy compute is unaffected.
+fn _has_local_data_input(toks: array) -> bool {
+    if !_is_hexa_exec(toks) { return false }
+    let n = len(toks)
+    let mut i = 0
+    while i < n {
+        let t = toks[i]
+        let eq = t.index_of("=")
+        if eq > 0 {
+            // attached form: --flag=value
+            let name = t.substring(0, eq)
+            if _is_data_input_flag(name) {
+                let val = t.substring(eq + 1, len(t))
+                if val != "" && !_is_synced_workdir_path(val) { return true }
+            }
+        } else if _is_data_input_flag(t) {
+            // space form: --flag value (value is the next token)
+            if i + 1 < n {
+                let val = toks[i + 1]
+                if val != "" && !_is_synced_workdir_path(val) { return true }
+            } else {
+                // dangling flag with no value — be conservative, pin local
+                return true
+            }
+        }
+        i = i + 1
+    }
+    return false
+}
+
 // `_basename` — strip directory prefix. `/Users/x/.hx/bin/hexa` → `hexa`.
 fn _basename(path: string) -> string {
     let i = path.last_index_of("/")
@@ -662,7 +755,7 @@ fn _emit_session_start() {
                + "  - ANY `hexa <verb>` → pool (0.8.0 POOL-DISPATCH; structural local-exemptions only: $CLAUDE_PLUGIN_ROOT/DATA · `hexa cloud` · `hexa atlas register` · /Users//home abs-path sign-gated)\n"
                + "  - non-hexa default also → pool (0.9.0 inversion); LOCAL-EXEC WHITELIST stays local: git/gh/pool · npm/pnpm/yarn · ~/. dotstate · host-introspection (ps/top/uptime/df/lsof/pgrep/kill/…)\n"
                + "  - whitelist 추가 = sign-gated (project.tape commons @D s13 · `! sidecar sign project`)\n"
-               + "  - `! sidecar sign local` (5min TUI bang) → 모든 명령 로컬 강제 (단일 force-local gate · agent 자가민팅 deny)\n"
+               + "  - `! sidecar sign local` (30min TUI bang since 0.9.3 — build-covering) → 모든 명령 로컬 강제 (단일 force-local gate · agent 자가민팅 deny)\n"
 
     let path = home + "/.pool/route-log.jsonl"
     let mut raw = ""
@@ -749,7 +842,7 @@ fn main() {
 
     // single local-execution gate (0.7.2): a fresh `local` sign token forces
     // EVERY command to run HERE — the one deliberate, user-minted "run this on
-    // the workstation, do NOT route" path (`! sidecar sign local`, 5min TTL).
+    // the workstation, do NOT route" path (`! sidecar sign local`, 30min TTL).
     // Consolidates local-exec control to one sign-gated channel: when the router
     // mis-classifies a local-bound command (a diagnostic `ps`/`awk`, a local-fs
     // fix) and ships it to a peer host, the user signs ONCE and all routing is
@@ -801,14 +894,14 @@ fn main() {
         // bash/sh <script>) on absolute host paths are the canonical mac
         // fork-storm trigger — multiple sessions racing dispatch caches +
         // re-fork on every env-hash miss. Require a fresh user sign-off
-        // (`! sidecar sign local`, 5min token, mints freely from the TUI
-        // bang) before honoring the absolute-path exemption. Bare reads
+        // (`! sidecar sign local`, 30min token since 0.9.3, mints freely from
+        // the TUI bang) before honoring the absolute-path exemption. Bare reads
         // (ls/cat/grep/find/...) on absolute paths stay free — the gate
         // narrows to interpreters/compilers only.
         let toks = _tokens(cmd)
         if _local_heavy_interp(cmd, toks) {
             if !_local_signed() {
-                _deny_count("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (5min token), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.", "heavy_failed")
+                _deny_count("local-bound heavy invocation (hexa · python · gcc/g++/clang/cc · sh <script>) on an absolute host path needs a fresh sign-off — the canonical mac fork-storm trigger. USER: run  `! sidecar sign local`  in the TUI prompt (30min token — covers a full build), then retry. Bare absolute-path reads (ls/cat/grep/find/...) are unaffected; this gate narrows to interpreters/compilers only.", "heavy_failed")
             }
         }
         _allow_count("local_bound")
@@ -927,6 +1020,23 @@ fn main() {
     // `register` WRITE subverb is pinned; read forms (atlas lookup/stats/hash/dump)
     // still route under the whitelist (read-only, peer staleness acceptable).
     if _any_adjacent(toks, ["atlas", "register"]) || _any_pair_substring(stripped, ["atlas", "register"]) { _allow_count("local_bound") }
+
+    // data-locality pin (0.9.3 — anima PURE F-CURRICULA-1 · 5th structural
+    // LOCAL-EXECUTION exemption to the 0.8.0 hexa POOL-DISPATCH): a hexa command
+    // whose data-INPUT flag (`--corpus-path`·`--corpus`·`--data`·`--data-path`·
+    // `--dataset`·`--input`·`--train-data`·`--eval-data`·`--weights`·`--ckpt`·
+    // `--checkpoint`) points at a LOCAL-ONLY path (anything NOT under a synced
+    // `~/core/` workdir) DEPENDS on data the pool peer does not hold. Routing it
+    // anyway reproduced the anima PURE failure: `hexa run build_curriculum_corpus
+    // .hexa --corpus-path /Users/.../c.jsonl` went to ubu-2, the jsonl was never
+    // synced there, and the run died at compile-stage with `source not found` —
+    // a DATA-ABSENCE error misread as a CODE error. Same data-locality necessity
+    // as the host-introspection whitelist (you can't measure a host's procs from
+    // a peer; you can't read Mac-local corpus from a peer). The value-IS-synced
+    // case (`--data ~/core/anima/d/`) is EXCLUDED → keeps routing (the peer
+    // mirrors `~/core`). Uses quote-stripped `toks` so a zsh-snapshot-wrapped
+    // invocation tokenizes cleanly. Unconditional · no opt-out env (@D s11).
+    if _has_local_data_input(toks) { _allow_count("local_bound") }
 
     // heavy classifier — build / test / package / train commands
     // 0.6.7 — `aprime_cc` added: hexa-lang's in-tree self-host native codegen

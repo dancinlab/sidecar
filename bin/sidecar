@@ -54,6 +54,15 @@ do_mirror() {
 # with `TTL` in hooks/sign-guard/bin/_sign_guard.hexa.
 SIGN_DIR="$HOME/.sidecar/signs"
 SIGN_TTL=300
+# The `local` key is a SEPARATE concern: it is pool-route's runtime force-local
+# token (`! sidecar sign local`), whose TTL is enforced by `_local_signed()` in
+# hooks/pool-route/bin/_pool_route.hexa (LOCAL_SIGN_TTL). 0.9.3 raised it to
+# 30min (build-covering — a local corpus build runs 10-20min). The governance
+# SIGN_TTL above is unaffected. `sign_ttl_for <key>` returns the right TTL so
+# the mint message + `--list` remaining-time display match the gate that
+# actually enforces the token. Keep LOCAL_SIGN_TTL in lockstep with pool-route.
+LOCAL_SIGN_TTL=1800
+sign_ttl_for() { if [ "$1" = "local" ]; then echo "$LOCAL_SIGN_TTL"; else echo "$SIGN_TTL"; fi; }
 
 # Absolute path of the sidecar repo root (this script lives in <root>/bin/sidecar,
 # follow symlinks so it works when `sidecar` is symlinked onto PATH).
@@ -232,7 +241,7 @@ TAPE
             k=$(basename "$f" .sign)
             mint=$(cat "$f" 2>/dev/null || echo 0)
             : "${mint:=0}"
-            left=$((SIGN_TTL - (now - mint)))
+            left=$(( $(sign_ttl_for "$k") - (now - mint) ))
             if [ "$left" -gt 0 ]; then
               echo "  active: $k — valid ${left}s"
             else
@@ -292,8 +301,14 @@ TAPE
         fi
         mkdir -p "$SIGN_DIR"
         date +%s > "$SIGN_DIR/$KEY.sign"
-        echo "sidecar sign: ✅ signed '$KEY' — the agent may edit the file gated under '$KEY' for the next 5 minutes."
-        echo "  (sign-guard will allow it until the token expires; clear early with: sidecar sign clear $KEY)"
+        _ttl_min=$(( $(sign_ttl_for "$KEY") / 60 ))
+        if [ "$KEY" = "local" ]; then
+          echo "sidecar sign: ✅ signed 'local' — pool-route will force EVERY command local (no pool routing) for the next ${_ttl_min} minutes."
+          echo "  (build-covering window since 0.9.3; clear early with: sidecar sign clear local)"
+        else
+          echo "sidecar sign: ✅ signed '$KEY' — the agent may edit the file gated under '$KEY' for the next ${_ttl_min} minutes."
+          echo "  (sign-guard will allow it until the token expires; clear early with: sidecar sign clear $KEY)"
+        fi
         ;;
     esac
     ;;

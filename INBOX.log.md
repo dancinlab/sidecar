@@ -2,6 +2,24 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-27 — pool-route data-locality pin + sign-local TTL 30min ✅ 해소 (from anima PURE F-CURRICULA-1)
+
+> **사건**: anima PURE 도메인 F-CURRICULA-1 GPU fire 준비 중, local 입력파일(Mac session log 추출본 + Phase D corpus)에 의존하는 corpus build (`hexa run build_curriculum_corpus.hexa --corpus-path /Users/.../c.jsonl …`) 가 pool-route 의 두 라우팅 경로 모두에서 막혀 fire 가 2회 BLOCKED. 비용 0 정직 halt 였으나 자율 fire(`a_fire_autonomous`) + 상시 자원활용 흐름이 sign 게이트에 반복 차단되는 마찰.
+
+> **갭 #1 — data-locality 오진단**: 0.9.0 inversion(default=pool)으로 bare `hexa run … --corpus-path /Users/.../c.jsonl` 가 ubu-2 로 라우팅 → 입력 jsonl(Mac-로컬)이 피어에 미동기화 → **compile-stage `source not found`** 로 죽음. 에러가 **데이터 부재**(입력파일이 그 호스트에 없음)인데 **코드 오류**(소스 못 찾음)처럼 보여 오진단.
+
+> **갭 #2 — sign-local TTL < build 시간**: 절대경로 `hexa run` 은 fork-storm `sign local` 게이트인데 `! sidecar sign local` 발행해도 **토큰 5분 < corpus 재생성+build 10-20분** → build 중간 후속 `hexa run` 이 토큰 만료로 재차단. 5분마다 재서명은 비현실적.
+
+**구현 (`hooks/pool-route/` 0.9.2 → 0.9.3 · `bin/sidecar` key-aware TTL · 모두 unconditional · opt-out 없음 · @D s11)**
+- [x] **(a) data-locality pin** ✅ — `_pool_route.hexa` 에 `_is_data_input_flag` + `_is_synced_workdir_path` + `_has_local_data_input` 추가. hexa exec(`_is_hexa_exec`)이 데이터-입력 플래그(`--corpus-path` · `--corpus` · `--data` · `--data-path` · `--dataset` · `--input` · `--train-data` · `--eval-data` · `--weights` · `--ckpt` · `--checkpoint`)를 들고 그 값이 동기화 `~/core/`(tilde + `$HOME/core/` 양형) workdir 이 **아니면** local pin. `--flag value` + `--flag=value` 양형 파싱 · dangling flag(값 없음) 보수적 local. atlas-register pin 다음, heavy classifier 앞에 배치(LOCAL-EXECUTION 화이트리스트 5번째 structural exemption). 동기화 `~/core` 데이터는 라우팅 유지(피어 mirror).
+- [x] **(b) sign-local TTL 30min** ✅ — `_local_signed()` 의 `age <= 300` → 명명상수 `LOCAL_SIGN_TTL = 1800`(30분). `bin/sidecar` 에 `LOCAL_SIGN_TTL=1800` + `sign_ttl_for <key>`(local=1800, 그외=300) 추가 → mint 확인메시지 + `sign --list` 잔여시간이 `local` 키엔 30분, 거버넌스 키엔 5분 정확 표기. **트레이드오프**: sign-local 이 abs-path heavy gate 를 SUPPRESS 하는 fork-storm 가드 윈도우가 6× 길어짐 — 수용(토큰 명시 · user-minted · agent 자가민팅 불가 · 단일키 · `sidecar sign clear local` 조기 해제). 단순 상수가 Occam(g0). `local` TTL 은 거버넌스 sign TTL(`SIGN_TTL=300` · sign-guard · commons/project/gitignore **편집** 게이트)과 **독립** — 후자는 5분 불변.
+
+**검증**: `_pool_route.hexa` `hexa parse` clean · `bin/sidecar` `bash -n` clean.
+- (a) standalone smoke 12/12 PASS — abs `--corpus-path /Users/...`/`--data=/Users/...`/`--weights /tmp/...`/`--ckpt /Users/...` → local(true) ✅ · 동기화 `--data ~/core/anima/d/`/`--corpus-path $HOME/core/...`/`--dataset=~/core/...` → 라우팅 유지(false) ✅ · `hexa run x.hexa`(플래그 무)/`hexa kick --seed` → false ✅ · `python train.py --data /Users/...`(non-hexa) → false(미적용) ✅ · dangling `--corpus`(값 무)/비-core 상대 `--input ./local.jsonl` → 보수적 true ✅.
+- (b) TTL smoke — age 1000s(16.6분, 구 5min 은 reject) → valid · age 1900s(31.6분) → expired · `sign_ttl_for local=1800 commons=300` ✅.
+
+**lesson**: 라우팅 휴리스틱은 **데이터 위치성(피어가 그 입력을 보유하는가)**도 고려해야 — code-portability ≠ data-portability. sign-local 같은 시간상자 게이트의 TTL 은 **보호하려는 작업의 실제 wall-clock**을 커버해야 마찰 없이 동작. severity: medium(우회 가능했으나 자율 흐름 반복 차단). anima 측은 입력 pre-sync 로 갭#1 완화 예정이나 pool-route 가 이제 구조적으로 local pin.
+
 ## 2026-05-27 — stale-base squash-merge 회귀 가드 ✅ 해소 (sidecar 3-가드) (anima #1105 가 35190 파일 삭제)
 
 > **사건**: anima PR #1105(`decoder-m4b-gpu2-arch`)가 극도로 stale 한 base 에서 분기 → `gh pr merge --squash --admin` 시 main 의 **35190 파일**(state/ archive/ HEXAD/ docs/ AGENT/ training/ `.hexarc` 등 거의 전체 repo)을 회귀 삭제. 정당한 변경은 `CORE/DECODER/v3_moe_arch.hexa` + smoke 2파일뿐. 복구 = anima #1106(99d581691 부모에서 전체 복원 + port 유지). **자동 머지가 35190-삭제를 무경고 통과**시킨 게 핵심 위험.

@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route data-locality pin + sign-local TTL 30min (anima PURE F-CURRICULA-1)
+
+INBOX 핸드오프 (anima PURE 2026-05-25) — local 입력파일(Mac 의 session log 추출본 + Phase D corpus)에 의존하는 corpus build (`hexa run build_curriculum_corpus.hexa --corpus-path /Users/.../c.jsonl …`) 가 **두 라우팅 경로 모두에서 막혀** F-CURRICULA-1 GPU fire 가 2회 BLOCKED. 비용 0 으로 정직하게 halt 됐으나 자율 fire 흐름이 반복 차단되는 마찰. pool-route 0.6.10 local-pin 위 잔여 갭 2종을 닫는다.
+
+### `hooks/pool-route/` 0.9.2 → 0.9.3 — data-locality pin (a) + sign-local TTL 30min (b)
+
+**(a) data-locality pin** — bare `hexa run … --corpus-path /Users/.../c.jsonl` 가 0.9.0 inversion(default=pool)으로 ubu-2 에 라우팅 → 입력 jsonl 미동기화 → compile-stage `source not found` 로 죽음. 에러가 **데이터 부재**인데 **코드 오류**(소스 못 찾음)처럼 보여 오진단. fix: hexa exec 이 **데이터-입력 플래그**(`--corpus-path` · `--corpus` · `--data` · `--data-path` · `--dataset` · `--input` · `--train-data` · `--eval-data` · `--weights` · `--ckpt` · `--checkpoint`)를 들고 그 값이 **동기화 `~/core/` workdir 이 아닌 로컬-only 경로**(abs `/Users/`·`/tmp`, 비-core 상대경로)면 **local pin** (피어엔 그 데이터가 없으니 라우팅 무의미 — host-introspection 화이트리스트와 같은 data-locality 논리). 동기화 `~/core` 데이터(`--data ~/core/anima/d/`)는 pool 라우팅 유지(피어도 보유). 5번째 structural LOCAL-EXECUTION exemption. quote-stripped tokens(zsh-snapshot 래핑 대응). unconditional · opt-out env 없음(@D s11).
+
+**(b) sign-local TTL 5min→30min** — 절대경로 `hexa run` 은 fork-storm `sign local` 게이트인데 토큰 TTL **5분 < 실제 build 10-20분** → build 중간 후속 `hexa run` 이 토큰 만료로 재차단(5분마다 재서명 = 비현실적 마찰). fix: `_local_signed()` 의 TTL 상수를 `LOCAL_SIGN_TTL = 1800`(30분)으로 상향. **트레이드오프**: fork-storm 가드 윈도우(sign-local 은 abs-path heavy gate 를 SUPPRESS)가 6× 길어짐 — 수용 (토큰은 명시적 · user-minted(agent 자가민팅 불가) · 단일키 · 조기 clear 가능 `sidecar sign clear local`). 단순 상수 변경이 Occam(g0) — 슬라이딩윈도우/세션마커 회피. `local` 토큰 TTL 은 거버넌스 sign TTL(`SIGN_TTL=300` · bin/sidecar + hooks/sign-guard · commons/project/gitignore **편집** 게이트 · 5분 유지)과 **독립**. bin/sidecar 의 mint 메시지 + `--list` 잔여시간을 key-aware 화(`sign_ttl_for`: local=1800, 거버넌스=300).
+
+### 검증
+- `_pool_route.hexa` `hexa parse` clean.
+- (a) standalone smoke 12 케이스 ALL PASS — abs `--corpus-path`/`--data=`/`--weights`/`--ckpt` → local ✅ · 동기화 `~/core` `--data`/`--corpus-path`/`--dataset=` → 라우팅 유지(false) ✅ · 데이터-플래그 없는 `hexa run`/`hexa kick` → 미변경 ✅ · non-hexa `python --data` → 미적용 ✅ · dangling `--corpus`(값 없음) · 비-core 상대경로 → 보수적 local ✅.
+- (b) TTL 로직 smoke — age 1000s(16.6분) valid(구 5min 은 reject) · age 1900s(31.6분) expired ✅ · `sign_ttl_for local=1800 commons=300` ✅. `bin/sidecar` `bash -n` clean.
+
 ## 2026-05-27 — stale-base squash-merge 35190-삭제 방어 (3-가드 · anima #1105)
 
 INBOX 핸드오프 (anima 2026-05-27) — anima PR #1105(`decoder-m4b-gpu2-arch`)가 극도로 stale 한 base 에서 분기 → `gh pr merge --squash --admin` 시 main 의 **35190 파일**(state/·archive/·HEXAD/·docs/·AGENT/·training/·.hexarc 등 거의 전체 repo)을 회귀삭제. 정당한 변경은 `CORE/DECODER/v3_moe_arch.hexa` + smoke 2파일뿐. **자동 머지가 35190-삭제를 무경고 통과**시킨 게 핵심 위험. root: worktree 재사용으로 stale base 보유 + git-guard 의 stale-base 경고가 `git push` 시점 backstop 인데 `gh pr merge`(squash) 경로엔 미동작.

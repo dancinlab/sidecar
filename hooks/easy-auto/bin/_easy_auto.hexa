@@ -8,6 +8,13 @@
 // base) when the lang variant is missing. NO opt-out by design — EASY_LANG
 // only SELECTS the style language (default `ko`); there is no disable/suppress
 // escape (commons @D g11 / sidecar @D s11). 0.1.2 removed the EASY_LANG=off path.
+//
+// 0.2.0 — UserPromptSubmit NL substring triggers `설명` + `쉽게` (verb/noun/
+// adverb 모든 어형 catch via bare-substring match — `설명해`/`설명해줘`/`설명`/
+// `설명서`/`쉽게 설명해줘`/`쉽게`/`쉽게 알려줘` 등). 매칭 시 additionalContext
+// 헤더에 1줄 banner를 prepend ("🎓 easy 모드 활성 — 7-요소 패턴 적용 …").
+// 기존 inject는 그대로 (always-on; trigger gating 아님). 오탐 가능
+// ("설명서 보여줘" 같은 noun도 발동) — 사용자 의도 수용.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -44,6 +51,30 @@ fn _event_of(payload: map) -> string {
     if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
     if has_key(payload, "hookEventName") { return payload["hookEventName"] }
     return ""
+}
+
+// UserPromptSubmit payload exposes `prompt` (Claude Code snake/camel both).
+// Other events (SessionStart/PreCompact/PostCompact) have no prompt → "".
+fn _prompt_of(payload: map) -> string {
+    if has_key(payload, "prompt") {
+        if type_of(payload["prompt"]) == "string" { return payload["prompt"] }
+    }
+    if has_key(payload, "userPrompt") {
+        if type_of(payload["userPrompt"]) == "string" { return payload["userPrompt"] }
+    }
+    return ""
+}
+
+// 0.2.0 NL substring triggers. Bare-substring match catches verb/noun/adverb
+// forms uniformly (`설명해`/`설명해줘`/`설명`/`설명서`/`쉽게 설명해줘`/`쉽게`/
+// `쉽게 알려줘` 등). Existing longer triggers (친근하게, 이지 모드, easy mode,
+// explain it simply, …) STAY — the two short substrings subsume them but
+// the longer forms remain harmless.
+fn _nl_trigger_hit(prompt: string) -> bool {
+    if prompt == "" { return false }
+    if prompt.contains("설명") { return true }
+    if prompt.contains("쉽게") { return true }
+    return false
 }
 
 fn _env(name: string) -> string {
@@ -87,7 +118,20 @@ fn main() {
     }
     if body == "" { _allow() }
 
-    let header = "# response style: easy (auto-injected by easy-auto · " + src + ")\n\n"
+    // 0.2.0 — NL trigger banner: prepend a 1-line activation banner when the
+    // user's UserPromptSubmit prompt contains the substring `설명` or `쉽게`.
+    // Other events (SessionStart/PreCompact/PostCompact) have no `prompt`
+    // field, so _nl_trigger_hit returns false and no banner is emitted.
+    let mut banner = ""
+    if event == "UserPromptSubmit" {
+        let prompt = _prompt_of(payload)
+        if _nl_trigger_hit(prompt) {
+            banner = "🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)\n\n"
+        }
+    }
+
+    let header = banner
+                + "# response style: easy (auto-injected by easy-auto · " + src + ")\n\n"
                 + "Apply the 7-element friendly pattern below to user-facing prose "
                 + "this turn — icon · name · alias · plain-line · analogy · ASCII · "
                 + "compare. Scope/exclusions per the canonical reference.\n\n"

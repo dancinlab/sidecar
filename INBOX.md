@@ -4,6 +4,8 @@
 
 (현재 상태만 기록 — 열린 handoff는 `- [ ]` 로, 처리 이력은 `INBOX.log.md` 로)
 
+- [x] **easy-auto '설명'/'쉽게' 트리거 + banner** ✅ (from user 2026-05-28) — easy-auto 0.2.0: 한국어 substring 매칭 추가 (verb/noun/adverb 어형 catch · 오탐 수용) + 발동 시 7-요소 banner. 상세 → `INBOX.log.md`.
+
 - [x] **sbs 0.5.0 재설계** ✅ (from user 2026-05-28) — 2 modes (manual=chat-form default·auto=4축 가중평균 자동선택·inline override) + plan.md 자동생성 + 'go' handoff. 상세 → `INBOX.log.md`.
 
 - [x] **pool-route path-whitelist + sidecar paths CLI** ✅ (from user 2026-05-28 — chat-form sbs FULL 4축 합의) — pool-route 0.10.0 + sidecar 0.6.0: `~/.sidecar/local-paths` (line-based plain text · USER 가 `sidecar paths {bare|add|rm}` 로 관리) — argv 의 `/`-prefix 토큰이 등록 prefix 로 시작하면 LOCAL 강제 (sign-local 의 영구 카운터파트 · TTL 없음). 첫 호출 시드 = `~/.claude/plugins/cache/sidecar/` + `~/core/sidecar/` (sidecar 자기 hexa 호출이 더이상 pool 로 안 튕김). 화이트리스트 자체가 opt-in (s11). 상세 → `INBOX.log.md`.

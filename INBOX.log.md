@@ -1,3 +1,38 @@
+## 2026-05-28 — easy-auto '설명'/'쉽게' substring 트리거 + 발동 banner (from user 2026-05-28) ✅
+
+> **트리거**: 사용자 1-decision 사이클 — "easy 모드 자동 발동 트리거에 한국어 짧은 substring 추가 + 발동시 banner". 기존 트리거는 길거나(`친근하게`·`이지 모드`·`쉽게 설명해줘`) 영문(`easy`·`easy mode`·`explain it simply`)이라, 평소 한국어 대화 중 `설명해 줘`/`쉽게 알려줘` 같은 자연스러운 한국어 어형이 trigger 되지 않는 갭이 있었다. 짧은 substring `설명` + `쉽게` 두 개로 verb/noun/adverb 모든 어형을 한 번에 catch.
+
+> **1 design decision (chat-form 합의로 잠금)**:
+
+```
+🎯 합의된 결정셋 (1개)
+└─ Q1: 매칭 패턴  → ✅ bare substring '설명' + bare substring '쉽게'
+                    매칭 예: "설명해" · "설명해줘" · "설명" · "설명서" · "설명 좀" ·
+                             "쉽게 설명해줘" · "쉽게" · "쉽게 알려줘"
+                    오탐 가능 ("설명서 보여줘" 같은 noun도 발동) — 사용자 의도 수용
+```
+
+> **Banner** — 매칭 시 additionalContext 헤더에 1줄 prepend:
+> ```
+> 🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)
+> ```
+> banner 는 UserPromptSubmit 에만 적용 (SessionStart/PreCompact/PostCompact 는 prompt 필드 없음 → 비발동).
+
+> **변경 파일 (sidecar)**:
+> - `hooks/easy-auto/bin/_easy_auto.hexa` — `_prompt_of` + `_nl_trigger_hit` helpers, header banner prepend (UserPromptSubmit 만)
+> - `hooks/easy-auto/.claude-plugin/plugin.json` — `0.1.2` → `0.2.0`, description 갱신
+> - `.claude-plugin/marketplace.json` — easy-auto entry `0.2.0` + description 갱신
+> - `README.md` — easy-auto row 0.2.0 + 새 트리거/banner 요약
+> - `CHANGELOG.md` — `2026-05-28 — easy-auto 0.2.0` 신규 entry 최상단
+
+> **always-on inject 동작 유지** — `easy-auto` 는 여전히 매 UserPromptSubmit 마다 styles/easy.<lang>.md 본문을 inject 한다. banner 는 trigger gating 이 아니라 NL 트리거 매칭 시 활성 표식만 prepend 하는 **upgrade-only** 패치. 기존 longer 트리거(`친근하게`·`이지 모드`·`easy mode`·`もっと分かりやすく` 등)도 그대로 — `설명`/`쉽게` 가 `쉽게 설명해줘` 를 subsume 하지만 longer 형은 harmless 잔존.
+
+> **메타** — 이번 사이클이 **sbs 0.5.0 manual chat-form + plan.md handoff** 첫 사용자 사이클 dogfood. 1-decision 합의 후 `drafts/easy-explain-trigger-plan.md` 작성, 백그라운드 에이전트가 land 까지 진행하는 흐름을 처음 검증.
+
+> **smoke**: `hexa parse` 는 sign-local 게이트로 막혀 실행 못함 (워크스테이션 path-whitelist 가드). source review — `has_key`/`type_of`/`.contains`/`_env` 기존 hook 패턴 1:1 재사용, syntactic risk 매우 낮음. 런타임 검증은 다음 UserPromptSubmit 가 자동으로 한다 (실패 시 hook silent allow → degraded 가 아니라 inject 만 누락).
+
+---
+
 ## 2026-05-28 — sbs 0.5.0 재설계: 2 modes (manual=chat-form default · auto=4축 자동선택) + plan.md handoff (from user 2026-05-28) ✅
 
 > **트리거**: 사용자 사이클 — "sbs 재설계 + 추천 자동선택" 정정 chain. 기존 3-mode (auto/manual/full) 가 너무 복잡 + per-step pause MANUAL 이 chat-form 보다 가치 낮음 → 2-mode 로 collapse, FULL 의 chat-form 을 MANUAL 의 새 기본으로 승격, 합의 후엔 plan.md + 백그라운드 Agent fan-out 으로 사용자 무개입 ship 까지.

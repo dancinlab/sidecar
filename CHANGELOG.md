@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — easy-auto 0.2.0: 한국어 substring 트리거 ('설명'·'쉽게') + 발동 banner
+
+사용자 요청 — easy 모드 자동 발동 자연어 트리거에 한국어 짧은 substring 두 개 (`설명`, `쉽게`) 추가 + 발동 시 1줄 banner. 기존 트리거(`친근하게`·`쉽게 설명해줘`·`이지 모드`·`easy`·`easy mode`·`explain it simply`·`もっと分かりやすく`·`简单点说`·`попроще`)는 유지 — 두 신규 substring 이 기존 `쉽게 설명해줘` 를 subsume 하지만 longer 트리거는 harmless 하게 잔존.
+
+- **`hooks/easy-auto/` 0.1.2 → 0.2.0** — UserPromptSubmit 시 payload 의 `prompt` 필드를 읽고 bare-substring 매칭(`prompt.contains("설명") || prompt.contains("쉽게")`). 매칭되면 additionalContext 헤더에 1줄 banner 를 prepend:
+  - `🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)`
+  - 매칭 예: `설명해`·`설명해줘`·`설명`·`설명서`·`설명 좀`·`쉽게 설명해줘`·`쉽게`·`쉽게 알려줘` 등 verb/noun/adverb 모든 어형
+  - **오탐 수용 trade-off** — `설명서 보여줘` 같은 noun 사용도 발동. 사용자 의도(짧고 흔한 substring 우선)로 수용.
+  - 기존 always-on inject 동작은 그대로 — `easy-auto` 는 여전히 매 UserPromptSubmit 마다 styles/easy.<lang>.md 본문을 inject 한다. banner 는 trigger gating 이 아니라 NL 트리거 시 활성 표식만 추가하는 **upgrade-only** 패치.
+  - SessionStart/PreCompact/PostCompact 는 prompt 필드 없음 → `_nl_trigger_hit` false → banner 비발동(인젝트 본문만 통과).
+
+- **lockstep gate (@D g22)**:
+  - `hooks/easy-auto/.claude-plugin/plugin.json` → `0.2.0`
+  - `.claude-plugin/marketplace.json` easy-auto entry → `0.2.0`
+  - `README.md` easy-auto row → `0.2.0` + 새 트리거/banner 요약
+
+- **INBOX**: `easy-auto '설명'/'쉽게' 트리거 + banner` ✅ (from user 2026-05-28). 이번 사이클은 sbs 0.5.0 (manual chat-form 1Q + plan.md handoff) 첫 사용자 사이클 dogfood — 1-decision 합의 후 `drafts/easy-explain-trigger-plan.md` 작성, 백그라운드 에이전트가 land 까지 진행.
+
 ## 2026-05-28 — step-by-step 0.5.0: 2-mode 재설계 (auto + manual) · plan.md 생성 + handoff
 
 사용자 — "sbs 재설계 + 추천 자동선택" → 5-decision chat-form 합의로 land. 기존 3-mode (auto/manual/full) → 2-mode (auto/manual)로 collapse. 기존 FULL 의 chat-form + 합의 화면을 MANUAL 의 새 기본 동작으로 승격하고, 합의 후 `drafts/<slug>-plan.md` 자동 생성 + 백그라운드 Agent fan-out 으로 사용자 무개입 ship 까지 진행. AUTO 는 같은 chat-form 스캐폴드를 출력하되 4-축 가중평균으로 자가선택.

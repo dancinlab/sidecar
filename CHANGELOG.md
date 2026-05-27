@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — cycle 0.8.2: `/cycle-all` — 추천/선택 없이 전부 진행
+
+사용자 directive — "/cycle 이 next-list 뽑고 '추천 우선순위 + 어느 거 dispatch?' 게이트를 띄우는 대신 전부 진행하는 명령어". `/cycle` 의 5-스테이지를 그대로 쓰되 2가지 override.
+
+- **신규 `/cycle-all`** (cycle 플러그인 5번째 명령):
+  - **OVERRIDE 1 — cap 제거**: open milestone 전체 enumerate + `## deferred` 백로그 전체를 한 라운드에 promote (cap>8→confirm 가드 waive). 이게 명령의 목적.
+  - **OVERRIDE 2 — 추천/선택 게이트 제거**: "🎯 추천 우선순위" shortlist · tiered "pick which" 메뉴 · `dispatch 지정 … 알려주시면 진행` hand-back 전부 금지. 플랜 테이블 후 PROCEED 행 **전부** 즉시 fan-out.
+  - **안전 가드는 전부 유지** (selection 아니라 correctness): SSOT-freshness · dup-race SKIP(이미 resolved 항목은 "전부"여도 dispatch 안 함) · leak-sweep · **resource-contention serialization (핵심 — 전부 fan-out ≠ 전부 병렬; 공유 EXCLUSIVE GPU 자원은 직렬)** · throttle-resilience · auto-continue to depletion.
+- SKILL.md Family 섹션 + plugin.json + marketplace.json 0.8.1→0.8.2 + README lockstep.
+
 ## 2026-05-27 — trail 0.1.0 + commons g74: 메인 흐름 이탈 → 복귀 스택
 
 사용자 directive — "디코더 진행하다 업스트림 fix 건 생겨 메인 흐름에서 이탈하는 경우, ai agent 가 알아서 remember 사용해서 기억하고 복귀할 수 있도록". 이번 세션이 그 시나리오의 전형: anima DECODER MoE → hexa-lang flame-P2b → codegen trim fix 로 4단계 파고들며 본 흐름(3B scale 검증)을 잃을 위험. 한 모델이 "이탈하라"(g11/g59/g60 upstream-first)만 알고 "복귀 경로를 남겨라"는 없던 갭을 메움.

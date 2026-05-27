@@ -1,3 +1,22 @@
+## 2026-05-28 — mining 0.5.0 — lens spec / depletion / leaf-ID / edge / checkpoint / promotion 6 gap fix (from anima ANIMA mining cycle 1) ✅ LANDED
+
+> **트리거**: anima ANIMA.mining cycle 1 (12 leaf 1-shot depletion) 직후 사용자 "마이닝 작동방식이 잘못된것같아 개선 필요". 0.4.0 의 auto-saturate trigger 본문은 풍부했으나, agent 가 의지할 spec 6개 모두 1-line prose:
+>
+> 1. 5 lens 의 step-by-step procedure 부재 (rule 1줄만)
+> 2. depletion "new leaf" 객관 기준 부족 — agent 가 자기-과대/과소 평가 freely
+> 3. leaf first-class ID 규칙 부재 — agent 가 L1·L2·... 임의 부여
+> 4. edge "meaningful" positive 기준 부재 (negative 3 exclusion 만)
+> 5. auto verb 의 5 lens × 5 round = 25 round 폭주 가능 + checkpoint discipline 부재
+> 6. leaf → milestone 승격 path 1-line ("[promoted →]") 마커만, 절차 부재
+
+> **fix (단일 PR, mining 0.5.0)**: 본 INBOX entry 작성 직전 LANDED. 변경 — `skills/mining/commands/mining.md` 에 (a) lens 5종 rule + procedure ≥2 steps + leaf-shape canonical · (b) depletion 3-test (surface dedup · mechanism dedup · no new bracket-tag) · (c) leaf ID `L<max+1>` 단조 + 재사용 금지 · (d) edge 4 positive criterion (causal · equivalence · dependency · inversion + label 필수) · (e) auto cap 25 + per-round disk write checkpoint · (f) promotion 4-step procedure + bare-verb top-3 next-action surface.
+
+> **expected impact**: agent 가 mining 의 자기-환각/약식 종료를 못 함 (각 lens 의 procedure 가 출력 형식 강제 + depletion 3-test 가 객관 통과 요구). 다른 도메인 mining 시 동일 lens 결과 비교 가능 (bracket-tag + leaf shape canonical).
+
+> **테스트 가능 사례** (future): anima ANIMA mining 재 fire → 동일 lens 가 cycle 1 결과보다 더 풍부한 leaf 생성 (이전엔 prose 묶음, 0.5.0 은 bracket-tag + mechanism 명시 강제). depletion 3-test 가 false-depletion 차단.
+
+---
+
 ## 2026-05-28 — /micro-exp Stage 1.5 + decision tree (domain-agnostic 일반화) (from hexa-codex CODEX 2026-05-28) ✅ PARTIAL
 
 > **트리거**: 사용자 — "물질 합성 연구에만 쓰이다가 다른프로젝트 돌리려니 안됨". hexa-codex CODEX PR #126 의 22-axis-candidate halt (22 candidate matrix enumerate ✅ · dispatch infra 0/22 ready → g63 honest halt) 가 직접 motivation. 원 INBOX 항목은 5-제안: (1) Stage 1.5 infra check · (2) commons g7N build+fire 분리 · (3) local-pool LLM 확장 · (4) meta-domain docs · (5) decision tree cross-link.

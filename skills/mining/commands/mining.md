@@ -239,10 +239,9 @@ drained:
 4. Report `🏁 mining drained — divergence depleted (N lenses) · convergence
    depleted (M edges) · tidy applied`.
 
-Cap per phase = 5 inner rounds (same as individual lens/connect verbs). If any
-phase hits cap, emit `🔄 phase <X> still saturating — re-run /mining auto` and
-preserve all progress so far (next invocation picks up where this left off via
-the undepleted-lens list).
+Cap per phase = 5 inner rounds (same as individual lens/connect verbs). **Total invocation cap = 25 round-equivalents** (5 lens × 5 rounds OR 5 connect passes) — if hit before depletion, emit `🔄 auto cap-25 reached, NOT depleted — re-run /mining auto` and preserve progress.
+
+**Checkpoint discipline (0.5.0)** — agents running `/mining auto` MUST write `<NAME>.mining.md` to disk after EACH inner round (not at the end of the whole pipeline). On rate-limit / SIGTERM mid-flight, the partial mining graph remains intact and `re-run /mining auto` picks up from the last committed state via the `@depleted:` markers.
 
 Custom lenses (`~/.sidecar/lens/*.md`) — included in the auto pass after the
 bundled catalogue, alphabetical order.
@@ -326,21 +325,82 @@ for that). Useful as a low-risk pre-step before `tidy --depth=full`.
 
 ## Bundled lens catalogue
 
-Each lens is a short rule for HOW to generate the next round of leaves from the
-current frontier.
+Each lens has (1) a short rule, (2) a **procedure** (steps the agent must follow), and
+(3) a **leaf shape** (canonical form the produced leaf must match).
 
-| Lens | Rule |
-|---|---|
-| **same-formula** | "If two systems share the same math, an equivalent mechanism likely lurks beneath the surface domain difference." Look across domains (math ↔ physics, physics ↔ economics, …) for identical equations; each match is a leaf candidate. |
-| **ouroboros** | "X referencing itself → fixed-point / self-closure surfaces." When a leaf can be applied to itself (a meta-level recursion), surface that as a leaf — and treat ouroboros-style surfacing as a **goal-closure signal** (the analysis has hit its own fixed point; consider this lens's auto-completion). |
-| **dimensional** | "Dimensional ladder — quantities of the same dimension are convertible across abstraction levels." For each leaf, enumerate adjacent abstraction levels (micro ↔ macro · component ↔ system · symbol ↔ implementation) and surface analogs at the next rung. |
-| **tension** | "Contradiction mining — two premises in conflict → branch fork." For each pair of leaves whose claims are in tension, fork two child leaves: one resolving via premise A, one via premise B. |
-| **combinatorial** | "A × B orthogonal product set exploration." For two orthogonal axes (e.g. {strategies} × {domains}), enumerate the product cells; each non-trivial cell is a candidate leaf. |
-| **custom** | Free-form. Pass `/mining custom <description>` and apply the inline lens text to the frontier. |
+### same-formula
+- **Rule**: "Two systems sharing the same math likely share an equivalent mechanism beneath the surface domain difference."
+- **Procedure**:
+  1. Pick the current frontier leaf or `@goal:` if frontier empty.
+  2. Extract its core equation / inequality / invariant in symbolic form.
+  3. Scan ≥2 disjoint domains (math · physics · biology · economics · …) for the same form.
+  4. For each domain hit, emit ONE leaf with shape below — the hit's mechanism is the new content, NOT the source.
+- **Leaf shape**: `[<target-domain>] <equation> ≅ <source-domain> <equation> → mechanism: <one-line claim>`
+
+### ouroboros
+- **Rule**: "X referencing itself → fixed-point / self-closure surfaces."
+- **Procedure**:
+  1. For each existing leaf, ask "can this leaf be applied to itself?".
+  2. If yes, the fixed-point IS the leaf — surface as a closure signal.
+  3. If the `@goal:` itself becomes a fixed-point (the lens captures the goal under its own rule), declare goal-closure and stop the cycle.
+- **Leaf shape**: `[ouroboros] <leaf-X> applied to itself ⇒ fixed-point: <claim>` (and if goal-closure: append `@goal-closure: yes`)
+
+### dimensional
+- **Rule**: "Dimensional ladder — quantities of the same dimension are convertible across abstraction levels."
+- **Procedure**:
+  1. For each leaf, identify its abstraction level (micro · meso · macro) or layer (component · system · ecosystem · symbol · implementation).
+  2. Enumerate adjacent rungs (≥1 up, ≥1 down).
+  3. Surface an analog at each adjacent rung — the dimension-preserving translation.
+- **Leaf shape**: `[<from-level> → <to-level>] <original-leaf> ≡ <translated-claim>`
+
+### tension
+- **Rule**: "Two premises in conflict → branch fork."
+- **Procedure**:
+  1. Find pairs of leaves whose claims are in active tension (not merely orthogonal).
+  2. For each pair, fork TWO child leaves: one resolving via premise A, one via premise B.
+  3. Mark the pair-of-origin: `(from L<a> ⊥ L<b>)`.
+- **Leaf shape**: `[tension-A] <resolution-A> (from L<a> ⊥ L<b>)` + `[tension-B] <resolution-B> (from L<a> ⊥ L<b>)`
+
+### combinatorial
+- **Rule**: "A × B orthogonal product set exploration."
+- **Procedure**:
+  1. Identify two orthogonal axes from current leaves (e.g. {strategies} × {domains}).
+  2. Enumerate the |A|×|B| product cells.
+  3. Skip trivial cells (the diagonal or self-product if both axes coincide).
+  4. Each non-trivial cell becomes a leaf candidate.
+- **Leaf shape**: `[<A-value> × <B-value>] <product-claim>`
+
+### custom
+Free-form. Pass `/mining custom <description>` and apply the inline lens text to the frontier. Custom lens MUST include a procedure (≥2 steps) and a leaf shape; otherwise refuse with `🛑 custom lens needs procedure + leaf-shape (g32: surface ambiguity)`.
 
 **Extension**: drop `~/.sidecar/lens/<name>.md` (a markdown file with the rule
 in the body) — `/mining <name>` will load + apply it identically. Catalogue
-auto-includes anything in `~/.sidecar/lens/`.
+auto-includes anything in `~/.sidecar/lens/`. Custom lens files SHOULD follow the same
+**rule + procedure + leaf-shape** schema for cross-domain reproducibility.
+
+## Depletion criteria (objective · 0.5.0)
+
+A new round under lens L is **non-productive** when ALL three hold:
+
+1. **Surface dedup** — every candidate leaf's `[<bracket-tag>]` + first 8 words matches an existing leaf.
+2. **Mechanism dedup** — every candidate's mechanism-clause (after `→ mechanism:` / `⇒` / `≡`) reduces to an already-recorded mechanism (case-insensitive substring match counts).
+3. **No new bracket-tag** — every candidate's `[<bracket-tag>]` already appears in `## leaves`.
+
+Mark the cycle `@depleted: <lens> @ <ISO-date>` ONLY when a round produces 0 leaves OR all candidates fail the three-test above. Do NOT declare depletion on cap-5 hit — that's `🔄 cap-5 reached, NOT depleted` (different signal).
+
+## Leaf ID + edge "meaningful" criteria (0.5.0)
+
+**Leaf ID assignment** — when writing to `## leaves`, ID is `L<next-int>` where `next-int = max(existing L#) + 1`. Cycle-local sub-IDs (L1a · L1b) FORBIDDEN — flatten across cycles. ID never reused on edit.
+
+**Edge "meaningful" positive criteria** — at least ONE of:
+- **Causal**: L<a> as cause implies L<b> as effect (or vice versa) under a stated mechanism.
+- **Equivalence**: L<a> and L<b> reduce to the same closed-form under a stated reduction.
+- **Dependency**: L<a> requires L<b> as a precondition (or vice versa).
+- **Inversion**: L<a> and L<b> are conjugate pair (e.g. position ↔ momentum, divergence ↔ convergence).
+
+Edge `E<n>: L<a> ↔ L<b> · <criterion>: <one-line mechanism>` — the criterion label is mandatory.
+
+Negative-edge (`(no-edge) L<a> ⊥ L<b>`) — record only when a suspected pair was investigated and found to fail all four criteria above.
 
 ## File structure conventions
 
@@ -393,6 +453,20 @@ auto-includes anything in `~/.sidecar/lens/`.
 The `.tape` `@X` entries are promotion candidates — when a leaf is verified
 (`/verify`) or merits a real milestone, promote it via `/domain milestone` or
 `/atlas register` and append `[promoted → <id>]` to the `.tape` entry.
+
+### Promotion procedure (0.5.0) — leaf → milestone / atlas atom
+
+For each leaf the user (or `bare /mining` next-actions) selects for promotion:
+
+1. **classify**: identify which `<DOMAIN>.md` the leaf belongs to (default = active domain; explicit reroute allowed).
+2. **shape check**: leaf must have a concrete actionable verb (`add X`, `implement Y`, `verify Z`, `register N`) — pure observations route to `/atlas register --from-drill` instead.
+3. **dispatch**:
+   - `actionable` → `/domain milestone <leaf-text-truncated-to-100ch>` then append `[promoted → <DOMAIN>:M<n>]` to the `.tape` `@X` line.
+   - `verifiable closed-form` → `/atlas register --from-drill --seed "<leaf-text>"` then append `[promoted → atlas:<atom-id>]`.
+   - `cross-domain handoff` → file to target repo's `INBOX.log.md` then append `[promoted → <repo>:INBOX/<slug>]`.
+4. **dedup**: before append, grep `<DOMAIN>.md` for the same text to avoid duplicate milestones.
+
+`bare /mining` should surface up to 3 highest-value undepoted leaves (by lens-novelty + cross-domain coverage) as `🎯 next promotion candidates: L<n> · L<m> · L<k>` so the user can drive the leaf→milestone flow without inspecting the whole file.
 
 ## Halt rules
 

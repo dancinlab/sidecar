@@ -6,6 +6,25 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.9.2: SessionStart에 정책 preamble 박음 (ambient awareness)
+
+사용자 — "hexa 실행하는거에 대해 pool로 전달되겠구나 를 그냥 알게끔, ai agent가 인식하게끔 내가 안알려줘도". 0.8.0~0.9.1 inversion 정책이 plugin.json 설명엔 있지만 세션 시작 시 agent context엔 안 박혀서, 매 세션 유저가 "hexa는 pool로 가요"를 다시 설명해야 했음.
+
+**fix**: `_emit_session_start()` 에 정책 preamble 추가 — route-log tail 앞에 4줄 정책 요약을 항상 emit. route-log 비어있어도 정책은 emit (예전엔 빈 로그면 early-exit).
+
+```
+# pool-route policy (default=POOL · 화이트리스트만 local · 0.9.0+ inversion):
+  - ANY `hexa <verb>` → pool (0.8.0 POOL-DISPATCH; 4 structural exemptions)
+  - non-hexa default also → pool (0.9.0 inversion); LOCAL-EXEC WHITELIST stays local
+  - whitelist 추가 = sign-gated (project.tape s13)
+  - `! sidecar sign local` (5min TUI bang) → 모든 명령 로컬 강제
+
+# recent pool-route (~/.pool/route-log.jsonl · last 5)
+...
+```
+
+이제 모든 세션이 시작 시 자동으로 "hexa → pool" 정책을 ambient context로 보유. 유저가 매번 설명 불필요.
+
 ## 2026-05-27 — pool-route 0.9.1: 0.8.3 canon 메커니즘 ROLLBACK (host-specific path resolution)
 
 ubu-2에 canon 설치 시도 중 발견 — **각 pool 호스트의 hexa binary가 host별로 다른 path-resolution 규칙**을 가짐:

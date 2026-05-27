@@ -653,37 +653,54 @@ fn _log_route(host: string, cmd: string) {
 fn _emit_session_start() {
     let home = _env("HOME")
     if home == "" { exit(0) }
+
+    // 0.9.2 — POLICY PREAMBLE: every session start now carries the pool-route
+    // routing policy as ambient context, so any agent automatically knows
+    // "hexa command → pool" without the user having to re-explain. The policy
+    // mirrors the plugin.json description but trimmed to one screen.
+    let policy = "# pool-route policy (default=POOL · 화이트리스트만 local · 0.9.0+ inversion):\n"
+               + "  - ANY `hexa <verb>` → pool (0.8.0 POOL-DISPATCH; structural local-exemptions only: $CLAUDE_PLUGIN_ROOT/DATA · `hexa cloud` · `hexa atlas register` · /Users//home abs-path sign-gated)\n"
+               + "  - non-hexa default also → pool (0.9.0 inversion); LOCAL-EXEC WHITELIST stays local: git/gh/pool · npm/pnpm/yarn · ~/. dotstate · host-introspection (ps/top/uptime/df/lsof/pgrep/kill/…)\n"
+               + "  - whitelist 추가 = sign-gated (project.tape commons @D s13 · `! sidecar sign project`)\n"
+               + "  - `! sidecar sign local` (5min TUI bang) → 모든 명령 로컬 강제 (단일 force-local gate · agent 자가민팅 deny)\n"
+
     let path = home + "/.pool/route-log.jsonl"
     let mut raw = ""
-    try { raw = read_file(path) } catch e { exit(0) }
-    if raw == "" { exit(0) }
-    let lines = raw.split("\n")
-    let n = len(lines)
-    let take = 5
-    let start = if n > take + 1 { n - take - 1 } else { 0 }
-    let mut bullets = []
-    let mut i = start
-    while i < n {
-        let ln = lines[i].trim()
-        if ln != "" {
-            let mut obj = json_parse("{}")
-            try { obj = json_parse(ln) } catch e { obj = json_parse("{}") }
-            if type_of(obj) == "map" {
-                let mut t = ""
-                let mut host = ""
-                let mut cmd = ""
-                if has_key(obj, "t") { if type_of(obj["t"]) == "string" { t = obj["t"] } }
-                if has_key(obj, "host") { if type_of(obj["host"]) == "string" { host = obj["host"] } }
-                if has_key(obj, "cmd") { if type_of(obj["cmd"]) == "string" { cmd = obj["cmd"] } }
-                if host != "" {
-                    bullets.push("- " + t + " → " + host + " : " + cmd)
+    try { raw = read_file(path) } catch e { raw = "" }
+
+    let mut tail = ""
+    if raw != "" {
+        let lines = raw.split("\n")
+        let n = len(lines)
+        let take = 5
+        let start = if n > take + 1 { n - take - 1 } else { 0 }
+        let mut bullets = []
+        let mut i = start
+        while i < n {
+            let ln = lines[i].trim()
+            if ln != "" {
+                let mut obj = json_parse("{}")
+                try { obj = json_parse(ln) } catch e { obj = json_parse("{}") }
+                if type_of(obj) == "map" {
+                    let mut t = ""
+                    let mut host = ""
+                    let mut cmd = ""
+                    if has_key(obj, "t") { if type_of(obj["t"]) == "string" { t = obj["t"] } }
+                    if has_key(obj, "host") { if type_of(obj["host"]) == "string" { host = obj["host"] } }
+                    if has_key(obj, "cmd") { if type_of(obj["cmd"]) == "string" { cmd = obj["cmd"] } }
+                    if host != "" {
+                        bullets.push("- " + t + " → " + host + " : " + cmd)
+                    }
                 }
             }
+            i = i + 1
         }
-        i = i + 1
+        if len(bullets) > 0 {
+            tail = "\n# recent pool-route (~/.pool/route-log.jsonl · last " + to_string(len(bullets)) + ")\n" + bullets.join("\n") + "\n"
+        }
     }
-    if len(bullets) == 0 { exit(0) }
-    let body = "# recent pool-route (~/.pool/route-log.jsonl · last " + to_string(len(bullets)) + ")\n" + bullets.join("\n") + "\n"
+
+    let body = policy + tail
     let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":" + _json_str(body) + "}}"
     println(out)
     exit(0)

@@ -350,3 +350,35 @@ bare /domain:
 **우선순위**: medium · 워크어라운드(수동 편집)이 작동하지만, 협업 brainstorm 패턴이 도메인 스킬에 포함되면 모든 demiurge/anima/hexa-lang 도메인이 즉시 사용 가능.
 
 **관련**: demiurge PR #335/344/346 (m-sign doc 본체) · PR #370/371 (brainstorm 이전).
+
+## 2026-05-27 — /mining 슬래시 커맨드 (from demiurge RTSC)
+
+협업 lens-driven 발산 가지치기 워크플로를 정식 슬래시 커맨드로.
+
+**상황**: demiurge RTSC 도메인에서 13 사이클 동안 다음 흐름이 자연발생:
+- math↔physics 같은-공식 lens · ouroboros (자기-닫힘) lens · 차원 사다리 lens · 모순 채굴 lens · 조합 곱 lens
+- 각 lens 적용 → 트리 가지치기 → 사이클별 누적 → 영구 기록 (`domains/<NAME>.mining.md` + `.tape`)
+- 결과: ~94 leaf + Cooper-Kramers fixed-point (LL-1) + Yoneda equivalence (LL-2) 발견
+
+**제안 /mining verbs**:
+- `/mining <lens>` — 명시 lens 적용 라운드 (lens ∈ {same-formula, ouroboros, dimensional, tension, combinatorial, custom})
+- `/mining` (bare) — 활성 도메인의 mining.md 현황(사이클 수·leaf 수·미고갈 lens)
+- `/mining append <text>` — 현 사이클에 timestamped append
+- `/mining cycle new <title>` — 새 사이클 헤더 + skeleton
+- `/mining depletion` — 현 lens가 새 leaf 0개면 "lens 고갈" 마킹
+- `/mining tree` — 누적 트리 ASCII 시각화
+
+**파일 패턴**: `<NAME>.mining.md` (사이클별 분석/추론) + `<NAME>.mining.tape` (idea cart, @X 항목). `/domain` 패턴과 sibling.
+
+**디자인 노트**:
+- log.md = 작업 step, mining.md = lens-driven 발산. brainstorm.md 잠재 별칭(둘 다 가능).
+- lens 카탈로그 = sidecar bundled (확장 가능 — `~/.sidecar/lens/<name>.md`).
+- cycle = chronological, depletion 선언이 cycle 종결.
+- ouroboros 류 self-reference 표면화는 lens 자체 fixed-point 신호 = goal 자동 종결.
+
+**관련**:
+- demiurge PR #335/344/346 (m-sign formula doc, math↔physics lens)
+- demiurge PR #370-378 (mining.md/.tape 본체 + 13 cycle 누적)
+- sidecar INBOX #189 (`<NAME>.brainstorm.{md,tape}` 3rd pillar — 본 entry의 선행)
+
+**우선순위**: medium · 수동 패턴이 작동하지만 `/mining`이 정식이면 모든 demiurge/anima/hexa 도메인 즉시 사용. brainstorm/mining 명칭은 둘 다 받아도 됨 (mining이 lens-driven 함의 더 명확).

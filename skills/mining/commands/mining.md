@@ -1,6 +1,6 @@
 ---
-description: /mining — lens-driven divergence + pruning workflow as a slash command. Sibling 3rd pillar to /domain (snapshot · log · MINING). Verbs — bare (status) · `<lens>` (round) · `append <text>` · `cycle new <title>` · `depletion` · `tree`. Bundled lenses — same-formula · ouroboros · dimensional · tension · combinatorial · custom (extensible `~/.sidecar/lens/<name>.md`).
-argument-hint: "[<lens> | append <text> | cycle new <title> | depletion | tree | (bare = status)]"
+description: /mining — lens-driven DIVERGENCE (add leaves) + CONVERGENCE (add edges) workflow. Sibling 3rd pillar to /domain (snapshot · log · MINING). Verbs — bare (status) · `<lens>` (divergence round) · `append <text>` · `cycle new <title>` · `depletion` · `tree` · `connect`/`edges` (find meaningful leaf↔leaf edges) · `connect <a> <b>` (justify one edge) · `graph` (ASCII graph + stats) · `saturate` (auto-edge until depletion). Bundled lenses — same-formula · ouroboros · dimensional · tension · combinatorial · custom (extensible `~/.sidecar/lens/<name>.md`). Mining accumulates as a (leaves, edges) graph: lens=divergence, connect=convergence.
+argument-hint: "[<lens> | append <text> | cycle new <title> | depletion | tree | connect [<a> <b>] | edges | graph | saturate | (bare = status)]"
 allowed-tools: Bash, Read, Edit, Write
 ---
 
@@ -9,19 +9,28 @@ allowed-tools: Bash, Read, Edit, Write
 Input: `$ARGUMENTS`
 
 `/mining` is the THIRD pillar of `/domain` — alongside `<NAME>.md` (snapshot) +
-`<NAME>.log.md` (step log), it adds the **divergence tree** for the active domain:
+`<NAME>.log.md` (step log), it accumulates the **(leaves, edges) graph** for the
+active domain:
 
-- `<NAME>.mining.md` — cycle-by-cycle, lens-driven analysis (the tree itself,
-  pruned per cycle, append-only across cycles).
+- `<NAME>.mining.md` — cycle-by-cycle, lens-driven analysis (the tree of
+  leaves) + an `## edges` section (the convergence half). Append-only across
+  cycles.
 - `<NAME>.mining.tape` — idea cart of surfaced candidates (`@X = <claim>` entries,
   promoted later to milestones or atlas registrations as warranted).
 
-A **cycle** = one round of applying a single **lens** to the current branch
-frontier, recording new leaves (sub-claims · sub-branches · candidates), then
-either continuing (`/mining append`), opening a new cycle (`/mining cycle new`),
-or declaring the lens depleted (`/mining depletion` — 0 new leaves under the
-current lens). Cycles are chronological + append-only; depletion closes a cycle,
-NOT the file.
+Mining has TWO complementary halves (0.2.0):
+
+- **Divergence (lens rounds)** — apply a lens to the current frontier and
+  record new **leaves** (sub-claims · branches). 0 new leaves under the current
+  lens = lens depletion.
+- **Convergence (connect rounds)** — find meaningful direct **edges** between
+  accumulated leaves (transitive / re-packaging excluded). 0 new edges in a
+  full pass = connect depletion. Together: mining = (leaves, edges) graph
+  — divergence builds the node set; convergence builds the topology that
+  compresses leaves into the underlying truth.
+
+A **cycle** = one round (lens or connect). Cycles are chronological + append-only;
+depletion closes a cycle, NOT the file.
 
 ## Step 0 — active domain check (RUN FIRST)
 
@@ -38,12 +47,16 @@ Resolve the active domain's file location from `DOMAINS.tape` (or current dir)
 
 | First token | Verb | What it does |
 |---|---|---|
-| (empty) | **status** | render mining status — cycle count · leaf count · undepleted lenses · current cycle title |
-| `<lens-name>` (one of bundled or custom) | **round** | apply that lens to the current frontier this cycle |
+| (empty) | **status** | render mining status — cycle count · leaf count · **edge count** · undepleted lenses · current cycle title |
+| `<lens-name>` (one of bundled or custom) | **lens round (divergence)** | apply that lens to the current frontier — add new **leaves** this cycle |
 | `append <text>` | **append** | append a timestamped bullet to the current cycle |
 | `cycle new <title>` | **cycle new** | close current cycle (if open) + open new `## cycle N — <title>` skeleton |
-| `depletion` | **depletion** | mark current lens depleted (0 new leaves), close cycle |
+| `depletion` | **depletion** | mark current lens / connect cycle depleted, close it |
 | `tree` | **tree** | render cumulative ASCII branch tree from all cycles |
+| `connect` or `edges` | **connect round (convergence)** | find meaningful direct edges between accumulated leaves — add new **edges** this cycle |
+| `connect <a> <b>` | **connect-pair** | justify or refute the edge between two specific leaves (L#·E# or text) |
+| `graph` | **graph** | ASCII (leaves, edges) graph + stats (n leaf · m edge · n(n-1)/2 possible · meaningful ratio) |
+| `saturate` | **saturate** | auto-loop `connect` rounds until a full pass finds 0 new edges (depletion analog for convergence) |
 
 ## Verb behaviors
 
@@ -115,6 +128,62 @@ Walk the cumulative leaves across all cycles, render as ASCII tree:
 
 Indent by cycle → lens → leaf. Mark `[DEPLETED]` after depleted lenses.
 
+### `connect` (or `edges`) — convergence round
+
+Scan the accumulated leaves (`## leaves` flat index) and surface **direct
+meaningful edges** — pairs whose claims, when juxtaposed, reveal a non-trivial
+shared mechanism / equivalence / dependency. **NOT trivial** = exclude (a)
+trivial transitive (if A↔B + B↔C already, A↔C is redundant unless it adds new
+info), (b) re-packaging (same claim in different words), (c) generic-ancestor
+("both are about X" with X too broad). Each new edge is recorded under a
+`## edges` section as:
+
+```
+- E<n>: L<a> ↔ L<b> · <one-line justification of the meaningful link>
+```
+
+Open or continue an `## cycle N — <title>` with `@kind: connect` and append
+`@lens: <none>` (connect cycles have no lens). 0 new meaningful edges in a full
+frontier pass → suggest `/mining depletion` for this connect cycle.
+
+### `connect <a> <b>` — justify one specific pair
+
+Take two leaf identifiers (`L<n>` or substring text match) and surface the
+edge justification — or, if no meaningful link exists, record an explicit
+NEGATIVE under the cycle (`- (no-edge) L<a> ⊥ L<b> · <why unrelated>`). Useful
+for shoring up the "0 new edges" depletion claim by walking specific suspect
+pairs.
+
+### `graph` — ASCII graph + stats
+
+Render the cumulative (leaves, edges) graph + stats:
+
+```
+n leaves = N    m edges = M    possible = N(N-1)/2 = P
+meaningful ratio = M/P = X.XX
+
+[ASCII adjacency or node-edge sketch — small graphs draw fully, large graphs
+ show top-degree nodes + edge-count histogram]
+
+  L1 ─── L3
+  L1 ─── L7
+  L3 ─── L7    (triangle L1-L3-L7)
+  L4 ─── L9
+  ...
+```
+
+For large graphs (N > 30), show a degree-ranked top-15 node list + a
+`degree-distribution` mini-histogram instead of the full adjacency.
+
+### `saturate` — auto-edge until convergence-depletion
+
+Auto-loop `connect` rounds: run a connect pass; if it found ≥1 new edge,
+immediately run another pass (the new edges may unlock further meaningful
+links); stop when a full pass yields 0 new edges. Cap at 5 inner passes per
+invocation (safety) — if still finding edges, report `🔄 still saturating —
+re-run /mining saturate` for the user to continue. Each inner pass appends its
+edges + cycle ends with `@depleted: connect @ <date>` when the loop terminates.
+
 ## Bundled lens catalogue
 
 Each lens is a short rule for HOW to generate the next round of leaves from the
@@ -163,6 +232,13 @@ auto-includes anything in `~/.sidecar/lens/`.
 - L1 [cycle 1 · same-formula] <leaf-text>
 - L2 [cycle 1 · same-formula] <leaf-text>
 - ...
+
+## edges (convergence half — 0.2.0)
+
+- E1 [cycle 3 · connect] L1 ↔ L7 · <justification of the meaningful link>
+- E2 [cycle 3 · connect] L3 ↔ L9 · <justification>
+- (no-edge) L4 ⊥ L8 · <why suspected pair turned out unrelated>
+- ...
 ```
 
 `<NAME>.mining.tape`:
@@ -191,8 +267,9 @@ The `.tape` `@X` entries are promotion candidates — when a leaf is verified
 
 After any verb, end with one status line:
 ```
-🧪 mining: <NAME> · cycles=<N> · leaves=<N> · current lens: <name> · status: <open | depleted>
+🧪 mining: <NAME> · cycles=<N> · leaves=<N> · edges=<M> · current: <lens|connect> <name> · status: <open | depleted>
 ```
 
 Triggers — `/mining`, `/mining <lens>`, `mining cycle`, `lens 발산`, `lens 채굴`,
-`divergence cycle`, `lens 적용`, `mining tree`.
+`divergence cycle`, `lens 적용`, `mining tree`, `mining connect`, `mining edges`,
+`mining graph`, `mining saturate`, `점잇기`, `선들 연결`, `edge 발견`.

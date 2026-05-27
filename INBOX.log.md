@@ -387,7 +387,9 @@ bare /domain:
 
 **우선순위**: medium · 수동 패턴이 작동하지만 `/mining`이 정식이면 모든 demiurge/anima/hexa 도메인 즉시 사용. brainstorm/mining 명칭은 둘 다 받아도 됨 (mining이 lens-driven 함의 더 명확).
 
-## 2026-05-27 — /mining connect|edges 점잇기 verb (from demiurge RTSC)
+## 2026-05-27 — /mining connect|edges 점잇기 verb (from demiurge RTSC) ✅
+
+**해소** (sidecar `skills/mining/` 0.2.0): connect/edges/graph/saturate 4 verbs 추가 · `<NAME>.mining.md`에 `## edges` 섹션 추가 · status line `edges=M` 표시 · `(no-edge) L<a> ⊥ L<b>` NEGATIVE 기록 패턴 · saturate inner-pass cap 5 (안전) · trivial-transitive/re-packaging/generic-ancestor 제외 디자인 + `#189` (`<NAME>.brainstorm.{md,tape}` 3rd pillar) ✅ superseded — 양방향 lens-divergence + connect-convergence가 #189 "verify 후 underlying truth로 통합" 요구를 더 일반적으로 해소.
 
 `/mining` 슬래시(#190)에 *edge enumeration* verb 추가 — 발산 후 자연 다음 단계.
 

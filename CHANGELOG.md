@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — mining 0.2.0: convergence 절반 (`connect` · `edges` · `graph` · `saturate`) 추가
+
+사용자 — "inbox check 해서 업그레이드" (INBOX.log.md `#191` from demiurge RTSC Cycle 15: 발산만 있으면 leaf가 무한 증식만 한다 → 누적 leaf 사이 의미있는 direct edge를 찾는 **수렴** 라운드 = 0.1.0과 대칭). mining = (leaves, edges) **그래프**로 재정의 — divergence는 노드를 만들고, convergence는 underlying truth로 압축한다.
+
+- **`skills/mining/` 0.1.0 → 0.2.0** — 수렴 verbs 4종 추가, 총 verbs 6 → 10.
+- **두 cycle 종류**:
+  - **lens cycle** (발산) — lens 적용 → 새 leaf 추가; depletion = 새 leaf 0개
+  - **connect cycle** (수렴) — 누적 leaf 사이 의미있는 direct edge 발견; depletion = full pass에서 새 edge 0개
+- **4 신규 verbs**:
+  - `connect` (alias `edges`) — 수렴 라운드. 누적 leaf scan, 의미있는 edge 추가. **trivial-transitive** (A↔B + B↔C → A↔C 자명) · **re-packaging** (같은 주장 다른 표현) · **generic-ancestor** ("둘 다 X에 관한 것" with X가 너무 광범위) 제외.
+  - `connect <a> <b>` — 특정 두 leaf 사이 edge 정당화. 의미있는 link 없으면 `(no-edge) L<a> ⊥ L<b> · <왜 무관>` 명시적 NEGATIVE 기록 (depletion 주장 보강).
+  - `graph` — 누적 (leaves, edges) ASCII 그래프 + 통계 (n leaf · m edge · 가능한 짝 `n(n-1)/2` · meaningful ratio). N>30이면 degree-top-15 + degree-distribution mini-histogram.
+  - `saturate` — auto-loop `connect`: 새 edge ≥1이면 즉시 또 한 pass (새 edge가 또 다른 link 해금 가능); 0이 되면 종결. 안전 cap 5 inner passes/호출 — 도달 시 `🔄 still saturating — re-run /mining saturate`.
+- **`<NAME>.mining.md` 구조 확장** — `## edges` 섹션 추가 (`- E<n>: L<a> ↔ L<b> · <justification>` + `- (no-edge) L<a> ⊥ L<b> · <why>`).
+- **status line 확장** — `cycles=N · leaves=N · edges=M · current: <lens|connect> <name> · status: <open|depleted>`.
+- INBOX.log #191 ✅ resolved · #189 ✅ superseded by /mining (양방향 lens-divergence + connect-convergence가 #189 "verify 후 underlying truth로 통합" 요구를 더 일반적으로 해소).
+- 출처: demiurge RTSC Cycle 15 — "발산만은 무한 증식" 자각 → 수렴 절반 요청.
+
 ## 2026-05-27 — mining 0.1.0: `/mining` 신규 — lens-driven 발산 가지치기 (`/domain` 3rd pillar)
 
 사용자 — "/mining 구현시작" (INBOX.log.md `#190` from demiurge RTSC: 13-cycle 동안 자연발생한 lens-driven 발산 + 가지치기 + 누적 워크플로를 정식 슬래시 커맨드로). `/domain`의 3번째 기둥으로 `<NAME>.mining.md`(사이클별 lens-driven 트리 · append-only) + `<NAME>.mining.tape`(idea cart of @X promotion 후보) 추가.

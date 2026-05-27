@@ -1,3 +1,54 @@
+## 2026-05-28 — sbs 0.5.0 재설계: 2 modes (manual=chat-form default · auto=4축 자동선택) + plan.md handoff (from user 2026-05-28) ✅
+
+> **트리거**: 사용자 사이클 — "sbs 재설계 + 추천 자동선택" 정정 chain. 기존 3-mode (auto/manual/full) 가 너무 복잡 + per-step pause MANUAL 이 chat-form 보다 가치 낮음 → 2-mode 로 collapse, FULL 의 chat-form 을 MANUAL 의 새 기본으로 승격, 합의 후엔 plan.md + 백그라운드 Agent fan-out 으로 사용자 무개입 ship 까지.
+
+> **5 design decisions (chat-form 합의로 잠금)**:
+
+```
+🎯 합의된 결정셋 (5개)
+┌─ Q1: 모드 개수            → ✅ 2 (manual + auto)
+├─ Q2: MANUAL = 새 기본     → ✅ chat-form + 합의 화면 + plan.md + 'go' handoff
+├─ Q3: AUTO = 1개 차이      → ✅ chat-form 스캐폴드는 동일, 사용자 응답 → 자동 추천
+├─ Q4: AUTO 추천 기준        → ✅ 4축 가중평균 (default 1:1:1:1, inline override)
+└─ Q5: handoff 형태          → ✅ drafts/<slug>-plan.md + 'go' 후 백그라운드 Agent
+```
+
+> **Q4 AUTO 4-축 정의** (1-5 점수 × 가중치 → 합산 → 최댓값 채택, 동점은 추천 line 우선):
+> - **완성도 (complete)** — robustness · edge-case coverage · finished quality
+> - **단순 (simple)** — Occam's razor · fewest moving parts · least surface area
+> - **안전 (safe)** — **blast radius 최소** · reversible · narrow scope
+> - **표준 (std)** — fits the established sidecar pattern (plugin shape · governance keys · concept separation)
+>
+> Default = 동등 1:1:1:1. Inline override syntax:
+> - `/sbs auto:safety <task>` — 단일축 강제 (safe=1, 나머지 0)
+> - `/sbs auto:complete=2,simple=3 <task>` — 명시 가중 (지정 안 한 축 = 0)
+> - `/sbs auto <task>` — default 1:1:1:1
+
+> **Q5 plan.md 워크플로**:
+> 1. 'go' 받으면 slug derive (kebab-case ≤6 tokens, `[a-z0-9][a-z0-9-]*`)
+> 2. `drafts/` 디렉토리 보장 + `.gitignore` 추가 (자동, blocked 시 warning)
+> 3. `drafts/<slug>-plan.md` 작성 — frontmatter (slug · mode · auto-weights(AUTO만) · created) + `## task brief` + `## locked decisions` + `## next-action checklist` (마지막 줄 `[ ] ship …`) + `## completion criteria`
+> 4. 백그라운드 Agent (general-purpose · `run_in_background=true`) launch — self-contained 프롬프트 = plan.md 본문 + ship 지시 (explicit paths · no force-push · Korean commit msg · `sidecar sync` after push) + 완료 기준 + "완료 시 보고"
+> 5. 사용자에게 1-line: `🚀 handoff: agent launched (id=<id>) · plan saved to drafts/<slug>-plan.md · you can leave`
+
+> **`legacy-manual` 1-version deprecation**: 토큰 잡으면 MANUAL 동작 + 1-line banner `⚠ legacy-manual is the old per-step pause behavior — being phased out; use plain manual for new chat-form default`. 한 버전 후 제거.
+
+> **inline fallback path 유지**: 첫 disambiguation scan 에서 ambiguity = 0 이면 chat-form ceremony skip, 즉시 `📋 plan (N steps)` → 실행. 사소한 작업에서 chat-form 자체가 병목이 되는 걸 방지. AUTO inline = 무중단 흐름, MANUAL inline = step 별 pause.
+
+> **Halt 조건 유지**: step failure · 비가역/파괴/외향 단계 직전 confirm — 모든 path 적용. 백그라운드 Agent 도 그런 단계 직전 사용자에게 보고 후 대기.
+
+> **lockstep gate (@D g22)** — plugin.json 0.5.0 + marketplace.json 0.5.0 + README.md row 0.5.0 + description 3 surface 동기화 + plugin.json keywords 에 `chat-form`, `handoff` 추가.
+
+> **evidence (구현 파일)**:
+> - `commands/step-by-step/commands/step-by-step.md` — Step 0 (2-mode parse + `auto:<axis>` / `auto:<k>=<n>` override) · Step 0.5 (chat-form BOTH modes; AUTO auto-pick + log) · Step 0.6 (agreement screen BOTH modes) · Step 0.7 (NEW — plan.md + 백그라운드 Agent handoff) · Step 1+ (fallback inline plan/execute) · Halt 조건
+> - `commands/step-by-step/commands/sbs.md` — 7-step recap 동기화
+> - `commands/step-by-step/.claude-plugin/plugin.json` — version + description + keywords
+> - `.claude-plugin/marketplace.json` step-by-step entry · `README.md` step-by-step row · `CHANGELOG.md` top entry
+
+> **출처**: 사용자 사이클 "sbs 재설계 + 추천 자동선택" 사용자 정정 chain (2026-05-28).
+
+---
+
 ## 2026-05-28 — cloud `pods`/`dispatch` CLI 미재빌드 drift + pods.json canonical 통일 (from demiurge RTSC)
 
 > **사건**: hexa-lang PR #1699 ("feat(cloud): per-project pods.json work manifest — `cloud pods` + `cloud dispatch`") MERGED 2026-05-27T14:58:31Z. sidecar `cloud` SKILL.md (commands + skills 양쪽) v0.x 가 즉시 신규 트리거 풍부히 등재(`"cloud pods"`, `"활성 pod"`, `"지금 뭐 돌고있어"`, `"verdict 갱신"`, `"pod tree"`, ...) + `dispatch [tree|active|add|verdict|rm]` 서브커맨드 동작 본문 상세 기술. demiurge RTSC 9-DFT 캠페인 세션이 이 트리거 받아 `hexa cloud pods` / `hexa cloud dispatch tree` 호출 → 두 호출 모두 **하단 help dump 만 출력** (서브커맨드 미인식, fall-through). 원인 확인 = `which hexa` → `/Users/ghost/.hx/bin/hexa` · `hexa --version` → `hexa 0.1.0-dispatch` (PR #1699 머지 이전 바이너리). 소스에는 `~/core/hexa-lang/stdlib/cloud/pods_local.hexa` 존재 → **source landed · binary not rebuilt**.

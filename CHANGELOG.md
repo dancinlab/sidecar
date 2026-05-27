@@ -6,6 +6,30 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — step-by-step 0.5.0: 2-mode 재설계 (auto + manual) · plan.md 생성 + handoff
+
+사용자 — "sbs 재설계 + 추천 자동선택" → 5-decision chat-form 합의로 land. 기존 3-mode (auto/manual/full) → 2-mode (auto/manual)로 collapse. 기존 FULL 의 chat-form + 합의 화면을 MANUAL 의 새 기본 동작으로 승격하고, 합의 후 `drafts/<slug>-plan.md` 자동 생성 + 백그라운드 Agent fan-out 으로 사용자 무개입 ship 까지 진행. AUTO 는 같은 chat-form 스캐폴드를 출력하되 4-축 가중평균으로 자가선택.
+
+- **`commands/step-by-step/` 0.4.0 → 0.5.0** — 5 잠금 결정:
+  - **Q1 모드 개수 → 2**: 기존 auto/manual/full 3-mode → auto/manual 2-mode. 기존 per-step pause MANUAL 폐기.
+  - **Q2 MANUAL = 새 기본**: 기존 FULL 의 chat-form (1Q/round + easy-mode 7-element scaffold + 자유응답) + `🎯 합의된 결정셋` 화면을 MANUAL 의 기본 path 로 승격. 합의 후 `drafts/<slug>-plan.md` 작성 + 'go' 받으면 백그라운드 Agent handoff.
+  - **Q3 AUTO = 1개 차이**: chat-form 스캐폴드 출력은 동일하나 사용자 응답 대기 없이 즉시 auto-pick → 다음 라운드 즉시 진행. 합의 화면은 여전히 pause (auto-pick 사용자 pre-commit 체크포인트).
+  - **Q4 AUTO 추천 4-축 가중평균**: 완성도(complete · robust + edge-case) + 단순(simple · Occam) + 안전(safe · blast radius 최소) + 표준(std · sidecar 패턴 일치). 기본 1:1:1:1. Inline override — `/sbs auto:safety <task>` (단일축 강제) · `/sbs auto:complete=2,simple=3 <task>` (가중치 지정). 미지정 축은 명시 가중 모드에서 0.
+  - **Q5 handoff 형태**: `drafts/<slug>-plan.md` (frontmatter: slug · mode · auto-weights(AUTO만) · created date) + `## task brief` + `## locked decisions` + `## next-action checklist` (마지막 줄 `[ ] ship …`) + `## completion criteria`. `drafts/` 자동 생성 + `.gitignore` 자동 추가 (sign-gitignore 게이트 차단 시 1-line warning).
+  - 백그라운드 Agent 는 general-purpose · `run_in_background=true` · self-contained 프롬프트 (plan.md 본문 + ship 지시 + 완료 기준 + "완료 시 보고"). 사용자는 한 줄 핸드오프 안내 받고 자리 비울 수 있음.
+  - **`legacy-manual` 토큰** — 1-version deprecation. MANUAL 으로 동작하되 1-line banner: `⚠ legacy-manual is the old per-step pause behavior — being phased out; use plain manual for new chat-form default`.
+  - Halt 조건 유지 (step failure · 비가역/파괴/외향 단계 직전 confirm). 핸드오프 Agent 도 동일 — 그런 단계 직전 사용자에게 보고 후 진행.
+
+- **lockstep gate (@D g22)**:
+  - `commands/step-by-step/.claude-plugin/plugin.json` → `0.5.0`
+  - `.claude-plugin/marketplace.json` step-by-step entry → `0.5.0`
+  - `README.md` step-by-step row → `0.5.0`
+  - description 본문 3 surface 동기화
+
+- **trigger 추가** — argument-hint `[auto[:<axis-or-weights>]|manual] [<task> | empty]` · keywords `chat-form`, `handoff` plugin.json keywords 에 추가.
+
+---
+
 ## 2026-05-28 — pool-route 0.10.0 + sidecar 0.6.0: 사이드카 path-prefix 화이트리스트
 
 사용자 — "사이드카 hexa들은 전부 화이트리스트 등록" → chat-form `/sbs full` 4-축 합의 후 land (Q1=ALL argv scan · Q2=`~/.sidecar/local-paths` plain text · Q3=`sidecar paths` CLI · Q4=default seed = cache + repo). pool-route 가 영구적으로 sidecar 자기 hexa 호출을 안 라우팅하도록 만드는 신규 LOCAL-EXECUTION 레이어.

@@ -10,6 +10,13 @@
 // target path sits under a volatile location (/tmp · /private/tmp ·
 // /var/folders) which is both tmp-reaped and outside the synced workspace.
 //
+// BRANCH-REUSE advisory (anima #1105 stale-base guard): when the command is
+// `git worktree add -b <br>` and `<br>` already exists — especially a
+// LOCAL-only stale branch absent from origin (a rejected/unpushed prior turn's
+// leftover) — warn that reusing it carries the stale-base risk that revert-
+// deleted 35190 files in anima #1105, and suggest a fresh per-PR branch
+// (`<br>-$(date +%s)` cut from origin/main).
+//
 // Advisory-only (per guards-narrow-scope: non-blocking additionalContext beats
 // a deny for hygiene). NO opt-out by design — no env var, no config, no
 // exception list. Sister of workdir-guard (shared-tree SessionStart advisory)
@@ -21,6 +28,53 @@ fn _read_stdin() -> string {
 
 fn _allow() {
     exit(0)
+}
+
+// whitespace-split into tokens
+fn _tokens(s: string) -> array {
+    let mut out = []
+    let n = len(s)
+    let mut i = 0
+    let mut cur = ""
+    while i < n {
+        let c = s[i]
+        if c == " " || c == "\t" || c == "\n" || c == "\r" {
+            if len(cur) > 0 { out.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { out.push(cur) }
+    return out
+}
+
+// The `<br>` value from `git worktree add -b <br> ...` (or `-B <br>`).
+// Empty when the command creates no new branch (-b/-B absent — e.g.
+// checking out an existing branch into a worktree).
+fn _new_branch_name(toks: array) -> string {
+    let n = len(toks)
+    let mut i = 0
+    while i + 1 < n {
+        if toks[i] == "-b" || toks[i] == "-B" { return toks[i + 1] }
+        i = i + 1
+    }
+    return ""
+}
+
+// Branch-existence probe. Returns a 2-char status: index 0 = local ref
+// exists ("1"/"0"), index 1 = origin ref exists ("1"/"0"). On probe
+// failure returns "??" (treated as unknown — no reuse warning fires).
+fn _branch_exists(br: string) -> string {
+    let local = "git show-ref --verify --quiet refs/heads/" + br + " && echo 1 || echo 0"
+    let remote = "git show-ref --verify --quiet refs/remotes/origin/" + br + " && echo 1 || echo 0"
+    let mut lo = "?"
+    let mut ro = "?"
+    try { lo = to_string(exec(local)).trim() } catch e { return "??" }
+    try { ro = to_string(exec(remote)).trim() } catch e { return "??" }
+    if lo == "" { lo = "?" }
+    if ro == "" { ro = "?" }
+    return lo + ro
 }
 
 fn _json_str(s: string) -> string {
@@ -66,7 +120,24 @@ fn main() {
 
     let volatile = cmd.contains("/tmp/") || cmd.contains("/private/tmp") || cmd.contains("/var/folders")
 
+    // Branch-reuse probe: a `git worktree add -b <br>` whose <br> already
+    // exists (esp. a LOCAL-only stale branch missing from origin) is the
+    // stale-base fingerprint — anima #1105 reused `decoder-m4b-gpu2-arch`
+    // and the squash-merge revert-deleted 35190 files. Advisory only.
+    let toks = _tokens(cmd)
+    let br = _new_branch_name(toks)
+    let mut reuse_hint = ""
+    if br != "" {
+        let st = _branch_exists(br)
+        if st == "11" {
+            reuse_hint = "  • ⚠ 브랜치 '" + br + "' 재사용 — 로컬+origin 양쪽에 이미 존재. stale base 위험 (anima #1105: `decoder-m4b-gpu2-arch` 재사용이 squash-merge 시 35190 파일 회귀삭제). 매 PR fresh 분기 권장: `git worktree add -b " + br + "-$(date +%s) <path> origin/main`."
+        } else if st == "10" {
+            reuse_hint = "  • ⚠ 브랜치 '" + br + "' 재사용 — **로컬-only stale 브랜치**(origin 엔 없음). 이전 rejected/미푸시 turn 의 잔재일 수 있어 stale base 위험이 가장 큼 (anima #1105: 35190 파일 회귀삭제). 매 PR origin/main 최신에서 fresh 분기: `git worktree add -b " + br + "-$(date +%s) <path> origin/main`."
+        }
+    }
+
     let mut hints = []
+    if reuse_hint != "" { hints.push(reuse_hint) }
     hints.push("  • 편집 직후 commit+push 하라 — 미커밋 편집을 턴에 걸쳐 들고 있지 마라. 동시 에이전트의 `git worktree prune` / 워크스페이스 sync 가 워크트리 디렉터리를 통째로 지우면 미커밋분이 함께 증발한다 (origin 에 올라간 커밋만 안전).")
     hints.push("  • 랜딩 순서: 편집 → stage → commit → push → PR → `git worktree remove`. 검증 빌드/테스트는 commit 뒤에 (빌드 실패해도 작업은 origin 에 보존).")
     if volatile {

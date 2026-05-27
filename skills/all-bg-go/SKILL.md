@@ -1,6 +1,6 @@
 ---
 name: all-bg-go
-description: Fan out the prior turn's branches in parallel — reactive single fan-out of what the immediately-preceding turn offered. Triggers — "all bg go", "all bg", "다 병렬", "전부 병렬 발사", "전부 다 가자", "fan it all out", "do them all in parallel". For a self-generating loop use /cycle.
+description: Fan out the prior turn's branches in parallel — reactive single fan-out of what the immediately-preceding turn offered. `/abg` is the 3-char alias. Triggers — "all bg go", "all bg", "abg", "다 병렬", "전부 병렬 발사", "전부 다 가자", "fan it all out", "do them all in parallel". For a self-generating loop use /cycle.
 allowed-tools: Agent, Bash, Read
 ---
 

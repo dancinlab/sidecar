@@ -233,8 +233,8 @@
     {
       "name": "all-bg-go",
       "source": "./skills/all-bg-go",
-      "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command.",
-      "version": "0.4.1"
+      "description": "Parallel fan-out trigger \u2014 'all bg go' \u2192 plan table + one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop, use /cycle instead. Skill (natural language) + /all-bg-go command + /abg 3-char alias (0.4.2).",
+      "version": "0.4.2"
     },
     {
       "name": "cycle",

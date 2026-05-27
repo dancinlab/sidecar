@@ -1,7 +1,7 @@
 {
   "name": "all-bg-go",
-  "description": "Parallel fan-out trigger — user says \"all bg go\" (or equivalent) → print a plan table (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop (enumerate next work → plan → fan-out → loop), use `/cycle` instead.",
-  "version": "0.4.1",
+  "description": "Parallel fan-out trigger — user says \"all bg go\" (or equivalent) → print a plan table (branch · subagent_type · isolation · goal) then spawn one background Agent per branch in the same message. REACTIVE single fan-out of what the PRIOR turn offered. For a self-generating repeatable loop (enumerate next work → plan → fan-out → loop), use `/cycle` instead. 0.4.2 — `/abg` 3-char alias added (commands/abg.md · identical semantics).",
+  "version": "0.4.2",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

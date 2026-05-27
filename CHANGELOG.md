@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — all-bg-go 0.4.2: `/abg` 3-char alias 추가
+
+사용자 요청 — "abg 만들어줘". `/all-bg-go` 가 길어 빠른 호출용 단축 명령 필요. 기존 alias 패턴 (`/q`→question · `/ij`→inject · `/sbs`→step-by-step) 과 동일 — 같은 plugin 의 commands/ 에 별 .md 추가 (mirror 가 `~/.claude/commands/abg.md` 로 복사).
+
+- **`skills/all-bg-go/commands/abg.md`** (신규) — `/all-bg-go` 와 동일 semantics. 본문 동일 (plan table → N Agent fan-out → `Next iteration` 라인). frontmatter `allowed-tools: Agent, Bash, Read` 동일.
+- **`skills/all-bg-go/SKILL.md`** — description + trigger 에 `abg` · `/abg` 추가.
+- **`skills/all-bg-go/.claude-plugin/plugin.json`** + **`.claude-plugin/marketplace.json`** — 0.4.1 → **0.4.2**.
+- 호출: `/abg` 또는 `abg` (NL) = `/all-bg-go` 와 100% 동일 동작.
+
+---
+
 ## 2026-05-28 — `/all-bg-go` 복구 (`a46a7ee` retire revert · commons g41 분리)
 
 사용자 요청 — "all-bg-go 명령어 폐기한거 살려줘". 2026-05-26 retire commit (`a46a7ee`) 이 `/cycle` 과 기능 겹친다고 폐기했으나, 두 패턴은 의도가 다름 (`/cycle` = self-generating loop · `/all-bg-go` = reactive single fan-out of prior-turn branches). 이번 세션 내 실제 사용 (3-agent fan-out × 2회) 으로 가치 재확인 → 복구.

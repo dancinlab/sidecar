@@ -6,6 +6,56 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — /micro-exp Stage 1.5 + decision tree (domain-agnostic 일반화)
+
+사용자 워딩 트리거 — "물질 합성 연구에만 쓰이다가 다른 프로젝트 돌리려니 안됨". hexa-codex CODEX PR #126 의 22-axis-candidate halt (22 candidate matrix enumerate ✅ 그러나 dispatch infra 0/22 ready) 가 직접 motivation. 5-제안 INBOX 항목 → 1 decision 합의 (D — ①+⑤+② best-effort 묶음 · ④ docs deferred · ③ ② hint 흡수) 후 사이클 진행.
+
+### ① micro-exp 0.4.0 — Stage 1.5 infra existence check + 도메인-agnostic 일반화
+
+- **Stage 1.5 신설** (`skills/micro-exp/commands/micro-exp.md`) — Step 1 (matrix enumerate) 이후 / Step 2 (dispatch) 직전. per-candidate 4 generic prereqs (`<runnable>` · `<inputs>` · `<parser>` · `<workdir>`) 존재 확인 → 미달 시 자동 halt `🛑 N/M candidates missing dispatch infrastructure — /cycle-bg <active-domain> required first (build phase before fire phase)` + per-candidate breakdown.
+- **kind 추상화** — 기존 spec 이 가정하던 materials/DFT/SSCHA 를 "1 example among many" 표기로 변경. 모든 kind 예시 (materials wall · LLM bench harness · web smoke endpoint · build bench) 가 동일 contract (`<runnable>` + `<parser>`) 위에 동작.
+- **local_pool_adapter 일반화** — wall-measurement/structural-oracle/build-bench 만 가정하던 기존 spec 을 "observation-only kind (closed-form-atom-registrable 이 아닌 모든 kind)" 로 추상화. ③ (local-pool LLM 확장) 이 이 일반화에 자연 흡수 — 별도 분기 없이 동일 어댑터로 LLM bench · web smoke 모두 커버.
+- **Monitor alive-check 패턴 추상화** — 기존 `pw.x|ph.x` FIXED 패턴을 "kind-appropriate alive-check + completion-check" 로 변경. 도메인별 적정 쌍을 spec 이 예시 (materials/LLM-bench/web-smoke 각각 한 줄) 로 제공.
+
+### ⑤ /cycle-bg ↔ /micro-exp decision tree cross-link (양쪽 SKILL.md mirror)
+
+- **skills/micro-exp/SKILL.md** + **skills/cycle/SKILL.md** 양쪽에 동일한 ASCII 결정 트리 + `@D micro_exp_handoff` / `@D decision_tree` block 추가:
+  ```
+  candidate matrix in context?
+  ├─ NO        → /kick
+  └─ YES → dispatch infra exists for all?
+           ├─ NO       → /cycle-bg <domain>  (BUILD)
+           ├─ PARTIAL  → /cycle-bg → /micro-exp (BUILD then FIRE)
+           └─ YES      → /micro-exp <scope>  (FIRE only)
+  ```
+- domain-agnostic 표현 — kind 가 materials/LLM/web/build 어떤 것이든 동일 트리.
+
+### ② commons.tape `@D g75` build+fire phase 분리 — DEFERRED (sign-gated)
+
+- spec 안에는 ②를 포함시키되, `hooks/commons/commons.tape` 직접 편집은 sign-gate 차단 (project.tape @D s13). 사용자가 `! sidecar sign commons` 발급 후 별도 차수에 land.
+- 제안 본문 (도메인-agnostic 문구) 은 `drafts/sbs-micro-exp-meta-generalize-plan.md` `## deferred-sign` 섹션에 보존.
+
+### ③ local-pool LLM 확장 — ABSORBED into ② hint + ① 일반화
+
+- 별도 spec line 없이 ②의 g75 본문 + ①의 local_pool_adapter 일반화에 흡수. kind 가 abstract 이므로 LLM bench 는 별도 분기 없이 동일 contract.
+
+### ④ meta-domain pattern docs — DEFERRED (별도 docs 사이클)
+
+- INBOX 항목에 명시. 본 사이클에서 land 하지 않음.
+
+### lockstep gate (@D g22)
+
+- `skills/micro-exp/.claude-plugin/plugin.json` → `0.4.0`
+- `skills/cycle/.claude-plugin/plugin.json` → `0.9.2` (decision tree cross-link)
+- `.claude-plugin/marketplace.json` 양쪽 entry sync
+- `README.md` 양쪽 row update
+
+### 사용자 의도
+
+- "물질 합성 연구에만 쓰이다가 다른프로젝트 돌리려니 안됨" — `/micro-exp` + `/cycle-bg` family 가 모든 sweep kind 에서 동일하게 작동해야 한다는 1차 갭. Stage 1.5 (infra gate) 가 silent-skip / fabrication 두 failure mode 를 막고, decision tree 가 build/fire phase 경계를 spec 에 명문화. domain-agnostic 표현 으로 LLM bench · web product · 임의 sweep kind 가 모두 first-class.
+
+---
+
 ## 2026-05-28 — step-by-step 0.6.0: 자동 QA 4축 (functional·visible·conformance·regression) handoff 끝에 추가
 
 사용자 — sbs 0.5.0 handoff 완료성 검증 갭 보완. handoff agent 가 ship 직후 자동 4축 검증을 실행하도록 spec 확장. 4축은 사용자 명시; fail 정책 1-decision (hybrid) 만 chat-form 합의로 잠금.

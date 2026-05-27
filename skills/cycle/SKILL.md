@@ -53,6 +53,23 @@ allowed-tools: Agent, Bash, Read
   do   = "at each round's tail (before the ScheduleWakeup / depletion call) emit a one-line round-lint verdict auditing that the round honored: (1) resource-partition declared — disjoint concurrent · shared-exclusive serial (@D resource_contention) · (2) every spawned Agent carried the checkpoint-commit + throttle-resume clause (@D throttle_resilience) · (3) dup-race precheck A+B ran, SKIPs surfaced (@D dup_race_precheck) · (4) worktree leak-sweep ran (@D worktree_leak_cleanup) · (5) per-round Agent count ≤ cap (default 3 · g66) · (6) any cross-repo handoff recorded as debt (@D handoff_debt_ledger) · (7) any ≥2-throttle-death milestone was split, not re-fired whole (@D oversized_split) · (8) each landed item reported with an HONEST verify tier (🔵/🟢/🟡/🟠/🔴, no over-claim · g3/g5) + a progress bar (g56) · (9) SSOT freshness checked before any depletion call (@D ssot_freshness) · (10) a perpetual domain emitted NO terminal closure (@D perpetual_domain). Emit `🔍 round-lint: <N>/10 ✓` and flag any ✗ with its rule id. A failing check is surfaced + corrected, never silently passed."
   dont   = "end a round without the round-lint line · rubber-stamp a check that did not actually happen (honest self-audit, not a green-by-default) · accept a ✗ without correcting or surfacing it · let the lint block exceed one compact line-group"
 
+@D micro_exp_handoff := "/cycle-bg ↔ /micro-exp build vs fire phase decision tree (mirrored in skills/micro-exp/SKILL.md · domain-agnostic)" :: skill [required active]
+  do   = "when a candidate matrix is in context, walk the tree before dispatching: (NO matrix) → /kick (discovery first) · (matrix exists AND ALL candidates have dispatch infra <runnable>+<inputs>+<parser>+<workdir>) → /micro-exp <scope> (FIRE phase only) · (matrix exists AND any candidate is missing infra) → /cycle-bg <domain> (BUILD phase — each worktree agent writes its candidate's dispatch infra), then /micro-exp once infra is M/M ready. /cycle-bg is the canonical BUILD lane for candidate orchestration (build+fire integrated per worktree agent); /micro-exp is the FIRE-only lane (pre-built infra assumed). Domain-agnostic — kind is abstract (materials wall · LLM bench · web smoke · build bench are all examples among many)"
+  dont = "fan-out /cycle-bg as fire phase when infra is already ready M/M (use /micro-exp directly — /cycle-bg's per-worktree overhead is wasted on a fire-only sweep) · skip /cycle-bg's build phase and fire /micro-exp on candidates with missing infra (Stage 1.5 in /micro-exp halts this with a steer; the silent-skip / hand-fabricate failure mode breaks honest sweep g63)"
+
+## Decision tree — `/cycle-bg` ↔ `/micro-exp` (domain-agnostic)
+
+```
+candidate matrix in context?
+├─ NO        → /kick                       (no candidates · discovery first)
+└─ YES → dispatch infra exists for all candidates?
+         ├─ NO       → /cycle-bg <domain>  (BUILD phase · each worktree agent writes its candidate's infra)
+         ├─ PARTIAL  → /cycle-bg <domain>  (build the missing N) then /micro-exp <scope> (FIRE all)
+         └─ YES      → /micro-exp <scope>  (FIRE phase only · pre-built infra assumed)
+```
+
+`/cycle-bg` = BUILD lane (build+fire integrated per worktree agent). `/micro-exp` = FIRE lane (Stage 1.5 auto-halts to the build phase on any missing prereq).
+
 ## Family — all four drain to depletion, differ only in entry shape
 
 All four commands now drain the active domain's `## deferred` backlog to DEPLETION (open milestones = 0 AND deferred empty AND no other signal). They share the per-round cap (WIDTH throttle), the full 5-stage structure, the plan table, the dup-race precheck, and the leak guardrails. They differ ONLY in how they enter and pace the loop:

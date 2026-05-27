@@ -1,5 +1,5 @@
 ---
-description: /step-by-step — plan-first sequential runbook with TWO modes (auto · manual default) + 자동 QA 4축 (functional·visible·conformance·regression) after ship · regression FAIL → auto-revert · others → alert. MANUAL (default) — chat-form disambiguation (1 question/round, 7-element easy scaffold; free-form answers OK) until ambiguity → 0, then a `🎯 합의된 결정셋` ASCII agreement screen, then write `drafts/<slug>-plan.md` and HAND OFF to a background Agent on `go` (user can leave; agent ships end-to-end + auto-QA). AUTO — same chat-form scaffold rendered, but each question is AUTO-PICKED by the 4-axis weighted average (완성도 · 단순 · 안전(blast radius) · 표준(sidecar pattern fit); default 1:1:1:1, inline override `/sbs auto:safety <task>` or `/sbs auto:complete=2,simple=3 <task>`). First arg token `auto[:<axis-or-weights>]` | `manual` selects the mode (default manual). `legacy-manual` is the old per-step pause behavior — 1-version deprecation banner, use plain `manual`. `/sbs` is the short alias. (For "continue the paused flow" use the separate `/go` command, not a mode here.)
+description: /step-by-step — plan-first sequential runbook with TWO modes (auto · manual default) + 자동 QA 4축 (functional·visible·conformance·regression) after ship · regression FAIL → auto-revert · others → alert + 0.7.0 자동 HANDOFF.md 9-section 인계 doc 작성 (handoff agent ship+QA 직후 · `plan.handoff` verb 있으면 end-user dossier bundle 도 생성). MANUAL (default) — chat-form disambiguation (1 question/round, 7-element easy scaffold; free-form answers OK) until ambiguity → 0, then a `🎯 합의된 결정셋` ASCII agreement screen, then write `drafts/<slug>-plan.md` and HAND OFF to a background Agent on `go` (user can leave; agent ships end-to-end + auto-QA + HANDOFF.md). AUTO — same chat-form scaffold rendered, but each question is AUTO-PICKED by the 4-axis weighted average (완성도 · 단순 · 안전(blast radius) · 표준(sidecar pattern fit); default 1:1:1:1, inline override `/sbs auto:safety <task>` or `/sbs auto:complete=2,simple=3 <task>`). First arg token `auto[:<axis-or-weights>]` | `manual` selects the mode (default manual). `legacy-manual` is the old per-step pause behavior — 1-version deprecation banner, use plain `manual`. `/sbs` is the short alias. (For "continue the paused flow" use the separate `/go` command, not a mode here.)
 argument-hint: "[auto[:<axis-or-weights>]|manual] [<task> | empty = current task in context]"
 ---
 
@@ -231,6 +231,99 @@ PASS/FAIL/SKIP — SKIP은 "해당 없음"(= PASS-equivalent, 통과로 간주).
 
 결과는 항상 `drafts/<slug>-plan.md`의 `## qa-results` (최신 위) + 필요 시
 `## qa-deferred` 섹션에 기록. user가 돌아오면 plan.md 읽어 후속 결정.
+
+## Step 0.9 — HANDOFF.md 9-section 자동 작성 (handoff agent · auto-QA 직후 · 보고 직전)
+
+ship + auto-QA 완료 직후, handoff agent는 **다음 세션 (AI 인계용) HANDOFF.md를
+자동 작성**한다. user가 자리에 없어도 다음 세션이 두 번 일하지 않도록
+9 섹션 단일 문서로 작업 결과를 굳히는 단계. **handoff agent 종료의 마지막
+스텝** (plan.md `## qa-results` 기록 → HANDOFF.md → 보고 순).
+
+**작성 위치 (canonical)**:
+- 레포가 `/domain` 컨벤션 따르면 (즉 `domains/` 디렉토리 존재 또는 active
+  domain이 `domains/<NAME>.md` 형태) → `domains/HANDOFF.md`
+- 그 외 → 레포 루트 `HANDOFF.md`
+- 기존 파일 존재 시 덮어쓰기 (현재 상태만 기록 · 히스토리는 `git log`)
+
+**9 섹션** (생략 가능 = SKIP 표기, 비우지 말 것):
+
+1. `## § PR 진행 상태 매트릭스` — `| # | title | status | merged | core |` 표. status
+   = `merged`/`open`/`draft`/`closed`. plan 이 stacked PR 가 아니어도 최소 1 행
+   (이번 ship 의 main commit/PR).
+2. `## § 설계 SSOT 파일 인덱스` — 다음 세션이 먼저 읽어야 할 파일 경로 bullet
+   리스트 (e.g. plan.md · 핵심 SKILL.md · 새 manifest tape · API spec).
+3. `## § 새 API surface` — `| method | path | role | auth |` 표. 신규 endpoint
+   없을 시 한 줄 `(none — no new API surface)` 로 SKIP 표기.
+4. `## § 새 컴포넌트/lib 트리` — 신규 추가 디렉토리 스케치 (tree -L 2 형태,
+   파일 수 많으면 핵심만). 없을 시 `(none)`.
+5. `## § 환경 변수` — 활성화 전 export 필요 env vars (e.g. `OPENAI_API_KEY`,
+   `HEXA_LANG`). 없을 시 `(none required)`.
+6. `## § 다음 우선순위` — 정렬된 todo list. 소스 = active domain의 open
+   milestones (`- [ ]`) + `## deferred` 섹션 + 이번 작업에서 발견한 follow-up.
+7. `## § 알려진 한계 + guard rule` — 이번 ship 이 안 다룬 것 + 관련된 commons.tape
+   `@D` 또는 project.tape governance rule pointer.
+8. `## § memory/CLAUDE.md 인덱스` — `~/.claude/projects/<project>/memory/MEMORY.md`
+   에서 이 작업과 관련된 entry pointer (e.g. `feedback:postcompact-survival`).
+   매칭 없을 시 `(no related memory entries)`.
+9. `## § 한 줄 시작 가이드` — 다음 세션이 즉시 실행할 첫 command 한 줄
+   (e.g. `/domain set <NAME> && /cycle` · `cd <repo> && /go`).
+
+**Trigger keywords — handoff doc 강제 작성** (이 키워드가 task brief에
+포함되면 plan 복잡도와 무관하게 항상 HANDOFF.md 작성):
+
+- `완전한 handoff` · `handoff 모드` · `완전 구현` · `complete handoff` · `end-to-end handoff`
+
+키워드 없을 시 휴리스틱: plan 의 PR 개수 ≥ 3 OR 변경 LOC ≥ 500 이면 작성, 아니면
+SKIP. SKIP 시 plan.md `## qa-results` 아래 한 줄 `handoff-doc: SKIP (small change)`.
+
+**Memory mirror** (HANDOFF.md 작성 후 추가 스텝):
+- `~/.claude/projects/<project>/memory/project_<slug>_handoff.md` 한 줄 pointer
+  생성 (`# project:<slug>-handoff\n\nSee <repo>/HANDOFF.md (or
+  domains/HANDOFF.md).`). project dir 없으면 silent skip.
+- 동 디렉토리 `MEMORY.md` 인덱스에 한 줄 `- project:<slug>-handoff —
+  [<slug> 인계](project_<slug>_handoff.md): <task one-line>` append.
+  MEMORY.md 없으면 silent skip.
+
+**Stacked PR-cycle 효율 hint** (관찰만 · 강제 X):
+plan 이 N 개 stacked PR 이라면, **단일 worktree** (`~/core/<repo>-pr-cycle`)
+안에서 branch 갈아끼우는 패턴이 N 회 worktree 생성/제거보다 5-10× 빠르다
+(실측: 7 PR ~6 분). 매 PR 사이클:
+`git reset --hard origin/main && git checkout -b feat/<n>`. agent prompt에
+이 hint 한 줄 포함 권장.
+
+**Deferred** (별도 cycle):
+`gh pr merge --repo X` PR 번호 누락 → exit 1 버그는 pr-cycle plugin 별도
+cycle 에서 처리. sbs skill 가 PR 번호 캡처해 명시적 `gh pr merge <N> --repo X`
+폴백 발사하는 fix 는 ⏳ deferred — pr-cycle plugin cycle 에 위임.
+
+## Step 0.10 — end-user dossier (plan 에 `handoff` verb 가 있을 때만)
+
+plan 의 next-action checklist 또는 task brief 에 **end-user 대상 `handoff`
+verb** 가 포함되면 (i.e. 사용자가 클릭 한 번으로 받아 들고 나갈 산출물이
+필요한 케이스), Step 0.9 의 AI 인계 doc 와 **별도로** end-user 대상 dossier
+bundle 도 생성한다.
+
+**generic spec** (domain-agnostic):
+
+- sbs 의 `handoff` verb = "end-user 가 download / click-to-receive 가능한
+  실 산출물 (dossier bundle) 을 만든다" 는 의미.
+- 형식은 앱에 따라 자유 — JSON dossier · zip · pdf · csv export · download
+  link · 무엇이든 사용자가 클릭해 가질 수 있으면 OK.
+- sbs 가 강제하는 건 한 가지: **handoff verb 의 구현이 사용자가 손에 쥘 수
+  있는 무언가를 produce 한다.**
+- reference impl 한 예: HTTP API 가 dossier JSON 을 다운로드로 반환
+  (`Content-Disposition: attachment` · `{ uid, generated_at, records[],
+  manifest{...} }`). 단순 한 예시일 뿐 — 강제 X.
+
+**두 패턴 공존**:
+- **AI handoff doc** (Step 0.9) = handoff agent 가 **항상** 작성 (다음 세션
+  AI 가 이어받기 위한 인계 문서).
+- **end-user dossier** (Step 0.10) = plan 에 `handoff` verb 가 있을 때만
+  생성 (앱 사용자가 클릭해 가져갈 실 산출물).
+
+dossier 생성도 plan 의 한 step 으로 잡혀 있어야 하고 (handoff verb 자체가
+plan checklist 에 들어가 있어야 한다), 작성 결과는 plan.md `## qa-results`
+에 `end-user-dossier: <path or url>` 한 줄로 기록한다.
 
 ## Step 1+ (fallback) — inline plan + execute (when chat-form is overkill)
 

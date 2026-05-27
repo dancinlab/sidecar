@@ -1,3 +1,39 @@
+## 2026-05-28 — /micro-exp Stage 1.5 + decision tree (domain-agnostic 일반화) (from hexa-codex CODEX 2026-05-28) ✅ PARTIAL
+
+> **트리거**: 사용자 — "물질 합성 연구에만 쓰이다가 다른프로젝트 돌리려니 안됨". hexa-codex CODEX PR #126 의 22-axis-candidate halt (22 candidate matrix enumerate ✅ · dispatch infra 0/22 ready → g63 honest halt) 가 직접 motivation. 원 INBOX 항목은 5-제안: (1) Stage 1.5 infra check · (2) commons g7N build+fire 분리 · (3) local-pool LLM 확장 · (4) meta-domain docs · (5) decision tree cross-link.
+
+> **1 design decision (chat-form 합의로 잠금)**:
+
+```
+🎯 합의된 결정셋 (1개) — /micro-exp meta-generalize 사이클
+└─ Q1: 진행 형태  → ✅ D (① + ⑤ + ② best-effort 묶음 · ④ docs 별도 사이클 · ③ ② hint로 흡수)
+   CRITICAL REQ: 모든 spec/decision-tree/example를 domain-agnostic으로
+       (materials/DFT/SSCHA/gCO2/token 같은 domain-specific 단어 제거 또는 "1 예시" 표기)
+```
+
+> **이번 사이클 land (① + ⑤)**:
+> - **micro-exp 0.4.0** — `skills/micro-exp/commands/micro-exp.md` Stage 1.5 신설 (per-candidate 4 generic prereqs `<runnable>`/`<inputs>`/`<parser>`/`<workdir>` · 미달시 자동 halt `🛑 N/M missing — /cycle-bg <domain> required first`) + kind 추상화 (materials/LLM/web/build 모두 "1 example among many") + local_pool_adapter 일반화 (observation-only kind 전체로 확장, ③ 흡수) + Monitor alive-check 패턴 추상화 (도메인별 적정 쌍 예시화) + `@D decision_tree` SKILL.md 추가.
+> - **cycle 0.9.2** — `skills/cycle/SKILL.md` 에 `@D micro_exp_handoff` 신설 (BUILD vs FIRE lane 명시) + decision tree ASCII block mirror. /cycle-bg = canonical BUILD lane · /micro-exp = FIRE-only lane.
+
+> **② deferred (사용자 sign 필요)** — `hooks/commons/commons.tape` `@D g75` (build+fire phase 분리). 본 사이클 agent self-mint 차단 (project.tape @D s13), 사용자가 `! sidecar sign commons` 발급 후 별도 차수에 land. 제안 본문 (도메인-agnostic 문구) 은 `drafts/sbs-micro-exp-meta-generalize-plan.md` `## deferred-sign` 섹션 보존.
+
+> **③ absorbed** — local-pool LLM 확장은 ②의 g75 본문 + ①의 local_pool_adapter 일반화에 자연 흡수 (kind 가 abstract 이므로 LLM bench · web smoke · build bench 모두 동일 contract).
+
+> **④ deferred to separate docs cycle** — meta-domain pattern docs (`docs/meta-domain-pattern.md` 또는 `plugins/domain/SKILL.md` 보강) 는 별도 docs 사이클로 분리.
+
+> **영향**:
+> - `skills/micro-exp/commands/micro-exp.md` (Stage 1.5 + decision tree + kind 추상화)
+> - `skills/micro-exp/SKILL.md` (mirror)
+> - `skills/cycle/SKILL.md` (decision tree mirror + @D micro_exp_handoff)
+> - `skills/micro-exp/.claude-plugin/plugin.json` → `0.4.0`
+> - `skills/cycle/.claude-plugin/plugin.json` → `0.9.2`
+> - `.claude-plugin/marketplace.json` 양쪽 entry sync
+> - `README.md` micro-exp + cycle 양쪽 row
+> - `CHANGELOG.md` top entry
+> - `drafts/sbs-micro-exp-meta-generalize-plan.md` (frontmatter + locked decisions + ## deferred-sign block with g75 proposal text + ## qa-results)
+
+---
+
 ## 2026-05-28 — sbs 0.6.0 자동 QA 4축 (handoff 끝 단계) (from user 2026-05-28) ✅
 
 > **트리거**: 사용자 — sbs 0.5.0 handoff 가 ship 까지는 자율 land 하지만, "정말 약속한대로 land 됐는가" 의 완료성 검증이 spec 에 없다. 4축은 사용자 명시 (functional·visible·conformance·regression). 핵심 의도: handoff 완성도 + regression 무회귀 1차 안전.

@@ -239,11 +239,17 @@ fn _ensure_paper_files(repo: string, slug: string) {
     if !_path_exists(lg) { _scaffold_paper_log(lg, slug) }
 }
 
+// Single PAPER/ root for all paper dirs — keeps repo root tidy.
+// Roster path is `./PAPER/<slug>` (cwd-relative from repo root).
+fn _paper_base() -> string { return "PAPER" }
+fn _paper_relpath(slug: string) -> string { return "./" + _paper_base() + "/" + slug }
+fn _paper_cwdpath(slug: string) -> string { return _paper_base() + "/" + slug }
+
 // register a freshly-scaffolded paper dir into PAPER.tape + drop PAPER.md/log.
 // Called from `_cmd_new` / `_cmd_sample` / `_cmd_monograph_init` so every paper
 // joins the roster automatically.
 fn _register_paper(repo: string, slug: string) {
-    _roster_append(repo, slug, "./" + slug)
+    _roster_append(repo, slug, _paper_relpath(slug))
     _ensure_paper_files(repo, slug)
 }
 
@@ -754,8 +760,9 @@ fn _cmd_new(root: string, slug: string) {
         eprintln("paper new: <slug> must be a simple name (no slashes / no leading dot)")
         exit(2)
     }
-    if _path_exists("./" + slug) {
-        eprintln("paper new: ./" + slug + " already exists — refusing to overwrite")
+    let dest = _paper_cwdpath(slug)
+    if _path_exists(dest) {
+        eprintln("paper new: " + dest + " already exists — refusing to overwrite")
         exit(2)
     }
     let template_dir = root + "/template"
@@ -763,16 +770,17 @@ fn _cmd_new(root: string, slug: string) {
         eprintln("paper new: template/ missing at " + template_dir)
         exit(1)
     }
-    let cp = exec_with_status("cp -R " + _shq(template_dir) + " " + _shq("./" + slug))
+    let _ = exec_with_status("mkdir -p " + _shq(_paper_base()))
+    let cp = exec_with_status("cp -R " + _shq(template_dir) + " " + _shq(dest))
     if cp[1] != 0 {
         eprintln("paper new: copy failed — " + _trim(to_string(cp[0])))
         exit(1)
     }
     _register_paper(_git_root(), slug)
-    println("[paper] scaffolded ./" + slug + "/ from template (+ PAPER.tape · PAPER.md · PAPER.log.md)")
+    println("[paper] scaffolded " + dest + "/ from template (+ PAPER.tape · PAPER.md · PAPER.log.md)")
     println("        edit main.tex (title · author · sections), references.bib, then `make`")
     println("        next: `/paper set " + slug + "` · `/paper goal <text>` · `/paper ms <text>`")
-    print(to_string(exec("ls -1 " + _shq("./" + slug))))
+    print(to_string(exec("ls -1 " + _shq(dest))))
 }
 
 // /paper sample [<sample-name>] [<dest-slug>] — copy a bundled sample.
@@ -802,19 +810,21 @@ fn _cmd_sample(root: string, args: array) {
         print(to_string(exec("ls -1 " + _shq(root + "/samples") + " 2>/dev/null")))
         exit(1)
     }
-    if _path_exists("./" + slug) {
-        eprintln("paper sample: ./" + slug + " already exists — refusing to overwrite")
+    let dest = _paper_cwdpath(slug)
+    if _path_exists(dest) {
+        eprintln("paper sample: " + dest + " already exists — refusing to overwrite")
         exit(2)
     }
-    let cp = exec_with_status("cp -R " + _shq(src) + " " + _shq("./" + slug))
+    let _ = exec_with_status("mkdir -p " + _shq(_paper_base()))
+    let cp = exec_with_status("cp -R " + _shq(src) + " " + _shq(dest))
     if cp[1] != 0 {
         eprintln("paper sample: copy failed — " + _trim(to_string(cp[0])))
         exit(1)
     }
     _register_paper(_git_root(), slug)
-    println("[paper] copied bundled '" + name + "' → ./" + slug + "/ (+ PAPER.tape · PAPER.md · PAPER.log.md)")
+    println("[paper] copied bundled '" + name + "' → " + dest + "/ (+ PAPER.tape · PAPER.md · PAPER.log.md)")
     println("        next: `/paper set " + slug + "` · `/paper goal <text>` · `/paper ms <text>`")
-    print(to_string(exec("ls -1 " + _shq("./" + slug))))
+    print(to_string(exec("ls -1 " + _shq(dest))))
 }
 
 fn _cmd_fig(root: string, args: array) {
@@ -1670,8 +1680,9 @@ fn _cmd_monograph_init(root: string, args: array) {
         let parsed = to_int(_trim(args[1]))
         if parsed >= 1 { n = parsed }
     }
-    if _path_exists("./" + slug) {
-        eprintln("paper monograph-init: ./" + slug + " already exists — refusing to overwrite")
+    let dest = _paper_cwdpath(slug)
+    if _path_exists(dest) {
+        eprintln("paper monograph-init: " + dest + " already exists — refusing to overwrite")
         exit(2)
     }
     let template_dir = root + "/template"
@@ -1679,20 +1690,21 @@ fn _cmd_monograph_init(root: string, args: array) {
         eprintln("paper monograph-init: template/ missing at " + template_dir)
         exit(1)
     }
+    let _0 = exec_with_status("mkdir -p " + _shq(_paper_base()))
     // 1. seed from template (gets main.tex · Makefile · references.bib · figures/ · companion/)
-    let cp = exec_with_status("cp -R " + _shq(template_dir) + " " + _shq("./" + slug))
+    let cp = exec_with_status("cp -R " + _shq(template_dir) + " " + _shq(dest))
     if cp[1] != 0 {
         eprintln("paper monograph-init: copy failed — " + _trim(to_string(cp[0])))
         exit(1)
     }
     // 2. appendix/ dir + N stub files
-    let _ = exec("mkdir -p " + _shq("./" + slug + "/appendix"))
+    let _ = exec("mkdir -p " + _shq(dest + "/appendix"))
     let mut inputs = ""
     let mut k = 0
     while k < n {
         let L = _ap_letter(k)
         let fname = L + "_appendix_" + to_string(k + 1)
-        let path = "./" + slug + "/appendix/" + fname + ".tex"
+        let path = dest + "/appendix/" + fname + ".tex"
         let body = "% Appendix " + L + " — TODO: title this appendix.\n"
             + "% Filled standalone, then \\input'd by main.tex (see \\appendix block).\n"
             + "% Compile check: `make` (the Makefile's APPENDIX wildcard picks this up).\n"
@@ -1711,7 +1723,7 @@ fn _cmd_monograph_init(root: string, args: array) {
         k = k + 1
     }
     // 3. wire \appendix block into main.tex (before \end{document})
-    let main_tex = "./" + slug + "/main.tex"
+    let main_tex = dest + "/main.tex"
     let block = "\n% =========================================================================\n"
         + "% MONOGRAPH APPENDICES (scaffolded by /paper monograph-init).\n"
         + "% Each \\input target is a self-contained chapter under appendix/.\n"
@@ -1727,7 +1739,7 @@ fn _cmd_monograph_init(root: string, args: array) {
         let _ = exec("printf '%s' " + _shq(block) + " >> " + _shq(main_tex))
     } else {
         // replace the marker with the real block (use a heredoc to a temp + sed-free swap)
-        let tmp = "./" + slug + "/.apx_block"
+        let tmp = dest + "/.apx_block"
         let _ = exec_with_status("cat > " + _shq(tmp) + " <<'PAPER_EOF'\n" + block + "PAPER_EOF")
         // python-free replacement: use awk to swap the marker line for the file contents
         let swap = "awk 'BEGIN{while((getline l < \"" + tmp + "\")>0) b=b l ORS} "
@@ -1742,13 +1754,13 @@ fn _cmd_monograph_init(root: string, args: array) {
         }
     }
     _register_paper(_git_root(), slug)
-    println("[paper] scaffolded monograph ./" + slug + "/ (" + to_string(n) + " appendices A.." + _ap_letter(n - 1) + ") — + PAPER.tape · PAPER.md · PAPER.log.md")
+    println("[paper] scaffolded monograph " + dest + "/ (" + to_string(n) + " appendices A.." + _ap_letter(n - 1) + ") — + PAPER.tape · PAPER.md · PAPER.log.md")
     println("        · main.tex   — template spine + \\appendix block wiring " + to_string(n) + " \\input files")
     println("        · appendix/  — " + to_string(n) + " stub .tex (each \\section + \\label + % TODO)")
     println("        · companion/ — verify-ledger · pr-roll · adapter-defect-catalog · session-journal · README")
     println("        seed reference: `/paper sample sample-fusion-7gate` (the §Full Pipeline pattern)")
     println("        next: `/paper fill A` for the per-appendix runbook · `make` to compile · `/paper lint " + slug + "`")
-    print(to_string(exec("ls -1 " + _shq("./" + slug) + " && echo '  appendix/:' && ls -1 " + _shq("./" + slug + "/appendix"))))
+    print(to_string(exec("ls -1 " + _shq(dest) + " && echo '  appendix/:' && ls -1 " + _shq(dest + "/appendix"))))
 }
 
 // /paper fill <appendix-letter> — print the fill runbook for one appendix.

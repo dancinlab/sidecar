@@ -12,12 +12,13 @@
 #   sidecar mirror      Refresh ~/.claude/commands/ mirrors so plugin commands are bare-invocable (`Skill("imagine")` instead of `Skill("imagine:imagine")`). Auto-runs at the tail of `sync`.
 #   sidecar shadow [plan]  Drop the forced `plugin:command` namespace (#15882): mirror+disable every command/skill plugin (hook/mcp kept), splicing SKILL.md triggers into the bare command so it stays lossless. `plan` = dry-run. Re-asserted at the tail of `sync`.
 #   sidecar unshadow    Revert shadow — re-enable the shadowed plugins (namespaced again) + remove created skill mirrors.
+#   sidecar paths       Show / add / remove path prefixes in the LOCAL-EXECUTION WHITELIST (~/.sidecar/local-paths). pool-route forces any Bash cmd whose argv contains a `/`-prefix matching a registered prefix to run LOCAL (skip pool routing). Sub-forms: `paths` = list · `paths add` = register cwd · `paths add <dir>` = register an absolute-resolved dir · `paths rm <prefix>` = remove. Seeded on first use with sidecar's own cache + repo paths.
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,15p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,16p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Mirror plugin commands to ~/.claude/commands/ so they're bare-invocable
@@ -357,6 +358,107 @@ TAPE
     echo "sidecar reset: $PLUG → follows the profile · applying…"
     apply_install
     ;;
+  paths)
+    # LOCAL-EXECUTION WHITELIST — path-prefix list. pool-route reads
+    # ~/.sidecar/local-paths and forces any Bash cmd whose argv contains a
+    # `/`-prefixed token starting with a registered prefix to run LOCAL
+    # (skip pool routing). The whitelist is ITSELF the opt-in — no env
+    # opt-out exists (project.tape @D s11).
+    #
+    # State file: ~/.sidecar/local-paths (line-based; `#` comments + blank
+    # lines tolerated and preserved on rm). Atomic writes via tmp + mv.
+    # Seeded on first call with sidecar's own cache + repo so the router
+    # never bounces sidecar's own hexa invocations.
+    PATHS_FILE="$HOME/.sidecar/local-paths"
+    mkdir -p "$HOME/.sidecar"
+    # Seed default prefixes when the file is ABSENT (not when empty — an
+    # explicit empty file means the user cleared it on purpose).
+    if [ ! -e "$PATHS_FILE" ]; then
+      tmp="${PATHS_FILE}.tmp.$$"
+      {
+        printf '%s\n' "$HOME/.claude/plugins/cache/sidecar/"
+        printf '%s\n' "$HOME/core/sidecar/"
+      } > "$tmp" && mv -f "$tmp" "$PATHS_FILE"
+    fi
+    SUB="${1:-}"
+    case "$SUB" in
+      ""|list|show)
+        n=0
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in
+            ""|\#*) continue ;;
+          esac
+          printf '%s\n' "$line"
+          n=$((n+1))
+        done < "$PATHS_FILE"
+        echo "sidecar paths: $n prefix(es) registered at $PATHS_FILE"
+        ;;
+      add)
+        ARG="${2:-}"
+        if [ -z "$ARG" ]; then
+          DIR="$(pwd)"
+        else
+          if [ ! -d "$ARG" ]; then
+            echo "sidecar paths: refused — '$ARG' is not an existing directory" >&2
+            exit 1
+          fi
+          DIR=$(CDPATH='' cd -- "$ARG" && pwd) || { echo "sidecar paths: refused — cannot resolve '$ARG' to an absolute path" >&2; exit 1; }
+        fi
+        # Canonical form: trailing slash so prefix-match is unambiguous.
+        case "$DIR" in
+          */) PREFIX="$DIR" ;;
+          *)  PREFIX="$DIR/" ;;
+        esac
+        # refuse if already present (exact-line match, comments/blanks skipped)
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in
+            ""|\#*) continue ;;
+          esac
+          if [ "$line" = "$PREFIX" ]; then
+            echo "sidecar paths: refused — '$PREFIX' already registered" >&2
+            exit 1
+          fi
+        done < "$PATHS_FILE"
+        tmp="${PATHS_FILE}.tmp.$$"
+        cp "$PATHS_FILE" "$tmp" && printf '%s\n' "$PREFIX" >> "$tmp" && mv -f "$tmp" "$PATHS_FILE"
+        echo "sidecar paths: + $PREFIX"
+        ;;
+      rm|remove|del|delete)
+        ARG="${2:-}"
+        if [ -z "$ARG" ]; then
+          echo "usage: sidecar paths rm <prefix>" >&2
+          exit 1
+        fi
+        # exact-line match (skip comments/blanks for the find — but preserve them on write)
+        found=0
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in
+            ""|\#*) continue ;;
+          esac
+          if [ "$line" = "$ARG" ]; then
+            found=1
+            break
+          fi
+        done < "$PATHS_FILE"
+        if [ "$found" -eq 0 ]; then
+          echo "sidecar paths: refused — '$ARG' not registered (use 'sidecar paths' to list)" >&2
+          exit 1
+        fi
+        tmp="${PATHS_FILE}.tmp.$$"
+        : > "$tmp"
+        while IFS= read -r line || [ -n "$line" ]; do
+          if [ "$line" = "$ARG" ]; then continue; fi
+          printf '%s\n' "$line" >> "$tmp"
+        done < "$PATHS_FILE"
+        mv -f "$tmp" "$PATHS_FILE"
+        echo "sidecar paths: - $ARG"
+        ;;
+      *)
+        echo "usage: sidecar paths [list | add [<dir>] | rm <prefix>]" >&2
+        exit 1
+        ;;
+    esac
+    ;;
   master)
     # creator-only marker. master-tier plugins enable ONLY while ~/.sidecar/master
     # exists (install.hexa gate). on = mint marker · off = remove · status = show.
@@ -371,7 +473,7 @@ TAPE
     ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · master" >&2
+    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · master" >&2
     exit 1
     ;;
 esac

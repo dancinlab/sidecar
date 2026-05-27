@@ -614,6 +614,47 @@ fn _is_synced_workdir_path(p: string) -> bool {
     return false
 }
 
+// `_has_whitelisted_local_path(av)` — 0.10.0 sidecar path-prefix whitelist
+// (~/.sidecar/local-paths · USER-managed via `sidecar paths {bare|add|rm}`):
+// scan ALL argv tokens for any `/`-prefixed absolute path that STARTS WITH
+// a registered prefix line. Hit → force LOCAL (skip routing). This is the
+// permanent counterpart to the runtime `sign-local` token: the user
+// declares "anything under these prefixes runs HERE, never the pool",
+// which fixes sidecar's own hexa hooks/commands bouncing into the pool +
+// any user-declared local-only workspace. The whitelist itself IS the
+// opt-in — there is no env opt-out (project.tape @D s11). Missing file =
+// empty whitelist (no-op, no fail-closed). Blank + `#` comment lines are
+// skipped. Read once per invocation (typically 2-10 lines, no cache).
+// Returns the matched prefix for the routing-decision log, or "" on miss.
+fn _whitelisted_path_match(av: array) -> string {
+    let home = _env("HOME")
+    if home == "" { return "" }
+    let path = home + "/.sidecar/local-paths"
+    if !file_exists(path) { return "" }
+    let mut raw = ""
+    try { raw = read_file(path) } catch e { return "" }
+    if raw == "" { return "" }
+    let lines = raw.split("\n")
+    let mut i = 0
+    while i < len(av) {
+        let t = av[i]
+        if len(t) > 0 && t.substring(0, 1) == "/" {
+            let mut j = 0
+            while j < len(lines) {
+                let ln = lines[j].trim()
+                if ln != "" {
+                    if ln.substring(0, 1) != "#" {
+                        if t.starts_with(ln) { return ln }
+                    }
+                }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+    return ""
+}
+
 // `_is_data_input_flag(name)` — is `name` one of the canonical data-INPUT flags
 // whose VALUE is a path to local-only training/eval/corpus/weights data? A hexa
 // command carrying one of these, pointing at a NON-synced path, depends on data
@@ -927,6 +968,23 @@ fn main() {
             if t0i == intro_list[ii] { _allow_count("local_bound") }
             ii = ii + 1
         }
+    }
+
+    // 0.10.0 — sidecar path-prefix whitelist (~/.sidecar/local-paths,
+    // USER-managed via `sidecar paths {bare|add|rm}`). The PERMANENT
+    // counterpart to the runtime `sign-local` token (which is one-shot
+    // 30-min): a registered prefix forces LOCAL for any Bash cmd whose
+    // argv contains a `/`-prefixed token starting with that prefix.
+    // Closes the recurring fail mode where sidecar's own hexa hooks at
+    // `$HOME/.claude/plugins/cache/sidecar/...` got bounced to the pool
+    // (the cache only exists on the workstation). The whitelist itself
+    // IS the opt-in — no env opt-out (project.tape @D s11). Sits
+    // alongside the other STRUCTURAL local-exemptions (host-introspection,
+    // dotstate, etc); the heavy classifier never sees these.
+    let _wl_match = _whitelisted_path_match(early_toks)
+    if _wl_match != "" {
+        println("pool-route: local (sidecar path whitelist · prefix=" + _wl_match + ")")
+        _allow_count("local_bound")
     }
 
     let home = _env("HOME")

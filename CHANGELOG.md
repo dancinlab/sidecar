@@ -6,6 +6,34 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — pool-route 0.10.0 + sidecar 0.6.0: 사이드카 path-prefix 화이트리스트
+
+사용자 — "사이드카 hexa들은 전부 화이트리스트 등록" → chat-form `/sbs full` 4-축 합의 후 land (Q1=ALL argv scan · Q2=`~/.sidecar/local-paths` plain text · Q3=`sidecar paths` CLI · Q4=default seed = cache + repo). pool-route 가 영구적으로 sidecar 자기 hexa 호출을 안 라우팅하도록 만드는 신규 LOCAL-EXECUTION 레이어.
+
+- **`hooks/pool-route/` 0.9.3 → 0.10.0** — sidecar PATH-PREFIX 화이트리스트 신규 레이어:
+  - `_has_whitelisted_local_path(av)` 헬퍼 추가 — 모든 argv 토큰을 스캔해 `/`-prefix abs path 가 등록된 prefix 중 하나로 시작하면 매치
+  - 라우팅 결정 순서에서 host-introspection 다음, 호스트 roster 읽기 직전에 배치 (기타 structural local-exemption 들과 같은 레이어)
+  - SSOT: `~/.sidecar/local-paths` (line-based plain text · USER 가 `sidecar paths` CLI 로 관리)
+  - 빈/없는 파일 tolerated (no fail-closed) · 호출당 1회 읽기 (2-10줄 평균, 캐시 불필요) · 빈줄 + `#` 코멘트 스킵
+  - 히트 시 한 줄 로그: `pool-route: local (sidecar path whitelist · prefix=<matched>)`
+  - 영구 카운터파트 (sign-local 은 1회 30min · 화이트리스트는 영구 · TTL 없음)
+  - 화이트리스트 자체가 opt-in · env 우회 없음 (@D s11)
+
+- **`commands/sidecar/` 0.5.0 → 0.6.0** + **`bin/sidecar` 신규 `paths` 동사**:
+  - `sidecar paths` (= list/show) — 등록된 prefix 줄별 출력 + 개수
+  - `sidecar paths add` — `$(pwd)` 등록 (이미 있으면 거부)
+  - `sidecar paths add <dir>` — abs-resolved dir prefix 등록 (`cd <dir> && pwd` 정규화 · trailing `/` 부여 · 존재안함/중복 거부 · exit 1)
+  - `sidecar paths rm <prefix>` — exact-line 매치 한 줄 삭제 (없으면 거부 · exit 1)
+  - 첫 호출 시 (파일 부재) 시드 2줄: `~/.claude/plugins/cache/sidecar/` + `~/core/sidecar/` (`$HOME` 런타임 해석 · 하드코딩 X · 빈 파일이면 시드 안 함 — 명시적 빈 상태 존중)
+  - 원자 write (tmp+mv `rename(2)` 패턴 · 비관련 줄/코멘트 보존)
+  - 도움말 + 알 수 없는 verb 목록에 `paths` 추가
+
+- **검증** — 모두 PASS:
+  - `hexa parse hooks/pool-route/bin/_pool_route.hexa` ✅ clean
+  - `bash -n bin/sidecar` ✅ clean
+  - CLI 스모크 8케이스 (first-call seed + list, add /tmp, list, rm /tmp/, list, refuse non-existent, refuse already-present, refuse rm-not-found) ✅
+  - pool-route 스모크 3케이스 (whitelist hit → local · 비매치 + abs-path hexa → 기존 sign-gate deny 유지 · 파일 없을 때 → 정상 fallthrough) ✅
+
 ## 2026-05-28 — 3-track 사이클: step-by-step 0.4.0 (FULL chat-form + 합의 화면) · paper 0.11.0 (3 verb fix) · INBOX archive split
 
 사용자 — "추가 inbox 내용 있나" → "어라 sbs 개선사항 들어왔을텐데" + INBOX false-positive filter 추적. 3-track 동시 진행 + INBOX 25→20 archive split로 soft cap 해소.

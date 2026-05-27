@@ -32,6 +32,43 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-28 — pool-route path-whitelist + sidecar paths CLI (from user) ✅
+
+**해소** (pool-route 0.9.3 → 0.10.0 + commands/sidecar 0.5.0 → 0.6.0 + bin/sidecar `paths` 동사 신규).
+
+> **사건**: 사용자 요청 — "사이드카 hexa들은 전부 화이트리스트 등록". sidecar 자기 hexa 호출 (e.g. `~/.claude/plugins/cache/sidecar/<plugin>/<v>/bin/_*.hexa`) 가 pool-route 의 hexa-POOL-DISPATCH 화이트리스트에 잡혀서 pool 로 라우팅 시도 → cache 는 워크스테이션에만 있어 모든 호스트 preflight 실패 → deny. 영구 force-local 경로 필요.
+
+> **chat-form `/sbs full` 4축 합의 (잠금)**:
+> ```
+> ┌─ Q1: matching trigger     → ✅ B (모든 argv 토큰 스캔 · `/`-prefix abs path 토큰)
+> ├─ Q2: SSOT 위치/포맷       → ✅ A (~/.sidecar/local-paths · line-based plain text)
+> ├─ Q3: 관리 CLI             → ✅ A (`sidecar paths {bare|add|rm|list}`)
+> └─ Q4: 디폴트 시드          → ✅ A (~/.claude/plugins/cache/sidecar/ + ~/core/sidecar/)
+> ```
+
+**구현 (atomic 1-커밋)**:
+- `hooks/pool-route/bin/_pool_route.hexa`: `_whitelisted_path_match(av)` 헬퍼 (모든 argv 토큰 스캔 · `/`-prefix + line.starts_with → 매치된 prefix 반환 · 빈/없는 파일 tolerated · `#`/blank 스킵) + 라우팅 결정에서 host-introspection 다음, 호스트 roster 읽기 직전에 콜사이트 (기타 structural local-exemption 들과 같은 레이어). 히트 시 `pool-route: local (sidecar path whitelist · prefix=<matched>)` 한 줄 로그 + `_allow_count("local_bound")`.
+- `bin/sidecar`: `paths` 동사 신규. SSOT 부재 시 (`~/.sidecar/local-paths`) 디폴트 2줄 시드 (`$HOME` 런타임 해석); 빈 파일이면 시드 안 함 (명시적 빈 상태 존중). `add` 는 cwd / abs-resolved dir (`cd && pwd` 정규화 + trailing `/`). 모든 write 는 tmp+`mv -f` 원자 패턴 (rename(2)) · `#`/blank 줄 보존. `add` 비존재 dir / 중복 prefix → exit 1. `rm` 미등록 prefix → exit 1.
+- `commands/sidecar/.claude-plugin/plugin.json` 0.5.0 → 0.6.0 + description 에 `paths` 동사 4줄 추가.
+- `commands/sidecar/commands/sidecar.md` description + argument-hint 동기.
+- `hooks/pool-route/.claude-plugin/plugin.json` 0.9.3 → 0.10.0 + description 앞쪽에 SIDECAR PATH-PREFIX WHITELIST 단락 추가.
+- 마켓플레이스 (`.claude-plugin/marketplace.json`) sidecar + pool-route 둘 다 동일 버전/description 동기.
+- README.md sidecar + pool-route 행 갱신.
+- CHANGELOG.md 2026-05-28 신규 섹션 (한국어).
+
+**설계 결정 / 트레이드오프**:
+- "영구 vs 토큰" → 영구 (sign-local 의 1회 30min 카운터파트). TTL 없음. 사용자가 명시적으로 `paths rm` 해야 삭제.
+- "env 우회 없음" — 화이트리스트 자체가 opt-in 메커니즘이므로 별도 escape-hatch 변수 없음 (commons s11).
+- 파일 읽기 캐시 안 함 — 평균 2-10줄, 호출당 1회면 충분히 cheap.
+- argv 스캔 = ALL 토큰 (B 옵션) — first-token 만 보면 wrapper/env-prefix 후 실제 hexa 호출의 인자 경로를 놓침.
+- seed 는 file ABSENT 일 때만; file EMPTY 면 시드 안 함 — 사용자가 명시적으로 비웠다면 존중.
+
+**검증**:
+- `hexa parse hooks/pool-route/bin/_pool_route.hexa` ✅
+- `bash -n bin/sidecar` ✅
+- CLI 스모크 8케이스 ALL PASS (first-call seed → list 2, add /tmp, list 3, rm /tmp/, list 2, refuse non-existent dir exit 1, refuse duplicate exit 1, refuse rm-not-found exit 1)
+- pool-route 스모크 3케이스 ALL PASS (whitelist hit → "pool-route: local (sidecar path whitelist · prefix=/tmp/)" + exit 0 · 비매치 hexa abs-path → 기존 sign-gate deny 유지 · 파일 없을 때 → 정상 fallthrough)
+
 ## 2026-05-27 — /sbs (commands/step-by-step) FULL mode: chat+analogy 1Q + final "이거 맞아요?" ASCII confirm (UX 제안) ✅
 
 **해소** (commands/step-by-step 0.4.0): FULL 자체가 chat-form으로 전환 (별도 sub-mode 토큰 X · 사용자 정정 반영). 한 라운드 = ONE 채팅 질문, easy-mode 7-요소 scaffold (아이콘·이름·별칭·평이·비유·ASCII·비교표·추천 + `→ A · B · 또는 자유응답`). 라운드 종료 후 `🎯 합의된 결정셋 (N개)` ASCII tree pause — user `go` / `Qn=<X>` 수정. mid-run new ambiguity도 chat 라운드 + 재합의 후 resume. Fallback: 사용자가 selectbox 원하면 그 1라운드만 AskUserQuestion. step-by-step.md + sbs.md 동기.

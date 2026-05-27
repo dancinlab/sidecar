@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.2.0: 자율 contract — queue status taxonomy + blocked:auto-resolve (no "awaiting-approval")
+
+🔧 demiurge RTSC 세션 라이브 교훈 — wave-3 잔여 4 candidate 를 "발사 대기 backlog" 로 프레이밍 → 사용자 "발사대기는 뭐지? 자율 아냐?" 지적. 실제 차단은 user 게이트가 아니라 H-cage 좌표 미확보(기술적 d6 halt). 자율 원칙(d17/d20)대로면 좌표를 자율 조사 후 발사해야 함. /system 0.2.0 이 이 anti-pattern 을 명령어에 못박음.
+
+- **candidate status taxonomy (autonomy contract)** — `queued` (ready → **auto-fires**) · `blocked:<technical>` (missing coord/data/pseudo/dep → **auto-resolves** via arxiv/fetch/build then fires, NOT a wait) · `fired` · `done` · `gated:<human-only>` (credential · irreversible · design decision = **유일하게 human 대기**, rare). 일반 candidate 에 "awaiting-approval" 상태는 의도적으로 부재.
+- **`next` loop 의 step 2 강화** — `blocked:<technical>` → AUTO-RESOLVE-then-fire (좌표 미확보 → /research:arxiv · 입력파일 → fetch/build · pseudo → wget). 정직 해소 시도 실패 시에만 logged skip (d6 — missing input hallucinate 금지).
+- **autonomy invariant 명문화** — "queued/blocked NEVER means 'waiting for user go'". 기술적-해소가능 candidate 를 "발사 대기/awaiting approval" 로 재프레이밍 = /system 이 제거하는 바로 그 anti-pattern.
+- SKILL.md + commands/system.md 양쪽 + plugin/marketplace 0.1.0→0.2.0.
+
+---
+
 ## 2026-05-28 — system 0.1.0 (NEW): /system 캠페인 관제탑 — domain-agnostic mission control
 
 🛰 demiurge RTSC DFT 캠페인 세션에서 수동으로 반복하던 패턴(전체 잡 sweep → 통합 대시보드 → event-driven watcher → terminal harvest → verdict → 자동 재발사 → 예산 추적)을 하나의 재사용 plugin 으로 승격. 사용자 directive "이걸 하나의 system 으로 · /system 명령어 · 범용 · demiurge 한정말고".

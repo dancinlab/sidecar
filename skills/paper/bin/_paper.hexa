@@ -1,13 +1,19 @@
 // _paper.hexa — arxiv-style LaTeX paper scaffolder (paper plugin).
 //
-// Verbs: new <slug> | sample <slug> | fig <size> <prompt> <out.png>
-//      | compile [dir] | list | help
+// Verbs (0.10 PAPER.tape roster):
+//   list [--sync] | set <slug> | show [<slug>]
+//   goal <text> | title <text> | ms <text> | done <match> | todo <text>
+//   new <slug> | sample <name> [<dest>] | samples (= old `list`)
+//   fig <size> <prompt> <out.png> | compile [dir] | lint [dir]
+//   companion {init|sync} | monograph-init <slug> [N] | fill <letter>
+//   outline [dir] | pipeline ... | atoms <domain> | verify-block ...
+//   bib add <id> | pr-roll <repo> <since> | arxiv-prep [<dir>] | help
 //
-//   new      copies template/ -> ./<slug>/
-//   sample   copies samples/sample-nb-bcs-absorbed/ verbatim -> ./<slug>/
-//   fig      delegates to the sister `imagine` plugin (fal.ai gpt-image-2)
-//   compile  runs pdflatex x 3 + bibtex in [dir] (default cwd)
-//   list     lists bundled samples
+// PAPER.tape (repo root) is the roster — `@paper <slug> := "<relpath>"` rows
+// map a paper slug to its dir. Each paper dir carries a sister PAPER.md
+// (snapshot = `@title:` · `@goal:` · `- [ ]` milestones) + PAPER.log.md
+// (append-only log). Progress / title are read LIVE from PAPER.md — the
+// roster never churns on a milestone flip. Mirrors the DOMAINS.tape pattern.
 //
 // usage: hexa run _paper.hexa --root <plugin-root> <verb> [args...]
 //
@@ -83,21 +89,625 @@ fn _bad_slug(slug: string) -> bool {
     return false
 }
 
-fn _usage() {
-    println("paper — arxiv-style LaTeX paper scaffolder (v0.9 — monograph mode)")
+// ═══════════════════════════════════════════════════════════════════
+// PAPER.tape roster — slug → dir map (mirrors DOMAINS.tape pattern).
+// Progress / title stay DERIVED from each paper's PAPER.md so the
+// checked-in roster never churns on a milestone flip.
+// ═══════════════════════════════════════════════════════════════════
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _ends_with(s: string, suf: string) -> bool {
+    if len(suf) > len(s) { return false }
+    return s.substring(len(s) - len(suf), len(s)) == suf
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _git_root() -> string {
+    let r = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+    if r[1] == 0 {
+        let t = _trim(to_string(r[0]))
+        if t != "" { return t }
+    }
+    return _trim(to_string(exec("pwd")))
+}
+
+fn _iso_ts() -> string {
+    return _trim(to_string(exec("date -u +%Y-%m-%dT%H:%M")))
+}
+
+// resolve a roster relpath to absolute: leading `/` = absolute; strip `./`;
+// otherwise prefix the repo root.
+fn _abs(repo: string, p: string) -> string {
+    if _starts_with(p, "/") { return p }
+    let mut q = p
+    if _starts_with(q, "./") { q = q.substring(2, len(q)) }
+    return repo + "/" + q
+}
+
+// ─── roster I/O ──────────────────────────────────────────────────
+fn _roster_path(repo: string) -> string {
+    return repo + "/PAPER.tape"
+}
+
+// parse PAPER.tape into [[slug, relpath], ...]; `@paper <slug> := "<path>"`.
+fn _roster_entries(repo: string) -> array {
+    let body = _read_file_safe(_roster_path(repo))
+    let mut out = []
+    if body == "" { return out }
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let ln = _trim(lines[i])
+        i = i + 1
+        if !_starts_with(ln, "@paper ") { continue }
+        let rest = _trim(ln.substring(7, len(ln)))
+        let sp = rest.index_of(" ")
+        let slug = if sp < 0 { rest } else { rest.substring(0, sp) }
+        let q1 = ln.index_of("\"")
+        if q1 < 0 { continue }
+        let after = ln.substring(q1 + 1, len(ln))
+        let q2 = after.index_of("\"")
+        if q2 < 0 { continue }
+        let path = after.substring(0, q2)
+        if slug != "" && path != "" { out.push([slug, path]) }
+    }
+    return out
+}
+
+fn _roster_lookup(repo: string, slug: string) -> string {
+    let es = _roster_entries(repo)
+    let mut i = 0
+    while i < len(es) {
+        if es[i][0] == slug { return es[i][1] }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _roster_has(repo: string, slug: string) -> bool {
+    return _roster_lookup(repo, slug) != ""
+}
+
+fn _roster_append(repo: string, slug: string, relpath: string) {
+    if _roster_has(repo, slug) { return }
+    let rp = _roster_path(repo)
+    let mut body = _read_file_safe(rp)
+    if body == "" {
+        body = "# PAPER.tape — paper roster (slug → dir; progress/title stay derived, not stored here)\n@V := \"papers\" :: index\n\n"
+    } else {
+        if body.substring(len(body) - 1, len(body)) != "\n" { body = body + "\n" }
+    }
+    write_file(rp, body + "@paper " + slug + " := \"" + relpath + "\"\n")
+}
+
+// ─── PAPER.md / PAPER.log.md path resolution ─────────────────────
+// roster path wins (paper can live at any relpath); else fall back to
+// `<repo>/<slug>/PAPER.md` so a slug just-scaffolded by `new`/`sample`
+// resolves correctly before the roster row is written.
+fn _paper_dir(repo: string, slug: string) -> string {
+    let rp = _roster_lookup(repo, slug)
+    if rp == "" { return repo + "/" + slug }
+    return _abs(repo, rp)
+}
+
+fn _paper_md(repo: string, slug: string) -> string {
+    return _paper_dir(repo, slug) + "/PAPER.md"
+}
+
+fn _paper_log(repo: string, slug: string) -> string {
+    return _paper_dir(repo, slug) + "/PAPER.log.md"
+}
+
+fn _scaffold_paper_md(path: string, slug: string) {
+    let body = "# " + slug + " — paper status\n"
+        + "\n"
+        + "@title: 📄 " + slug + "\n"
+        + "@goal: TODO — declare paper goal in one line (one outcome, one sentence)\n"
+        + "\n"
+        + "- [ ] draft v1\n"
+        + "- [ ] figures complete (≥1 fal.ai-generated)\n"
+        + "- [ ] references ≥10 (`/paper bib add <doi-or-arxiv>`)\n"
+        + "- [ ] lint pass (`/paper lint .`)\n"
+        + "- [ ] compile clean (`/paper compile .`)\n"
+        + "- [ ] arxiv submit ready (`/paper arxiv-prep .`)\n"
+    write_file(path, body)
+}
+
+fn _scaffold_paper_log(path: string, slug: string) {
+    let body = "# " + slug + " — paper log\n"
+        + "\n"
+        + "Append-only history sister of `PAPER.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.\n"
+        + "\n"
+    write_file(path, body)
+}
+
+fn _ensure_paper_files(repo: string, slug: string) {
+    let md = _paper_md(repo, slug)
+    let lg = _paper_log(repo, slug)
+    let _ = exec_with_status("mkdir -p " + _shq(_dirname(md)))
+    if !_path_exists(md) { _scaffold_paper_md(md, slug) }
+    if !_path_exists(lg) { _scaffold_paper_log(lg, slug) }
+}
+
+// register a freshly-scaffolded paper dir into PAPER.tape + drop PAPER.md/log.
+// Called from `_cmd_new` / `_cmd_sample` / `_cmd_monograph_init` so every paper
+// joins the roster automatically.
+fn _register_paper(repo: string, slug: string) {
+    _roster_append(repo, slug, "./" + slug)
+    _ensure_paper_files(repo, slug)
+}
+
+// ─── active paper store (~/.claude/paper-active.tsv) ─────────────
+// One `<repo>\t<sid>\t<slug>` line per (repo × session). New session
+// inherits the repo's last-set paper (most-recent row for the repo).
+fn _session_id() -> string {
+    let cid = env_var("CLAUDE_CODE_SESSION_ID")
+    if cid != "" { return cid }
+    let r = exec_with_status("tty 2>/dev/null")
+    if r[1] == 0 {
+        let t = _trim(to_string(r[0]))
+        if t != "" { return t }
+    }
+    return "NOTTY"
+}
+
+fn _active_store() -> string {
+    let home = env_var("HOME")
+    if home == "" { return ".paper-active.tsv" }
+    return home + "/.claude/paper-active.tsv"
+}
+
+fn _active_key(repo: string) -> string {
+    return repo + "\t" + _session_id()
+}
+
+fn _set_active(repo: string, slug: string) {
+    let path = _active_store()
+    let home = env_var("HOME")
+    if home != "" { let _ = exec_with_status("mkdir -p " + _shq(home + "/.claude")) }
+    let body = _read_file_safe(path)
+    let lines = body.split("\n")
+    let key = _active_key(repo)
+    let pfx = key + "\t"
+    let mut out = []
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if ln == "" { i = i + 1; continue }
+        if _starts_with(ln, pfx) { i = i + 1; continue }
+        out.push(ln)
+        i = i + 1
+    }
+    out.push(pfx + slug)
+    try { write_file(path, out.join("\n") + "\n") } catch e { }
+}
+
+fn _get_active(repo: string) -> string {
+    let body = _read_file_safe(_active_store())
+    let lines = body.split("\n")
+    let exact = _active_key(repo) + "\t"
+    let rootpfx = repo + "\t"
+    let mut fallback = ""
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, exact) { return ln.substring(len(exact), len(ln)) }
+        if _starts_with(ln, rootpfx) {
+            let rest = ln.substring(len(rootpfx), len(ln))
+            let tab = rest.index_of("\t")
+            if tab >= 0 { fallback = rest.substring(tab + 1, len(rest)) }
+        }
+        i = i + 1
+    }
+    return fallback
+}
+
+// ─── PAPER.md derived metrics + mutators ─────────────────────────
+fn _count_tasks(repo: string, slug: string) -> array {
+    let body = _read_file_safe(_paper_md(repo, slug))
+    let lines = body.split("\n")
+    let mut done = 0
+    let mut todo = 0
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [x] ") { done = done + 1 }
+        else if _starts_with(ln, "- [ ] ") { todo = todo + 1 }
+        i = i + 1
+    }
+    return [done, todo]
+}
+
+fn _progress_bar(done: int, total: int) -> string {
+    if total == 0 { return "░░░░░░░░░░ 0% · 0/0 (no milestones yet — /paper ms <text>)" }
+    let pct = (done * 100) / total
+    let filled = (done * 10) / total
+    let mut bar = ""
+    let mut i = 0
+    while i < 10 {
+        if i < filled { bar = bar + "▓" } else { bar = bar + "░" }
+        i = i + 1
+    }
+    return bar + " " + to_string(pct) + "% · " + to_string(done) + "/" + to_string(total)
+}
+
+fn _get_goal(repo: string, slug: string) -> string {
+    let body = _read_file_safe(_paper_md(repo, slug))
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@goal:") {
+            return _trim(lines[i].substring(6, len(lines[i])))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _get_title(repo: string, slug: string) -> string {
+    let body = _read_file_safe(_paper_md(repo, slug))
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@title:") {
+            return _trim(lines[i].substring(7, len(lines[i])))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _set_goal(repo: string, slug: string, text: string) {
+    _ensure_paper_files(repo, slug)
+    let md = _paper_md(repo, slug)
+    let body = _read_file_safe(md)
+    let lines = body.split("\n")
+    let mut out = []
+    let mut placed = false
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "@goal:") {
+            if !placed { out.push("@goal: " + text); placed = true }
+        } else {
+            out.push(ln)
+            if !placed && _starts_with(ln, "# ") {
+                out.push("")
+                out.push("@goal: " + text)
+                placed = true
+            }
+        }
+        i = i + 1
+    }
+    if !placed { out.push("@goal: " + text) }
+    write_file(md, out.join("\n"))
+}
+
+fn _set_title(repo: string, slug: string, text: string) {
+    _ensure_paper_files(repo, slug)
+    let md = _paper_md(repo, slug)
+    let body = _read_file_safe(md)
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        if _starts_with(lines[i], "@title:") {
+            lines[i] = "@title: " + text
+            write_file(md, lines.join("\n"))
+            return
+        }
+        i = i + 1
+    }
+    let mut out = []
+    let mut placed = false
+    i = 0
+    while i < len(lines) {
+        out.push(lines[i])
+        if !placed && _starts_with(lines[i], "# ") {
+            out.push("@title: " + text)
+            placed = true
+        }
+        i = i + 1
+    }
+    if !placed { out.push("@title: " + text) }
+    write_file(md, out.join("\n"))
+}
+
+fn _append_milestone(repo: string, slug: string, text: string) {
+    _ensure_paper_files(repo, slug)
+    let md = _paper_md(repo, slug)
+    let body = _read_file_safe(md)
+    let mut sep = "\n"
+    if len(body) > 0 && body.substring(len(body) - 1, len(body)) == "\n" { sep = "" }
+    write_file(md, body + sep + "- [ ] " + text + "\n")
+}
+
+// flip a snapshot milestone `- [ ] <term>` -> `- [x]`. Substring match;
+// 2+ open hits → list candidates + exit 1 (force a more specific term).
+fn _flip_done(repo: string, slug: string, term: string) -> bool {
+    _ensure_paper_files(repo, slug)
+    let md = _paper_md(repo, slug)
+    let body = _read_file_safe(md)
+    let lines = body.split("\n")
+    let mut opens = []
+    let mut closes = []
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [ ] ") && ln.index_of(term) >= 0 { opens.push(i) }
+        else if _starts_with(ln, "- [x] ") && ln.index_of(term) >= 0 { closes.push(i) }
+        i = i + 1
+    }
+    if len(opens) == 1 {
+        let idx = opens[0]
+        let old = lines[idx]
+        lines[idx] = "- [x] " + old.substring(6, len(old))
+        write_file(md, lines.join("\n"))
+        return true
+    }
+    if len(opens) >= 2 {
+        eprintln("paper: ambiguous — '" + term + "' matches " + to_string(len(opens)) + " open milestones in PAPER.md:")
+        let mut j = 0
+        while j < len(opens) {
+            eprintln("  " + lines[opens[j]])
+            j = j + 1
+        }
+        eprintln("hint: use a longer / more specific term")
+        exit(1)
+    }
+    if len(closes) > 0 {
+        eprintln("paper: '" + term + "' already closed in PAPER.md:")
+        let mut j = 0
+        while j < len(closes) {
+            eprintln("  " + lines[closes[j]])
+            j = j + 1
+        }
+    }
+    return false
+}
+
+fn _append_todo(repo: string, slug: string, text: string) {
+    _ensure_paper_files(repo, slug)
+    let lg = _paper_log(repo, slug)
+    let ts = _iso_ts()
+    let body = _read_file_safe(lg)
+    write_file(lg, body + "\n## " + ts + " — log\n\n- [ ] " + text + "\n")
+}
+
+// ─── disk scan (for list --sync) ─────────────────────────────────
+fn _disk_papers(repo: string) -> array {
+    let raw = to_string(exec("find " + _shq(repo) + " -maxdepth 3 -name PAPER.md -not -path '*/node_modules/*' 2>/dev/null | sort"))
+    let lines = raw.split("\n")
+    let pfx = repo + "/"
+    let mut out = []
+    let mut i = 0
+    while i < len(lines) {
+        let p = _trim(lines[i])
+        i = i + 1
+        if p == "" { continue }
+        let mut rel = p
+        if _starts_with(p, pfx) { rel = p.substring(len(pfx), len(p)) }
+        if _ends_with(rel, "/PAPER.md") {
+            let dir = rel.substring(0, len(rel) - 9)
+            let slug = _basename(dir)
+            if slug != "" { out.push([slug, "./" + dir]) }
+        }
+    }
+    return out
+}
+
+// ─── list rendering ──────────────────────────────────────────────
+fn _rpad(s: string, w: int) -> string {
+    let mut out = s
+    while len(out) < w { out = out + " " }
+    return out
+}
+
+fn _lpad3(n: int) -> string {
+    let mut s = to_string(n)
+    while len(s) < 3 { s = " " + s }
+    return s
+}
+
+fn _bar_compact(done: int, total: int) -> string {
+    let mut pct = 0
+    let mut filled = 0
+    if total > 0 {
+        pct = (done * 100) / total
+        filled = (done * 10) / total
+    }
+    let mut bar = ""
+    let mut i = 0
+    while i < 10 {
+        if i < filled { bar = bar + "▓" } else { bar = bar + "░" }
+        i = i + 1
+    }
+    return bar + " " + _lpad3(pct) + "%"
+}
+
+fn _truncate(s: string, max: int) -> string {
+    if len(s) <= max { return s }
+    let mut cut = max
+    while cut > 0 {
+        let b = char_code(s, cut)
+        if b < 128 || b >= 192 { break }
+        cut = cut - 1
+    }
+    return s.substring(0, cut) + "…"
+}
+
+fn _list_row(repo: string, slug: string, relpath: string, active: string) -> int {
+    let mark = if slug == active { "★ " } else { "  " }
+    let md = _abs(repo, relpath) + "/PAPER.md"
+    if !_path_exists(md) {
+        println(mark + _rpad(slug, 22) + "  👻 PAPER.md 없음 → " + relpath)
+        return 1
+    }
+    let body = _read_file_safe(md)
+    let lines = body.split("\n")
+    let mut done = 0
+    let mut todo = 0
+    let mut title = ""
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [x] ") { done = done + 1 }
+        else if _starts_with(ln, "- [ ] ") { todo = todo + 1 }
+        else if title == "" && _starts_with(ln, "@title:") { title = _trim(ln.substring(7, len(ln))) }
+        i = i + 1
+    }
+    let tail = if title != "" { _truncate(title, 50) } else { "(no @title)" }
+    println(mark + _rpad(slug, 22) + " " + _bar_compact(done, done + todo) + "  " + _rpad(relpath, 24) + " " + tail)
+    return 0
+}
+
+fn _cmd_paper_list(repo: string) {
+    let active = _get_active(repo)
+    let es = _roster_entries(repo)
+    let total = len(es)
+    if total == 0 {
+        let disk = _disk_papers(repo)
+        if len(disk) == 0 {
+            println("◆ paper roster 비어있음 — `/paper new <slug>` · `/paper sample <name>` · `/paper monograph-init <slug>` 로 시작")
+            return
+        }
+        println("◆ PAPER.tape 없음 · 디스크엔 " + to_string(len(disk)) + "개 PAPER.md")
+        eprintln("ℹ `/paper list --sync` 로 호적부 부트스트랩")
+        return
+    }
+    println("◆ papers: " + to_string(total) + "개  (★ = 활성 · PAPER.tape)")
     println("")
-    println("usage:")
+    let mut ghosts = 0
+    let mut j = 0
+    while j < total {
+        if es[j][0] == active { ghosts = ghosts + _list_row(repo, es[j][0], es[j][1], active) }
+        j = j + 1
+    }
+    j = 0
+    while j < total {
+        if es[j][0] != active { ghosts = ghosts + _list_row(repo, es[j][0], es[j][1], active) }
+        j = j + 1
+    }
+    let disk = _disk_papers(repo)
+    let mut unreg = []
+    let mut k = 0
+    while k < len(disk) {
+        if !_roster_has(repo, disk[k][0]) { unreg.push(disk[k][0]) }
+        k = k + 1
+    }
+    if len(unreg) > 0 {
+        eprintln("⚠ 미등록(disk엔 있으나 호적부에 없음): " + unreg.join(" · ") + "  → /paper list --sync")
+    }
+    if ghosts > 0 {
+        eprintln("⚠ 유령 " + to_string(ghosts) + "건(호적부에 있으나 PAPER.md 없음) — 경로 수정 or 행 삭제")
+    }
+}
+
+fn _cmd_paper_list_sync(repo: string) {
+    let disk = _disk_papers(repo)
+    let mut added = []
+    let mut i = 0
+    while i < len(disk) {
+        let slug = disk[i][0]
+        let rel = disk[i][1]
+        if !_roster_has(repo, slug) {
+            _roster_append(repo, slug, rel)
+            added.push(slug)
+        }
+        i = i + 1
+    }
+    if len(added) == 0 {
+        println("✓ PAPER.tape 이미 최신 (스캔된 PAPER.md 폴더 전부 등록됨)")
+    } else {
+        println("✓ PAPER.tape 동기화 · +" + to_string(len(added)) + ": " + added.join(" · "))
+    }
+    println("")
+    _cmd_paper_list(repo)
+}
+
+// ─── show / set / verb handlers ──────────────────────────────────
+fn _cmd_paper_show(repo: string, slug: string) {
+    _ensure_paper_files(repo, slug)
+    let md = _paper_md(repo, slug)
+    let lg = _paper_log(repo, slug)
+    let goal = _get_goal(repo, slug)
+    let title = _get_title(repo, slug)
+    let c = _count_tasks(repo, slug)
+    let label = if title != "" { title } else { "active paper: " + slug }
+    if goal == "" {
+        println("◆ " + label)
+    } else {
+        println("◆ " + label + "   🎯 " + goal)
+        println("진행 " + _progress_bar(c[0], c[0] + c[1]))
+    }
+    if goal == "" { eprintln("⚠ lint: `@goal:` 없음 — /paper goal <text>") }
+    if c[0] + c[1] == 0 { eprintln("⚠ lint: 밀스톤(`- [ ]`) 없음 — /paper ms <text>") }
+    println("═══ " + md + " ═══")
+    print(_read_file_safe(md))
+    println("")
+    println("═══ " + lg + " ═══")
+    print(_read_file_safe(lg))
+}
+
+fn _cmd_paper_set(repo: string, slug: string) {
+    if _bad_slug(slug) {
+        eprintln("paper set: <slug> must be a simple name (no slashes / no leading dot)")
+        exit(1)
+    }
+    _set_active(repo, slug)
+    // self-heal: register if dir already exists but roster missing
+    if !_roster_has(repo, slug) && _dir_exists(repo + "/" + slug) {
+        _roster_append(repo, slug, "./" + slug)
+        eprintln("✓ roster: registered " + slug + " → ./" + slug + " in PAPER.tape")
+    }
+    _cmd_paper_show(repo, slug)
+}
+
+fn _require_active(repo: string, verb: string) -> string {
+    let a = _get_active(repo)
+    if a == "" {
+        eprintln("paper " + verb + ": no active paper — run `/paper set <slug>` first (or `/paper list`)")
+        exit(2)
+    }
+    return a
+}
+
+fn _usage() {
+    println("paper — arxiv-style LaTeX paper scaffolder (v0.10 — PAPER.tape roster)")
+    println("")
+    println("usage — roster (PAPER.tape · slug → dir; progress derived from PAPER.md):")
+    println("  /paper                                     show active paper (@title · @goal · progress)")
+    println("  /paper list [--sync]                       repo-wide paper index (★ = active); --sync = reconcile roster with disk")
+    println("  /paper set <slug>                          select session's active paper")
+    println("  /paper show [<slug>]                       show one paper (defaults to active)")
+    println("  /paper goal <text>                         set PAPER.md `@goal:` line on active paper")
+    println("  /paper title <text>                        set PAPER.md `@title:` display header (icon · name · alias)")
+    println("  /paper ms <text>                           add `- [ ]` milestone (alias: milestone)")
+    println("  /paper done <match>                        flip a milestone `- [ ]` → `- [x]`")
+    println("  /paper todo <text>                         append `- [ ] <text>` to PAPER.log.md")
+    println("")
+    println("usage — scaffold (auto-registers to PAPER.tape + drops PAPER.md/log.md):")
     println("  /paper new <slug>                          scaffold ./<slug>/ from template")
-    println("  /paper sample [<name>] [<dest>]            copy a bundled sample (see `/paper list`)")
+    println("  /paper sample [<name>] [<dest>]            copy a bundled sample (see `/paper samples`)")
+    println("  /paper samples                             list bundled samples")
+    println("  /paper monograph-init <slug> [N]           scaffold a monograph (main.tex \\appendix + N stubs + companion/)")
+    println("")
+    println("usage — build / extras:")
     println("  /paper fig <image_size> <prompt> <out.png> generate a figure (delegates to /imagine)")
     println("  /paper compile [dir]                       xelatex x 3 + bibtex")
     println("  /paper lint [dir]                          commons g51 lint (auto paper/monograph tier)")
-    println("  /paper list                                list bundled samples")
     println("  /paper help                                this message")
     println("")
     println("v0.9 monograph verbs:")
-    println("  /paper monograph-init <slug> [N]           scaffold a monograph: main.tex \\appendix +")
-    println("                                             N (default 12) appendix/<L>_*.tex stubs + companion/")
     println("  /paper fill <appendix-letter>              print the fill runbook for one appendix")
     println("  /paper companion sync                      rebuild companion/{pr-roll,verify-ledger}.json")
     println("")
@@ -158,8 +768,10 @@ fn _cmd_new(root: string, slug: string) {
         eprintln("paper new: copy failed — " + _trim(to_string(cp[0])))
         exit(1)
     }
-    println("[paper] scaffolded ./" + slug + "/ from template")
+    _register_paper(_git_root(), slug)
+    println("[paper] scaffolded ./" + slug + "/ from template (+ PAPER.tape · PAPER.md · PAPER.log.md)")
     println("        edit main.tex (title · author · sections), references.bib, then `make`")
+    println("        next: `/paper set " + slug + "` · `/paper goal <text>` · `/paper ms <text>`")
     print(to_string(exec("ls -1 " + _shq("./" + slug))))
 }
 
@@ -199,7 +811,9 @@ fn _cmd_sample(root: string, args: array) {
         eprintln("paper sample: copy failed — " + _trim(to_string(cp[0])))
         exit(1)
     }
-    println("[paper] copied bundled '" + name + "' → ./" + slug + "/")
+    _register_paper(_git_root(), slug)
+    println("[paper] copied bundled '" + name + "' → ./" + slug + "/ (+ PAPER.tape · PAPER.md · PAPER.log.md)")
+    println("        next: `/paper set " + slug + "` · `/paper goal <text>` · `/paper ms <text>`")
     print(to_string(exec("ls -1 " + _shq("./" + slug))))
 }
 
@@ -262,7 +876,7 @@ fn _cmd_compile(args: array) {
     println("[paper] built " + dir + "/main.pdf")
 }
 
-fn _cmd_list(root: string) {
+fn _cmd_samples(root: string) {
     let samples_dir = root + "/samples"
     if !_dir_exists(samples_dir) {
         println("(no samples bundled)")
@@ -1087,7 +1701,8 @@ fn _cmd_monograph_init(root: string, args: array) {
             let _2 = exec("rm -f " + _shq(tmp))
         }
     }
-    println("[paper] scaffolded monograph ./" + slug + "/ (" + to_string(n) + " appendices A.." + _ap_letter(n - 1) + ")")
+    _register_paper(_git_root(), slug)
+    println("[paper] scaffolded monograph ./" + slug + "/ (" + to_string(n) + " appendices A.." + _ap_letter(n - 1) + ") — + PAPER.tape · PAPER.md · PAPER.log.md")
     println("        · main.tex   — template spine + \\appendix block wiring " + to_string(n) + " \\input files")
     println("        · appendix/  — " + to_string(n) + " stub .tex (each \\section + \\label + % TODO)")
     println("        · companion/ — verify-ledger · pr-roll · adapter-defect-catalog · session-journal · README")
@@ -1241,8 +1856,57 @@ fn main() {
         _cmd_compile(rest)
     } else if verb == "lint" {
         _cmd_lint(rest)
-    } else if verb == "list" {
-        _cmd_list(root)
+    } else if verb == "list" || verb == "ls" {
+        let repo = _git_root()
+        if len(rest) >= 1 && rest[0] == "--sync" { _cmd_paper_list_sync(repo) }
+        else { _cmd_paper_list(repo) }
+    } else if verb == "samples" {
+        _cmd_samples(root)
+    } else if verb == "set" {
+        if len(rest) < 1 { eprintln("paper set: usage: /paper set <slug>"); exit(2) }
+        _cmd_paper_set(_git_root(), rest[0])
+    } else if verb == "show" {
+        let repo = _git_root()
+        let slug = if len(rest) >= 1 { rest[0] } else { _require_active(repo, "show") }
+        _cmd_paper_show(repo, slug)
+    } else if verb == "goal" {
+        let repo = _git_root()
+        let slug = _require_active(repo, "goal")
+        if len(rest) < 1 { eprintln("paper goal: usage: /paper goal <text>"); exit(2) }
+        let text = _join(rest, " ")
+        _set_goal(repo, slug, text)
+        println("🎯 goal set · " + slug + ": " + text)
+    } else if verb == "title" || verb == "subtitle" {
+        let repo = _git_root()
+        let slug = _require_active(repo, "title")
+        if len(rest) < 1 { eprintln("paper title: usage: /paper title <text>"); exit(2) }
+        let text = _join(rest, " ")
+        _set_title(repo, slug, text)
+        println("🏷  title set · " + slug + ": " + text)
+    } else if verb == "ms" || verb == "milestone" {
+        let repo = _git_root()
+        let slug = _require_active(repo, "ms")
+        if len(rest) < 1 { eprintln("paper ms: usage: /paper ms <text>"); exit(2) }
+        _append_milestone(repo, slug, _join(rest, " "))
+        let c = _count_tasks(repo, slug)
+        println("milestone + · " + slug + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
+    } else if verb == "done" {
+        let repo = _git_root()
+        let slug = _require_active(repo, "done")
+        if len(rest) < 1 { eprintln("paper done: usage: /paper done <match>"); exit(2) }
+        let term = _join(rest, " ")
+        if !_flip_done(repo, slug, term) {
+            eprintln("paper done: no open milestone matching '" + term + "' in PAPER.md")
+            exit(1)
+        }
+        let c = _count_tasks(repo, slug)
+        println("flipped · " + slug + "   진행 " + _progress_bar(c[0], c[0] + c[1]))
+    } else if verb == "todo" {
+        let repo = _git_root()
+        let slug = _require_active(repo, "todo")
+        if len(rest) < 1 { eprintln("paper todo: usage: /paper todo <text>"); exit(2) }
+        _append_todo(repo, slug, _join(rest, " "))
+        println("todo + · " + slug)
     } else if verb == "companion" {
         _cmd_companion(root, rest)
     } else if verb == "monograph-init" {
@@ -1263,8 +1927,14 @@ fn main() {
         _cmd_pr_roll(rest)
     } else if verb == "arxiv-prep" {
         _cmd_arxiv_prep(rest)
-    } else if verb == "help" || verb == "-h" || verb == "--help" || verb == "" {
+    } else if verb == "help" || verb == "-h" || verb == "--help" {
         _usage()
+    } else if verb == "" {
+        // bare `/paper` — show active paper if one is set, else usage
+        let repo = _git_root()
+        let a = _get_active(repo)
+        if a != "" { _cmd_paper_show(repo, a) }
+        else { _usage() }
     } else {
         eprintln("paper: unknown verb '" + verb + "'")
         _usage()

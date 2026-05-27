@@ -668,3 +668,30 @@ demiurge Web GUI: 18 라운드 합의 → PR#0 (design SSOT 4 manifest) → PR#1
 - demiurge PR#388/389/391/392/393/394/395/396/397 (9 stacked PR cycle 실측)
 
 **우선순위**: medium-high · skill 갱신 + style guide 한 줄. 다음 `/sbs full handoff` 즉시 적용 가능.
+
+---
+
+## 2026-05-28 — handoff 모드 보강 — "handoff verb 완성형 = end-user 산출물" (sidecar #197 clarify)
+
+PR #197 entry 가 "stacked-PR plan 직후 HANDOFF.md PR 자동 추가" 패턴이었으나, **demiurge 사용자 본의는 다름** — 8 verb 중 `handoff` verb 자체가 end-user 가 클릭 한 번에 **실 산출물 (dossier bundle)** 을 받아 들고 나갈 수 있어야 한다는 의미. PR #197 는 다음 세션(AI) 인계 문서였고, 핵심은 사용자 인계.
+
+**둘 다 필요 · 둘 다 패턴화**:
+
+1. **AI 세션 인계** (#197 의 HANDOFF.md): 다음 세션이 작업을 이어받기 위한 doc. 9-step plan 끝에 강제 PR. ✅ 유지.
+2. **End-user 인계** (이번 보강): handoff verb 페이지가 실 산출물 생성 + 다운로드. demiurge 구현 = `/api/v1/handoff/[domain]?download=1` → JSON dossier (records + manifest + generated_at). PR #398 reference impl.
+
+**handoff verb 완성형 체크리스트** (sbs full + handoff 트리거 시 강제 항목):
+
+- [ ] `GET /api/v1/handoff/{domain}` 엔드포인트 — JSON dossier 반환
+- [ ] `?download=1` 시 `Content-Disposition: attachment` 헤더
+- [ ] dossier = `{ domain, uid, generated_at, records[], manifest{verb_count, complete/in_progress/todo} }`
+- [ ] 클라이언트 컴포넌트 = 미리보기 + ⬇ 다운로드 버튼 + status 카운트 카드
+- [ ] `/handoff/[domain]` 페이지 slot = 위 클라이언트 컴포넌트 (placeholder 제거)
+- [ ] (선택) zip / pdf / 사이드카 paper 합본 export
+
+**관련**:
+- sidecar PR #197 (HANDOFF.md AI-인계 패턴)
+- demiurge PR #398 (handoff verb 완성형 reference impl: dossier endpoint + 다운로드 UI)
+- demiurge `domains/HANDOFF.md` § 6 next-priority list
+
+**우선순위**: high — "사용자 handoff 가 완성형이어야 한다" 가 사용자 본의. skill 갱신 시 PR #197 패턴과 함께 묶어 한 set 으로.

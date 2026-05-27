@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.5.0: `drive` verb — autonomous self-driving campaign (sticky cross-turn)
+
+🚗 사용자 "시스템 개선해줘 자율주행하게". 기존 `auto` = 1회 in-session 패스 (시간당 도는 DFT/training 잡엔 부족). `drive` = `auto` 를 턴 가로질러 persistent 화 — 예산+큐 걸고 walk away.
+
+- **`drive [--budget $X] [--max-pods N]` verb** — sticky 자율주행. 2 재진입: **watcher-event(primary)** + **ScheduleWakeup heartbeat(fallback, 1200–1800s — DFT/training cadence, 60s poll 금지 · cache-window 정합)**. drive 마커를 `pods.json` 에 영속(`drive:{on,budget_cap,max_pods,engaged_utc}`) → compaction/restart/rate-limit 생존.
+- **각 tick**: status → harvest(exit-code-aware: TIMEOUT-RESUMABLE→recover, CRASHED→advance) → verdict(g5) → atlas(g62) → next(throttle-aware ≤2 fan, storm 시 backoff serialize) → re-arm → budget(g64)/depletion check → upstream-reflex(g59) → schedule-next.
+- **halt ONLY**: 🏁 drain · 🛑 budget · ⏸ gated:human-only(그 candidate 만 pause, 나머지 계속) · interrupt. "continue?" 안 물음.
+- **replay-safe**: 마커+manifest = durable state. rate-limit 사망 → 다음 watcher-event/heartbeat 재진입 재-derive (fired candidate 재발사 안 함).
+- **`stop`/`drive off`** — 마커 clear (running 잡+watcher 는 유지, AUTO 재발사만 종료).
+- 트리거: 자율주행 · self-driving · drive · "예산 걸고 알아서" · 멈춰. SKILL+command+meta 0.4.1→0.5.0.
+- distinction: `auto`=지금 1패스(interactive) · `drive`=물리한계(budget/drain)까지 며칠 자가운전.
+
 ## 2026-05-28 — system 0.4.1: `upstream` verb origin/main 조회 보정 + entry-merged ≠ fix-status 구분
 
 🔗 0.4.0 dogfood self-gap (upstream-reflex 가 제 보고 버그를 잡음).

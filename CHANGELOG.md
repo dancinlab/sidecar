@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — step-by-step 0.3.0: FULL + GO 모드 추가 (4-모드 질문밀도 스펙트럼)
+
+사용자 — "sbs, 모호함 사라질때까지 계속 묻고 또 묻고 하는 형태의 full 서브커맨드. go, manual, auto, full". 기존 2모드(manual/auto)에 **GO**(최소질문)·**FULL**(최대질문) 추가해 4-모드 스펙트럼 완성.
+
+```
+go ────────── auto ────────── manual ────────── full
+적게 묻기                       (기본)            많이 묻기
+plan-gate 없음  계획+무중단      단계별 상의        모호함 0까지 질문
+즉시·terse                                       묻고 또 묻고
+```
+
+- **GO** (신규) — plan 표 suppress, 무중단, result 라인만. 가장 빠르고 trusting (모호함 없는 작업).
+- **AUTO** — plan 보여주고 무중단 (기존).
+- **MANUAL** (기본) — 단계별 pause + consult (기존).
+- **FULL** (신규) — **Step 0.5 disambiguation 루프**: 계획 전에 AskUserQuestion 라운드(≤4/round)를 모호함 scan이 0 나올 때까지 반복(`🔍 disambiguation: N rounds · ambiguity → 0`). 이후 무중단 실행하되 **step이 새 모호함 surface하면 멈추고 또 질문** (fork 앞에서 절대 추측 안 함). FULL은 empty task도 질문 (다른 3모드는 assume+proceed).
+- 4모드 모두 halt 조건 동일 (step failure · 비가역/외향 step 전 confirm).
+- `/sbs` alias도 동기화. FIRST arg token `go`|`auto`|`manual`|`full` (기본 manual).
+
 ## 2026-05-27 — pool-route data-locality pin + sign-local TTL 30min (anima PURE F-CURRICULA-1)
 
 INBOX 핸드오프 (anima PURE 2026-05-25) — local 입력파일(Mac 의 session log 추출본 + Phase D corpus)에 의존하는 corpus build (`hexa run build_curriculum_corpus.hexa --corpus-path /Users/.../c.jsonl …`) 가 **두 라우팅 경로 모두에서 막혀** F-CURRICULA-1 GPU fire 가 2회 BLOCKED. 비용 0 으로 정직하게 halt 됐으나 자율 fire 흐름이 반복 차단되는 마찰. pool-route 0.6.10 local-pin 위 잔여 갭 2종을 닫는다.

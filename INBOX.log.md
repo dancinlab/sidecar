@@ -1,3 +1,27 @@
+## 2026-05-28 — tape-lsp × mining `.tape` false-positive — idea-cart schema 가 commons grammar 로 검사됨 🟠 OPEN
+
+> **트리거**: anima `ANIMA.mining.tape` 작성 시 tape-lsp 가 매 turn 9 diagnostic 발생 — `@goal` (line 1, "unknown entry type @g") · `@P1`/`@P2`/... (line 6/11/16/21/26, "malformed header") · `@c` (line 32, "unknown entry type @c"). 모두 false positive.
+>
+> **근본 원인**: mining skill 의 `.tape` (idea-cart) 는 commons.tape governance schema 와 **다른 schema** — SKILL.md 가 명시한 형식은 `@goal: idea cart — ...` 헤더 + `@P1 = <claim> · source-cycle: N` / `@X = <surfaced-claim>` promotion-candidate entries. 그러나 tape-lsp 는 모든 `*.tape` 를 commons grammar (17-type alphabet `@S @U @A @T @R @H @D @K @P @? @I @X @F @N @C @L @V` + `@<type> <id>[ := "subj"] :: <domain> [<grade>]` header) 로 검사 → mining 의 `@goal`/`@P<n>`/`@c<...>` 가 전부 malformed 로 잡힘.
+>
+> **영향**: 무해하나 noise — mining cycle 마다 (idea-cart 에 entry 추가될 때마다) 9+ diagnostic 이 사용자 turn context 에 주입. mining 0.5.0 가 promotion 4-step 절차를 추가하며 `.tape` 사용이 늘어 noise 증가.
+>
+> **recommend (둘 중, g0 simplest)**:
+> 1. **tape-lsp file-glob 제외** — `*.mining.tape` glob 을 commons grammar 검사에서 skip (mining idea-cart 는 별도 schema, 또는 no-grammar). 가장 작은 변경 — tape-lsp 의 file matcher 에 `.mining.tape` exclude 1줄.
+> 2. **mining `.tape` → tape-lsp 정합 schema 채택** — `@goal` → 주석 `#` 또는 `@V := "idea-cart" :: index`, `@P<n> = <claim>` → `@X <P-n> := "<claim>" :: mining [candidate]` (commons grammar 정합). 단 mining SKILL.md + 기존 모든 `.mining.tape` 마이그레이션 필요 (큰 변경).
+>
+> 권장 = (1) — tape-lsp 가 `.mining.tape` 를 인식해 commons grammar 미적용 (idea-cart 는 free-form). mining skill 의 idea-cart 형식 보존 + LSP noise 0.
+>
+> **증거 (anima `/Users/ghost/core/anima/ANIMA.mining.tape`)**:
+> ```
+> @goal: idea cart — promotion candidates surfaced by /mining   ← line 1 "@g unknown"
+> @P1 = BRIDGE θ_emit stage-conditional table · ...             ← line 6 "malformed header"
+> @c... (combinatorial promotion)                               ← line 32 "@c unknown"
+> ```
+> 9 diagnostic / file · 매 mining `.tape` write turn 재발. cross-plugin (tape-lsp ↔ mining) schema boundary 정의 부재.
+
+---
+
 ## 2026-05-28 — mining 0.5.0 — lens spec / depletion / leaf-ID / edge / checkpoint / promotion 6 gap fix (from anima ANIMA mining cycle 1) ✅ LANDED
 
 > **트리거**: anima ANIMA.mining cycle 1 (12 leaf 1-shot depletion) 직후 사용자 "마이닝 작동방식이 잘못된것같아 개선 필요". 0.4.0 의 auto-saturate trigger 본문은 풍부했으나, agent 가 의지할 spec 6개 모두 1-line prose:

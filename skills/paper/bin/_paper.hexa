@@ -1303,8 +1303,28 @@ fn _cmd_atoms(args: array) {
         eprintln("  this verb requires a local checkout of hexa-lang under ~/core/hexa-lang")
         exit(1)
     }
-    // grep lines whose preceding comment OR same line contains <domain> (case-insensitive)
-    let cmd = "awk 'BEGIN{IGNORECASE=1} /^[[:space:]]*\\/\\// { last=$0; next } /\"[A-Za-z0-9:_-]+\"/ { if (last ~ /" + domain + "/ || $0 ~ /" + domain + "/) print last \"\\n\" $0 \"\\n---\" } { last=\"\" }' " + _shq(verify_cli)
+    // BSD awk (macOS default) ignores `BEGIN{IGNORECASE=1}` — that's GNU-only.
+    // Lower-case both the file content and the needle so the match works on
+    // either awk. Also scan TWO patterns:
+    //   (1) the original quoted-string heuristic (atom IDs inside "")
+    //   (2) `fn <name>_…(`  function-definition lines (the dispatch table
+    //       lives there in 0.10 verify_cli; we need fn names, not just strings)
+    // Both fire under the same domain-match window (preceding comment OR
+    // same line). The two passes are unioned so a domain with no docstring
+    // still yields its fn-dispatch entries.
+    let dlow = _trim(to_string(exec("printf %s " + _shq(domain) + " | tr '[:upper:]' '[:lower:]'")))
+    // LC_ALL=C: BSD awk (macOS) chokes on non-ASCII bytes in the input with
+    // "illegal byte sequence" under UTF-8 locales; force the C locale so byte
+    // matching survives the Korean/emoji bytes that hexa-lang verify_cli.hexa
+    // sprinkles in comments. Patterns are ASCII-only so this is safe.
+    let cmd = "LC_ALL=C awk -v dom='" + dlow + "' '"
+        + "function lc(s){ r=\"\"; for(i=1;i<=length(s);i++){c=substr(s,i,1); r=r tolower(c)} return r } "
+        + "{ ll = lc($0) } "
+        + "/^[[:space:]]*\\/\\// { last=$0; lastl=ll; next } "
+        + "/\"[A-Za-z0-9:_-]+\"/ { if (index(lastl, dom)>0 || index(ll, dom)>0) print last \"\\n\" $0 \"\\n---\" } "
+        + "/^[[:space:]]*fn [A-Za-z_][A-Za-z0-9_]*[[:space:]]*\\(/ { if (index(lastl, dom)>0 || index(ll, dom)>0) print last \"\\n\" $0 \"\\n---\" } "
+        + "{ last=\"\"; lastl=\"\" }"
+        + "' " + _shq(verify_cli)
     let r = exec_with_status(cmd)
     let body = _trim(to_string(r[0]))
     if body == "" {
@@ -1509,12 +1529,21 @@ fn _cmd_bib(args: array) {
 // /paper pr-roll <repo> <since-ref> — emit \paragraph + companion/pr-roll.json.
 fn _cmd_pr_roll(args: array) {
     if len(args) < 2 {
-        eprintln("paper pr-roll: usage: /paper pr-roll <repo> <since-ISO-date>")
+        eprintln("paper pr-roll: usage: /paper pr-roll <OWNER/REPO> <since-ISO-date>")
         eprintln("  example: /paper pr-roll dancinlab/sidecar 2026-05-01")
+        eprintln("  (gh `--repo` requires the OWNER/REPO slug — bare repo name is rejected)")
         exit(2)
     }
     let repo = args[0]
     let since = args[1]
+    // gh refuses bare `sidecar` — must be `dancinlab/sidecar`. Catch up-front
+    // with a friendly error instead of letting the gh stderr surface as a
+    // cryptic "no such repo" 200 lines later.
+    if repo.index_of("/") < 0 {
+        eprintln("paper pr-roll: repo '" + repo + "' missing OWNER/ prefix — gh `--repo` requires OWNER/REPO")
+        eprintln("  example: /paper pr-roll dancinlab/" + repo + " " + since)
+        exit(2)
+    }
     if !_has_cmd("gh") {
         eprintln("paper pr-roll: gh CLI not on PATH")
         exit(1)
@@ -1538,14 +1567,20 @@ fn _cmd_pr_roll(args: array) {
     } else {
         println("[paper] (no ./companion/ in cwd — skipped JSON write; run /paper companion init first)")
     }
-    // LaTeX \paragraph stub — use jq if present, else raw
+    // LaTeX \paragraph stub — use jq if present, else raw.
+    //
+    // jq escape note: `\#` is NOT a recognised JSON string escape, so
+    // emitting `"\\\\item PR \\#"` (which becomes the jq literal `"\item PR \#"`)
+    // crashes with `Invalid escape at line 1: \#`. Emit a bare `#` from jq
+    // and let LaTeX see it as `\#` via a separate prefix — `\#` is the
+    // canonical \paragraph PR-marker but it's a LaTeX escape, not a JSON one.
     println("")
     println("% --- emitted by /paper pr-roll " + repo + " " + since + " ---")
     println("\\paragraph{Merged PRs since " + since + " (" + repo + ").}")
     println("\\begin{itemize}\\itemsep0.1em")
     if _has_cmd("jq") {
         let jq = exec_with_status("printf %s " + _shq(json)
-            + " | jq -r '.[] | \"\\\\item PR \\#\" + (.number|tostring) + \" --- \" + .title + \" (\" + .mergedAt + \")\"'")
+            + " | jq -r '.[] | \"\\\\item PR \\\\#\" + (.number|tostring) + \" --- \" + .title + \" (\" + .mergedAt + \")\"'")
         print(to_string(jq[0]))
     } else {
         println("\\item (jq not on PATH — see companion/pr-roll.json for the raw list)")
@@ -1570,16 +1605,21 @@ fn _cmd_arxiv_prep(args: array) {
         eprintln("paper arxiv-prep: " + dir + "/main.bbl not found — run `make` first (arxiv requires .bbl)")
         exit(2)
     }
-    let basename_dir = _basename(_trim(to_string(exec("cd " + _shq(dir) + " && pwd"))))
+    // Resolve dir to an ABSOLUTE path BEFORE we go anywhere — the tar target
+    // gets passed into a `cd $TMP` subshell, and `<dir>/out/<slug>-arxiv.tar.gz`
+    // (relative) becomes `$TMP/<dir>/out/...` which doesn't exist. Same trap
+    // bit demiurge ANTIMATTER paper rego (INBOX #112).
+    let abs_dir = _trim(to_string(exec("cd " + _shq(dir) + " && pwd")))
+    let basename_dir = _basename(abs_dir)
     let slug = basename_dir
-    let out = dir + "/out"
+    let out = abs_dir + "/out"
     let _ = exec("mkdir -p " + _shq(out))
     let tar = out + "/" + slug + "-arxiv.tar.gz"
-    let cmd = "cd " + _shq(dir)
+    let cmd = "cd " + _shq(abs_dir)
         + " && TMP=$(mktemp -d) && cp main.tex references.bib main.bbl \"$TMP\"/ "
         + " && mkdir -p \"$TMP\"/figures "
         + " && find figures -maxdepth 1 \\( -name '*.pdf' -o -name '*.png' -o -name '*.eps' \\) -exec cp {} \"$TMP\"/figures/ \\; "
-        + " && (cd \"$TMP\" && tar -czf \"" + tar + "\" .) "
+        + " && (cd \"$TMP\" && tar -czf " + _shq(tar) + " .) "
         + " && rm -rf \"$TMP\""
     let r = exec_with_status(cmd + " 2>&1")
     if r[1] != 0 {

@@ -2,7 +2,11 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
-## 2026-05-27 — /sbs (commands/step-by-step) FULL mode: chat+analogy 1Q + final "이거 맞아요?" ASCII confirm (UX 제안)
+## 2026-05-27 — /sbs (commands/step-by-step) FULL mode: chat+analogy 1Q + final "이거 맞아요?" ASCII confirm (UX 제안) ✅
+
+**해소** (commands/step-by-step 0.4.0): FULL 자체가 chat-form으로 전환 (별도 sub-mode 토큰 X · 사용자 정정 반영). 한 라운드 = ONE 채팅 질문, easy-mode 7-요소 scaffold (아이콘·이름·별칭·평이·비유·ASCII·비교표·추천 + `→ A · B · 또는 자유응답`). 라운드 종료 후 `🎯 합의된 결정셋 (N개)` ASCII tree pause — user `go` / `Qn=<X>` 수정. mid-run new ambiguity도 chat 라운드 + 재합의 후 resume. Fallback: 사용자가 selectbox 원하면 그 1라운드만 AskUserQuestion. step-by-step.md + sbs.md 동기.
+
+
 
 > **사건**: demiurge 세션에서 `/sbs full web gui, cli 8verb 처리과정 구현계획` 으로 진입 → 모드는 disambiguate-first(FULL) 가 맞으나, AskUserQuestion 4-옵션 선택상자가 한 번에 4축을 묶어 던져 사용자 인지부하 ↑. 사용자 명시 요청: "선택상자 말고 비유하면서 채팅으로 진행". 채팅+비유 1문항씩으로 전환하니 흐름이 깔끔. 또한 disambiguate 종료시점에 "최종 원하는게 이거 맞아요?" 의 ASCII 구조 합의 화면 부재 — 사용자가 plan 진입 전 전체 결정셋을 한 눈에 보고 yes/no 할 surface 가 없음.
 
@@ -95,7 +99,11 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 - [ ] **상류 debt #2 — `dancinlab/pool` install** (sibling repo): `install.hexa` 가 첫 설치에서 네이티브 선컴파일(`-o` 안정경로) + shim 을 바이너리 직접 exec 로 생성 → implicit-run 의존 제거(hexa.toml 의 "compiled on first run, then cached" 의도를 실제 구현). hx-generated shim 회귀 방지.
 - repro(고정): `pool list` → 전엔 `OK: list` + `pool.hexa` 259B 클로버, 이제 roster 출력 + 소스 무손상.
 
-## 2026-05-26 — worktree-gc 가 활성 worktree prune (브랜치명 재사용 오판) (from demiurge monograph fan-out)
+## 2026-05-26 — worktree-gc 가 활성 worktree prune (브랜치명 재사용 오판) (from demiurge monograph fan-out) ✅
+
+**해소** (`hooks/worktree-gc` 0.2.0): HEAD-ancestor 진짜-merged 체크 (`git merge-base --is-ancestor`) + dirty/recent-mtime/cwd-in-use 3중 라이브 가드 + 원자 prune (실패 시 무삭제). CERN(#220)·ANTIMATTER(#222) 재발 차단.
+
+
 
 > demiurge monograph 함대(CERN·RTSC·ANTIMATTER·UFO)를 `isolation:worktree` + `/Users/ghost/wt-*-mono` 로 fan-out 하던 중, 빌드 진행 중인 worktree 가 통째로 사라지는 사고가 다수 에이전트에서 반복. 기존 `hooks/worktree-gc` 0.1.0(merged-prune)이 *살아있는* worktree 를 prune 한 것 — 2026-05-25 "4-gap"(harness HEAD/ref/bundle)과 별개의 **worktree-gc 자체 갭**(sidecar-actionable).
 
@@ -109,7 +117,17 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 - [ ] **severity**: high — in-flight 에이전트 작업을 조용히 파괴. 이번 세션 monograph 함대에서 다수 재발. checkpoint-commit 이 유일한 방어선이었음.
 - 출처: demiurge monograph fan-out 2026-05-26 (CERN #220 · RTSC #221 · ANTIMATTER #222 · UFO in-flight). 회피책(현재): 빌드 worktree 를 `/private/tmp` 에 두고 `make` 대신 texbin 직접 호출(별 갭 — pool-route 가 `make` 단어를 ubu 로 라우팅).
 
-## 2026-05-26T00:05Z — paper:paper v0.8 — 3 verb 버그 (from: demiurge ANTIMATTER paper rego PR #197)
+## 2026-05-26T00:05Z — paper:paper v0.8 — 3 verb 버그 (from: demiurge ANTIMATTER paper rego PR #197) ✅
+
+**해소** (skills/paper 0.11.0):
+- `pr-roll`: bare repo name early reject (`OWNER/REPO 요구` 친절 에러) + jq 표현식이 `\\\\#` emit → LaTeX `\#` 살림 (전엔 jq `Invalid escape \#` crash)
+- `atoms`: `LC_ALL=C` 래핑 (BSD awk illegal-byte-sequence 회피) + 사용자입력/파일 모두 lowercase 비교 (BSD awk는 GNU IGNORECASE 없음) + `fn <name>(` 시그니처 패턴 추가 (dispatch 라인 매칭)
+- `arxiv-prep`: dir → absolute path 선해결 후 `cd $TMP && tar -czf <ABS> .` (전엔 relative target이 `$TMP/<dir>/...`로 해석돼 항상 실패)
+- shipped `bin/hexa-verify` stale 관련 install-sync 갭은 별도 — paper 영역 외이므로 본 entry 범위 밖
+
+smoke: bare reject ✅ · OWNER/REPO ✅ · `atoms verify` fn signatures + 주석 매칭 출력 ✅ · `arxiv-prep` no-main.tex reject 정상.
+
+
 
 **맥락**: ANTIMATTER BLUE-MAX paper를 paper v0.8(sample-blue-max + 신규 verb)로 재생성 중 3개 verb가 advertised대로 동작 안 함. stub-first (g60) — 구현은 review 후.
 
@@ -120,7 +138,11 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 
 repro: demiurge antimatter-bluemax-2026 rego (PR #197) · paper plugin v0.8
 
-## 2026-05-25T11:20Z — g61 stdlib-SSOT 강제·자동화·범위확장 (from: anima IIT4 세션)
+## 2026-05-25T11:20Z — g61 stdlib-SSOT 강제·자동화·범위확장 (from: anima IIT4 세션) ✅
+
+**해소** (4-track land): commons 0.10.7 g61 범위확장 (primitives + domain engines · engine⊥adapter · import-root) · `hooks/stdlib-ssot-guard` 0.1.0 (PreToolUse advisory + SessionStart stdlib-root 검증) · `skills/stdlib` 0.1.0 (`/stdlib check`/`promote` 런북) · SessionStart import-root 체크.
+
+
 
 **맥락**: IIT4 엔진(의식 Φ-structure)을 hexa-brain·eeg 등 타 프로젝트와 공유하려고 stdlib 승격을 검토하던 중, 사용자: *"hexa-lang 을 최대한 단일 SSOT 로 하려면 sidecar 어떻게 수정해야될까"*. → commons.tape 에 이미 **g61**("hexa-lang stdlib is the SSOT for general primitives")이 존재 = **정책은 있음**. 빠진 건 **강제·자동화·범위·물리적 단일해석** 4가지. INBOX 에 제안만, 구현은 사용자 review/sign 후.
 
@@ -351,22 +373,13 @@ bare /domain:
 - 출처: hexa-lang `inbox/patches/sidecar-skill-root-arg-and-pool-route-escalate-2026-05-25.md` (handoff 이관 후 hexa-lang 쪽 archive). 원 리포트 #3(`hexa verify --expr` ubu-2 `verify_cli.hexa` build segfault)은 hexa-lang 소관 — 별도 추적(이 handoff 범위 밖).
 - ✅ **resolved-obsolete** (2026-05-24, sidecar `6383af9` 기준) — 두 항목 다 옛 sidecar 스냅샷 기준이라 현재 손댈 것 없음. **#1**: 모든 skill wrapper 가 이미 `$CLAUDE_PLUGIN_ROOT/bin/_*.hexa` 절대경로 사용 — `command -v` 미사용이라 빈-바이너리 실패 모드 자체가 없음 (INBOX.log 2026-05-24 fix 가 동일 건). **#2**: load-escalation 게이트는 pool-route 0.6.0 에서 제거됨 (`_pool_route.hexa` 414-428 = 제거 사유 주석 · classifier-only `@D s10` · zero-macOS-offload `@D s12`) + 요청한 `SIDECAR_NO_POOL_ROUTE=1` override 는 `@D s11`(escape-hatch 변수 금지) 위반이라 **미구현**.
 
-## 2026-05-24 — worktree disk fill-up · 자동 prune (from anima)
-- [x] `hooks/worktree-gc` 0.1.0 land — SessionStart 에서 merged linked worktree prune (threshold-gated · open-PR skip · NO opt-out)
+(2026-05-22 ~ 2026-05-24 resolved entries 5건은 `INBOX.archive.log.md` 로 이동 — worktree disk fill-up · self-merge admin guard · .hexa PATH · hexa shim regen · hexa cloud preflight.)
 
-## 2026-05-24 — agent self-merge via admin toggle (from hexa-lang PROBE r14)
-- [x] `hooks/gh-api-guard` 0.1.0 + commons `@D g55` land — agent surface 의 branch-protection toggle + `gh pr merge --admin` hard-block (env-var bypass 없음)
+## 2026-05-27 — /domain `<NAME>.brainstorm.md` + `.tape` 3rd pillar (from demiurge) ✅ superseded
 
-## 2026-05-24 — `.hexa`-migrated skill 이 PATH 로 bin 못 찾음 (from anima)
-- [x] resolved — command 템플릿을 `$CLAUDE_PLUGIN_ROOT/bin/_*.hexa` 절대경로로 전환 (research·domain·inbox·imagine·paper·ship)
+**해소** (`skills/mining` 0.1.0~0.3.0): `/mining` 3rd pillar로 더 일반적인 해소. lens(발산) + connect(수렴) + tidy(정리) 3-workflow가 brainstorm/append/cart 패턴을 모두 포괄. `<NAME>.mining.md` + `<NAME>.mining.tape` 파일 패턴 동일.
 
-## 2026-05-23 — hexa shim regen after rebuild (to hexa-lang)
-- [x] closed — upstream 이미 해결 (hexa-lang #421·#446·#466, `hexa` 래퍼 추적됨) · sidecar #85 portable resolver 가 defense-in-depth
 
-## 2026-05-22 — reflect hexa cloud cycle C (preflight) in /cloud (from hexa-lang)
-- [x] resolved in `cloud` 0.2.0 — `preflight` verb + GPU mem-budget surface 반영
-
-## 2026-05-27 — /domain `<NAME>.brainstorm.md` + `.tape` 3rd pillar (from demiurge)
 
 협업 brainstorm 결과 영구 기록을 위한 도메인 평면 형제 파일 도입 제안.
 

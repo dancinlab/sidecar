@@ -6,6 +6,37 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — 3-track 사이클: step-by-step 0.4.0 (FULL chat-form + 합의 화면) · paper 0.11.0 (3 verb fix) · INBOX archive split
+
+사용자 — "추가 inbox 내용 있나" → "어라 sbs 개선사항 들어왔을텐데" + INBOX false-positive filter 추적. 3-track 동시 진행 + INBOX 25→20 archive split로 soft cap 해소.
+
+- **`commands/step-by-step/` 0.3.0 → 0.4.0** (INBOX `#5` ✅) — FULL mode UX 전면 개선 (사용자 요청: "선택상자 말고 비유하면서 채팅으로 진행"):
+  - FULL 자체가 CHAT FORM (별도 sub-mode 토큰 X) — 한 라운드 = ONE 채팅 질문
+  - easy-mode 7-요소 scaffold per round: 아이콘 · 이름 · 별칭 · 평이 한 줄 · 일상 비유 · ASCII 다이어그램 · 옵션 비교표 · 한 줄 추천
+  - 라운드 종료: `→ A · B · 또는 자유응답 (예: "다른 안: …")` — 자유응답 explicit
+  - 라운드 종료 후 **Step 0.6 합의 화면** (모든 FULL 변종 공통):
+    ```
+    🎯 합의된 결정셋 (N개)
+    ┌─ Q1: <axis>  → ✅ <chosen>
+    ├─ Q2: <axis>  → ✅ <chosen>
+    └─ Qn: <axis>  → ✅ <chosen>
+    요약: <one-line restatement>
+    → 맞으면 `go` · 수정은 `Qn=<다른 선택>` (예: `Q2=B`)
+    ```
+  - `go` → plan으로, `Qn=<X>` → 해당 결정만 갱신 + 재렌더
+  - mid-run 새 ambiguity도 chat 라운드 + 재합의 후 resume (plan 진입 전 cheap 마지막 flip)
+  - Fallback: 사용자가 selectbox 원하는 그 1라운드에 한해 AskUserQuestion 허용 (chat이 default)
+  - step-by-step.md + sbs.md 동기
+
+- **`skills/paper/` 0.10.0 → 0.11.0** (INBOX `#112` ✅, demiurge ANTIMATTER paper rego PR #197) — 3 verb 버그 fix:
+  - `pr-roll`: bare repo name early reject (gh `--repo`는 `OWNER/REPO` 필수 — 친절 에러 + 사용 예) + jq 표현식이 `\\\\#` emit (LaTeX `\#` 살림 · 전엔 jq `Invalid escape \#` crash)
+  - `atoms`: `LC_ALL=C` 래핑 (BSD awk illegal-byte-sequence 회피 — verify_cli.hexa의 한국어/이모지 바이트) + 사용자입력/파일 모두 lowercase 비교 (BSD awk `IGNORECASE`는 GNU-only) + `fn <name>(` dispatch 시그니처 패턴 추가 (전엔 `"id"` quoted-string만 매칭)
+  - `arxiv-prep`: dir → absolute path 선해결 후 `cd $TMP && tar -czf <ABS> .` (전엔 relative target이 `$TMP/<dir>/...`로 해석돼 항상 실패)
+  - smoke 4종 ALL PASS
+
+- **INBOX 정리** — 5 ✅ 마크 보강 (`#5 sbs UX` · `#98 worktree-gc 활성 wt prune` · `#112 paper v0.8` · `#123 g61 stdlib-SSOT` · `#369 /domain brainstorm superseded by /mining`) + INBOX.md row 2건 추가 (sbs · paper).
+- **`INBOX.archive.log.md` 신규 분리** — 2026-05-22~05-24 resolved entries 5건 (`worktree disk fill-up` · `self-merge admin guard` · `.hexa PATH` · `hexa shim regen` · `cloud preflight`) 이동. soft cap 25→20 해소. hot log = 최근 + open만, cold archive = 전체 audit trail.
+
 ## 2026-05-28 — cloud 0.4.0: `cloud pods` + `cloud dispatch` 노출 (hexa-lang PR #1699 land 따라가기)
 
 사용자 — "프로젝트마다 runpod/vast.ai/ubu 작업 관리 시스템, 파일 한 개로" (INBOX.log.md `#193`). 처음에 `~/.pool/pods.json` 글로벌 + pool CLI로 제안됐으나, 사용자 정정으로 **cwd `./pods.json` per-project + hexa cloud 확장**으로 land. pool 0.9.0 wip는 폐기 (영역 불일치 — pool=호스트 roster, pods=작업 매니페스트).

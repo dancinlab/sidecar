@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.1.0 (NEW): /system 캠페인 관제탑 — domain-agnostic mission control
+
+🛰 demiurge RTSC DFT 캠페인 세션에서 수동으로 반복하던 패턴(전체 잡 sweep → 통합 대시보드 → event-driven watcher → terminal harvest → verdict → 자동 재발사 → 예산 추적)을 하나의 재사용 plugin 으로 승격. 사용자 directive "이걸 하나의 system 으로 · /system 명령어 · 범용 · demiurge 한정말고".
+
+- **`skills/system/`** (NEW plugin v0.1.0) — `/system` campaign control-tower. 7 verb: bare/status (통합 대시보드) · watch (job 당 event-driven watcher 무장 · ScheduleWakeup 0 · rate-limit 생존 · 2x debounce) · harvest [<id>] (terminal job → metric parse + g5 verdict tier VERBATIM + ledger) · next/redispatch (autonomous harvest→atlas-register(g62)→fire-next-queued · NO user gate) · auto (full loop → backlog-drain / budget-hit(g64) / interrupt) · cost (예산 추적) · queue [add|rm|ls] (candidate backlog).
+- **domain-agnostic** — abstract job model {id, surface, workdir, terminal_marker, metric_parser, verdict}. DFT(`CHAIN DONE`) · ML training(`training complete`) · build(`PASS`) · render 모두 terminal_marker/metric_parser 값만 다름, loop 동일.
+- **non-duplication** — `./pods.json` (cloud dispatch SSOT) reuse · `/cloud pods` (manifest) + `/micro-exp` (fresh sweep launch) + `/atlas` + `/verify` 위의 orchestration layer. /micro-exp 가 새 sweep 을 LAUNCH 한다면 /system 은 이미 돌고 있는 잡들의 persistent CONTROL TOWER.
+- **harvest→re-dispatch 자율 루프** = `next`/`auto` verb 로 1급 시민화 (사용자가 원래 project.tape 룰로 요청 → 범용 commons 패턴 → 전용 command 로 진화). 🔴 FALSIFIED 도 valid terminal (g63) → 다음 candidate 자동 진행.
+- commons g5/g8/g10/g57/g62/g63/g64/g65 정합 명시.
+
+---
+
 ## 2026-05-28 — all-bg-go 0.4.2: `/abg` 3-char alias 추가
 
 사용자 요청 — "abg 만들어줘". `/all-bg-go` 가 길어 빠른 호출용 단축 명령 필요. 기존 alias 패턴 (`/q`→question · `/ij`→inject · `/sbs`→step-by-step) 과 동일 — 같은 plugin 의 commands/ 에 별 .md 추가 (mirror 가 `~/.claude/commands/abg.md` 로 복사).

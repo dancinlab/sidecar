@@ -386,3 +386,28 @@ bare /domain:
 - sidecar INBOX #189 (`<NAME>.brainstorm.{md,tape}` 3rd pillar — 본 entry의 선행)
 
 **우선순위**: medium · 수동 패턴이 작동하지만 `/mining`이 정식이면 모든 demiurge/anima/hexa 도메인 즉시 사용. brainstorm/mining 명칭은 둘 다 받아도 됨 (mining이 lens-driven 함의 더 명확).
+
+## 2026-05-27 — /mining connect|edges 점잇기 verb (from demiurge RTSC)
+
+`/mining` 슬래시(#190)에 *edge enumeration* verb 추가 — 발산 후 자연 다음 단계.
+
+**상황**: demiurge RTSC mining에서 14 사이클(~94 leaf) 발산 후 사용자 "선들 연결해봐 고갈까지" → Cycle 15에서 leaf-leaf 의미있는 direct edge 32개 발견 → 그래프 본질 토폴로지 도달 (정보 압축: ~94 leaf → 1 진실 + 6 미커버).
+
+**제안 verbs**:
+- `/mining connect` 또는 `/mining edges` — 현 누적 leaf 사이의 의미있는 direct edge 발견 라운드. 동일 lens 기능에 *추가* (lens=발산, connect=수렴).
+- `/mining connect <leaf-a> <leaf-b>` — 특정 두 leaf 사이 edge 정당화(혹은 무관 확인).
+- `/mining graph` — 누적 edge 그래프 ASCII 시각화 + 통계 (n leaf · m edge · n(n-1)/2 가능 · 의미 비율).
+- `/mining saturate` — 새 edge 없을 때까지 자동 반복 (depletion analog of `/mining` lens 루프).
+
+**디자인**:
+- lens 종류 = 발산 (leaf 추가); connect 종류 = 수렴 (edge 추가).
+- 둘 합쳐 mining = (leaves, edges) 그래프 누적 — 그래프 이론에서 자연 짝.
+- edge "의미있음" = 사용자 판단 또는 LLM 자기-평가 (재포장/transitive 제외).
+- `/mining depletion`이 이미 있다면 lens+connect 둘 다 고갈 시 활성.
+
+**관련**:
+- sidecar #189 (`<NAME>.brainstorm.{md,tape}` 3rd pillar)
+- sidecar #190 (`/mining` lens-driven 발산)
+- demiurge PR #380 (Cycle 15 edge 32개 + 그래프 고갈 실증)
+
+**우선순위**: medium-high · 사용자 패턴이 sidecar #190만으론 발산만 자동화, 수렴(점잇기)도 정식화하면 mining 워크플로 완결.

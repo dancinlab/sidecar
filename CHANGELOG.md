@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — mining 0.5.0: lens procedure + 객관 depletion + leaf-ID 규칙 + edge positive 기준 + checkpoint discipline
+
+🛠 anima ANIMA mining cycle 1 (12 leaves 1-shot 'depletion') 직후 사용자 "마이닝 작동방식이 잘못된것같아" 신호. SKILL.md 본문은 0.4.0 auto-saturate trigger 만 풍부했고, 실 lens 5개 · depletion 기준 · leaf ID 규칙 · edge meaningful 기준 모두 1-line prose 만으로 의존 → agent 가 자기-환각으로 채울 여지 다대. 본 0.5.0 = 6 spec gap 동시 fix.
+
+- **`skills/mining/commands/mining.md`** — **lens 5종 step-by-step procedure** (same-formula · ouroboros · dimensional · tension · combinatorial 각각 rule + procedure ≥2 steps + leaf shape canonical) · **객관 depletion 3-test** (surface dedup · mechanism dedup · no new bracket-tag — 모두 충족 시에만 `@depleted:`; cap-5 hit ≠ depletion) · **leaf ID 규칙** (`L<max+1>` 단조 증가, 재사용 금지, sub-ID 금지) · **edge meaningful 4 positive 기준** (causal · equivalence · dependency · inversion · 각 edge 에 criterion label 필수) · **auto verb 총량 cap 25** (5 lens × 5 round) + checkpoint discipline (매 inner round 후 `.mining.md` 디스크 write — rate-limit 사망 시 graph 보존) · **promotion procedure** (leaf → milestone / atlas atom / cross-domain INBOX 4-step + dedup grep + bare-verb next-action surface up to 3).
+- **`skills/mining/.claude-plugin/plugin.json`** + **`.claude-plugin/marketplace.json`** — 0.4.0 → **0.5.0**.
+- **portable (s3 / s11)**: 모든 spec 이 markdown table + procedure list 로 표현 (env var / abs path 없음). lens 적용 후 leaf 가 `[<bracket-tag>]` 형식이라 객관 dedup 가능.
+- 재현: ANIMA mining cycle 1 = 12 leaf 1-shot depletion (실제는 leaf shape 객관 기준 부재로 agent 가 임의 stop). 0.5.0 적용 후 동일 lens fire 시 각 leaf 가 procedure 의 step 1-4 충족 + bracket-tag 명시 + depletion 3-test 통과해야 `@depleted:` 가능.
+
+---
+
 ## 2026-05-28 — hexa-lsp 0.1.2: cwd-bound LSP boot fix (`self/lsp.hexa` not found 종결)
 
 🚨 `/doctor` 가 `hexa-lsp` 를 crash trail 로 분류하던 false-alarm 의 진짜 원인 종결. upstream hexa-lang 의 `hexa lsp` 가 내부적으로 `hexa build self/lsp.hexa` 를 cwd 기준 상대 경로로 호출 → Claude Code 가 LSP 서버를 spawn 할 때 cwd 가 사용자 프로젝트(예: cwd=`/tmp` · cwd=다른 레포)면 "source file not found: self/lsp.hexa" 로 부팅 실패. hexa-lang main 에는 파일이 875줄로 명백히 존재(hexa-lang PR #1769 확인); cwd resolution 만의 문제.

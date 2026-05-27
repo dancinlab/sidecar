@@ -150,18 +150,20 @@ The reporting half of the `watch`/`harvest` **upstream-reflex** (when a `hexa cl
 
 **Repos scanned**: the linked upstream repos from `pods.json` `upstream_repos` (array of repo paths/slugs); default `~/core/hexa-lang` (the cloud/CLI substrate) + any repo referenced by a job's `kind`. `/system upstream <repo>` scopes to one.
 
+**⚠ Query origin/main + gh remote — NEVER the local working tree** (`git -C <repo> show origin/main:INBOX.log.md`, not a working-tree `grep <repo>/INBOX.log.md`). The local tree may be stale, on another branch, or unpulled → a false-empty result. This gap was found by dogfooding 0.4.0 (the upstream-reflex catching its own reporting bug).
+
 **Procedure**:
-1. **INBOX entries** — for each repo, `grep -nE '^## .*(from <campaign>|RTSC|<campaign-tag>)' <repo>/INBOX.log.md` (match the campaign tag the reflex stamped) → list date · slug · status (✅ resolved / 🟠 open).
-2. **Merged PRs** — `gh pr list --repo <owner/repo> --state merged --search "<campaign-tag> in:title,body" --json number,title,mergedAt --limit 20` → list PR# · title · mergedAt.
+1. **INBOX entries** — for each repo, scan origin/main (NOT the local tree): `git -C <repo> show origin/main:INBOX.log.md 2>/dev/null | grep -nE '^## .*(from <campaign>|RTSC|<campaign-tag>)'` (match the campaign tag the reflex stamped) → list date · slug. **Then parse each entry's own `🟠 OPEN` / `✅ RESOLVED` marker as the FIX status** — do NOT conflate "the entry's PR got merged" with "the fix landed". An INBOX **entry merged** only means the entry was recorded; the underlying fix may still be a 🟠 OPEN recommendation or a ✅ RESOLVED implementation. (Evidence this session: hexa-lang #1734 entry = ✅ RESOLVED implemented, but #1775 / #1828 entries = 🟠 OPEN recommendations despite their entry-PRs being merged.)
+2. **Merged PRs** — `gh pr list --repo <owner/repo> --state merged --search "<campaign-tag> in:title,body" --json number,title,mergedAt --limit 20` → list PR# · title · mergedAt. (gh hits the remote — already correct, never the local tree.)
 3. **Session scope** — if a `--since <ISO>` or the session-start time is known, filter to this session; else show the campaign-tagged trail.
-4. Render:
+4. Render — show BOTH the entry-merged state AND the parsed fix status as distinct columns:
 ```
-🔗 upstream trail — <campaign> (g59 reflex)
+🔗 upstream trail — <campaign> (g59 reflex · origin/main + gh)
 ═══════════════════════════════════════
 <repo>
-   #<PR>  <slug>                        <status>  <mergedAt>
+   #<PR>  <slug>                  entry:merged   fix:🟠 OPEN / ✅ RESOLVED   <mergedAt>
    ...
-─── N filed · M merged · K open ───
+─── N filed · M entry-merged · K fix-open · L fix-resolved ───
 ```
 Read-only (no filing here — that's the `watch`/`harvest` reflex). If a gap was hit THIS turn but not yet filed, flag it: `⚠ unfiled gap: <desc> — file to <repo>/INBOX (g59)`.
 

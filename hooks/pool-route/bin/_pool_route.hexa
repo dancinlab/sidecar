@@ -1151,17 +1151,21 @@ fn main() {
             if hverb == "kick" || hverb == "drill" || hverb == "loop" || hverb == "cc" { hexa_subverb = hverb }
             let mut help_cmd = "hexa --help"
             if hverb != "" && hverb.substring(0, 1) != "-" { help_cmd = "hexa " + hverb + " --help" }
-            // 0.8.2 — drop the obsolete `test -x build/hexa_interp` gate. hexa is a
-            // COMPILED toolchain; the tree-walking interpreter (build/hexa_interp)
-            // was DEPRECATED, so probing for it wrongly SKIPS hosts that have a
-            // perfectly working compiled hexa (e.g. ubu-2 has hexa on PATH +
-            // hexa_cli_driver + hexa_v2 but no leftover hexa_interp → was rejected;
-            // ubu-1 only passed on a stale leftover binary). Readiness now = the
-            // binary resolves (`command -v hexa`) AND a cheap real invocation
-            // (`hexa <verb> --help`, which compiles+runs through the live
-            // toolchain) succeeds — that exercises the actual compile path, no
-            // dependence on a specific build-dir artifact name.
-            tool_probe = "command -v hexa >/dev/null 2>&1 && PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_LANG=\"$HOME/core/hexa-lang\" " + help_cmd + " >/dev/null 2>&1"
+            // 0.8.3 — route hexa through `~/.hx/canon`, the pool-canonical
+            // hexa-lang checkout pinned at origin/main. Decouples pool dispatch
+            // from each host's `~/core/hexa-lang` (which may be on a feature
+            // branch, behind, or carrying anima WIP). The host's `~/.hx/bin/hexa`
+            // wrapper honors $HEXA_REAL_BIN, so injecting it + HEXA_LANG=canon
+            // pins BOTH the binary AND stdlib to origin/main without touching
+            // the user's dev tree. Probe: canon binary must exist + the wrapper
+            // must execute (`hexa <verb> --help`) through canon — exercises the
+            // actual compile path against the canonical stdlib.
+            // canon is bootstrapped by `~/.hx/canon-update.sh` on each host
+            // (idempotent: git fetch origin main + reset --hard + copy bootstrap
+            // C from ~/core/hexa-lang + hexa cc --regen). Hosts missing canon
+            // fail preflight with a runbook trailer; auto-self-heal deferred to
+            // 0.8.4 (probe must stay fast).
+            tool_probe = "test -x \"$HOME/.hx/canon/build/hexa_linux\" && command -v hexa >/dev/null 2>&1 && HEXA_REAL_BIN=\"$HOME/.hx/canon/build/hexa_linux\" HEXA_LANG=\"$HOME/.hx/canon\" HEXA_DAEMON=0 PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" " + help_cmd + " >/dev/null 2>&1"
             tool_label = help_cmd
         } else if t0b == "gcc" || t0b == "g++" || t0b == "clang" || t0b == "clang++" || t0b == "cc" || t0b == "c++" {
             tool_probe = "command -v " + t0b + " >/dev/null 2>&1"
@@ -1193,9 +1197,11 @@ fn main() {
         }
         let mut hexa_env = ""
         if _has_word(rcmd, "hexa") || rcmd.contains("hexa ") {
-            let mut hexa_lang = "$PWD"
-            if hexa_subverb != "" { hexa_lang = "$HOME/core/hexa-lang" }
-            hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"" + hexa_lang + "\" && "
+            // 0.8.3 — pin hexa dispatch to ~/.hx/canon (pool-canonical origin/main).
+            // Wrapper at ~/.hx/bin/hexa reads HEXA_REAL_BIN; HEXA_LANG=canon makes
+            // stdlib resolve against current self/*.hexa (#1533 qwen_bpe fix etc.).
+            // HEXA_DAEMON=0 bypasses the local hexa-daemon (per-host stale).
+            hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_REAL_BIN=\"$HOME/.hx/canon/build/hexa_linux\" HEXA_LANG=\"$HOME/.hx/canon\" HEXA_DAEMON=0 && "
         }
         let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
 
@@ -1240,9 +1246,12 @@ fn main() {
                  + "  why     : " + why + " (heavy-classified, must use pool resources)\n"
                  + "  tried   : " + tried.join(", ") + "\n"
                  + "  failures:\n    " + reasons.join("\n    ") + "\n"
-                 + "  fix     : for hexa, ensure each pool host has the hexa-lang repo at ~/core/hexa-lang "
-                 + "+ a runnable compiled `hexa` on PATH (`command -v hexa` + `hexa --help` must succeed — "
-                 + "hexa is compiled, the build/hexa_interp interpreter is DEPRECATED, do NOT probe for it); "
+                 + "  fix     : for hexa, ensure each pool host has the pool-canonical canon at "
+                 + "`~/.hx/canon` (= origin/main checkout + built `build/hexa_linux`). Bootstrap / refresh: "
+                 + "`pool on <host> ~/.hx/canon-update.sh` (idempotent — git fetch + reset --hard origin/main "
+                 + "+ copy bootstrap C from ~/core/hexa-lang + hexa cc --regen). 0.8.3 routes ALL hexa "
+                 + "dispatches via canon (HEXA_REAL_BIN + HEXA_LANG) so feature branches / WIP in "
+                 + "~/core/hexa-lang no longer affect pool runs; "
                  + "for C/C++, ensure the compiler (gcc/clang) is installed on a host; "
                  + "for any command, ensure the workdir (" + wd_remote + ") exists on at least one host."
         _deny_count(body, "heavy_failed")

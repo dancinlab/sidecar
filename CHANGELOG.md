@@ -6,6 +6,28 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — pool-route 0.8.3: pool-canonical `~/.hx/canon` 경로 — stale-컴파일러 근본해결
+
+사용자 지적 — "old compiler 문제등근본해결 필요". 진단: pool 호스트들의 `~/core/hexa-lang` 체크아웃이 origin/main 대비 심하게 뒤처짐 (ubu-1=42 commit 뒤·feature branch 2 미푸시·idle, ubu-2=**614 commit 뒤·main·미커밋 8개·활성 run 3개·systemd-resolved 죽음으로 github 접근 불가**). 0.8.2 preflight는 "hexa가 실행되는가"만 검사 → 614-뒤처진 컴파일러도 readiness PASS → anima 세션의 qwen_bpe round-trip이 miscompile. 단순한 git pull은 불가 — ubu-2의 5개 untracked WIP가 origin/main 트래킹 파일과 충돌, ubu-1의 미푸시 feature branch도 못 건드림.
+
+**근본해결**: 유저 dev 트리(`~/core/hexa-lang`)와 pool 디스패치를 **분리**.
+
+```
+~/core/hexa-lang  = 유저 dev (브랜치 · WIP · atlas)  — 건드리지 않음
+~/.hx/canon       = pool 전용 origin/main 체크아웃     — pool-route가 사용
+~/.hx/bin/hexa    = 래퍼 (HEXA_REAL_BIN 존중)
+```
+
+- **pool-route 0.8.2 → 0.8.3** — 모든 hexa 디스패치에 canon 환경 주입:
+  - `tool_probe` = `test -x ~/.hx/canon/build/hexa_linux` AND `command -v hexa` AND wrapper가 canon으로 `hexa --help` 실행
+  - `hexa_env` = `HEXA_REAL_BIN=$HOME/.hx/canon/build/hexa_linux HEXA_LANG=$HOME/.hx/canon HEXA_DAEMON=0` (바이너리 + stdlib 둘 다 canon으로 핀)
+  - deny-trailer = canon 부재 시 `~/.hx/canon-update.sh` 실행 안내
+- **`~/.hx/canon-update.sh`** (호스트별 설치) — 멱등 refresh: `git fetch origin main` → `reset --hard origin/main` → bootstrap C 복사 (`~/core/hexa-lang`의 untracked generated `self/runtime.c` + `self/native/hexa_cc.c`) → `hexa cc --regen` → `~/.hx/canon/.last_update` touch
+- ubu-1 ✅ canon @ `9027a1f` (#1549 t53 fixture fix) 빌드 + 검증 완료 — wrapper-injection으로 `qwen_bpe` parse cleanly
+- ubu-2는 systemd-resolved 죽음(`sudo systemctl restart systemd-resolved` 필요·유저 sudo) 해결 후 canon-update.sh 실행 가능 — 별개 호스트 health 이슈
+- auto-self-heal (stale 자동 fetch+rebuild)은 0.8.4로 미룸 — probe 속도 우선, canon-update.sh 매뉴얼 실행으로 충당
+- 효과: 유저의 feature 브랜치·WIP·atlas 작업이 pool 결과에 영향 없음, 모든 호스트에서 동일 origin/main hexa로 compile (결정성 ↑), stale-컴파일러 클래스 차단
+
 ## 2026-05-27 — pool-route 0.8.2: 폐기된 `hexa_interp` preflight probe 제거 (hexa=컴파일언어)
 
 사용자 지적 — "hexa는 컴파일언어, 인터프리터 폐기됨". pool-route preflight가 호스트 hexa 가용성을 `test -x ~/core/hexa-lang/build/hexa_interp` 로 판정했는데, 이 인터프리터 아티팩트는 **폐기**돼서 컴파일 hexa가 멀쩡한 호스트를 잘못 skip. 결과: ubu-2(hexa·hexa_cli_driver·hexa_v2 완비, leftover interp 없음)가 preflight 실패 → round-robin skip → agent가 pool 못 쓰고 로컬 sign-gate로 회귀.

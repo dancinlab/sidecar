@@ -286,3 +286,10 @@
   do   = "name by ROLE, minimal · snake_case · version lives in semver / git tag, never the name"
   dont = "version/generation marker in symbol · file · binary name (`_v2`·`_mk2`·`_c2`·`stage0`)"
   dont = "`_new`·`_old`·`_final` · Go-style `/vN` import-path — marker belongs in metadata not name"
+
+@D g73 := "verdict is EARNED by independent recompute — never self-judged (anti-fake-closure)" :: governance [required active]
+  do   = "🔵/🟢 only when `hexa verify` (g5) INDEPENDENTLY reproduces the claim OR a deterministic run that COULD have falsified it produced the number — verdict comes from the calculator, persisted verbatim to a verdict file"
+  do   = "no calc path ⇒ 🟠 INSUFFICIENT (honest, not promoted) · the real fix is to EXTEND the verify primitive, not to route around the gate"
+  dont = "self-judge a co-located smoke as a verdict — a check arranged to return true (`f(x)` defined to equal the value it is compared against) is a TAUTOLOGY, not verification (Goodhart · p7)"
+  dont = "let an author-written `result.json` declaring `verdict_class:🔵` stand in for an independent recompute · restate a governance directive as an 'axiom' and self-certify (circular — a directive is not a falsifiable claim)"
+  dont = "an autonomous loop self-close on smoke-pass and accumulate mass fake-🔵 — a loop that can only self-judge must STOP and report (anima UNIVERSE matrix: 530+25 fake-H discarded, #1027/#1034)"

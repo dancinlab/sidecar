@@ -414,7 +414,9 @@ bare /domain:
 
 **우선순위**: medium-high · 사용자 패턴이 sidecar #190만으론 발산만 자동화, 수렴(점잇기)도 정식화하면 mining 워크플로 완결.
 
-## 2026-05-27 — /mining tidy|consolidate 정리 verb (from demiurge RTSC)
+## 2026-05-27 — /mining tidy|consolidate 정리 verb (from demiurge RTSC) ✅
+
+**해소** (sidecar `skills/mining/` 0.3.0): tidy/consolidate/squash 3 verbs 추가 (총 12 verbs) · 4 phase 그룹(divergence/analysis/convergence/external) · cycle-index 표(chronological 순서 보존 — LOSSLESS) · stats(n leaves · m edges · K cycles · covered/uncovered axes · meaningful ratio) + closure box 자동 · `--depth=light`(header+index) / `--depth=full`(body regroup, DEFAULT) · squash=cosmetic dup-header dedup only (low-risk pre-step) · `@kind:` 누락 시 phase 추정 금지 → 명시 요구 · status 자동 advisory ≥10 cycles & ≥500 lines.
 
 `/mining` 슬래시(#190)에 *재정리* verb 추가 — 발산(lens)/수렴(connect)에 이어 *organize*.
 

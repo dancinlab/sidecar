@@ -1,6 +1,6 @@
 ---
-description: /mining — lens-driven DIVERGENCE (add leaves) + CONVERGENCE (add edges) workflow. Sibling 3rd pillar to /domain (snapshot · log · MINING). Verbs — bare (status) · `<lens>` (divergence round) · `append <text>` · `cycle new <title>` · `depletion` · `tree` · `connect`/`edges` (find meaningful leaf↔leaf edges) · `connect <a> <b>` (justify one edge) · `graph` (ASCII graph + stats) · `saturate` (auto-edge until depletion). Bundled lenses — same-formula · ouroboros · dimensional · tension · combinatorial · custom (extensible `~/.sidecar/lens/<name>.md`). Mining accumulates as a (leaves, edges) graph: lens=divergence, connect=convergence.
-argument-hint: "[<lens> | append <text> | cycle new <title> | depletion | tree | connect [<a> <b>] | edges | graph | saturate | (bare = status)]"
+description: /mining — lens-driven DIVERGENCE (add leaves) + CONVERGENCE (add edges) + ORGANIZE (tidy) workflow. Sibling 3rd pillar to /domain (snapshot · log · MINING). Verbs — bare (status) · `<lens>` (divergence round) · `append <text>` · `cycle new <title>` · `depletion` · `tree` · `connect`/`edges` (find meaningful leaf↔leaf edges) · `connect <a> <b>` (justify one edge) · `graph` (ASCII graph + stats) · `saturate` (auto-edge until depletion) · `tidy`/`consolidate` [`--depth=light|full`] (lossless phase-group reorganize) · `squash` (dedup trivial headers). Bundled lenses — same-formula · ouroboros · dimensional · tension · combinatorial · custom (extensible `~/.sidecar/lens/<name>.md`). Mining = three workflows: lens (divergence) + connect (convergence) + tidy (organize).
+argument-hint: "[<lens> | append <text> | cycle new <title> | depletion | tree | connect [<a> <b>] | edges | graph | saturate | tidy [--depth=light|full] | consolidate | squash | (bare = status)]"
 allowed-tools: Bash, Read, Edit, Write
 ---
 
@@ -18,19 +18,27 @@ active domain:
 - `<NAME>.mining.tape` — idea cart of surfaced candidates (`@X = <claim>` entries,
   promoted later to milestones or atlas registrations as warranted).
 
-Mining has TWO complementary halves (0.2.0):
+Mining has THREE complementary workflows (0.3.0):
 
 - **Divergence (lens rounds)** — apply a lens to the current frontier and
   record new **leaves** (sub-claims · branches). 0 new leaves under the current
   lens = lens depletion.
 - **Convergence (connect rounds)** — find meaningful direct **edges** between
   accumulated leaves (transitive / re-packaging excluded). 0 new edges in a
-  full pass = connect depletion. Together: mining = (leaves, edges) graph
-  — divergence builds the node set; convergence builds the topology that
-  compresses leaves into the underlying truth.
+  full pass = connect depletion. Together: divergence + convergence make
+  mining a (leaves, edges) graph — divergence builds the node set;
+  convergence builds the topology that compresses leaves into the underlying
+  truth.
+- **Organize (tidy / consolidate)** — once the (leaves, edges) graph is large
+  (≥10 cycles · ≥500 log lines), reorganize chronological raw form into
+  PHASE groups (divergence / analysis / convergence / external) with a cycle-
+  index table that preserves chronology losslessly. Optional `squash` collapses
+  trivial repeated headers (cosmetic, no regroup).
 
 A **cycle** = one round (lens or connect). Cycles are chronological + append-only;
-depletion closes a cycle, NOT the file.
+depletion closes a cycle, NOT the file. `tidy` rearranges the cycles into phase
+groups but does NOT discard any leaf/edge — the index table preserves the
+original chronological order so anything can be re-derived.
 
 ## Step 0 — active domain check (RUN FIRST)
 
@@ -57,6 +65,8 @@ Resolve the active domain's file location from `DOMAINS.tape` (or current dir)
 | `connect <a> <b>` | **connect-pair** | justify or refute the edge between two specific leaves (L#·E# or text) |
 | `graph` | **graph** | ASCII (leaves, edges) graph + stats (n leaf · m edge · n(n-1)/2 possible · meaningful ratio) |
 | `saturate` | **saturate** | auto-loop `connect` rounds until a full pass finds 0 new edges (depletion analog for convergence) |
+| `tidy` or `consolidate` [`--depth=light\|full`] | **tidy (organize)** | reorganize accumulated cycles into PHASE groups (divergence / analysis / convergence / external) + cycle-index table + stats + single closure box · LOSSLESS (chronological info preserved in the index) |
+| `squash` | **squash dup headers** | dedup repeated trivial headers (e.g. "next cycle pending" repeated N times) — cosmetic only, no phase regrouping |
 
 ## Verb behaviors
 
@@ -66,11 +76,14 @@ Read the `.mining.md`. Print:
 
 ```
 🧪 mining: <NAME>
-  cycles: <N>   leaves: <N>   .tape entries: <N>
-  current cycle: #<N> · lens: <name> · since: <date>
+  cycles: <N>   leaves: <N>   edges: <M>   .tape entries: <N>
+  current cycle: #<N> · kind: <lens|connect> <name> · since: <date>
   undepleted lenses: <list>
   recent leaves (last 3): · <leaf> · <leaf> · <leaf>
 ```
+
+If cycles ≥ 10 AND `.mining.md` line count ≥ 500, append the advisory:
+`💡 consider /mining tidy (≥10 cycles · ≥500 lines)`. Non-blocking.
 
 ### `<lens-name>` — apply lens round
 
@@ -184,6 +197,80 @@ invocation (safety) — if still finding edges, report `🔄 still saturating �
 re-run /mining saturate` for the user to continue. Each inner pass appends its
 edges + cycle ends with `@depleted: connect @ <date>` when the loop terminates.
 
+### `tidy` (or `consolidate`) — phase-group reorganize (LOSSLESS)
+
+Reorganize accumulated cycles into PHASE groups + add a cycle-index table.
+Default depth = `full`. Phase groups (in order):
+
+1. **divergence** — all `@kind: lens` cycles (lens rounds; leaves)
+2. **analysis** — non-lens/non-connect commentary cycles (mid-stream reviews ·
+   appended `/mining append` notes that aren't part of a lens pass)
+3. **convergence** — all `@kind: connect` cycles (connect rounds; edges)
+4. **external** — links to outside repos / atlas / verify outcomes referenced
+   by leaves (extracted into a single tail section so the body stays focused)
+
+The output replaces the chronological `## cycles` body with:
+
+```
+## cycles (reorganized 2026-MM-DD · tidy v<N>)
+
+### index (chronological — preserves original order losslessly)
+| cycle | kind   | title                | leaves | edges | depleted | phase       |
+|------:|--------|----------------------|-------:|------:|:--------:|-------------|
+|     1 | lens   | <title>              |     12 |     — | ✓ same-formula | divergence |
+|     2 | lens   | <title>              |      8 |     — | ✓ ouroboros    | divergence |
+|     3 | connect| <title>              |     — |    14 | ✓ connect      | convergence|
+| ...   | ...    | ...                  |   ... |   ... | ...      | ...         |
+
+### stats
+n leaves = N · m edges = M · cycles = K (divergence D · analysis A · convergence C)
+covered axes: <list>   uncovered axes: <list>
+meaningful ratio = M / (N(N-1)/2) = X.XX
+
+## divergence
+(grouped lens cycles — each cycle as a `### cycle N — <title>` subsection)
+
+## analysis
+(grouped mid-stream commentary cycles)
+
+## convergence
+(grouped connect cycles)
+
+## external
+(extracted external references)
+
+## closure
+@status: <open | depleted-divergence | depleted-convergence | depleted-both>
+@last-action: tidy @ <ISO-date>
+@next: <suggested next move — new lens · new connect pass · saturate · etc>
+```
+
+**Lossless guarantee** — every leaf, edge, and note from the chronological body
+must reappear under exactly one phase group; the `index` table holds the
+original chronological order so `/mining tree` and `/mining graph` remain
+deterministic across tidy operations. If unable to map a cycle to a phase
+(unknown `@kind:` or ambiguous), emit `🛑 tidy: cycle <N> phase ambiguous —
+re-run after declaring '@kind: <lens|connect|analysis>'` rather than guess.
+
+**Depth flag** —
+
+- `--depth=light` — header + cycle-index table + stats only; body stays
+  chronological. Safe at smaller scales (cycles < ~10) where regrouping adds
+  no clarity.
+- `--depth=full` (DEFAULT) — full phase regrouping per the schema above.
+
+**Auto-suggest** — when `mining status` detects cycles ≥ 10 AND log lines ≥
+500, append a single-line nudge `💡 consider /mining tidy (≥10 cycles ·
+≥500 lines)` to the status block. Non-blocking — purely advisory.
+
+### `squash` — dedup repeated trivial headers (cosmetic)
+
+Walk the current `.mining.md` and collapse exact-duplicate trivial headers
+(canonical examples: repeated empty `### 다음 사이클 예정` / `### TBD` /
+`### scratch` headers between bona-fide cycle sections). Body content stays;
+only the duplicate headers themselves merge. No phase regrouping (use `tidy`
+for that). Useful as a low-risk pre-step before `tidy --depth=full`.
+
 ## Bundled lens catalogue
 
 Each lens is a short rule for HOW to generate the next round of leaves from the
@@ -272,4 +359,6 @@ After any verb, end with one status line:
 
 Triggers — `/mining`, `/mining <lens>`, `mining cycle`, `lens 발산`, `lens 채굴`,
 `divergence cycle`, `lens 적용`, `mining tree`, `mining connect`, `mining edges`,
-`mining graph`, `mining saturate`, `점잇기`, `선들 연결`, `edge 발견`.
+`mining graph`, `mining saturate`, `점잇기`, `선들 연결`, `edge 발견`,
+`mining tidy`, `mining consolidate`, `mining squash`, `정리`, `phase 그룹`,
+`마이닝 정리`, `consolidate cycles`, `reorganize mining`.

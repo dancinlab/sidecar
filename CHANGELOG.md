@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — mining 0.3.0: organize 절반 (`tidy` · `consolidate` · `squash`) 추가 — 3-workflow 완성
+
+사용자 — "inbox check and patch" (INBOX.log.md `#192` from demiurge RTSC Cycle 15: 15 사이클 누적 후 chronological raw 가독성 떨어짐 → mining.md를 430→230줄로 phase 그룹화한 demiurge #382 워크플로의 슬래시화). **lens(발산) + connect(수렴) + tidy(정리)** = mining 3-workflow 완성 — 발산이 노드를, 수렴이 토폴로지를, 정리가 navigable 구조를 만든다.
+
+- **`skills/mining/` 0.2.0 → 0.3.0** — 정리 verbs 3종 추가, 총 verbs 10 → 12.
+- **3 신규 verbs**:
+  - `tidy` (alias `consolidate`) — phase-group 재조직. 4 phase 그룹 — **divergence** (lens cycles) · **analysis** (mid-stream commentary) · **convergence** (connect cycles) · **external** (외부 참조). 본문 위에 **cycle-index 표** (chronological — 원본 순서 보존) + **stats** (n leaves · m edges · 사이클 K · 커버/미커버 axes · meaningful ratio) + **closure box** (`@status` · `@last-action` · `@next`) 자동 생성.
+  - `--depth=light` — 헤더 + index 표 + stats만 추가 (사이클 <10 안전 모드).
+  - `--depth=full` (DEFAULT) — 본문도 phase 그룹화.
+  - `squash` — 중복 trivial 헤더(예: 반복 `### 다음 사이클 예정` / `### TBD`)만 단일화. **destructive 아님** (본문 그대로, 헤더만 머지). low-risk pre-step before `tidy --depth=full`.
+- **LOSSLESS 보장** — 모든 leaf/edge/note가 정확히 한 phase 그룹에 재배치; `index` 표가 chronological 순서 보존해 `/mining tree`·`/mining graph` 결과가 tidy 전후 동일. `@kind:` 누락/모호 사이클은 추정 금지 → `🛑 tidy: cycle <N> phase ambiguous` refuse + 선언 요구.
+- **status 자동 advisory** — 사이클 ≥10 AND 라인 ≥500 시 `💡 consider /mining tidy (≥10 cycles · ≥500 lines)` non-blocking 표시.
+- INBOX.log #192 ✅ resolved.
+- 출처: demiurge RTSC Cycle 15 — "마이닝 계속 고갈시까지 정리" → mining.md v2 phase-그룹 재조직 본체(#382)의 슬래시화.
+
 ## 2026-05-27 — mining 0.2.0: convergence 절반 (`connect` · `edges` · `graph` · `saturate`) 추가
 
 사용자 — "inbox check 해서 업그레이드" (INBOX.log.md `#191` from demiurge RTSC Cycle 15: 발산만 있으면 leaf가 무한 증식만 한다 → 누적 leaf 사이 의미있는 direct edge를 찾는 **수렴** 라운드 = 0.1.0과 대칭). mining = (leaves, edges) **그래프**로 재정의 — divergence는 노드를 만들고, convergence는 underlying truth로 압축한다.

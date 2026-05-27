@@ -478,7 +478,11 @@ bare /domain:
 
 **우선순위**: medium · 발산/수렴 완성된 sidecar #190/#191 후 자연 다음 step. 누적 doc의 가독성·유지보수성 직격.
 
-## 2026-05-27 — ~/.pool/pods.json 활성 POD 매니페스트 (update-form, from demiurge RTSC)
+## 2026-05-27 — ~/.pool/pods.json 활성 POD 매니페스트 (update-form, from demiurge RTSC) ✅
+
+**해소** (hexa-lang `stdlib/cloud/pods_local.hexa` 0.4.0 · PR #1699 main 머지 · sidecar `skills/cloud/` 0.4.0). **위치/CLI 정정**: INBOX entry 원안의 `~/.pool/pods.json` 글로벌 + pool CLI는 사용자 의도("프로젝트마다 작업관리 시스템 · 파일 한 개로")와 영역 불일치(pool=호스트 roster · pods=작업 매니페스트) → **cwd `./pods.json` per-project + hexa cloud 확장**으로 land. pool 0.9.0 wip 폐기. 6 verbs (pods · dispatch · dispatch tree · active · add · verdict · rm) 8-case smoke ALL PASS. atomic write + .bak 로테이션 + auto `last_updated_utc` 스탬프(s11). 글로벌 `pod_registry` (`cloud orphans`/`reconcile` · `~/.hexa-cloud/pods.jsonl` 자동추적 billing/orphan 방어)와 분리 — `pods`/`dispatch`는 operator의 manual project work view, 공존.
+
+
 
 호스트 roster용 `~/.pool/pool.json` (이미 존재 · update-form)의 sibling — 활성 DFT/dispatch POD 상태를 *append 아닌 update 형식*으로 관리.
 

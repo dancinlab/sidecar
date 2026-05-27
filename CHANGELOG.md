@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — cloud 0.4.0: `cloud pods` + `cloud dispatch` 노출 (hexa-lang PR #1699 land 따라가기)
+
+사용자 — "프로젝트마다 runpod/vast.ai/ubu 작업 관리 시스템, 파일 한 개로" (INBOX.log.md `#193`). 처음에 `~/.pool/pods.json` 글로벌 + pool CLI로 제안됐으나, 사용자 정정으로 **cwd `./pods.json` per-project + hexa cloud 확장**으로 land. pool 0.9.0 wip는 폐기 (영역 불일치 — pool=호스트 roster, pods=작업 매니페스트).
+
+- **`skills/cloud/` 0.3.5 → 0.4.0** — SKILL.md 트리거 + plugin.json 설명에 신규 verbs 노출.
+- **hexa-lang `cloud pods` + `cloud dispatch` (PR #1699 main 머지)** — 신규 모듈 `stdlib/cloud/pods_local.hexa` (340줄) + `cloud_cli.hexa` 라우팅. 8 verbs smoke ALL PASS:
+  - `cloud pods` — 전체 테이블 (cwd `./pods.json` 읽기)
+  - `cloud dispatch` — 동일 (alias)
+  - `cloud dispatch tree` — pod 그룹 ASCII (orphan job tail 섹션)
+  - `cloud dispatch active` — verdict=PENDING만
+  - `cloud dispatch add <jid> <pid> <dir> [flags]` — job entry 덮어쓰기 + pod entry 자동 stub
+  - `cloud dispatch verdict <jid> <status>` — verdict + verdict_utc만 갱신 (다른 field 보존)
+  - `cloud dispatch rm <target>` — job 우선 매칭 후 pod, **pinned job 있으면 pod rm 거부**
+- **schema** (update-form): `{version, last_updated_utc, pods{<pod-id>: {host,provider,...}}, jobs{<job-id>: {pod,dir,kind,stage,pid,watcher,watcher_output,verdict,started_utc,verdict_utc}}}`. atomic write (`mktemp + mv -f` rename(2)) + `.bak` 로테이션 + auto `last_updated_utc` 스탬프 (s11 no-opt-out).
+- **글로벌 `pod_registry`와 분리**: 기존 `~/.hexa-cloud/pods.jsonl` (`cloud orphans`/`reconcile`)은 자동 추적 billing/orphan 방어 — `cloud run`/`nohup`이 dispatch마다 자동 기록. 신규 `./pods.json`은 **operator의 manual 작업 매니페스트 per project** (demiurge/anima/hexa-lang 각자 독립). 공존.
+- INBOX.log #193 ✅ resolved · INBOX.md 갱신.
+- 동기: demiurge RTSC 8 DFT 동시 진행 + sidecar `/micro-exp` sweep — "지금 무엇이 어디서 진행중"이 매 사이클 sweep 명령 반복 없이 한눈에 보이게.
+
 ## 2026-05-27 — mining 0.3.0: organize 절반 (`tidy` · `consolidate` · `squash`) 추가 — 3-workflow 완성
 
 사용자 — "inbox check and patch" (INBOX.log.md `#192` from demiurge RTSC Cycle 15: 15 사이클 누적 후 chronological raw 가독성 떨어짐 → mining.md를 430→230줄로 phase 그룹화한 demiurge #382 워크플로의 슬래시화). **lens(발산) + connect(수렴) + tidy(정리)** = mining 3-workflow 완성 — 발산이 노드를, 수렴이 토폴로지를, 정리가 navigable 구조를 만든다.

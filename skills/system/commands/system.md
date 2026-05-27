@@ -96,9 +96,13 @@ For a terminal job (or all terminal jobs if no id):
 
 This is the **harvest→re-dispatch autonomy** — the reason `/system` exists. For each harvested-terminal job:
 1. **atlas register** on a 🟢/🔵 verdict (g62) — `/atlas register --from-verify ...` (verified closed-form folds into the atlas).
-2. **fire the next queued candidate** from `queue` (status `queued`, highest priority) — provision/reuse a surface, dispatch its run, arm its watcher, flip its queue status → `fired`. State the incremental cost in ONE line, then fire (no "shall I continue?" gate — same autonomy as the initial cost-bearing fire).
+2. **fire the next candidate** from `queue` (highest priority). Resolve its status FIRST (see taxonomy below):
+   - `queued` (ready) → provision/reuse a surface, dispatch, arm watcher, flip → `fired`. State the incremental cost in ONE line, then fire — **no "shall I continue?" gate** (same autonomy as the initial cost-bearing fire).
+   - `blocked:<technical-input>` → **AUTO-RESOLVE the blocker, then fire** — do NOT park it. A missing structure coord → `/research:arxiv` or literature lookup; a missing input file → fetch/build it; a missing pseudo/dep → wget/install it. Resolving a technical input is agent work, NOT a user gate. Only after an HONEST resolution attempt fails (input genuinely unavailable, e.g. a coord that exists only as a figure) does it become a logged skip (d6 — never hallucinate the missing input).
 3. 🔴 FALSIFIED is a valid terminal → STILL advance to the next candidate (a closed-negative rules out an axis; the campaign continues).
 4. If `queue` is empty AND no open axis remains → report depletion (NOT a pause-for-approval).
+
+**Autonomy invariant (the reason this verb exists):** "queued" / "blocked" NEVER means "waiting for the user to say go." `queued` auto-fires; `blocked:<technical>` auto-resolves-then-fires. The ONLY status that legitimately stops the loop for a human is `gated:<human-only-input>` — a credential, a destructive/irreversible action, or a genuine design decision (rare). Re-framing a technically-resolvable candidate as "발사 대기 / awaiting approval" is the exact anti-pattern `/system` removes.
 
 ## auto — full loop to depletion
 
@@ -119,6 +123,18 @@ Sum `running`+`done` pod-hours × rate from `pods.json` → `spent_usd`; render 
 - `queue add <id> <kind> <spec>` — append a candidate (status `queued`).
 - `queue rm <id>` — drop a candidate.
 The queue is what `next`/`auto` draws the re-dispatch target from.
+
+**Candidate status taxonomy** (the status is an AUTONOMY contract, not a waiting-room):
+
+| status | meaning | loop behavior |
+|---|---|---|
+| `queued` | ready (spec + inputs complete) | **auto-fires** on `next`/`auto` |
+| `blocked:<technical>` | missing a resolvable input (coord · data · pseudo · dep) | **auto-resolve** (research/fetch/build) then fire — NOT a wait |
+| `fired` | dispatched, watcher armed | in-flight; harvest on terminal |
+| `done` | harvested + verdict recorded | terminal |
+| `gated:<human-only>` | needs credential / irreversible-action OK / design decision | **the ONLY status that stops for a human** (rare) |
+
+There is deliberately NO "awaiting-approval" status for an ordinary candidate. If you catch yourself about to write "발사 대기 / waiting for user go" on a `queued` or `blocked:<technical>` item — that's the anti-pattern; fire or auto-resolve instead.
 
 ## Honest constraints (commons-aligned)
 - **g8** — all pod ops via `hexa cloud {exec|run|nohup|copy-to|copy-from|poll|tail}`; never raw ssh/scp.

@@ -2,6 +2,19 @@
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.
 
+## 2026-05-27 — stale-base squash-merge 회귀 가드 (anima #1105 가 35190 파일 삭제)
+
+> **사건**: anima PR #1105(`decoder-m4b-gpu2-arch`)가 극도로 stale 한 base 에서 분기 → `gh pr merge --squash --admin` 시 main 의 **35190 파일**(state/ archive/ HEXAD/ docs/ AGENT/ training/ `.hexarc` 등 거의 전체 repo)을 회귀 삭제. 정당한 변경은 `CORE/DECODER/v3_moe_arch.hexa` + smoke 2파일뿐. 복구 = anima #1106(99d581691 부모에서 전체 복원 + port 유지). **자동 머지가 35190-삭제를 무경고 통과**시킨 게 핵심 위험.
+
+> **root cause**: 이전 rejected turn 에서 생성된 브랜치(`decoder-m4b-gpu2-arch`)가 worktree 재사용으로 stale base 를 보유. git-guard 의 stale-base 경고는 `git push` 시점 backstop 인데 `gh pr merge` (squash) 경로에서 미동작 → 대량 삭제가 그대로 main 에 안착.
+
+**제안 가드 (sidecar pr-cycle / git-guard hook)**
+- [ ] **삭제-수 sanity gate** — pr-cycle 머지 hook 에서 `gh pr diff --name-status` 의 `D` 라인 수가 임계(예: >50) 또는 추가 대비 비대칭(삭제≫추가)이면 머지 BLOCK + 명시 확인 요구. 35190 삭제는 명백 이상치.
+- [ ] **브랜치 재사용 금지 가드** — `git worktree add -b <br>` 시 `<br>` 가 이미 존재(특히 origin 에 없는 로컬-only stale)하면 거부/경고. 매 PR fresh-분기 강제.
+- [ ] **stale-base 체크를 머지 경로로 확장** — PR head 의 `git merge-base origin/main <head>` 가 origin/main 에서 N커밋 이상 뒤지거나, merge 가 main-only 파일을 대량 삭제할 것으로 예측되면 push 뿐 아니라 merge 직전에도 경고.
+
+**lesson (작성자 규율)**: 브랜치/worktree 재사용 금지 — 매 PR 마다 `origin/main` 최신에서 fresh 분기 + HEAD 확인. severity: **high** (main 무결성 회귀).
+
 ## 2026-05-26 — `pool` CLI 회귀 ✅ 로컬 해소 + 상류 debt (from hexa-lang RUNTIME)
 
 > 핸드오프 증상: 전 subcommand 가 `OK: <첫인자>` 만 반환, bare `pool` → `hexa-cc` usage. 1차추정은 "shim 정상, `~/.hx/bin/hexa` 인터프리터 또는 `pool.hexa` 설치본 손상". 진단 결과 손상은 **결과**였고 원인은 따로 있었음.

@@ -42,7 +42,14 @@
 // No opt-out by design — no env var, no config file, no exception list.
 
 let MARK = "__SIDECAR_PR_CYCLE__"
-let MERGE_TAIL = " && gh pr merge --squash --admin --delete-branch"
+// 0.3.0 — explicit PR# capture via `gh pr view --json number -q .number` (run
+// right after `gh pr create` succeeds, so the API sees the fresh PR). Bare
+// `gh pr merge` infers from current-branch context; explicit PR# is robust
+// when the branch is detached, when the worktree is being torn down, or when
+// CI rerouting drops the head-ref. The same-repo tail captures from the cwd
+// repo; the cross-repo branch (line ~376) captures via `--repo X` for both
+// the view and the merge so the entire chain stays pinned to the target repo.
+let MERGE_TAIL = " && gh pr merge \"$(gh pr view --json number -q .number)\" --squash --admin --delete-branch"
 
 // Absolute deletion ceiling for an auto-merge. Above this the PR is a
 // mass-deletion outlier — the 35190-file stale-base regression sits far
@@ -372,8 +379,11 @@ fn main() {
     // against the cwd repo's main, fetching/merging the wrong repo).
     let repo = _repo_flag(toks)
     if repo != "" {
-        let xcmd = cmd + " && gh pr merge --repo " + repo + " --squash --admin --delete-branch" + "  # " + MARK
-        let xnote = "pr-cycle: cross-repo (--repo " + repo + ") — appended `gh pr merge --repo " + repo + "`; no local worktree cleanup (cwd repo ≠ PR repo)."
+        // 0.3.0 — explicit PR# via `gh pr view --repo X --json number -q .number`
+        // pinned to the same target repo as the create (vs inferring from the
+        // cwd branch, which would resolve to the WRONG repo's PR — INBOX #4).
+        let xcmd = cmd + " && gh pr merge \"$(gh pr view --repo " + repo + " --json number -q .number)\" --repo " + repo + " --squash --admin --delete-branch" + "  # " + MARK
+        let xnote = "pr-cycle: cross-repo (--repo " + repo + ") — appended `gh pr merge <PR#> --repo " + repo + "` (PR# captured via `gh pr view --repo X`); no local worktree cleanup (cwd repo ≠ PR repo)."
         _emit(ti, xcmd, xnote)
     }
 

@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — pr-cycle-hook 0.3.0: 명시 PR# 캡처 (`gh pr view --json number`)
+
+INBOX 5-제안 deferred 잔여 1건 — pr-cycle hook 의 auto-merge tail 에 명시 PR# 추가. 직전 cycle 에서 hexa-lang PR #1757 작성 시 main worktree 충돌로 `gh pr merge` 의 `--delete-branch` 가 local cleanup 시도 → fail; 같은 클래스의 robustness 향상.
+
+- **`hooks/pr-cycle-hook/` 0.2.0 → 0.3.0** — `MERGE_TAIL` + cross-repo branch 둘 다 `gh pr merge "$(gh pr view ... --json number -q .number)"` 형태로 PR# 명시 capture:
+  - same-repo: `gh pr merge "$(gh pr view --json number -q .number)" --squash --admin --delete-branch`
+  - cross-repo (`--repo X`): `gh pr merge "$(gh pr view --repo X --json number -q .number)" --repo X --squash --admin --delete-branch` (view+merge 둘 다 target repo 에 pin)
+- **목적**: branch-ref detached · worktree mid-teardown · CI head-ref strip 등 `gh pr merge` 가 current-branch 로 PR 유추하기 어려운 상황에서도 정확한 merge. cross-repo 가 cwd repo 의 PR 로 잘못 라우팅되는 케이스 (INBOX #4 anima) 도 belt-and-suspenders.
+- **DELETION-SANITY GATE (0.2.0) 보존** — anima #1105 35190-file revert-delete 차단 로직 그대로.
+
+---
+
 ## 2026-05-28 — install.hexa: cache plugin.json jq validate · docs/meta-domain-pattern.md 추가
 
 INBOX 5-제안 deferred 잔여 2건 inline 처리 — (4) install.hexa cache jq + (1) meta-domain pattern doc.

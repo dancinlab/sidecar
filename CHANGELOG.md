@@ -27,6 +27,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — mining 0.4.0: auto-saturate default + 신규 `auto` verb (사이클마다 물어보지 않고 고갈시까지)
+
+사용자 피드백 — "/mining 이 사이클마다 사용자 확인 받지 않고 depletion 까지 자동 진행되어야". 기존 `<lens>` / `connect` 가 1 round 후 사용자 응답 대기 → cycle 마다 manual gate 발생.
+
+- **`skills/mining/` 0.3.0 → 0.4.0** — 기본 행동 변경 + 신규 verb:
+  - **`<lens>` auto-saturate** — 적용 직후 새 leaves ≥1 이면 같은 lens 다시 적용, 0 new leaves 일 때만 stop + `@depleted` 마킹. cap 5 inner rounds/invocation. 사용자 per-round 확인 없음.
+  - **`connect`/`edges` auto-saturate** — 동일 패턴. `saturate` verb 는 alias 로 보존 (discoverability).
+  - **신규 `auto` verb** — 단일 invocation 으로 full pipeline drain: ① divergence saturate (모든 undepleted bundled lens round-robin · 한 catalogue 전체 pass 가 0 new leaves 면 종료) → ② convergence saturate → ③ `tidy --depth=light` → ④ `🏁 mining drained` 보고. cap-5 phase 단위로 적용 (안전).
+- **사용자 흐름**: `/mining <lens>` 한 번 호출 = lens 완전 소진. `/mining auto` 한 번 호출 = mining graph 전체 drain.
+- **NL triggers 추가**: `고갈시까지` · `한번에 끝까지` · `사이클마다 물어보지 말고`
+- **호환**: 기존 verb table 12 → 13 (`auto` 추가) · `saturate` semantic 동일 유지 (alias) · `cycle new` / `depletion` / `tidy` 등 그대로.
+
+---
+
 ## 2026-05-28 — pr-cycle-hook 0.3.0: 명시 PR# 캡처 (`gh pr view --json number`)
 
 INBOX 5-제안 deferred 잔여 1건 — pr-cycle hook 의 auto-merge tail 에 명시 PR# 추가. 직전 cycle 에서 hexa-lang PR #1757 작성 시 main worktree 충돌로 `gh pr merge` 의 `--delete-branch` 가 local cleanup 시도 → fail; 같은 클래스의 robustness 향상.

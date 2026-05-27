@@ -1,6 +1,6 @@
 ---
-description: /mining — lens-driven DIVERGENCE (add leaves) + CONVERGENCE (add edges) + ORGANIZE (tidy) workflow. Sibling 3rd pillar to /domain (snapshot · log · MINING). Verbs — bare (status) · `<lens>` (divergence round) · `append <text>` · `cycle new <title>` · `depletion` · `tree` · `connect`/`edges` (find meaningful leaf↔leaf edges) · `connect <a> <b>` (justify one edge) · `graph` (ASCII graph + stats) · `saturate` (auto-edge until depletion) · `tidy`/`consolidate` [`--depth=light|full`] (lossless phase-group reorganize) · `squash` (dedup trivial headers). Bundled lenses — same-formula · ouroboros · dimensional · tension · combinatorial · custom (extensible `~/.sidecar/lens/<name>.md`). Mining = three workflows: lens (divergence) + connect (convergence) + tidy (organize).
-argument-hint: "[<lens> | append <text> | cycle new <title> | depletion | tree | connect [<a> <b>] | edges | graph | saturate | tidy [--depth=light|full] | consolidate | squash | (bare = status)]"
+description: /mining — lens-driven DIVERGENCE + connect-driven CONVERGENCE + tidy-driven ORGANIZE workflow. Sibling 3rd pillar to /domain (snapshot · log · MINING). 0.4.0 — **auto-saturate by default**: `<lens>` and `connect` auto-loop until depletion (no per-round confirmation; cap 5 inner rounds per invocation, re-run hint when not yet depleted). New verb `auto` = full pipeline (drain divergence → convergence → tidy in one shot). Verbs — bare (status) · `<lens>` (divergence saturate-loop) · `append <text>` · `cycle new <title>` · `depletion` · `tree` · `connect`/`edges` (convergence saturate-loop) · `connect <a> <b>` · `graph` · `saturate` (alias of connect-loop) · `auto` (full pipeline to depletion) · `tidy`/`consolidate` [`--depth=light|full`] · `squash`. Bundled lenses — same-formula · ouroboros · dimensional · tension · combinatorial · custom (extensible `~/.sidecar/lens/<name>.md`).
+argument-hint: "[<lens> | append <text> | cycle new <title> | depletion | tree | connect [<a> <b>] | edges | graph | saturate | auto | tidy [--depth=light|full] | consolidate | squash | (bare = status)]"
 allowed-tools: Bash, Read, Edit, Write
 ---
 
@@ -64,7 +64,8 @@ Resolve the active domain's file location from `DOMAINS.tape` (or current dir)
 | `connect` or `edges` | **connect round (convergence)** | find meaningful direct edges between accumulated leaves — add new **edges** this cycle |
 | `connect <a> <b>` | **connect-pair** | justify or refute the edge between two specific leaves (L#·E# or text) |
 | `graph` | **graph** | ASCII (leaves, edges) graph + stats (n leaf · m edge · n(n-1)/2 possible · meaningful ratio) |
-| `saturate` | **saturate** | auto-loop `connect` rounds until a full pass finds 0 new edges (depletion analog for convergence) |
+| `saturate` | **saturate** (alias of `connect`) | identical to `connect`/`edges` since 0.4.0 (auto-saturate by default); kept as discoverable alias |
+| `auto` | **auto pipeline** (0.4.0) | one-shot full drain: divergence saturate (all undepleted lenses round-robin) → convergence saturate → tidy `--depth=light` → done |
 | `tidy` or `consolidate` [`--depth=light\|full`] | **tidy (organize)** | reorganize accumulated cycles into PHASE groups (divergence / analysis / convergence / external) + cycle-index table + stats + single closure box · LOSSLESS (chronological info preserved in the index) |
 | `squash` | **squash dup headers** | dedup repeated trivial headers (e.g. "next cycle pending" repeated N times) — cosmetic only, no phase regrouping |
 
@@ -85,7 +86,7 @@ Read the `.mining.md`. Print:
 If cycles ≥ 10 AND `.mining.md` line count ≥ 500, append the advisory:
 `💡 consider /mining tidy (≥10 cycles · ≥500 lines)`. Non-blocking.
 
-### `<lens-name>` — apply lens round
+### `<lens-name>` — apply lens (AUTO-SATURATE LOOP, 0.4.0)
 
 For the **bundled lens catalogue** (see below) or a `~/.sidecar/lens/<name>.md`
 custom file, read the lens prompt + apply it to the current branch frontier
@@ -93,9 +94,20 @@ custom file, read the lens prompt + apply it to the current branch frontier
 inline. Append to current cycle under a `### lens: <name>` subheading with a
 timestamp, each new leaf as a `- ` bullet.
 
-If applying this lens produces **0 new leaves** that aren't already on the tree
-(de-dup by surface form OR by claimed mechanism), automatically suggest
-`/mining depletion` for this lens.
+**0.4.0 — auto-saturate (default behavior, no per-round user gate)**: after a
+round, if it produced ≥1 new leaf, **immediately run another round** under the
+same lens (newly-surfaced leaves may unlock further branches). Stop when a round
+yields **0 new leaves** (de-dup by surface form OR by claimed mechanism) — at
+that point append `@depleted: <lens-name> @ <ISO-date>` to the cycle and report
+the saturation summary (rounds_run · total_new_leaves).
+
+Safety cap: **5 inner rounds per single invocation**. If the cap is hit while
+still finding leaves, emit `🔄 still saturating — re-run /mining <lens-name>` so
+the user can continue (no auto-ScheduleWakeup — mining is interactive-pace, not
+background-loop like /cycle).
+
+No user confirmation between rounds. The only halt path inside one invocation
+is depletion or cap-5 reached.
 
 ### `append <text>` — timestamped entry
 
@@ -141,7 +153,7 @@ Walk the cumulative leaves across all cycles, render as ASCII tree:
 
 Indent by cycle → lens → leaf. Mark `[DEPLETED]` after depleted lenses.
 
-### `connect` (or `edges`) — convergence round
+### `connect` (or `edges`) — convergence (AUTO-SATURATE LOOP, 0.4.0)
 
 Scan the accumulated leaves (`## leaves` flat index) and surface **direct
 meaningful edges** — pairs whose claims, when juxtaposed, reveal a non-trivial
@@ -156,8 +168,19 @@ info), (b) re-packaging (same claim in different words), (c) generic-ancestor
 ```
 
 Open or continue an `## cycle N — <title>` with `@kind: connect` and append
-`@lens: <none>` (connect cycles have no lens). 0 new meaningful edges in a full
-frontier pass → suggest `/mining depletion` for this connect cycle.
+`@lens: <none>` (connect cycles have no lens).
+
+**0.4.0 — auto-saturate (default behavior, identical to `saturate` verb)**:
+after a pass, if it found ≥1 new edge, **immediately run another pass** (new
+edges may unlock further meaningful links). Stop when a full pass yields **0
+new edges** → append `@depleted: connect @ <ISO-date>` to the cycle and report
+saturation summary (passes_run · total_new_edges).
+
+Safety cap: **5 inner passes per invocation**. If still finding edges at cap,
+emit `🔄 still saturating — re-run /mining connect`.
+
+No user confirmation between passes. `connect` and `saturate` verbs are now
+functionally identical (`saturate` kept as a discoverable alias).
 
 ### `connect <a> <b>` — justify one specific pair
 
@@ -196,6 +219,36 @@ links); stop when a full pass yields 0 new edges. Cap at 5 inner passes per
 invocation (safety) — if still finding edges, report `🔄 still saturating —
 re-run /mining saturate` for the user to continue. Each inner pass appends its
 edges + cycle ends with `@depleted: connect @ <date>` when the loop terminates.
+
+### `auto` — full pipeline to depletion (0.4.0, one-shot drain)
+
+Single-invocation full mining pipeline. Runs in order until the whole graph is
+drained:
+
+1. **divergence saturate** — walk the bundled lens catalogue (same-formula →
+   ouroboros → dimensional → tension → combinatorial) in order; for each
+   undepleted lens, run the auto-saturate loop above (cap 5 inner rounds);
+   when a lens hits 0 new leaves, mark it depleted and advance to the next
+   lens. Stop the divergence phase when ALL bundled lenses are depleted under
+   the current frontier (one full catalogue pass with 0 new leaves anywhere).
+2. **convergence saturate** — run `connect` saturate loop until 0 new edges in
+   a full pass.
+3. **tidy `--depth=light`** — write the cycle-index table + stats + closure
+   block (light depth = no body regroup, preserves chronological body for
+   future deep tidy if needed).
+4. Report `🏁 mining drained — divergence depleted (N lenses) · convergence
+   depleted (M edges) · tidy applied`.
+
+Cap per phase = 5 inner rounds (same as individual lens/connect verbs). If any
+phase hits cap, emit `🔄 phase <X> still saturating — re-run /mining auto` and
+preserve all progress so far (next invocation picks up where this left off via
+the undepleted-lens list).
+
+Custom lenses (`~/.sidecar/lens/*.md`) — included in the auto pass after the
+bundled catalogue, alphabetical order.
+
+This is the "사이클마다 물어보지 않고 고갈시까지" path — one user invocation,
+zero per-round confirmation, terminates only at full depletion or cap.
 
 ### `tidy` (or `consolidate`) — phase-group reorganize (LOSSLESS)
 
@@ -359,6 +412,7 @@ After any verb, end with one status line:
 
 Triggers — `/mining`, `/mining <lens>`, `mining cycle`, `lens 발산`, `lens 채굴`,
 `divergence cycle`, `lens 적용`, `mining tree`, `mining connect`, `mining edges`,
-`mining graph`, `mining saturate`, `점잇기`, `선들 연결`, `edge 발견`,
-`mining tidy`, `mining consolidate`, `mining squash`, `정리`, `phase 그룹`,
-`마이닝 정리`, `consolidate cycles`, `reorganize mining`.
+`mining graph`, `mining saturate`, `mining auto`, `점잇기`, `선들 연결`,
+`edge 발견`, `mining tidy`, `mining consolidate`, `mining squash`, `정리`,
+`phase 그룹`, `마이닝 정리`, `consolidate cycles`, `reorganize mining`,
+`고갈시까지`, `한번에 끝까지`, `사이클마다 물어보지 말고`, `auto drain`.

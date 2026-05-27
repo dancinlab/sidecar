@@ -1,5 +1,5 @@
 ---
-description: /sbs — short alias for /step-by-step. Plan-first sequential runbook with TWO modes (auto · manual default). MANUAL (default) — chat-form (1Q/round, easy-mode 7-element scaffold; free-form answers OK) until ambiguity → 0, then `🎯 합의된 결정셋` ASCII agreement screen, then write `drafts/<slug>-plan.md` and hand off to a background Agent on `go` (user can leave; agent ships end-to-end). AUTO — same chat-form rendered, but each round AUTO-PICKED by 4-axis weighted average (완성도·단순·안전(blast radius)·표준; default 1:1:1:1, inline override `auto:safety` or `auto:complete=2,simple=3`). First arg `auto[:<axis-or-weights>]`|`manual` (default manual). `legacy-manual` = old per-step pause (1-version deprecation banner). (`go` is NOT a mode — `/go` is a separate continue-the-paused-flow command.)
+description: /sbs — short alias for /step-by-step. Plan-first sequential runbook with TWO modes (auto · manual default) + 자동 QA 4축 (functional·visible·conformance·regression) after ship · regression FAIL → auto-revert · others → alert + plan.md `## qa-deferred`. MANUAL (default) — chat-form (1Q/round, easy-mode 7-element scaffold; free-form answers OK) until ambiguity → 0, then `🎯 합의된 결정셋` ASCII agreement screen, then write `drafts/<slug>-plan.md` and hand off to a background Agent on `go` (user can leave; agent ships end-to-end + auto-QA). AUTO — same chat-form rendered, but each round AUTO-PICKED by 4-axis weighted average (완성도·단순·안전(blast radius)·표준; default 1:1:1:1, inline override `auto:safety` or `auto:complete=2,simple=3`). First arg `auto[:<axis-or-weights>]`|`manual` (default manual). `legacy-manual` = old per-step pause (1-version deprecation banner). (`go` is NOT a mode — `/go` is a separate continue-the-paused-flow command.)
 argument-hint: "[auto[:<axis-or-weights>]|manual] [<task> | empty = current task in context]"
 ---
 
@@ -75,3 +75,14 @@ answer to each round.
    self-check. Handoff Agent reports back BEFORE executing such a step.
 
 7. **Closure** — `🏁 <done>/<N> steps complete`.
+
+8. **Auto-QA 4축 (handoff agent ship 직후)** — ship 완료 즉시 4축 자동 검증:
+   **functional** (새 endpoint 응답?) · **visible** (URL/path 노출?) ·
+   **conformance** (locked decision ↔ 코드 1:1) · **regression** (기존 surface
+   미손상). 각 축 PASS/FAIL/SKIP — SKIP=PASS-equivalent. Fail 정책(hybrid):
+   regression FAIL → `git revert <SHA> && git push && sidecar sync` 자동
+   실행 + banner `🛑 sbs-qa: regression FAIL — auto-reverted <SHA>`; 나머지
+   FAIL → ship 유지 + plan.md `## qa-deferred` append + banner `🛑 sbs-qa:
+   <axis> FAIL — alert only`; ALL PASS/SKIP → banner 없음 · plan.md
+   `## qa-results`에 ✓ 라인만 append. 결과는 항상 plan.md `## qa-results`
+   (최신 위) + 필요 시 `## qa-deferred` 섹션에 기록.

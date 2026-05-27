@@ -6,6 +6,33 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — step-by-step 0.6.0: 자동 QA 4축 (functional·visible·conformance·regression) handoff 끝에 추가
+
+사용자 — sbs 0.5.0 handoff 완료성 검증 갭 보완. handoff agent 가 ship 직후 자동 4축 검증을 실행하도록 spec 확장. 4축은 사용자 명시; fail 정책 1-decision (hybrid) 만 chat-form 합의로 잠금.
+
+- **4축 정의**:
+  - **functional** — 새 endpoint/verb/surface 가 응답하는가? (코드 실행 또는 smoke verb · 없으면 SKIP)
+  - **visible** — 사용자 진입 URL/path/surface 변화 노출? (render check · 없으면 SKIP)
+  - **conformance** — locked decision ↔ 코드 1:1 매핑 (spec ↔ diff 대조 LLM judge)
+  - **regression** — 기존 surface 미손상 (영향 받는 plugin parse + smoke 재실행)
+
+- **Hybrid fail 정책** (Q1 합의 — C):
+  - `regression FAIL` → `git revert <ship-SHA> && git push && sidecar sync` 자동 실행 + 다음 사용자 turn banner `🛑 sbs-qa: regression FAIL — auto-reverted <SHA>` (가장 critical · 무회귀 1차 원칙)
+  - `functional` / `visible` / `conformance` FAIL → ship 유지 + plan.md `## qa-deferred` 섹션 append + banner `🛑 sbs-qa: <axis> FAIL — alert only` (spec drift 가 의도된 경우 user 결정에 맡김)
+  - `SKIP` = PASS-equivalent (자동 통과 · 해당 안 됨)
+  - ALL PASS/SKIP → banner 없음 · plan.md `## qa-results` 에 ✓ 라인만 append · DONE
+
+- **결과 기록**: `drafts/<slug>-plan.md` 의 `## qa-results` 섹션 (최신 위) + 필요 시 `## qa-deferred` 섹션. user 가 돌아오면 plan.md 만 읽어 후속 결정.
+
+- **lockstep gate (@D g22)**:
+  - `commands/step-by-step/.claude-plugin/plugin.json` → `0.6.0`
+  - `.claude-plugin/marketplace.json` step-by-step entry → `0.6.0`
+  - `README.md` step-by-step row → `0.6.0` + 4축 요약
+  - `commands/step-by-step/commands/step-by-step.md` Step 0.8 추가 (full)
+  - `commands/step-by-step/commands/sbs.md` 7→8 단계 (compact)
+
+- **INBOX**: `sbs 0.6.0 자동 QA 4축` ✅ (from user 2026-05-28). 이번 land 자체가 sbs 0.5.0 → 0.6.0 dogfood — 1-decision chat-form 합의 (hybrid C) 후 `drafts/sbs-0.6.0-auto-qa-plan.md` 작성, 백그라운드 에이전트가 land + self-QA 까지 진행.
+
 ## 2026-05-28 — easy-auto 0.2.0: 한국어 substring 트리거 ('설명'·'쉽게') + 발동 banner
 
 사용자 요청 — easy 모드 자동 발동 자연어 트리거에 한국어 짧은 substring 두 개 (`설명`, `쉽게`) 추가 + 발동 시 1줄 banner. 기존 트리거(`친근하게`·`쉽게 설명해줘`·`이지 모드`·`easy`·`easy mode`·`explain it simply`·`もっと分かりやすく`·`简单点说`·`попроще`)는 유지 — 두 신규 substring 이 기존 `쉽게 설명해줘` 를 subsume 하지만 longer 트리거는 harmless 하게 잔존.

@@ -1,3 +1,50 @@
+## 2026-05-28 — sbs 0.6.0 자동 QA 4축 (handoff 끝 단계) (from user 2026-05-28) ✅
+
+> **트리거**: 사용자 — sbs 0.5.0 handoff 가 ship 까지는 자율 land 하지만, "정말 약속한대로 land 됐는가" 의 완료성 검증이 spec 에 없다. 4축은 사용자 명시 (functional·visible·conformance·regression). 핵심 의도: handoff 완성도 + regression 무회귀 1차 안전.
+
+> **4축 정의**:
+> - **functional** — 새 endpoint/verb/surface 가 응답하는가? (smoke verb · 없으면 SKIP)
+> - **visible** — 사용자 진입 URL/path/surface 변화 노출? (render check · 없으면 SKIP)
+> - **conformance** — locked Q-decision ↔ 코드 1:1 매핑 (spec ↔ diff 대조 LLM judge · 모든 합의 구현 + 빠진 것 없음 + 추가 잡탕 없음)
+> - **regression** — 기존 surface 미손상 (영향 받는 plugin parse + smoke 재실행)
+>
+> 각 축 PASS/FAIL/SKIP — SKIP = "해당 안 됨" = PASS-equivalent (자동 통과).
+
+> **1 design decision (chat-form 합의로 잠금)** — fail 정책만 사용자 선택:
+
+```
+🎯 합의된 결정셋 (1개) — sbs 0.6.0 자동 QA 단계
+└─ Q1: 4축 QA fail 정책  → ✅ C (hybrid)
+                            • functional FAIL  → alert only + plan.md ## qa-deferred
+                            • visible    FAIL  → alert only + plan.md ## qa-deferred
+                            • conformance FAIL → alert only (spec drift 의도 가능)
+                            • regression FAIL  → 🛑 git revert 자동 + 사용자 알림 banner
+                            • SKIP = PASS-equivalent (해당 안 됨)
+```
+
+> **사용자 의도**: regression 이 가장 critical (다른 plugin 깨지면 즉시 복구). functional/visible/conformance 는 spec drift 가 의도된 경우 user 결정에 맡기는 것이 옳음 — 자동 revert 는 오히려 user 가 일부러 한 변경을 되돌릴 위험. 따라서 hybrid (C) 가 채택.
+
+> **자동 실행 흐름** (handoff agent ship 직후):
+> 1. ship 완료 (commit + push + `sidecar sync`)
+> 2. ship-SHA 확보 (`git rev-parse HEAD`)
+> 3. 4축 순차 실행 → axis 별 PASS/FAIL/SKIP 판정
+> 4. plan.md `## qa-results` 섹션 (없으면 생성, 있으면 최신 위) 에 `axis=verdict` 라인 4개 append
+> 5. FAIL 분기:
+>    - regression FAIL → `git revert <SHA> && git push && sidecar sync` 자동 + 다음 사용자 turn banner `🛑 sbs-qa: regression FAIL — auto-reverted <SHA> · 자세한 내용 drafts/<slug>-plan.md`
+>    - 나머지 FAIL → ship 유지 + plan.md `## qa-deferred` 섹션에 fail 사유 append + banner `🛑 sbs-qa: <axis> FAIL — alert only · see drafts/<slug>-plan.md`
+>    - ALL PASS/SKIP → banner 없음 · plan.md 에 ✓ 라인만 append · DONE
+
+> **영향**:
+> - `commands/step-by-step/.claude-plugin/plugin.json` → `0.6.0` (description 에 4축 + hybrid 명시)
+> - `.claude-plugin/marketplace.json` step-by-step entry → `0.6.0`
+> - `README.md` step-by-step row → `0.6.0` + 4축 요약
+> - `commands/step-by-step/commands/step-by-step.md` Step 0.8 추가 (full · 표 + hybrid 정책)
+> - `commands/step-by-step/commands/sbs.md` Step 8 추가 (compact form)
+> - `CHANGELOG.md` 2026-05-28 sbs 0.6.0 entry
+> - `INBOX.md` + `INBOX.log.md`
+
+> **이번 land 자체 = sbs 0.5.0 → 0.6.0 dogfood**: 1-decision chat-form 합의 후 `drafts/sbs-0.6.0-auto-qa-plan.md` 작성 → 백그라운드 에이전트가 ship + self-QA 까지 진행. self-QA 4축 결과: functional=SKIP (doc/spec only) · visible=SKIP (CLI verb 변화 없음) · conformance=PASS (Q1 hybrid C 가 Step 0.8 본문에 명시) · regression=PASS (다른 plugin 영향 없음 · JSON parse valid).
+
 ## 2026-05-28 — easy-auto '설명'/'쉽게' substring 트리거 + 발동 banner (from user 2026-05-28) ✅
 
 > **트리거**: 사용자 1-decision 사이클 — "easy 모드 자동 발동 트리거에 한국어 짧은 substring 추가 + 발동시 banner". 기존 트리거는 길거나(`친근하게`·`이지 모드`·`쉽게 설명해줘`) 영문(`easy`·`easy mode`·`explain it simply`)이라, 평소 한국어 대화 중 `설명해 줘`/`쉽게 알려줘` 같은 자연스러운 한국어 어형이 trigger 되지 않는 갭이 있었다. 짧은 substring `설명` + `쉽게` 두 개로 verb/noun/adverb 모든 어형을 한 번에 catch.

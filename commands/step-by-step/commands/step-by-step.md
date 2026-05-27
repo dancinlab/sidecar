@@ -1,5 +1,5 @@
 ---
-description: /step-by-step — plan-first sequential runbook with TWO modes (auto · manual default). MANUAL (default) — chat-form disambiguation (1 question/round, 7-element easy scaffold; free-form answers OK) until ambiguity → 0, then a `🎯 합의된 결정셋` ASCII agreement screen, then write `drafts/<slug>-plan.md` and HAND OFF to a background Agent on `go` (user can leave; agent ships end-to-end). AUTO — same chat-form scaffold rendered, but each question is AUTO-PICKED by the 4-axis weighted average (완성도 · 단순 · 안전(blast radius) · 표준(sidecar pattern fit); default 1:1:1:1, inline override `/sbs auto:safety <task>` or `/sbs auto:complete=2,simple=3 <task>`). First arg token `auto[:<axis-or-weights>]` | `manual` selects the mode (default manual). `legacy-manual` is the old per-step pause behavior — 1-version deprecation banner, use plain `manual`. `/sbs` is the short alias. (For "continue the paused flow" use the separate `/go` command, not a mode here.)
+description: /step-by-step — plan-first sequential runbook with TWO modes (auto · manual default) + 자동 QA 4축 (functional·visible·conformance·regression) after ship · regression FAIL → auto-revert · others → alert. MANUAL (default) — chat-form disambiguation (1 question/round, 7-element easy scaffold; free-form answers OK) until ambiguity → 0, then a `🎯 합의된 결정셋` ASCII agreement screen, then write `drafts/<slug>-plan.md` and HAND OFF to a background Agent on `go` (user can leave; agent ships end-to-end + auto-QA). AUTO — same chat-form scaffold rendered, but each question is AUTO-PICKED by the 4-axis weighted average (완성도 · 단순 · 안전(blast radius) · 표준(sidecar pattern fit); default 1:1:1:1, inline override `/sbs auto:safety <task>` or `/sbs auto:complete=2,simple=3 <task>`). First arg token `auto[:<axis-or-weights>]` | `manual` selects the mode (default manual). `legacy-manual` is the old per-step pause behavior — 1-version deprecation banner, use plain `manual`. `/sbs` is the short alias. (For "continue the paused flow" use the separate `/go` command, not a mode here.)
 argument-hint: "[auto[:<axis-or-weights>]|manual] [<task> | empty = current task in context]"
 ---
 
@@ -210,6 +210,27 @@ On `go`, do the following IN ORDER and atomically (no pause between substeps):
 After Step 0.7 you have nothing more to do in this session — the background
 Agent will report when complete (or if it hits a hard halt). Do NOT poll;
 do NOT continue inline.
+
+## Step 0.8 — auto-QA 4축 (handoff agent의 ship 직후)
+
+Ship 완료 직후 handoff agent가 자동 4축 검증을 실행한다. 각 축은
+PASS/FAIL/SKIP — SKIP은 "해당 없음"(= PASS-equivalent, 통과로 간주).
+
+| 축 | 묻는 것 | 실행 방법 |
+|---|---|---|
+| **functional** | 새 endpoint/verb/surface가 응답하는가? | 코드 실행 또는 smoke verb (없으면 SKIP) |
+| **visible** | 사용자 진입 URL/path/surface 변화 노출? | render check (없으면 SKIP) |
+| **conformance** | locked decision ↔ 코드 1:1 매핑 | spec ↔ diff 대조 (LLM judge) |
+| **regression** | 기존 surface 미손상 | 영향 받는 plugin parse + smoke 재실행 |
+
+**Fail 정책** (hybrid):
+- regression FAIL → `git revert <ship-SHA> && git push && sidecar sync` 자동 실행 + 다음 사용자 turn에 banner `🛑 sbs-qa: regression FAIL — auto-reverted <SHA> · 자세한 내용 drafts/<slug>-plan.md`
+- functional / visible / conformance FAIL → ship 유지 + plan.md `## qa-deferred` 섹션에 fail 사유 append + banner `🛑 sbs-qa: <axis> FAIL — alert only · see drafts/<slug>-plan.md` (다음 사용자 turn 첫 줄)
+- SKIP = PASS-equivalent (자동 통과)
+- ALL PASS/SKIP → banner 없음 · plan.md `## qa-results`에 ✓ 라인만 append · DONE
+
+결과는 항상 `drafts/<slug>-plan.md`의 `## qa-results` (최신 위) + 필요 시
+`## qa-deferred` 섹션에 기록. user가 돌아오면 plan.md 읽어 후속 결정.
 
 ## Step 1+ (fallback) — inline plan + execute (when chat-form is overkill)
 

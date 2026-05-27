@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — install.hexa: cache plugin.json jq validate · docs/meta-domain-pattern.md 추가
+
+INBOX 5-제안 deferred 잔여 2건 inline 처리 — (4) install.hexa cache jq + (1) meta-domain pattern doc.
+
+- **`install.hexa`** — version cache 의 `plugin.json` 을 `cp -R` 직후 `jq -e .` 로 validate. parse fail 시 `rm -rf <dest>` 로 캐시 evict + WARN println (다음 sync 가 재카피). 직전 cycle 에서 발생한 corrupt cache (`cycle@0.9.1` + `pool-route@0.10.0` plugin.json 미escape 인용부호) 가 `/doctor` 를 침묵으로 깨뜨린 클래스 — advisory · never fatal · 자동 회복.
+- **`docs/meta-domain-pattern.md`** (신규 doc) — `+` 합성 표기 + parent-name meta 도메인 패턴 정리. ANIMA (7 sub-domain: DECODER · BRIDGE · METACOG · DREAM · INTENT · SAVANT · HIVE-MIND) reference example. 언제 만드는가 / anti-pattern / roster 등록 흐름. INBOX ④ (meta-domain orchestrator 패턴 박제) 해소.
+
+---
+
 ## 2026-05-28 — pod-monitor 0.1.4: `pods.json` ledger 환기 hint 추가 (ghost-pod class 닫기)
 
 L1/L3 gap-filler — agent 가 GPU pod 발사 후 `hexa cloud dispatch add` 호출을 잊어 cwd 의 `./pods.json` 에 entry 미작성 → **ghost pod** (billing 추적 ⊘ · verdict 갱신 ⊘ · per-project 활성 작업 view ⊘) 발생. L2 (hexa-lang `cloud fire/nohup` 의 auto-attach) 가 본질적 fix 지만 upstream 변경이 필요해 별 INBOX entry 로 outbound. 본 ship 은 advisory hint 로 caller 책임을 매번 환기.

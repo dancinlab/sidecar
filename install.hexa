@@ -259,6 +259,18 @@ fn main() {
         if !_is_dir(dest) {
             let _m = exec("mkdir -p " + _shq(dest))
             let _c = exec("cp -R " + _shq(srcdir) + "/. " + _shq(dest) + "/")
+            // jq validate the freshly copied plugin.json — a corrupt manifest in
+            // the cache silently breaks /doctor + plugin load. On parse fail, rm
+            // the dest dir so the next sync re-copies (vs leaving a zombie cache
+            // that survives forever once written). Advisory stderr — never fatal.
+            let pj = dest + "/.claude-plugin/plugin.json"
+            if exec_with_status("test -f " + _shq(pj))[1] == 0 {
+                let probe = exec_with_status("jq -e . " + _shq(pj) + " >/dev/null 2>&1")
+                if probe[1] != 0 {
+                    let _rm = exec("rm -rf " + _shq(dest))
+                    println("sidecar install: WARN — " + name + "@" + ver + " plugin.json invalid JSON, cache evicted (re-sync next run)")
+                }
+            }
         }
 
         let key = name + "@sidecar"

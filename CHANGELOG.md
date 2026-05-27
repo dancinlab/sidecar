@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — `/all-bg-go` 복구 (`a46a7ee` retire revert · commons g41 분리)
+
+사용자 요청 — "all-bg-go 명령어 폐기한거 살려줘". 2026-05-26 retire commit (`a46a7ee`) 이 `/cycle` 과 기능 겹친다고 폐기했으나, 두 패턴은 의도가 다름 (`/cycle` = self-generating loop · `/all-bg-go` = reactive single fan-out of prior-turn branches). 이번 세션 내 실제 사용 (3-agent fan-out × 2회) 으로 가치 재확인 → 복구.
+
+- **`skills/all-bg-go/`** — `plugin.json` · `SKILL.md` · `commands/all-bg-go.md` restore (retire 전 동일 spec)
+- **`.claude-plugin/marketplace.json`** — all-bg-go entry restore
+- **`.claude-plugin/profiles.json`** — all-bg-go enable 복구
+- **`hooks/commons/COMMANDS.md`** — 명령 카탈로그 entry restore
+- **commons g41 (sign-gated)** — 본 commit 미포함. 사용자 `! sidecar sign commons` 후 별 commit 으로 g41 ("reactive fan-out via /all-bg-go (sister of /cycle)") restore 권장 (agent 자가편집 deny).
+- **README plugin count 표** — 별 follow-up (단순 숫자 + 표 갱신).
+
+---
+
 ## 2026-05-28 — mining 0.5.0: lens procedure + 객관 depletion + leaf-ID 규칙 + edge positive 기준 + checkpoint discipline
 
 🛠 anima ANIMA mining cycle 1 (12 leaves 1-shot 'depletion') 직후 사용자 "마이닝 작동방식이 잘못된것같아" 신호. SKILL.md 본문은 0.4.0 auto-saturate trigger 만 풍부했고, 실 lens 5개 · depletion 기준 · leaf ID 규칙 · edge meaningful 기준 모두 1-line prose 만으로 의존 → agent 가 자기-환각으로 채울 여지 다대. 본 0.5.0 = 6 spec gap 동시 fix.

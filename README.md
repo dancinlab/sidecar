@@ -170,10 +170,11 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-64 plugins across `{hook · command · skill}` — one concept each (29 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+73 plugins across `{hook · command · skill}` — one concept each (35 `core` · 17 `hexa` · 19 `personal` · 2 `master`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
+| [`all-bg-go`](skills/all-bg-go/) | command + skill | `core` | 0.4.1 | Parallel fan-out trigger — "all bg go" → plan table + one background Agent per branch the prior turn offered (REACTIVE single fan-out; for a self-generating loop use `/cycle`) |
 | [`brainstorm`](skills/brainstorm/) | command + skill | `core` | 0.1.1 | Iterative brainstorming |
 | [`bypass`](skills/bypass/) | skill | `core` | 0.2.1 | Anti-punt |
 | [`check`](skills/check/) | command + skill | `core` | 0.1.0 | Task dashboard skill |

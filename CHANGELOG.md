@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.4.1: `upstream` verb origin/main 조회 보정 + entry-merged ≠ fix-status 구분
+
+🔗 0.4.0 dogfood self-gap (upstream-reflex 가 제 보고 버그를 잡음).
+
+- **origin/main 조회 보정 (local stale-tree false-empty)** — INBOX-scan 단계가 LOCAL working tree(`grep <repo>/INBOX.log.md`) 를 grep 해서 stale·다른-브랜치·미-pull 시 false-empty 반환. `git -C <repo> show origin/main:INBOX.log.md 2>/dev/null | grep -nE '^## ...'` 로 교체 — origin/main + gh remote 만 조회, working tree 절대 금지 note 명시. (gh PR list 단계는 이미 remote → 유지.)
+- **entry-merged ≠ fix-status 구분** — INBOX 항목의 entry-PR 가 merged 됐다(=항목 기록됨)는 사실과 그 fix 가 landed 됐다(🟠 OPEN 권고 vs ✅ RESOLVED 구현)는 별개. 항목의 `🟠 OPEN` / `✅ RESOLVED` 마커를 파싱해 별도 컬럼으로 렌더. (증거: hexa-lang #1734 = ✅ RESOLVED 구현, #1775/#1828 = 🟠 OPEN 권고 — entry-PR 는 모두 merged.)
+- command + plugin/marketplace 0.4.0→0.4.1.
+
+
 ## 2026-05-28 — system 0.4.0: `upstream` verb — report the g59 upstream-reflex trail
 
 🔗 사용자 "system 플러그인에도 'hexa upstream fix in this session' 로 작업되게". 0.3.0 의 upstream-reflex(gap→INBOX 파일)의 짝 = 조회 verb.

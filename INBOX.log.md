@@ -1,3 +1,33 @@
+## 2026-05-28 — cloud `pods`/`dispatch` CLI 미재빌드 drift + pods.json canonical 통일 (from demiurge RTSC)
+
+> **사건**: hexa-lang PR #1699 ("feat(cloud): per-project pods.json work manifest — `cloud pods` + `cloud dispatch`") MERGED 2026-05-27T14:58:31Z. sidecar `cloud` SKILL.md (commands + skills 양쪽) v0.x 가 즉시 신규 트리거 풍부히 등재(`"cloud pods"`, `"활성 pod"`, `"지금 뭐 돌고있어"`, `"verdict 갱신"`, `"pod tree"`, ...) + `dispatch [tree|active|add|verdict|rm]` 서브커맨드 동작 본문 상세 기술. demiurge RTSC 9-DFT 캠페인 세션이 이 트리거 받아 `hexa cloud pods` / `hexa cloud dispatch tree` 호출 → 두 호출 모두 **하단 help dump 만 출력** (서브커맨드 미인식, fall-through). 원인 확인 = `which hexa` → `/Users/ghost/.hx/bin/hexa` · `hexa --version` → `hexa 0.1.0-dispatch` (PR #1699 머지 이전 바이너리). 소스에는 `~/core/hexa-lang/stdlib/cloud/pods_local.hexa` 존재 → **source landed · binary not rebuilt**.
+
+> **갭 #1 — sidecar SKILL 의 "기능 광고" 가 사용자 환경의 hexa 바이너리 빌드 상태와 분리**: skill 이 트리거를 잡는 순간 사용자는 기능이 동작한다 가정. 실제로는 PR 머지 직후 ~ 사용자 재빌드 시점까지 N시간/N일 blank window. 이 구간에 호출하면 help dump 만 받고 침묵 실패. (skill 은 자기 SemVer 만 보고 hexa-lang HEAD 와 동조 안 함 — 의존성 가시화 부재)
+
+> **갭 #2 — filename canonical drift**: sidecar INBOX #193 (`~/.pool/pods.json` 활성 POD 매니페스트 ✅) 머지 시 README/skill 은 `./pods.json` (per-project, cwd-local) 로 변경 (전역 `~/.pool/pods.json` 과 분리). demiurge 측은 그 사이 PR #383~#386 으로 `pods.temp.json` 이름 채택 (사용자 명시 "pods.temp.json 으로 하자" + "루트로 이동" 흐름) → **두 repo SSOT drift**. skill 이 implement 되면 `./pods.json` 만 인식 → demiurge 의 `pods.temp.json` 은 dark file.
+
+> **갭 #3 — 두 surface README 보강 부재**: `./pods.json` (operator's view, manual edits + atomic + .bak) vs `~/.hexa-cloud/pods.jsonl` (global, auto-tracked by `cloud run`/`nohup`) 분리는 좋은 설계지만, sidecar SKILL.md 본문 1줄 + dont-line 외에 README/예시/마이그레이션 안내 없음 → demiurge 측 사용자(나) 가 헷갈려 `pods.temp.json` 새 이름 채택했음.
+
+**구현 제안**
+
+- [ ] **(a) SessionStart 호환성 프로브 (cloud skill)**: skill 활성 시 `hexa cloud help 2>&1 | grep -qE '^\s*cloud (pods|dispatch)\b'` 검사 → 부재 시 사용자에게 1줄 surface: `⚠ cloud pods/dispatch 미빌드 — hexa-lang #1699 머지됨, 로컬 hexa 재빌드 필요 (cd ~/core/hexa-lang && ./tool/build_hexa_module_loader.sh && hexa install .)`. 트리거 발화 후 sub-cmd 호출 직전이라도 동일 가드.
+- [ ] **(b) 새 트리거 자동 graceful-fallback**: `hexa cloud pods` 미구현 환경에서 cloud skill 이 트리거 잡으면 `cat ./pods.json 2>/dev/null || cat ./pods.temp.json 2>/dev/null` + `jq` 렌더로 대체 (read-only fallback — 쓰기는 자제). 사용자에게 "fallback 모드" 명시.
+- [ ] **(c) filename canonical 결정 + 마이그레이션 안내**: README 상단 한 줄 — `canonical = ./pods.json` (전역과 명확 분리). 기존 `pods.temp.json` 채택 repo (demiurge) 는 PR로 rename 안내. 또는 v0.x 한정 `pods.json | pods.temp.json` 둘 다 수용 + warn → v0.next 에서 통일.
+- [ ] **(d) 의존성 가시화**: cloud `SKILL.md` 헤더에 `requires: hexa>=<MIN_VER>` 메타 추가 → SessionStart 또는 skill-load 훅이 비교 → 미달 시 surface. (commons g22 의 cross-component SemVer lockstep 의 cloud-쪽 적용)
+
+**우선순위**: (a) > (c) > (d) > (b). (a)만 있어도 silent help-dump 가 명시적 경고로 변환 — 그 시점에 사용자/agent 가 rebuild 결정 가능. (c) 는 demiurge 처럼 사전 채택 한 repo 들의 cleanup PR 동기 부여.
+
+**evidence** (demiurge 세션):
+- `hexa cloud pods` → help dump (서브커맨드 미인식)
+- `hexa cloud dispatch tree` → 동일 help dump
+- `strings $(which hexa) | grep -E '^(cloud (pods|dispatch))'` → 0 hit
+- hexa-lang `gh pr view 1699 --json state` → `state=MERGED · mergedAt=2026-05-27T14:58:31Z`
+- 소스 grep `cmd_cloud_pods | cmd_cloud_dispatch | "cloud pods"` → `stdlib/cloud/pods_local.hexa` 만 hit (cmd 디스패처 미 hook)
+
+**관련**: INBOX #193 (`~/.pool/pods.json` ✅ 해소) → #1699 머지 → 본 항목 = 빌드/사용자 환경 drift 후속.
+
+---
+
 # INBOX — log
 
 Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timestamp> — <header>` (newest on top); body = `- [x]` (done) / `- [ ]` (pending) checkbox tasks.

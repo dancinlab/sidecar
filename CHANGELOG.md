@@ -6,6 +6,23 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — mining 0.1.0: `/mining` 신규 — lens-driven 발산 가지치기 (`/domain` 3rd pillar)
+
+사용자 — "/mining 구현시작" (INBOX.log.md `#190` from demiurge RTSC: 13-cycle 동안 자연발생한 lens-driven 발산 + 가지치기 + 누적 워크플로를 정식 슬래시 커맨드로). `/domain`의 3번째 기둥으로 `<NAME>.mining.md`(사이클별 lens-driven 트리 · append-only) + `<NAME>.mining.tape`(idea cart of @X promotion 후보) 추가.
+
+- **`skills/mining/` 0.1.0** — 신규 command + skill. profiles tier `core` (cross-domain 유용).
+- **bundled lens 6종** (모두 `~/.sidecar/lens/<name>.md`로 확장):
+  - **same-formula** — 두 시스템이 같은 수학 공유 → 표면 도메인 너머 동등 메커니즘
+  - **ouroboros** — X 자기-참조 → fixed-point/자기-닫힘 표면화 (= goal 자동 종결 신호)
+  - **dimensional** — 차원 사다리 · 인접 추상 레벨 간 변환 가능 analog
+  - **tension** — 모순/긴장 채굴 · 두 전제 충돌 → 가지 분기
+  - **combinatorial** — A × B 직교 곱 탐색
+  - **custom** — 자유형 (`/mining custom <text>`)
+- **6 verbs**: bare(status) · `<lens>`(round) · `append <text>` · `cycle new <title>` · `depletion` · `tree`
+- **cycle 의미**: 한 lens 적용 라운드. depletion = 새 leaf 0개 → 사이클 종결(파일은 append-only 계속).
+- **active-domain only** (commons @D g58 · `/domain` active pointer 읽음, 없으면 stop).
+- 출처: demiurge RTSC 13-cycle 유기적 emergence (Cooper-Kramers fixed-point LL-1 + Yoneda equivalence LL-2 발견 패턴).
+
 ## 2026-05-27 — step-by-step 0.3.0: FULL 모드 추가 (3-모드 질문밀도 스펙트럼)
 
 사용자 — "sbs, 모호함 사라질때까지 계속 묻고 또 묻고 하는 형태의 full 서브커맨드". 기존 2모드(manual/auto)에 **FULL**(최대질문) 추가해 3-모드 스펙트럼 완성. (`go`는 별도 명령어 `/go`로 — sbs 모드 아님.)

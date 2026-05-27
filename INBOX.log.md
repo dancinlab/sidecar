@@ -351,7 +351,11 @@ bare /domain:
 
 **관련**: demiurge PR #335/344/346 (m-sign doc 본체) · PR #370/371 (brainstorm 이전).
 
-## 2026-05-27 — /mining 슬래시 커맨드 (from demiurge RTSC)
+## 2026-05-27 — /mining 슬래시 커맨드 (from demiurge RTSC) ✅ 해소
+
+**해소** (sidecar `skills/mining/` 0.1.0): 신규 plugin · 6 verbs (bare/lens/append/cycle-new/depletion/tree) · 6 bundled lens (same-formula · ouroboros · dimensional · tension · combinatorial · custom · `~/.sidecar/lens/` 확장) · `<NAME>.mining.md` + `.mining.tape` 패턴 · active-domain only (commons @D g58) · profiles tier `core`.
+
+---
 
 협업 lens-driven 발산 가지치기 워크플로를 정식 슬래시 커맨드로.
 

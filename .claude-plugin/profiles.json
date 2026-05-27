@@ -68,6 +68,7 @@
     "inbox-guard": "personal",
     "go": "core",
     "roi": "core",
+    "mining": "core",
     "pool-route": "personal",
     "s9-guard": "personal",
     "plist-guard": "personal",

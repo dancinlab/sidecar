@@ -783,3 +783,42 @@ PR #197 entry 가 "stacked-PR plan 직후 HANDOFF.md PR 자동 추가" 패턴이
 - demiurge `domains/HANDOFF.md` § 6 next-priority list
 
 **우선순위**: high — "사용자 handoff 가 완성형이어야 한다" 가 사용자 본의. skill 갱신 시 PR #197 패턴과 함께 묶어 한 set 으로.
+
+---
+
+## 2026-05-28 — /sbs 마지막에 QA 단계 강제 추가 (from demiurge Web GUI 21 PR fire 후속)
+
+PR #194 (FULL chat+analogy) · PR #195 (18-round 보강) · PR #197/#198 (handoff 패턴) 자매. 21 PR 자율 fire 직후 발견 — **설계(spec) ↔ 구현(code) 1:1 매칭 확인 단계가 빠짐**. 사용자 본의는 작업 끝낸 후 "설계대로 됐나" QA 점검.
+
+**관찰**:
+demiurge handoff 모드 9-step + 추가 8-step (총 21 PR) 모두 merge ✅, Cloud Run deploy ✅. 사용자는 https://demiurge.dancinlab.org/dashboard 들어갔으나 visible 변화 인식 못 함 → "그대로" / "엉망". 원인 = (a) /dashboard 가 인증 redirect (b) PR#17 의 새 UI 가 페이지 하단 (c) verb 별 페이지 디자인 일관성 부족. **acceptance test (= QA) 단계가 있었다면 즉시 적색 깃발**.
+
+**제안 보강** (sbs FULL 모드 한정 · 마지막 단계 강제):
+
+1. **QA 단계 추가** — handoff (마지막 PR · HANDOFF.md) 직후, fire 종료 전 자동:
+   - 모든 Q 결정 (Q1~Qn) × 라이브 surface 매트릭스 생성
+   - 각 행: ✅ matches / ⚠️ partial / ❌ missing
+   - 결과 = `domains/QA.md` (또는 `<slug>/QA.md`)
+2. **QA 4축**:
+   - **functional** — 결정한 endpoint/route/component 실제 응답?
+   - **visible** — 사용자가 들어가는 URL 에서 변화가 보이나? (랜딩 vs auth vs scrolled)
+   - **conformance** — 결정셋 (decision-set) 18 항목 × 코드 위치 매핑 표
+   - **regression** — 기존 surface 안 깨졌나 (Q17 guard 페이지)
+3. **QA fail → 자동 follow-up PR 제안** — ❌ 행마다 "fix idea + LOC 추정" 제안
+4. **/sbs 흐름 갱신**:
+   ```
+   disambiguate → plan → fire → HANDOFF.md → 🔍 QA → done
+                                              ↑ 신규 단계
+   ```
+5. **QA terminology 표준화** — `QA` (포괄) = `Acceptance Test` (정확). 둘 다 INBOX/skill doc 에 명시.
+
+**왜 지금**:
+이번 demiurge fire 에서 처음 발견. 21 PR 모두 merged + URL 응답 OK 인데 사용자가 "그대로/엉망" 인 격차 = QA 단계 부재의 정확한 증상. 
+
+**관련**:
+- PR #194/#195 (/sbs FULL chat+analogy + 18-round)
+- PR #197/#198 (handoff 모드)
+- demiurge PR #388~#409 (21 PR fire — QA 단계 없이 종료)
+- demiurge `domains/HANDOFF.md` (handoff doc 만 있고 QA 없음)
+
+**우선순위**: high — 다음 `/sbs full` fire 즉시 적용 가능 · skill doc + style guide 갱신만.

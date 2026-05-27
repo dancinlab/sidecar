@@ -2,7 +2,9 @@
 //
 // A small registry of sign-gated files (GATED below) — governance SSOT
 // (commons.tape · project.tape) plus commit-hygiene files (.gitignore, which
-// silently controls what enters version control) — may be edited by the
+// silently controls what enters version control) plus the LOCAL-EXECUTION
+// WHITELIST (~/.sidecar/local-paths, which silently overrides pool-route to
+// force commands LOCAL) — may be edited by the
 // agent ONLY while a fresh user sign-off token exists. The user mints a
 // token with `sidecar sign <key>`, which writes the current epoch to
 // `~/.sidecar/signs/<key>.sign`. A token is valid for TTL seconds.
@@ -41,6 +43,7 @@ fn _gated() -> array {
         ["commons", "/commons.tape"],
         ["project", "/project.tape"],
         ["gitignore", "/.gitignore"],
+        ["paths", "/.sidecar/local-paths"],
     ]
 }
 
@@ -196,7 +199,7 @@ fn _deny_mint() {
     let reason = "sign-guard: minting a governance sign-off token is a USER-ONLY action.\n"
         + "  BLOCKED — the agent must NOT run `sidecar sign <key>` (self-mint defeats the gate; project.tape @D s13).\n"
         + "  Ask the USER to run  `! sidecar sign <key>`  (the TUI `!` bang mints — only the agent's OWN run is denied).\n"
-        + "  Keys: `commons` (commons.tape) · `project` (project.tape) · `gitignore` (.gitignore). Valid 5 min, then retry your edit.\n"
+        + "  Keys: `commons` (commons.tape) · `project` (project.tape) · `gitignore` (.gitignore) · `paths` (~/.sidecar/local-paths). Valid 5 min, then retry your edit.\n"
         + "  Allowed for you: `sidecar sign` (list) · `sidecar sign clear [<key>]`. NO override by design."
     _deny(reason)
 }

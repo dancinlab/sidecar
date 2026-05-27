@@ -48,6 +48,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — fork-storm 방어 3겹 (sign-guard 0.1.7 · pool-route 0.11.0 · sidecar 0.7.0)
+
+세션 중 mac에서 `hexa_run` 고CPU + stale `hexa-lsp` 누적을 진단하다, `/tmp` 스크립트가 `~/.sidecar/local-paths`(`/tmp/` 등록) 때문에 force-local로 도는 구조를 확인. 이를 계기로 fork-storm 방어를 3겹으로 강화 (사용자 directive — "local-paths 는 sign 통해서만 등록/삭제" + "/tmp 만 fork-storm 방지 = 동시실행 cap + reaper").
+
+**① local-paths 변경 = sign-gated** (sign-guard 0.1.7 · sidecar 0.7.0)
+- `~/.sidecar/local-paths` 가 sign-guard GATED 레지스트리에 추가 (전용 키 `paths` — least-privilege; `.gitignore` 선례 따름). pool-route 를 우회시키는 강력한 escape hatch 라 등록/삭제에 USER 사인 필요.
+- 3개 변경 경로 전부 차단 — `sidecar paths add/rm` (CLI 게이트) · Edit/Write 툴 직접 수정 · `echo >> local-paths` redirect (뒤 둘은 sign-guard 훅). agent 자가민팅 deny (@D s13) · env opt-out 없음 (@D s11).
+
+**② fork-storm cap** (pool-route 0.11.0)
+- whitelist-forced-local hexa run 은 default hexa→pool offload 를 면제받아 mac 에 머무는데, N개 백그라운드 agent 가 동시에 `/tmp` hexa 를 쏘면 프로세스 폭주. `FORK_STORM_CAP`(기본 8) 이상 USER hexa 인터프리터가 이미 실행 중이면 새 whitelist-local hexa 를 DENY (locality 유지 = import 해결 + 폭주 천장).
+- 카운트 — `ps -Ao args` first-token basename `hexa` (run 당 1줄) · sidecar 자체 훅(`cache/sidecar`) + claude(@D s9) 제외 · count 에러 시 **fail-OPEN** (절대 build 안 막음, @D s11).
+
+**③ stale-process reaper** (sidecar 0.7.0 — `reap` verb)
+- `sidecar reap` = 2h 이상 유휴 `hexa-lsp` 나열 (dry-run) · `reap --kill` = 종료. claude(@D s9) + active hexa run 은 절대 안 건드림 (active 는 ②가 예방).
+- 이번 세션에서 4~13h 묵은 stale `hexa-lsp` 6개 reap 완료.
+
+surfaces — sign-guard 0.1.6→0.1.7 · pool-route 0.10.0→0.11.0 · sidecar(command) 0.6.0→0.7.0 · marketplace 0.10.15→0.10.16. 코드 — `bin/sidecar` · `hooks/sign-guard/bin/_sign_guard.hexa` · `hooks/pool-route/bin/_pool_route.hexa`.
+
 ## 2026-05-28 — all-bg-go 0.4.2: `/abg` 3-char alias 추가
 
 사용자 요청 — "abg 만들어줘". `/all-bg-go` 가 길어 빠른 호출용 단축 명령 필요. 기존 alias 패턴 (`/q`→question · `/ij`→inject · `/sbs`→step-by-step) 과 동일 — 같은 plugin 의 commands/ 에 별 .md 추가 (mirror 가 `~/.claude/commands/abg.md` 로 복사).

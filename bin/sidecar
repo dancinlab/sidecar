@@ -4,7 +4,7 @@
 # usage:
 #   sidecar init        Scaffold project.tape + CLAUDE.md symlink + LATTICE_POLICY.md here.
 #   sidecar sync        Pull marketplace + refresh cache + installed_plugins.json + enable plugins.
-#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated file (commons · project · gitignore) for 5 min.
+#   sidecar sign <key>  Mint a user sign-off token unlocking agent edits to a sign-gated file (commons · project · gitignore · paths) for 5 min.
 #   sidecar profile [<name>]  Show, or set, the enable profile (minimal · hexa · full). Set re-applies the install.
 #   sidecar enable <plugin>   Force-enable one plugin regardless of profile (per-plugin override). Re-applies.
 #   sidecar disable <plugin>  Force-disable one plugin regardless of profile (per-plugin override). Re-applies.
@@ -12,13 +12,14 @@
 #   sidecar mirror      Refresh ~/.claude/commands/ mirrors so plugin commands are bare-invocable (`Skill("imagine")` instead of `Skill("imagine:imagine")`). Auto-runs at the tail of `sync`.
 #   sidecar shadow [plan]  Drop the forced `plugin:command` namespace (#15882): mirror+disable every command/skill plugin (hook/mcp kept), splicing SKILL.md triggers into the bare command so it stays lossless. `plan` = dry-run. Re-asserted at the tail of `sync`.
 #   sidecar unshadow    Revert shadow — re-enable the shadowed plugins (namespaced again) + remove created skill mirrors.
-#   sidecar paths       Show / add / remove path prefixes in the LOCAL-EXECUTION WHITELIST (~/.sidecar/local-paths). pool-route forces any Bash cmd whose argv contains a `/`-prefix matching a registered prefix to run LOCAL (skip pool routing). Sub-forms: `paths` = list · `paths add` = register cwd · `paths add <dir>` = register an absolute-resolved dir · `paths rm <prefix>` = remove. Seeded on first use with sidecar's own cache + repo paths.
+#   sidecar paths       Show / add / remove path prefixes in the LOCAL-EXECUTION WHITELIST (~/.sidecar/local-paths). pool-route forces any Bash cmd whose argv contains a `/`-prefix matching a registered prefix to run LOCAL (skip pool routing). Sub-forms: `paths` = list · `paths add` = register cwd · `paths add <dir>` = register an absolute-resolved dir · `paths rm <prefix>` = remove. add/rm are SIGN-GATED (key `paths`: `! sidecar sign paths` first) since the list overrides pool-route. Seeded on first use with sidecar's own cache + repo paths.
+#   sidecar reap        Reap stale `hexa-lsp` servers (idle > 2h) — fork-storm hygiene. Dry-run by default; `reap --kill` terminates them. Never touches claude (@D s9) or active hexa runs.
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,16p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,17p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Mirror plugin commands to ~/.claude/commands/ so they're bare-invocable
@@ -64,6 +65,17 @@ SIGN_TTL=300
 # actually enforces the token. Keep LOCAL_SIGN_TTL in lockstep with pool-route.
 LOCAL_SIGN_TTL=1800
 sign_ttl_for() { if [ "$1" = "local" ]; then echo "$LOCAL_SIGN_TTL"; else echo "$SIGN_TTL"; fi; }
+
+# Fresh, valid sign token for <key>? Mirrors `_signed()` in the sign-guard hook
+# (hooks/sign-guard/bin/_sign_guard.hexa). Used to gate state-mutating verbs
+# (e.g. `paths add/rm`) on a real USER sign-off — the agent cannot self-mint
+# (the sign-guard hook hard-denies the agent's own `sidecar sign`).
+sign_fresh() {
+  _sf="$SIGN_DIR/$1.sign"
+  [ -f "$_sf" ] || return 1
+  _sm=$(cat "$_sf" 2>/dev/null || echo 0); : "${_sm:=0}"
+  [ "$(( $(date +%s) - _sm ))" -le "$(sign_ttl_for "$1")" ]
+}
 
 # Absolute path of the sidecar repo root (this script lives in <root>/bin/sidecar,
 # follow symlinks so it works when `sidecar` is symlinked onto PATH).
@@ -224,14 +236,14 @@ TAPE
     # gated file (commons.tape · project.tape · .gitignore) unless a fresh
     # token exists. This mints / lists / clears those tokens.
     #
-    #   sidecar sign <key>          mint a 5-min token for <key>  (commons · project · gitignore)
+    #   sidecar sign <key>          mint a 5-min token for <key>  (commons · project · gitignore · paths)
     #   sidecar sign  | --list      show active tokens + remaining validity
     #   sidecar sign clear [<key>]  remove one / all tokens
     SUB="${1:-}"
     case "$SUB" in
       ""|--list|list|status)
         echo "sidecar sign — gated governance files need YOUR sign-off before the agent may edit them."
-        echo "  mint:   sidecar sign <key>       (keys: commons · project · gitignore)"
+        echo "  mint:   sidecar sign <key>       (keys: commons · project · gitignore · paths)"
         echo "  clear:  sidecar sign clear [<key>]"
         now=$(date +%s)
         found=0
@@ -381,6 +393,23 @@ TAPE
       } > "$tmp" && mv -f "$tmp" "$PATHS_FILE"
     fi
     SUB="${1:-}"
+    # Mutating the LOCAL-EXECUTION WHITELIST is SIGN-GATED (key: `paths`). This
+    # list OVERRIDES pool-route — any registered prefix forces a command LOCAL,
+    # skipping the pool — so add/rm need a fresh USER sign-off. Listing stays
+    # open. The agent cannot self-mint (sign-guard hook); the human runs
+    # `! sidecar sign paths`. No env opt-out (project.tape @D s11). Direct
+    # edits to ~/.sidecar/local-paths are gated by the sign-guard hook too.
+    case "$SUB" in
+      add|rm|remove|del|delete)
+        if ! sign_fresh paths; then
+          echo "sidecar paths: refused — add/rm is SIGN-GATED (key: paths)." >&2
+          echo "  This list overrides pool-route (a registered prefix forces commands LOCAL)," >&2
+          echo "  so changing it needs YOUR sign-off — the agent cannot self-mint." >&2
+          echo "  Run  ! sidecar sign paths   in your terminal, then retry within 5 min." >&2
+          exit 1
+        fi
+        ;;
+    esac
     case "$SUB" in
       ""|list|show)
         n=0
@@ -459,6 +488,47 @@ TAPE
         ;;
     esac
     ;;
+  reap)
+    # Stale-process reaper — fork-storm hygiene. A `hexa-lsp` language server
+    # orphaned by a closed editor lingers idle for hours; it is not a fork-storm
+    # by itself but these accumulate. `reap` lists stale ones (a `hexa-lsp` idle
+    # longer than REAP_AGE_SECS); `reap --kill` (or `reap kill`) terminates them.
+    # claude is NEVER touched (project.tape @D s9); ACTIVE hexa runs are never
+    # touched (the pool-route fork-storm cap throttles those preventively, so the
+    # reaper only sweeps leftover LSP cruft). Dry-run by default — look first.
+    REAP_AGE_SECS=7200
+    DO_KILL=0
+    case "${1:-}" in --kill|kill) DO_KILL=1 ;; esac
+    CANDS=$(ps -Ao pid,etime,pcpu,comm | awk -v thresh="$REAP_AGE_SECS" '
+      /hexa-lsp/ && !/claude/ && !/awk/ {
+        n=split($2,a,"[-:]"); s=0;
+        if(n==2)s=a[1]*60+a[2];
+        else if(n==3)s=a[1]*3600+a[2]*60+a[3];
+        else if(n==4)s=a[1]*86400+a[2]*3600+a[3]*60+a[4];
+        if(s>=thresh) printf "%s\t%s\t%s\t%s\n", $1, $2, $3, $4
+      }')
+    _hrs=$(( REAP_AGE_SECS / 3600 ))
+    if [ -z "$CANDS" ]; then
+      echo "sidecar reap: no stale hexa-lsp (idle > ${_hrs}h) — nothing to reap."
+      exit 0
+    fi
+    n=$(printf '%s\n' "$CANDS" | grep -c .)
+    echo "sidecar reap: ${n} stale hexa-lsp (idle > ${_hrs}h · claude excluded · active hexa runs untouched):"
+    printf '  %-8s %-12s %-5s %s\n' PID ELAPSED %CPU COMM
+    printf '%s\n' "$CANDS" | while IFS="$(printf '\t')" read -r pid et cpu comm; do
+      [ -n "$pid" ] || continue
+      printf '  %-8s %-12s %-5s %s\n' "$pid" "$et" "$cpu" "$comm"
+    done
+    if [ "$DO_KILL" -eq 1 ]; then
+      printf '%s\n' "$CANDS" | while IFS="$(printf '\t')" read -r pid et cpu comm; do
+        [ -n "$pid" ] || continue
+        if kill "$pid" 2>/dev/null; then echo "  ✓ killed $pid"; else echo "  ✗ could not kill $pid (already gone?)"; fi
+      done
+      echo "sidecar reap: reaped ${n} stale hexa-lsp."
+    else
+      echo "sidecar reap: DRY RUN — run 'sidecar reap --kill' to terminate the ${n} above."
+    fi
+    ;;
   master)
     # creator-only marker. master-tier plugins enable ONLY while ~/.sidecar/master
     # exists (install.hexa gate). on = mint marker · off = remove · status = show.
@@ -473,7 +543,7 @@ TAPE
     ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · master" >&2
+    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · reap · master" >&2
     exit 1
     ;;
 esac

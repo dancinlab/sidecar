@@ -31,6 +31,16 @@
 
 let MARK = "__SIDECAR_POOL__"
 
+// 0.11.0 — fork-storm cap. A whitelist-forced-LOCAL hexa run (a /tmp script, a
+// ~/core/sidecar tool, …) escapes the default hexa->pool offload and runs on
+// the Mac. When N background agents each fire one at once the Mac forks into a
+// multi-process CPU storm. FORK_STORM_CAP bounds how many USER hexa runs may be
+// in flight locally before a NEW whitelist-local hexa is DENIED (with a
+// runbook). sidecar's own hooks + claude are never counted (s9). A real
+// precondition (a live process count), not an opt-out switch (s11); the count
+// fails OPEN (a count error never blocks) so it can never break the build.
+let FORK_STORM_CAP = 8
+
 // `_pool_advisory_text()` — canonical advisory shown when a useless env-prefix
 // is detected (0.7.11 — POOL-OFFLOAD m7 prep · agent education). Emitted via
 // `additionalContext` on the eventual exit so the agent learns these are no-op
@@ -655,6 +665,37 @@ fn _whitelisted_path_match(av: array) -> string {
     return ""
 }
 
+// `_local_hexa_count()` — how many USER hexa interpreter runs are live on this
+// host right now? Reads `ps -Ao args` and counts lines whose first token's
+// basename is `hexa` (one line per run — the dispatch binary `hexa_run.<hash>`
+// and the `sh -c` shim have a different basename, so a single run counts once).
+// Excludes sidecar's OWN hooks (argv under `cache/sidecar`, incl. THIS router)
+// and anything mentioning `claude` (s9 — never attribute load to claude). Only
+// LOCAL hexa appear in `ps` here (pool-routed runs execute on a peer), so the
+// count is exactly the local fork-storm pressure. Returns -1 on any error so
+// the caller fails OPEN (never block on a count bug · s11 spirit).
+fn _local_hexa_count() -> int {
+    let mut raw = ""
+    try { raw = to_string(exec("ps -Ao args")) } catch e { return -1 }
+    if raw == "" { return -1 }
+    let lines = raw.split("\n")
+    let mut c = 0
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i].trim()
+        i = i + 1
+        if ln == "" { continue }
+        let sp = ln.index_of(" ")
+        let mut first = ln
+        if sp > 0 { first = ln.substring(0, sp) }
+        if _basename(first) != "hexa" { continue }
+        if ln.contains("cache/sidecar") { continue }
+        if ln.contains("claude") { continue }
+        c = c + 1
+    }
+    return c
+}
+
 // `_is_data_input_flag(name)` — is `name` one of the canonical data-INPUT flags
 // whose VALUE is a path to local-only training/eval/corpus/weights data? A hexa
 // command carrying one of these, pointing at a NON-synced path, depends on data
@@ -983,6 +1024,20 @@ fn main() {
     // dotstate, etc); the heavy classifier never sees these.
     let _wl_match = _whitelisted_path_match(early_toks)
     if _wl_match != "" {
+        // 0.11.0 fork-storm cap: a whitelist-forced-local HEAVY hexa run is the
+        // canonical Mac fork-storm source (N background agents each firing a
+        // /tmp hexa at once -> multi-process CPU blowout). Cap concurrent local
+        // hexa RUNS: if FORK_STORM_CAP or more USER hexa interpreters are already
+        // live (sidecar's own hooks + claude excluded), DENY this one with a
+        // runbook — locality is preserved (imports still resolve) while the storm
+        // gets a ceiling. Fail-OPEN: a count error (-1) is < cap, so it never
+        // blocks. Only fires for hexa execs; a plain `cat /tmp/x` is unaffected.
+        if _is_hexa_exec(early_toks) {
+            let _nrun = _local_hexa_count()
+            if _nrun >= FORK_STORM_CAP {
+                _deny_count("pool-route: fork-storm guard — " + to_string(_nrun) + " local hexa runs already in flight (cap " + to_string(FORK_STORM_CAP) + ").\n  This `hexa` is forced LOCAL by the sidecar path whitelist (prefix=" + _wl_match + "), so launching another now risks a Mac fork-storm.\n  Options: (a) wait for an in-flight run to finish, (b) run it on the pool (use a path NOT under a local-paths prefix), or (c) raise FORK_STORM_CAP in pool-route.\n  (counts USER hexa runs only — sidecar's own hooks + claude are excluded.)", "heavy_failed")
+            }
+        }
         println("pool-route: local (sidecar path whitelist · prefix=" + _wl_match + ")")
         _allow_count("local_bound")
     }

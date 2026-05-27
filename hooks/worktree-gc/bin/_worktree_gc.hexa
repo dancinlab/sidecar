@@ -3,8 +3,17 @@
 //
 // Threshold gate: only scans when linked-worktree count >= 3 OR disk avail
 // < 20 GiB. Above gate, fetches `gh pr list --state merged --limit 200` and
-// prunes any linked worktree whose branch is in that merged set OR whose
-// `origin/<branch>` is gone. Open-PR worktrees are NEVER touched.
+// considers a worktree only when its branch is in that merged set OR its HEAD
+// commit truly landed on origin/main. Before removing, every candidate must
+// clear FOUR live-work guards, all unconditional (no opt-out, commons s11):
+//   (a) dirty-tree     — uncommitted changes → SKIP
+//   (b) recent-mtime   — HEAD commit or any file modified < 1h ago → SKIP
+//   (c) cwd-in-use     — a live process' cwd is in the worktree → SKIP
+//   (d) HEAD-ancestor  — prune only if HEAD is a real ancestor of origin/main;
+//                        a vanished `origin/<branch>` ref alone is IGNORED
+//                        (a reused branch name must not condemn fresh work)
+// (e) atomic prune     — `git worktree remove` is the sole removal path; on
+//                        failure NOTHING is deleted (no partial / manual rm).
 //
 // Empty / no candidates / below threshold → silent. gh unavailable → emits
 // a short note and exits 0. Always exit 0 (non-blocking).
@@ -122,6 +131,73 @@ fn _has_origin_branch(repo: string, branch: string) -> bool {
     return r[1] == 0
 }
 
+// (a) dirty-tree guard: true if the worktree has uncommitted changes.
+// A non-empty `git status --porcelain` means mid-task work — never prune.
+fn _is_dirty(path: string) -> bool {
+    let r = exec_with_status("git -C " + path + " status --porcelain 2>/dev/null")
+    if r[1] != 0 { return true }  // can't inspect → treat as live, do not prune
+    return r[0].trim() != ""
+}
+
+// (b) recent-mtime guard: true if the worktree HEAD commit OR any tracked
+// working file was modified within the last hour (mid-task signal).
+fn _is_recent(path: string) -> bool {
+    // HEAD commit author/commit time (epoch seconds)
+    let cr = exec_with_status("git -C " + path + " log -1 --format=%ct 2>/dev/null")
+    let now_r = exec_with_status("date +%s")
+    let mut now = 0
+    if now_r[1] == 0 { try { now = to_int(now_r[0].trim()) } catch e { now = 0 } }
+    if now == 0 { return true }  // can't establish 'now' → be safe, do not prune
+    if cr[1] == 0 {
+        let cs = cr[0].trim()
+        if cs != "" {
+            let mut ct = 0
+            try { ct = to_int(cs) } catch e { ct = 0 }
+            if ct > 0 && (now - ct) < 3600 { return true }
+        }
+    }
+    // newest file mtime anywhere under the worktree (excludes .git), epoch.
+    // `find -newermt '1 hour ago' -print -quit` → non-empty means a recent file.
+    let fr = exec_with_status("find " + path + " -path " + path + "/.git -prune -o -type f -newermt '1 hour ago' -print 2>/dev/null | head -1")
+    if fr[1] == 0 && fr[0].trim() != "" { return true }
+    return false
+}
+
+// (c) cwd-in-use guard: true if any live process has this worktree as its
+// current working directory (or a path under it). Uses `lsof -d cwd`.
+fn _is_cwd_in_use(path: string) -> bool {
+    let r = exec_with_status("lsof -a -d cwd -- " + path + " 2>/dev/null | tail -n +2 | head -1")
+    if r[1] != 0 {
+        // lsof unavailable/failed → fall back to a coarse pgrep on the path.
+        let pr = exec_with_status("pgrep -f " + path + " 2>/dev/null | head -1")
+        return pr[1] == 0 && pr[0].trim() != ""
+    }
+    return r[0].trim() != ""
+}
+
+// (d) HEAD-ancestor real-merged check: true ONLY if the worktree's HEAD
+// commit is an actual ancestor of origin/main (the work really landed).
+// Branch-name-based "origin-gone" inference is intentionally NOT used here:
+// it mis-fires when a NEW worktree reuses the name of an already-merged branch.
+fn _head_merged_into_main(repo: string, path: string) -> bool {
+    // resolve the worktree HEAD commit
+    let hr = exec_with_status("git -C " + path + " rev-parse HEAD 2>/dev/null")
+    if hr[1] != 0 { return false }
+    let head = hr[0].trim()
+    if head == "" { return false }
+    // resolve origin/main (fall back to origin/master)
+    let mr = exec_with_status("git -C " + repo + " rev-parse --verify origin/main 2>/dev/null")
+    let mut base = ""
+    if mr[1] == 0 { base = mr[0].trim() }
+    if base == "" {
+        let mr2 = exec_with_status("git -C " + repo + " rev-parse --verify origin/master 2>/dev/null")
+        if mr2[1] == 0 { base = mr2[0].trim() }
+    }
+    if base == "" { return false }  // no main ref → cannot prove merged → keep
+    let anc = exec_with_status("git -C " + repo + " merge-base --is-ancestor " + head + " " + base + " 2>/dev/null")
+    return anc[1] == 0
+}
+
 // disk usage of a path in MiB (rough; for human-readable reporting only).
 fn _du_mib(path: string) -> int {
     let r = exec_with_status("du -sk " + path + " 2>/dev/null | awk '{print $1}'")
@@ -173,12 +249,29 @@ fn main() {
         let w = linked[i]
         let branch = w["branch"]
         let path = w["path"]
+
+        // Candidate signal: branch is in the merged-PR set, OR its HEAD commit
+        // truly landed on origin/main. We DO NOT prune on "origin/<branch> ref
+        // is gone" alone anymore — a NEW worktree can reuse a previously-merged
+        // branch name, and that false signal is exactly what wiped live work.
         let merged_hit = _in_array(branch, merged)
-        let origin_gone = !_has_origin_branch(cwd, branch)
-        if merged_hit || origin_gone {
+        let head_landed = _head_merged_into_main(cwd, path)
+        if merged_hit || head_landed {
+            // (a) dirty-tree guard — uncommitted changes = live work, SKIP.
+            if _is_dirty(path) { i = i + 1; continue }
+            // (b) recent-mtime guard — HEAD/file touched < 1h ago = mid-task, SKIP.
+            if _is_recent(path) { i = i + 1; continue }
+            // (c) cwd-in-use guard — a live process sits in this worktree, SKIP.
+            if _is_cwd_in_use(path) { i = i + 1; continue }
+            // (d) real-merged confirmation — even a merged_hit must have its HEAD
+            // landed on origin/main; otherwise the branch name was reused, SKIP.
+            if !head_landed { i = i + 1; continue }
+
             let mib = _du_mib(path)
-            let mut reason = "merged"
-            if !merged_hit && origin_gone { reason = "origin-gone" }
+            let reason = "head-merged"
+            // (e) atomic prune — `git worktree remove` is the ONLY removal path.
+            // If it fails, we leave EVERYTHING in place (no manual rm of parts) so
+            // a non-atomic state (e.g. companion/ left, .git link gone) is impossible.
             let rmr = exec_with_status("cd " + cwd + " && git worktree remove --force " + path + " 2>&1")
             if rmr[1] == 0 {
                 let _brd = exec_with_status("cd " + cwd + " && git branch -D " + branch + " 2>&1")

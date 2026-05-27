@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — worktree-gc 0.2.0: 활성 worktree mid-task wipe 방어
+
+INBOX 핸드오프 (demiurge monograph fan-out 2026-05-26) — `worktree-gc` 0.1.0 이 *작업 중* worktree 를 prune 해서 라이브 작업을 파괴. `wt-*-mono` worktree 의 `.git` 링크 + `main.tex`/`Makefile`/`appendix/` 가 mid-build 로 소실 (`companion/`+`cover.png` 만 생존). CERN(#220)·ANTIMATTER(#222) 둘 다 발생, checkpoint-commit 으로만 복구.
+
+### 근본원인
+prune 후보 판정이 **브랜치명 기준**이었다 (`origin/<branch>` ref 가 사라지면 "origin-gone" → prune). 이전 세션이 동명 브랜치(`feat/cern-monograph`)를 merge→origin 삭제하면, 동명을 재사용한 **신규 worktree(미푸시 라이브 작업)** 가 "origin-gone" 으로 오판되어 파괴됐다. 기존 `open-PR skip` 가드는 PR 생성 전 빌드 단계에선 무력.
+
+### `hooks/worktree-gc/` 0.2.0 — 5개 가드 추가 (모두 unconditional · opt-out env 없음 · commons s11)
+- **(a) dirty-tree 가드** — `git -C <wt> status --porcelain` 비어있지 않으면(uncommitted 변경) SKIP. status 조회 실패 시도 안전하게 라이브 취급 → SKIP.
+- **(b) recent-mtime 가드** — worktree HEAD commit 시각 또는 working file mtime 이 < 1h 이면(mid-task 신호) SKIP. `now` 확정 실패 시 SKIP.
+- **(c) cwd-in-use 가드** — `lsof -a -d cwd` 로 그 worktree 를 cwd 로 쓰는 라이브 프로세스가 있으면 SKIP. lsof 부재 시 `pgrep -f <path>` fallback.
+- **(d) HEAD-ancestor 진짜-merged 체크** — 브랜치명 소실이 아니라 **worktree HEAD 가 실제로 `origin/main` 의 ancestor 인지**(`git merge-base --is-ancestor <wt-HEAD> origin/main`)로 판정. `origin/<branch>` ref 소실 단독 신호는 **무시** → 브랜치명 재사용 오판 차단(핵심 fix). `origin/main` 없으면 `origin/master` fallback, 둘 다 없으면 prune 불가(keep).
+- **(e) atomic prune** — `git worktree remove` 가 **유일한** 삭제 경로. 실패 시 아무것도 안 지움(부분 삭제 / 수동 rm 금지) → companion/ 만 남고 .git 링크 소실 같은 비원자 상태 불가능.
+
+### 검증
+- `hexa parse hooks/worktree-gc/bin/_worktree_gc.hexa` → parses cleanly.
+- 가드 primitive smoke test (활성 worktree 대상): (b) HEAD delta 12s<3600 → recent SKIP, (c) lsof 가 worktree cwd 프로세스 검출 → SKIP, (d) HEAD 가 origin/main ancestor 아님(rc=1) → prune 후보 아님. 라이브 작업이 4중 방어로 보호됨을 확인.
+
 ## 2026-05-27 — go 0.1.0 + roi 0.1.0: 2개 신규 스킬
 
 사용자 — "go 명령어, 자연어 캐치도 필요해 'go' only" + "roi 명령어도 필요해 무손실 성능/자원/속도 개선 할일 목록 뽑기, 특정 부분 지정 메시지 뒤로".

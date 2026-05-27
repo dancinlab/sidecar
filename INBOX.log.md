@@ -15,6 +15,16 @@ Append-only history sister of `INBOX.md`. Each entry starts with `## <ISO timest
 
 **lesson (작성자 규율)**: 브랜치/worktree 재사용 금지 — 매 PR 마다 `origin/main` 최신에서 fresh 분기 + HEAD 확인. severity: **high** (main 무결성 회귀).
 
+## 2026-05-27 — worktree-gc 활성 worktree mid-task wipe ✅ 해소 (from demiurge monograph fan-out)
+
+> 핸드오프 증상: `hooks/worktree-gc` 0.1.0 이 작업 중 `wt-*-mono` worktree 를 mid-build prune → `.git` 링크 + `main.tex`/`Makefile`/`appendix/` 소실, `companion/`+`cover.png` 만 생존(비원자 흔적). CERN(#220)·ANTIMATTER(#222) 둘 다 발생, checkpoint-commit 으로만 복구.
+
+- [x] **진단 — 근본원인**: 0.1.0 prune 판정이 `merged_hit || origin_gone` 이고 `origin_gone = !_has_origin_branch(branch)` = **브랜치명 기준**. 이전 세션이 동명 브랜치(`feat/cern-monograph`)를 merge→origin 삭제하면, 동명을 재사용한 신규 worktree(아직 미푸시 라이브 작업)가 "origin-gone" 으로 오판되어 force-remove 당함. `open-PR skip`(merged set) 가드는 PR 생성 전 빌드 단계엔 무력.
+- [x] **fix — 판정 교체 + 4중 라이브 가드**: `origin/<branch>` ref 소실 단독 신호 **폐기**. 신규 `_head_merged_into_main()` 가 worktree HEAD 를 resolve → `git -C <repo> merge-base --is-ancestor <HEAD> origin/main`(없으면 `origin/master` fallback, 둘 다 없으면 keep) 으로 **진짜 landed 여부**만 판정. 후보가 되어도 prune 전 4중 가드 통과 필수, 모두 unconditional(opt-out env 없음 · commons s11): (a) `_is_dirty` = `git status --porcelain` 비어있지 않거나 조회 실패 → SKIP, (b) `_is_recent` = HEAD commit epoch(`%ct`) 또는 working file `find -newermt '1 hour ago'` 가 <1h, 또는 `now` 확정 실패 → SKIP, (c) `_is_cwd_in_use` = `lsof -a -d cwd -- <path>` 비어있지 않음(lsof 부재 시 `pgrep -f <path>` fallback) → SKIP, (d) HEAD-ancestor 재확인.
+- [x] **atomic prune**: `git worktree remove --force` 가 유일 삭제경로 — 실패(rc≠0) 시 branch -D 도 안 하고 아무것도 안 지움. companion/ 만 남고 .git 링크 소실 같은 비원자 상태 구조적 불가. (수동 `rm -rf` 부분삭제 경로 자체가 코드에 없음.)
+- [x] **검증**: `hexa parse hooks/worktree-gc/bin/_worktree_gc.hexa` → parses cleanly. 가드 primitive smoke test (이 라이브 worktree 대상): (b) HEAD delta 12s<3600 → recent SKIP, (c) lsof 가 zsh+lsof 의 cwd 검출 → SKIP, (d) HEAD 가 origin/main ancestor 아님(merge-base rc=1) → prune 후보조차 아님. 라이브 작업이 4중으로 보호됨 확인.
+- [x] **버전 + 배포**: 0.1.0 → 0.2.0, 4 surface lockstep (plugin.json · marketplace.json · README 행 · CHANGELOG 신규 섹션). hook 은 `hexa run <source>` 직접 실행(prebuilt 바이너리 없음)이라 별도 build 불필요.
+
 ## 2026-05-26 — `pool` CLI 회귀 ✅ 로컬 해소 + 상류 debt (from hexa-lang RUNTIME)
 
 > 핸드오프 증상: 전 subcommand 가 `OK: <첫인자>` 만 반환, bare `pool` → `hexa-cc` usage. 1차추정은 "shim 정상, `~/.hx/bin/hexa` 인터프리터 또는 `pool.hexa` 설치본 손상". 진단 결과 손상은 **결과**였고 원인은 따로 있었음.

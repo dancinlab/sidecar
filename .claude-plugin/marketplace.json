@@ -389,8 +389,8 @@
     {
       "name": "step-by-step",
       "source": "./commands/step-by-step",
-      "description": "/step-by-step:step-by-step (alias /step-by-step:sbs) \u2014 plan-first sequential runbook. Decomposes the task into an ordered, numbered plan, then executes every step strictly in order WITHOUT pausing between steps, narrating each step's start + \u2705/\u26a0/\u274c result. Halts only on a step failure (reports the failing step + verbatim error + un-run tail) or before a genuinely irreversible / destructive / outward-facing step (confirm-then-resume, same bar as the bypass self-check). The deliberate single-threaded counterpart to /cycle's parallel fan-out \u2014 one thread, top to bottom. Bare = the task in context; /step-by-step:step-by-step <task> targets explicitly.",
-      "version": "0.1.0"
+      "description": "/step-by-step (alias /sbs) \u2014 plan-first sequential runbook with TWO execution modes (0.2.0). Always plans first (ordered numbered steps); modes differ between steps. MANUAL (DEFAULT) \u2014 execute ONE step, then pause (\u23f8 step i/N done. next \u2192 \u2026 proceed?) and end the turn, advancing only on the user's go-ahead \u2014 the user consults/steers at every step boundary. AUTO (opt-in via the `auto` token) \u2014 run every step strictly in order WITHOUT pausing (pre-0.2.0 single-shot behavior). FIRST arg token selects mode: `manual` | `auto` (default manual); remainder is the task. Both halt on a step failure (failing step + verbatim error + un-run tail) and pause before an irreversible / destructive / outward-facing step (confirm-then-resume, same bar as the bypass self-check). Single-threaded counterpart to /cycle's parallel fan-out. Bare = manual on the current task in context.",
+      "version": "0.2.0"
     },
     {
       "name": "micro-exp",

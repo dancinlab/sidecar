@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — step-by-step 0.2.0: manual(기본)/auto 2-모드
+
+`/sbs`(및 `/step-by-step`)가 fully-auto 라 "실제 상의하면서 진행"이 안 되고 자동 폭주하던 문제 수정. 이제 **MANUAL 이 기본** — 한 스텝씩 실행 후 멈춰서 사용자와 상의, go 받아야 다음 진행.
+
+- **2 모드** (첫 arg 토큰으로 선택):
+  - `manual` (또는 토큰 없음 = 기본) — 스텝 1개 실행 → `⏸ step i/N done. next → … proceed?` 출력 후 **턴 종료**. 사용자가 continue/adjust/skip/stop 으로 매 경계마다 조향. 협업 루프.
+  - `auto` — 기존 동작(전 스텝 무중단 실행). opt-in.
+- **타겟 파싱**: 첫 토큰이 `manual`/`auto` 면 모드, 나머지가 task. 아니면 전체가 task + manual 기본.
+- **halt 조건 양 모드 공통**: 스텝 실패(failing step + verbatim error + un-run tail) · 비가역/파괴/대외 스텝 전 confirm (bypass self-check 동급). manual 은 매 스텝이 이미 pause point.
+- step-by-step.md + sbs.md 양 커맨드 본문 동시 갱신 · plugin.json/marketplace 0.1.0→0.2.0 · README lockstep.
+
 ## 2026-05-27 — matrix 0.1.0: axis cross-product 커버리지 추적기
 
 `/matrix` — axis × axis 교차곱 커버리지 매트릭스를 cwd-local `MATRIX.tape` SSOT 로 관리 (DOMAINS.tape 와 동일한 선언적 패턴). anima UNIVERSE 의 손-추적 매트릭스(10×10 axis-pair · BIO × anima cross) 워크플로를 도구화 — 매 round prose 로 "어느 row 완료, 다음 셀 뭐" 추적하던 것을 대체.

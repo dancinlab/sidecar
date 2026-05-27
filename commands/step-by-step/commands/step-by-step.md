@@ -1,31 +1,41 @@
 ---
-description: /step-by-step — plan-first sequential runbook. Decompose the task into an ordered, numbered plan, then execute every step IN ORDER without pausing between steps, narrating each step's start + ✅/⚠/❌ result, halting only on a step failure or before a genuinely irreversible / outward-facing step. The deliberate single-threaded counterpart to /cycle's parallel fan-out. Bare = the task in context. `/sbs` is the short alias.
-argument-hint: "[<task> | empty = current task in context]"
+description: /step-by-step — plan-first sequential runbook with TWO modes. MANUAL (default) — decompose into a numbered plan, then execute ONE step at a time, pausing after each to report + consult before advancing (collaborative). AUTO — execute every step in order without pausing (halt only on failure / irreversible step). First arg token `manual` | `auto` selects the mode (default manual); the rest is the task. The deliberate single-threaded counterpart to /cycle. `/sbs` is the short alias.
+argument-hint: "[manual|auto] [<task> | empty = current task in context]"
 ---
 
 # /step-by-step — plan-first sequential runbook
 
-Task: `$ARGUMENTS`
+Input: `$ARGUMENTS`
 
 You are running **`/step-by-step`**: decompose, then execute the task as an
 ordered sequence of steps — the deliberate, single-threaded counterpart to
 `/cycle` (which fans out in parallel). One thread, in order, top to bottom.
 
-## Step 1 — resolve the target
+## Step 0 — parse mode + target
 
-- arguments non-empty → the target is the argument text.
-- arguments empty → the target is the current work in context. State your
-  assumption in one line (the uncommitted diff, else the task under discussion,
-  else the repo at cwd) and proceed — do not stop to ask.
+Read the FIRST whitespace-delimited token of the input:
 
-## Step 2 — plan (show, don't gate)
+- token is `manual` → **MANUAL** mode; the task is the remaining text.
+- token is `auto` → **AUTO** mode; the task is the remaining text.
+- token is anything else (or input empty) → **MANUAL** mode (the default); the
+  task is the entire input.
+
+Then resolve the target:
+
+- task text non-empty → the target is that text.
+- task empty → the target is the current work in context. State your assumption
+  in one line (the uncommitted diff, else the task under discussion, else the
+  repo at cwd) and proceed — do not stop to ask.
+
+State the chosen mode in one line, e.g. `mode: manual (pause + consult per step)`
+or `mode: auto (run straight through)`.
+
+## Step 1 — plan (always shown)
 
 Decompose the target into an **ordered, numbered list of concrete steps**. Each
 step is one logical, independently-verifiable unit of work, small enough that
 its result is a clear ✅ / ⚠ / ❌. Order by hard dependency — a step may only
 depend on steps above it.
-
-Print the plan as a compact list:
 
 ```
 📋 plan (N steps)
@@ -35,40 +45,58 @@ Print the plan as a compact list:
  N. <step>
 ```
 
-Do **not** wait for approval. The plan is shown for transparency, then you run
-it immediately (plan-first **auto-execute**).
+Do not gate on plan approval in either mode — the plan is shown, then you begin.
 
-## Step 3 — execute in order (no gates)
+## Step 2 — execute
 
-Run the steps **strictly top-to-bottom, one at a time** — not in parallel (that
-is `/cycle`'s job). For each step:
+Per step, always: print `▶ <i>/<N> — <step>` → do the work → print a one-line
+result `✅` done · `⚠` done-with-caveat (note) · `❌` failed (cause).
 
-1. Print the marker `▶ <i>/<N> — <step>`.
-2. Do the work for that step.
-3. Print a one-line result: `✅` done · `⚠` done-with-caveat (one-line note) ·
-   `❌` failed (one-line cause).
+The two modes differ ONLY in what happens between steps:
 
-Between steps there is **no pause and no user gate** — flow straight into the
-next step.
+### MANUAL (default) — pause + consult per step
 
-### Halt conditions (auto-run is not "ignore everything")
+After each step's result line, **STOP and hand control back to the user**:
 
-Stop the run and report — do not blindly continue — when:
+```
+⏸ step <i>/<N> done. next → <i+1>. <next step>
+   proceed? (continue / adjust / skip / stop)
+```
+
+Then **end your turn** — do not start the next step. Wait for the user to steer:
+they may say continue/go/next (→ do exactly the next ONE step, then pause
+again), or correct the plan, skip a step, or stop. This is the collaborative
+default: the user is in the loop at every step boundary, actually consulting
+rather than watching an auto-run scroll by.
+
+(A pure read/inspection step whose output the user needs in order to decide may
+be run and folded into the ⏸ pause — but never advance past a step that
+*changes* state without the user's go-ahead.)
+
+### AUTO — run straight through
+
+Execute the steps strictly top-to-bottom with **no pause and no user gate** —
+flow straight into the next step. This is the old single-shot behavior, now
+opt-in via the `auto` token.
+
+## Halt conditions (BOTH modes)
+
+Regardless of mode, stop and report — never blindly continue — when:
 
 - a step **fails** (`❌`): report which step, the verbatim error, and the
-  remaining un-run steps; let the user decide how to proceed.
+  remaining un-run steps; let the user decide.
 - the next step is **irreversible, destructive, or outward-facing** (deploy,
-  publish, force-push, mass-delete, send): pause at that one step for explicit
-  confirmation, then resume. Same bar as the `bypass` self-check — reversible
-  local steps auto-run; non-reversible ones confirm first.
+  publish, force-push, mass-delete, send): pause for explicit confirmation, then
+  resume. Same bar as the `bypass` self-check. (In MANUAL mode every step
+  already pauses; this just means such a step must NEVER be run even under a
+  blanket "continue" without a specific confirmation.)
 
-## Step 4 — closure
+## Closure
 
-After the last step, print a one-line summary:
+After the last step (or when the run ends), print:
 
 ```
 🏁 <done>/<N> steps complete
 ```
 
-If the run halted early, instead print where it stopped and why, plus the
-remaining steps as an un-run tail.
+If it halted early, print where it stopped, why, and the remaining un-run tail.

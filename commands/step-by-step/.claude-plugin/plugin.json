@@ -1,7 +1,7 @@
 {
   "name": "step-by-step",
-  "description": "/step-by-step (alias /sbs) — plan-first sequential runbook. Decomposes the task into an ordered, numbered plan, then executes every step strictly in order WITHOUT pausing between steps, narrating each step's start + ✅/⚠/❌ result. Halts only on a step failure (reports the failing step + verbatim error + un-run tail) or before a genuinely irreversible / destructive / outward-facing step (confirm-then-resume, same bar as the bypass self-check). The deliberate single-threaded counterpart to /cycle's parallel fan-out — one thread, top to bottom. Bare = the task in context; /step-by-step <task> targets explicitly.",
-  "version": "0.1.0",
+  "description": "/step-by-step (alias /sbs) — plan-first sequential runbook with TWO execution modes. Always decomposes the task into an ordered, numbered plan first; modes differ in what happens between steps. MANUAL (the DEFAULT, 0.2.0) — execute ONE step at a time, then pause (`⏸ step i/N done. next → … proceed?`) and hand control back to the user, ending the turn; the next step runs only on the user's go-ahead, so the user actually consults/steers at every step boundary. AUTO (opt-in via the `auto` token) — execute every step strictly in order WITHOUT pausing (the pre-0.2.0 single-shot behavior). Mode is selected by the FIRST arg token: `manual` | `auto` (default manual); the remainder is the task. Both modes still halt on a step failure (report failing step + verbatim error + un-run tail) and pause before a genuinely irreversible / destructive / outward-facing step (confirm-then-resume, same bar as the bypass self-check). The deliberate single-threaded counterpart to /cycle's parallel fan-out — one thread, top to bottom. Bare = manual on the current task in context; /step-by-step auto <task> targets + runs straight through.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

@@ -210,7 +210,7 @@
       "name": "system",
       "source": "./skills/system",
       "description": "/system — campaign control-tower (domain-agnostic). One persistent mission-control over EVERY in-flight job of a long-running campaign across ANY execution surface (rented pods via cloud · pool hosts · local procs). Ties the manifest (cwd ./pods.json) + event-driven watchers + harvest+verdict + the autonomous harvest→re-dispatch loop into one command. NOT domain-locked — DFT sweeps · ML training fleets · build matrices · render farms · any N-parallel-job campaign with a queued backlog. Verbs: bare/status (unified dashboard) · watch (event-driven watchers, no ScheduleWakeup, rate-limit-survivable) · harvest [<id>] (terminal → parse metric + g5 verdict + ledger) · next/redispatch (autonomous harvest→atlas-register→fire-next-queued loop, no user gate) · auto (full loop to backlog-drain / budget-hit / interrupt) · cost · queue [add|rm|ls] · upstream [<repo>] (report the g59 upstream-reflex trail — INBOX entries + merged PRs filed to linked repos; 0.4.1 queries origin/main + gh remote, NEVER the local working tree, and distinguishes entry-merged from the parsed 🟠 OPEN / ✅ RESOLVED fix status). Abstract job model (terminal_marker / metric_parser per kind). Reuses ./pods.json (cloud dispatch SSOT) — does NOT duplicate /cloud pods or /micro-exp (that launches a fresh sweep; /system is the control tower over already-running jobs). Triggers: /system · 관제탑 · 캠페인 현황 · mission control · campaign status · 결과보고 추가발사 · 자율 재발사 루프 · control tower.",
-      "version": "0.4.1"
+      "version": "0.5.0"
     },
     {
       "name": "draft",

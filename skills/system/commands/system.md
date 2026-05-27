@@ -47,7 +47,9 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 | `watch` | **watch** | arm one event-driven watcher per active job |
 | `harvest [<id>]` | **harvest** | terminal job → parse metric + g5 verdict + ledger |
 | `next` / `redispatch` | **next** | autonomous harvest→register→fire-next-queued (one step) |
-| `auto` | **auto** | full loop (status→watch→harvest→next) to depletion/budget/interrupt |
+| `auto` | **auto** | full loop (status→watch→harvest→next) ONE in-session pass to depletion/budget/interrupt |
+| `drive [--budget $X] [--max-pods N]` | **drive** | AUTONOMOUS SELF-DRIVING — sticky cross-turn loop (ScheduleWakeup heartbeat + watcher-event re-entry) ticking harvest→verdict→re-dispatch until budget/depletion/interrupt |
+| `stop` / `drive off` | **stop** | disengage self-driving (clear the drive marker) |
 | `cost` | **cost** | budget tracker, per-surface breakdown |
 | `queue [add\|rm\|ls]` | **queue** | manage the candidate backlog |
 | `upstream [<repo>]` | **upstream** | report the upstream-reflex trail — INBOX entries + merged PRs this campaign filed to linked repos (g59) |
@@ -121,6 +123,40 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 
 `auto` NEVER asks "fire next?" between candidates — that gate is exactly what `/system` removes. The only halts are drain / budget / interrupt / a surface-transport failure it can't recover.
 
+`auto` is ONE in-session pass. For a campaign whose jobs run for HOURS (DFT · training fleets), the loop must survive ACROSS turns — that is `drive`.
+
+## drive [--budget $X] [--max-pods N] — AUTONOMOUS SELF-DRIVING (sticky, cross-turn)
+
+`drive` is `auto` made persistent: a self-driving campaign that re-enters itself across turns until a halt condition, with NO per-tick user prompt. Two re-entry mechanisms, both honored:
+- **watcher-event (primary)** — each armed watcher's terminal fires a harness re-invoke; `drive` harvests THAT job + re-dispatches, then re-arms.
+- **ScheduleWakeup heartbeat (fallback)** — a long-interval wake (DFT/training cadence = hours → **1200–1800 s**, never a 5-min poll) so the loop survives even if a watcher silently dies or a surface is between events. The cache-window math: hour-scale jobs change slowly, so a 20–30 min heartbeat is right; do NOT poll at 60 s (burns cache 30× for nothing).
+
+**Engage**: set the drive marker in `pods.json` (`"drive": {"on": true, "budget_cap": X, "max_pods": N, "engaged_utc": "<ISO>"}`) — persisted so it survives compaction/restart. Print `🚗 drive engaged · budget $X · max-pods N · heartbeat <delay>s`.
+
+**Each tick** (on watcher-event OR heartbeat wake), run in order:
+1. **status** sweep (liveness probe all running; exit-code-aware terminal taxonomy).
+2. **harvest** every terminal job → metric + g5 verdict VERBATIM → atlas register on 🟢 (g62) → ledger. (TIMEOUT-RESUMABLE → recover-resume instead of harvest; CRASHED → log + advance.)
+3. **next** — for freed capacity (≤ `max_pods`), fire `queued` / auto-resolve `blocked:<technical>` candidates. **Throttle-aware**: spawn ≤2 parallel agents; on a transient-throttle storm, BACK OFF (serialize, ≤1, jittered) — never thundering-herd. Re-dispatch cost stated in one line per fire.
+4. **re-arm** watchers on all running jobs.
+5. **budget** check → halt on `spent ≥ cap` (g64).
+6. **depletion** check → halt on `queue empty AND all terminal AND no open axis`.
+7. **upstream-reflex** — any cloud/tooling gap hit this tick → file upstream INBOX (g59) before continuing.
+8. **schedule next** — if not halted, `ScheduleWakeup` the heartbeat delay; else clear the drive marker + emit the halt verdict.
+
+**Halt conditions** (the ONLY stops — `drive` never pauses to ask "continue?"):
+- 🏁 **drained** — queue empty + all terminal + no open axis → final ledger + verdict matrix, clear marker.
+- 🛑 **budget** — `spent ≥ cap_usd` (g64) → halt, do NOT exceed silently, clear marker.
+- ⏸ **gated:<human-only>** — a candidate needs a credential / irreversible-action OK / design decision → PAUSE that ONE candidate (surface it), keep driving the rest; only a campaign-wide human gate stops the whole loop.
+- **user interrupt** / explicit `/system stop`.
+
+**Crash/throttle survival**: the drive marker + `pods.json` manifest are the durable state. On a rate-limit death mid-tick, the next watcher-event or heartbeat re-enters and re-reads state (no work lost — checkpoint = the manifest + the per-job recovery files). `drive` itself is replay-safe: a re-entered tick re-derives terminals/queue from the manifest, never re-fires an already-`fired` candidate.
+
+**Distinction**: `auto` = one pass now (interactive). `drive` = the campaign drives itself to its physical limit (budget/drain) across hours/days, hands back only on a halt condition. This is "set the budget + queue, walk away."
+
+## stop / drive off — disengage self-driving
+
+Clear the `pods.json` `drive.on` marker + cancel the pending ScheduleWakeup intent. Print `🛑 drive disengaged · <N> jobs still running (watchers stay armed) · queue <M> preserved`. Running jobs + watchers continue (stop only ends the AUTO re-dispatch loop, not the in-flight work).
+
 ## cost — budget tracker
 
 Sum `running`+`done` pod-hours × rate from `pods.json` → `spent_usd`; render `▓▓░░ $spent/$cap (pct%)` + per-surface breakdown + per-candidate est for the remaining queue. Flag if the queue's est would breach `cap`.
@@ -188,4 +224,5 @@ End every verb with one status line:
 
 Triggers — `/system`, `관제탑`, `캠페인 현황`, `전체 잡 현황`, `mission control`, `campaign status`,
 `upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `INBOX 올린 거`, `상류 기여`,
+`자율주행`, `self-driving`, `drive`, `set and walk away`, `예산 걸고 알아서`, `campaign drive`, `자율 캠페인`, `멈춰`, `drive off`, `stop driving`,
 `결과보고 추가발사`, `harvest 후 자동발사`, `자율 재발사 루프`, `control tower`, `잡 전부 모니터`.

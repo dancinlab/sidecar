@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.2"
+  version = "1.3"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -293,3 +293,8 @@
   dont = "self-judge a co-located smoke as a verdict — a check arranged to return true (`f(x)` defined to equal the value it is compared against) is a TAUTOLOGY, not verification (Goodhart · p7)"
   dont = "let an author-written `result.json` declaring `verdict_class:🔵` stand in for an independent recompute · restate a governance directive as an 'axiom' and self-certify (circular — a directive is not a falsifiable claim)"
   dont = "an autonomous loop self-close on smoke-pass and accumulate mass fake-🔵 — a loop that can only self-judge must STOP and report (anima UNIVERSE matrix: 530+25 fake-H discarded, #1027/#1034)"
+
+@D g74 := "main-flow deviation — breadcrumb the return path on ANY side-task (intra/cross-repo · g11/g59/g60 companion)" :: governance [required active]
+  do   = "leaving the active goal for any side-task → `/trail push <return-target>` first"
+  do   = "side-task closes → `/trail pop` and resume the parent flow it names"
+  dont = "dive into any deviation without `/trail push` · leave the trail unpopped after returning"

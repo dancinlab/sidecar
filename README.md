@@ -170,7 +170,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-63 plugins across `{hook · command · skill}` — one concept each (28 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+64 plugins across `{hook · command · skill}` — one concept each (29 `core` · 17 `hexa` · 18 `personal`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -182,6 +182,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`draft`](skills/draft/) | command + skill | `core` | 0.2.0 | Ephemeral scratchpad — `/draft <slug>` scaffolds `drafts/<slug>.md`; `add <slug> <content>` appends timestamped bullet; `rm <slug>` deletes one; `drafts/` auto-gitignored; LLM AUTO-REGISTERS on natural-language signals (\"이거 등록해줘\"/\"메모\"/\"register this\") by picking a slug from context and running `/draft add`; symmetric deletion triggers (\"삭제\"/\"지워\") map to `/draft rm` |
 | [`end`](skills/end/) | command + skill | `core` | 0.2.0 | Session closure safety check |
 | [`matrix`](skills/matrix/) | command + skill | `core` | 0.1.0 | Axis cross-product coverage tracker — `/matrix` manages an axis × axis grid via cwd-local `MATRIX.tape` (SQUARE: one axis set, pairs · RECTANGULAR: `rows` × `cols`); `done <i> <j>` toggles a cell, bare renders the grid (small) or per-row coverage bars (large) + coverage % + next unfilled cells |
+| [`trail`](skills/trail/) | command + skill | `core` | 0.1.0 | Main-flow return stack (LIFO) — `/trail push <target>` records where to climb back when deviating into ANY side-task (intra-repo tangent/sub-fix OR cross-repo/upstream fix — not only cross-repo); `pop` closes the top detour + shows what to resume; bare renders the ladder (deepest = ★ NOW); HOME-global `~/.sidecar/trail.tape` (one stack for the current dive, survives `cd`); LLM auto-uses per commons g74 |
 | [`gap`](commands/gap/) | command | `core` | 0.2.0 | multi-axis gap exploration |
 | [`gh-stack`](skills/gh-stack/) | skill | `core` | 0.1.1 | Stacked-PR workflow skill |
 | [`git-guard`](hooks/git-guard/) | hook | `core` | 0.5.0 | PreToolUse(Bash) git-push safety guard, in hexa-lang (`_git_guard.hexa`, via `hexa run`) |
@@ -222,7 +223,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |
 | [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
-| [`commons`](hooks/commons/) | hook | `personal` | 0.10.13 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
+| [`commons`](hooks/commons/) | hook | `personal` | 0.10.14 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |

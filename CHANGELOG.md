@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — trail 0.1.0 + commons g74: 메인 흐름 이탈 → 복귀 스택
+
+사용자 directive — "디코더 진행하다 업스트림 fix 건 생겨 메인 흐름에서 이탈하는 경우, ai agent 가 알아서 remember 사용해서 기억하고 복귀할 수 있도록". 이번 세션이 그 시나리오의 전형: anima DECODER MoE → hexa-lang flame-P2b → codegen trim fix 로 4단계 파고들며 본 흐름(3B scale 검증)을 잃을 위험. 한 모델이 "이탈하라"(g11/g59/g60 upstream-first)만 알고 "복귀 경로를 남겨라"는 없던 갭을 메움.
+
+- **신규 plugin `trail` 0.1.0** (`skills/trail/`) — 메인 흐름 복귀 스택 (LIFO). 이탈은 **크로스레포뿐 아니라 같은 레포 내 곁가지/sub-fix 에서도 발생** (활성 마일스톤에서 벗어나는 임의 side-task) — 둘 다 커버. 동굴 탐험 실타래 비유: 들어갈 때 실 풀고, 나올 때 실 따라 복귀.
+  - **저장 = HOME-global** `~/.sidecar/trail.tape` (cwd-local 인 `/draft` 와 갈리는 핵심) — 현재 dive 를 한 스택으로 추적: intra-repo 곁가지 커버 + 크로스레포(anima→hexa-lang) 이탈 시 `cd` 후에도 생존하는 상위집합.
+  - 동사 — `push <return-target>` (이탈 직전 복귀 지점 기록: UTC ts + git-toplevel repo + 타겟 텍스트) · `pop` (top 프레임 제거 + 다음 resume 대상 출력, 비면 'back on MAIN FLOW') · bare/`show` (사다리 렌더 · deepest = `★ NOW` 상단, root 하단) · `clear` · `help`.
+  - **portable POSIX** (head/tail/grep/awk · GNU-only 플래그 0) → macOS + Linux pool 동일 동작 (g13).
+  - `/draft`(cwd-local throwaway) · `/domain`(in-repo milestone SSOT) 과 구분되는 메인 흐름 이탈 STACK (intra-repo + 크로스레포 공통).
+- **commons.tape 1.2 → 1.3 · 신규 `@D g74`** — "main-flow deviation — breadcrumb the return path on ANY side-task (intra/cross-repo · g11/g59/g60 companion)". LLM 자동 사용 지시: 활성 목표에서 임의 side-task(intra-repo 곁가지/sub-fix 또는 크로스레포/업스트림)로 피벗 → `/trail push <return-target>` 후 진입 · 닫히면 `/trail pop` 후 부모 흐름 복귀. s7(룰 + 집행기 동반 ship) 충족 — g74(룰) + trail(메커니즘) 동일 배치.
+
 ## 2026-05-27 — pool-route 0.8.0: HEXA 화이트리스트 (blacklist → whitelist 전환)
 
 사용자 directive "heavy 말고 블랙리스트 말고 화이트리스트로 — 모든 hexa 실행 pool 로". 배경: heavy-VERB 블랙리스트(kick/drill/run/build/… 만 라우팅)가 `hexa verify --expr` · `hexa atlas register` · `hexa parse` · `hexa honesty` 등을 누락 → 병렬 anima 자율 루프가 이것들을 로컬 대량 fork → **1600+ hexa 프로세스 Mac fork-storm** (load avg 12+, clang/atlas-parse 폭주). 블랙리스트는 새 verb 마다 새는 구조라 화이트리스트로 전환.

@@ -29,6 +29,7 @@
     "check": "core",
     "draft": "core",
     "matrix": "core",
+    "trail": "core",
     "end": "core",
     "cycle": "core",
     "brainstorm": "core",

@@ -11,8 +11,8 @@
     {
       "name": "commons",
       "source": "./hooks/commons",
-      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g72` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
-      "version": "0.10.13"
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook \u2014 injects a cross-project do/dont layer from commons.tape (granular `@D g0..g74` form, no tool/usage) + a live `pool` roster snapshot (~/.pool/pool.json) appended per injection so the host lineup is visible without running `pool list`; UserPromptSubmit re-injects every turn so the layer never fades; SessionStart additionally appends COMMANDS.md (the cross-project slash-command catalog) once per session. Carries LATTICE_POLICY.md (real-limits-first SSOT).",
+      "version": "0.10.14"
     },
     {
       "name": "prefs",
@@ -210,6 +210,12 @@
       "name": "matrix",
       "source": "./skills/matrix",
       "description": "Axis cross-product coverage tracker — `/matrix` manages a combinatorial coverage matrix (axis × axis hypothesis/experiment grid) via a cwd-local `MATRIX.tape` SSOT, the same declarative pattern as DOMAINS.tape. Two modes: SQUARE (one axis set via `axes <a…>`; cells = upper-triangle + diagonal pairs, total N·(N+1)/2) and RECTANGULAR (separate `rows <a…>` × `cols <a…>`, e.g. BIO mechanisms × anima axes, total R·C). Verbs — bare/`show` renders the full grid with ✓/· when small (rows≤14 ∧ cols≤14, or square N≤12) else per-row coverage bars ▓▓▓░░, always printing coverage % + next 5 unfilled cells · `done <i> <j>` marks a cell (explicit toggle like /domain milestones; square pairs auto-sorted to a canonical key so order doesn't matter) · `undone <i> <j>` · `next [N]` lists next N unfilled (default 10) · `help`. Drives a systematic combinatorial sweep row-by-row without tracking coverage in prose; SSOT survives across sessions; cells are explicit (not auto-detected) so it's workflow-agnostic. Triggers: /matrix · 매트릭스 · matrix 만들어 · 교차곱 매트릭스 · cross-product matrix · coverage 추적 · 다음 셀 · 어디 채울 차례.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "trail",
+      "source": "./skills/trail",
+      "description": "Main-flow return stack — `/trail` is a LIFO deviation stack that records where you were on the MAIN FLOW (the active goal) when you pivot into ANY side-task — an intra-repo tangent/sub-fix OR a cross-repo/upstream fix — so the parent goal is never stranded. Deviations are NOT only cross-repo; a same-repo tangent off the active milestone strands the main flow just as easily. The store is HOME-global (`~/.sidecar/trail.tape`) — NOT cwd-local like `/draft` — so one stack tracks the current dive across intra-repo deviations AND survives `cd` when a detour does cross repos (e.g. anima DECODER → hexa-lang flame → codegen fix). Verbs — `push <return-target>` appends a frame (UTC timestamp + git-toplevel repo basename + return-target text) · `pop` removes the top frame and prints the next frame to resume (or 'back on MAIN FLOW' when empty) · bare/`show` renders the ladder with the deepest frame `★ NOW` at top and the root at the bottom · `clear` wipes · `help`. LLM AUTO-USE (commons g74 companion) — SKILL.md instructs the calling LLM to run `/trail push` the instant work pivots into any side-task (intra-repo tangent/sub-fix or cross-repo/upstream fix) and `/trail pop` the instant it closes, no explicit command, plus `/trail` (show) on long yak-shaves to re-surface the climb-back path. Distinct from `/draft` (cwd-local throwaway) and `/domain` (in-repo milestone SSOT). Portable POSIX script (no GNU-only flags) so it runs identically on macOS + Linux pool hosts. Triggers: /trail · 트레일 · 복귀 스택 · 이탈 기록 · 메인 흐름 표시 · breadcrumb · return stack · 어디까지 했더라 · 원래 뭐 하던 · 곁가지 · detour · climb back · 본 흐름 복귀.",
       "version": "0.1.0"
     },
     {

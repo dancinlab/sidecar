@@ -327,3 +327,26 @@ bare /domain:
 
 ## 2026-05-22 — reflect hexa cloud cycle C (preflight) in /cloud (from hexa-lang)
 - [x] resolved in `cloud` 0.2.0 — `preflight` verb + GPU mem-budget surface 반영
+
+## 2026-05-27 — /domain `<NAME>.brainstorm.md` + `.tape` 3rd pillar (from demiurge)
+
+협업 brainstorm 결과 영구 기록을 위한 도메인 평면 형제 파일 도입 제안.
+
+**현재 패턴**: `<NAME>.md` (spec) + `<NAME>.log.md` (append-only log)
+**제안**: `<NAME>.brainstorm.md` (분석/추론/도구, 사이클별 누적) + `<NAME>.brainstorm.tape` (아이디어 cart, @X 항목)
+
+**상황**: demiurge RTSC에서 8 cycle 협업 brainstorm (math↔physics same-formula 24+ 아이디어, 2D→5D 차원 지도, 트리 가지치기 ~35 leaf) 산출물을 `.discoveries/`에 임시 저장 → `domains/rtsc.brainstorm.{md,tape}` 평면 형제로 수동 이전 (demiurge PR #370/371). 도메인 스킬 자체가 지원하면 더 깨끗.
+
+**제안 verbs**:
+- `/domain brainstorm <text>` → `<NAME>.brainstorm.md` 끝에 timestamped append (cycle 헤더 옵션)
+- `/domain cart <text>` 또는 `/domain idea <text>` → `<NAME>.brainstorm.tape` 끝에 @X 항목 append
+- bare `/domain` 상태 표시에 brainstorm 라인 추가 (`brainstorm: N cycles · M cart items`)
+
+**디자인 노트**:
+- `log.md` 와 차이: log = step-by-step 작업 기록 / brainstorm = 분석·아이디어 정리 (다른 목적, 분리 정당)
+- `.tape` format = 기존 `@X` (speculation/cart) 활용
+- 사이클 헤더는 timestamp 자동 (`## Cycle <N> — <date>`)
+
+**우선순위**: medium · 워크어라운드(수동 편집)이 작동하지만, 협업 brainstorm 패턴이 도메인 스킬에 포함되면 모든 demiurge/anima/hexa-lang 도메인이 즉시 사용 가능.
+
+**관련**: demiurge PR #335/344/346 (m-sign doc 본체) · PR #370/371 (brainstorm 이전).

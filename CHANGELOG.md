@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — commons 0.10.15: `@D g75` 추가 (candidate orchestration build/fire split · domain-agnostic)
+
+micro-exp 0.4.0 + cycle 0.9.2 + commons g75 3-개 surface가 한 governance 패키지를 이룬다 — INBOX 5-제안의 ② commons.tape g7N (당시 sign-deferred) 항목 해소. 사용자 `! sidecar sign commons` 후 land.
+
+- **`hooks/commons/` 0.10.14 → 0.10.15** — `@D g75` 추가 (build/fire split). g73 길이 cap 위반도 함께 split (tape-lint baseline 갱신).
+- **@D g75 spec** (domain-agnostic — kind 무관):
+  - `do`: build phase = `/cycle-bg <domain>` (agents write each candidate's dispatch infra) · fire phase = `/micro-exp <scope>` (assumes infra; runs+harvests) · infra missing → default to `/cycle-bg` (Stage 1.5 halts+steers) · kind is abstract (runnable + parser 있으면 모두)
+  - `dont`: fire `/micro-exp` against missing infra · default doc to `/micro-exp` w/o infra check · fabricate sparse infra to skip build · couple spec to a single candidate kind
+- 짝 surface: `skills/micro-exp` 0.4.0 (Stage 1.5 + decision tree) · `skills/cycle` 0.9.2 (cross-link)
+- 전 사이클 (`968cf62`) build phase ↔ fire phase 영역 분리를 governance 형태로 박제 — 모든 후속 사이드카 도메인이 이 규칙을 SessionStart로 받음
+
+---
+
 ## 2026-05-28 — /micro-exp Stage 1.5 + decision tree (domain-agnostic 일반화)
 
 사용자 워딩 트리거 — "물질 합성 연구에만 쓰이다가 다른 프로젝트 돌리려니 안됨". hexa-codex CODEX PR #126 의 22-axis-candidate halt (22 candidate matrix enumerate ✅ 그러나 dispatch infra 0/22 ready) 가 직접 motivation. 5-제안 INBOX 항목 → 1 decision 합의 (D — ①+⑤+② best-effort 묶음 · ④ docs deferred · ③ ② hint 흡수) 후 사이클 진행.

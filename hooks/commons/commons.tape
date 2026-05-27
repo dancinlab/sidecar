@@ -288,11 +288,21 @@
   dont = "`_new`·`_old`·`_final` · Go-style `/vN` import-path — marker belongs in metadata not name"
 
 @D g73 := "verdict is EARNED by independent recompute — never self-judged (anti-fake-closure)" :: governance [required active]
-  do   = "🔵/🟢 only when `hexa verify` (g5) INDEPENDENTLY reproduces the claim OR a deterministic run that COULD have falsified it produced the number — verdict comes from the calculator, persisted verbatim to a verdict file"
-  do   = "no calc path ⇒ 🟠 INSUFFICIENT (honest, not promoted) · the real fix is to EXTEND the verify primitive, not to route around the gate"
-  dont = "self-judge a co-located smoke as a verdict — a check arranged to return true (`f(x)` defined to equal the value it is compared against) is a TAUTOLOGY, not verification (Goodhart · p7)"
-  dont = "let an author-written `result.json` declaring `verdict_class:🔵` stand in for an independent recompute · restate a governance directive as an 'axiom' and self-certify (circular — a directive is not a falsifiable claim)"
-  dont = "an autonomous loop self-close on smoke-pass and accumulate mass fake-🔵 — a loop that can only self-judge must STOP and report (anima UNIVERSE matrix: 530+25 fake-H discarded, #1027/#1034)"
+  do   = "🔵/🟢 only when `hexa verify` (g5) INDEPENDENTLY reproduces the claim — verdict from calculator"
+  do   = "OR when a deterministic run that COULD have falsified it produced the number (verbatim verdict file)"
+  do   = "no calc path ⇒ 🟠 INSUFFICIENT (honest, not promoted) — fix is to EXTEND verify primitive"
+  dont = "self-judge a co-located smoke — a check arranged to return true is TAUTOLOGY (Goodhart · p7)"
+  dont = "let author-written `result.json` declaring `verdict_class:🔵` stand in for independent recompute"
+  dont = "restate a governance directive as an 'axiom' and self-certify (directive ≠ falsifiable claim)"
+  dont = "autonomous loop self-close on smoke-pass — mass fake-🔵 (anima UNIVERSE 530+25 discarded · #1027)"
+
+@D g75 := "candidate orchestration — build phase vs fire phase split (domain-agnostic)" :: governance [required active]
+  do   = "build phase = `/cycle-bg <domain>` — agents write each candidate's dispatch infra"
+  do   = "fire phase = `/micro-exp <scope>` — assumes infra exists; runs + harvests"
+  do   = "infra missing → default to `/cycle-bg` (build-then-fire); Stage 1.5 halts + steers"
+  do   = "kind is abstract — same split applies to any candidate kind with runnable + parser"
+  dont = "fire `/micro-exp` against missing infra · default doc to `/micro-exp` w/o infra check"
+  dont = "fabricate sparse infra to skip build · couple spec to a single candidate kind"
 
 @D g74 := "main-flow deviation — breadcrumb the return path on ANY side-task (intra/cross-repo · g11/g59/g60 companion)" :: governance [required active]
   do   = "leaving the active goal for any side-task → `/trail push <return-target>` first"

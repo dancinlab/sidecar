@@ -225,7 +225,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`verify`](skills/verify/) | command + skill | `hexa` | 0.2.1 | runs `hexa verify "$@"` (cross-project tier rubric, TECS-L-aligned) |
 | [`verify-guard`](hooks/verify-guard/) | hook | `hexa` | 0.1.2 | PreToolUse(Bash) hard block for raw verification-tool usage cited as primary evidence, implemented in hexa-lang (`_ver… |
 | [`ai-api-guard`](hooks/ai-api-guard/) | hook | `personal` | 0.1.3 | PreToolUse(Bash) hard block for raw AI-API calls when a sidecar CLI wraps the same operation, implemented in hexa-lang… |
-| [`commons`](hooks/commons/) | hook | `personal` | 0.10.14 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook |
+| [`commons`](hooks/commons/) | hook | `personal` | 0.10.15 | UserPromptSubmit + SessionStart + PreCompact + PostCompact hook · 0.10.15 adds `@D g75` (candidate orchestration build/fire split · domain-agnostic) |
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.2.0 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook; 0.2.0 adds 한국어 substring NL 트리거 '설명'/'쉽게' (UserPromptSubmit · verb/noun/adverb 어형 catch) + 발동 시 1줄 banner emit (always-on inject는 그대로) |
 | [`go`](skills/go/) | command + skill | `core` | 0.1.0 | /go [hint] — proceed with most-recently proposed action / continue paused flow without further confirmation. Bare "go" single-word message catches as NL alias. Stateless continuation token (not a runbook). Optional hint: `retry`/`skip`/`all`/host-name |

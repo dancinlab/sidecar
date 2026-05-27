@@ -6,6 +6,24 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — cycle 0.9.0: `/cycle-fg` — foreground 순차진행 변형
+
+사용자 요청 — "사이클 명령어 포그라운드 순차진행 명령어 필요". 기존 cycle family는 전부 백그라운드 Agent fan-out (병렬 실행). 디버깅 · 조심스러운 리뷰 · cwd 공유 작업처럼 인-세션 가시성이 필요한 경우 — cycle의 자동 enumeration + plan은 유지하되 Stage 4 execution을 foreground sequential로 바꾼 변형 필요.
+
+- **`/cycle-fg`** — Stages 0-3는 `/cycle`과 동일 (SSOT-freshness · next-list · dup-race precheck · plan table), Stage 4만 OVERRIDE: 각 PROCEED 행을 메인 세션에서 직접 Bash/Read/Edit/Write로 순차 실행. `▶ i/N → ✅/⚠/❌` 가시 진행. NO `Agent` 호출 · NO `run_in_background` · NO `isolation: worktree`. Stage 5 depletion 자동연속은 유지.
+- **Halt 규칙** (sbs-like): step `❌ failed` → STOP + verbatim error + un-run tail · 비가역/외향 step 전 confirm · 유저 interrupt → graceful stop.
+- **trade-off vs /cycle**: 깊이 우선 순차 비용 ↔ 가시성 + throttle 안전 + cwd 공유 작업 호환.
+- **6개 명령** 패밀리 (`/cycle` · `/cycle-full` · `/cycle-loop` · `/cycle-full-loop` · `/cycle-all` · `/cycle-fg`) 모두 같은 5-stage 구조 · plan-table · dup-race precheck · leak guardrails 공유, entry/pacing/cap/execution-mode만 다름.
+
+| 축 | /cycle (default) | /cycle-fg |
+|---|---|---|
+| 실행 | 백그라운드 Agent fan-out (병렬) | 인-세션 직접 실행 (순차) |
+| 결과 가시성 | Agent 완료 알림 | 매 step stdout/diff 그대로 |
+| 리소스 | N개 Agent context · throttle 영향 | 단일 main context · throttle 안전 |
+| 적합 | 독립 작업 다발 · 격리 필요 | 디버깅 · 조심스러운 리뷰 · cwd 공유 |
+
+NL triggers 확장: `사이클 포그라운드` · `사이클 순차` · `사이클 직접` · `foreground cycle` · `sequential cycle` · `inline cycle` · `한 단계씩 사이클`.
+
 ## 2026-05-27 — pool-route 0.9.2: SessionStart에 정책 preamble 박음 (ambient awareness)
 
 사용자 — "hexa 실행하는거에 대해 pool로 전달되겠구나 를 그냥 알게끔, ai agent가 인식하게끔 내가 안알려줘도". 0.8.0~0.9.1 inversion 정책이 plugin.json 설명엔 있지만 세션 시작 시 agent context엔 안 박혀서, 매 세션 유저가 "hexa는 pool로 가요"를 다시 설명해야 했음.

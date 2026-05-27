@@ -99,6 +99,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "inbox-guard",
+      "source": "./hooks/inbox-guard",
+      "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for any write into an `inbox/` folder. The canonical cross-project handoff SSOT is `INBOX.md` (single markdown file at repo root, `- [ ]` open items + sibling `INBOX.log.md` for resolved history) \u2014 agents repeatedly created `inbox/<kind>/<slug>.md` (notes / patches / poc / rfc_drafts) folder entries in parallel, fragmenting active handoff state across many files instead of accumulating in the single SSOT. Any file_path containing `/inbox/` as a directory segment is denied with a redirecting message pointing to INBOX.md. Bare `INBOX.md` / `INBOX.log.md` files are NOT caught (no `/inbox/` segment); only writes INTO an inbox/ directory are refused. No opt-out by design (commons @D s11). Companion: the legacy `inbox` skill that scaffolded inbox/<kind>/<slug>.md is retired in the same ship cycle (user-level `~/.claude/commands/inbox.md` removed).",
+      "version": "0.1.0"
+    },
+    {
       "name": "sidecar-lint",
       "source": "./hooks/sidecar-lint",
       "description": "PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claude-plugin/marketplace.json), implemented in hexa-lang (`_sidecar_lint.hexa`, invoked via `hexa run`). Non-blocking findings as additionalContext: stale-history patterns in staged diff (commons @D g15) \u00b7 hardcoded /Users//home/ absolute paths in staged diff (commons @D g13 \u00b7 sidecar @D s3) \u00b7 marketplace.json plugin entry \u2194 each plugin.json version drift (commons @D g22) \u00b7 hook .sh missing user-exec bit \u00b7 missing CHANGELOG.md at repo root (commons @D g29) \u00b7 (when .claude-plugin/profiles.json is present) any marketplace plugin missing a tier there (sidecar @D s7 \u2014 untagged silently defaults to 'personal', hidden from the minimal/hexa profiles) \u00b7 any registered MCP-server plugin (project.tape @D s15 \u2014 `mcps/` source or `mcpServers` in plugin.json; no MCP-server plugins, stdio handshake blocks sessions). NO opt-out by design.",

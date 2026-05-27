@@ -227,6 +227,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`easy`](skills/easy/) | command + skill | `personal` | 0.1.2 | Easy (friendly) response style |
 | [`easy-auto`](hooks/easy-auto/) | hook | `personal` | 0.1.2 | SessionStart + UserPromptSubmit + PreCompact + PostCompact hook |
 | [`imagine`](skills/imagine/) | command + skill | `personal` | 0.2.3 | generic AI image generator |
+| [`inbox-guard`](hooks/inbox-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for any write into an `inbox/` folder — the canonical handoff SSOT is `INBOX.md` (single file + sibling `INBOX.log.md`); folder-style `inbox/<kind>/<slug>.md` fragments active state and is refused. No opt-out by design. Companion: legacy `inbox` skill retired |
 | [`inbox-log-lint`](hooks/inbox-log-lint/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) advisory for the INBOX domain log (`INBOX.log.md`) |
 | [`inject`](skills/inject/) | command + skill | `personal` | 0.2.0 | Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install… |
 | [`plist-guard`](hooks/plist-guard/) | hook | `personal` | 0.1.2 | PreToolUse(Write\|Edit\|NotebookEdit) hard block for `.plist` writes, implemented in hexa-lang (`_plist_guard.hexa`, inv… |

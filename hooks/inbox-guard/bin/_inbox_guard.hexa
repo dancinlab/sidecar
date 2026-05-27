@@ -1,0 +1,92 @@
+// _inbox_guard.hexa — PreToolUse(Write|Edit|NotebookEdit) hard block for
+// writes into any `inbox/` folder.
+//
+// SSOT for cross-project handoff is the single `INBOX.md` markdown file at
+// repo root, with sibling `INBOX.log.md` for resolved history. Agents
+// repeatedly created `inbox/<kind>/<slug>.md` (notes / patches / poc /
+// rfc_drafts) entries in parallel, fragmenting the active handoff state
+// across many files instead of accumulating in the single SSOT. Any
+// file_path containing `/inbox/` as a directory segment is denied with a
+// redirecting message.
+//
+// Bare `INBOX.md` / `INBOX.log.md` are NOT caught (no `/inbox/` segment) —
+// only writes INTO an inbox/ directory are refused.
+//
+// No opt-out by design — no env var, no config file, no exception list,
+// no self-exclusion. Companion retirement: the legacy `inbox` skill that
+// scaffolded inbox/<kind>/<slug>.md is removed in the same ship cycle.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _is_inbox_path(p: string) -> bool {
+    // contains an `inbox/` directory segment anywhere in the path:
+    //   - "/inbox/" (mid-path)
+    //   - "inbox/" prefix (relative path)
+    //   - exact "inbox" (the dir itself, rare for a file_path)
+    if p.contains("/inbox/") { return true }
+    if len(p) >= 6 && p.substring(0, 6) == "inbox/" { return true }
+    if p == "inbox" { return true }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    let tool = payload["tool_name"]
+    if tool != "Write" && tool != "Edit" && tool != "NotebookEdit" { _allow() }
+
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    let mut target = ""
+    if has_key(ti, "file_path") { target = ti["file_path"] }
+    if target == "" {
+        if has_key(ti, "notebook_path") { target = ti["notebook_path"] }
+    }
+    if target == "" { _allow() }
+
+    if !_is_inbox_path(target) { _allow() }
+
+    let reason = "inbox-guard: writes into an `inbox/` folder are refused. The canonical cross-project handoff SSOT is `INBOX.md` (single markdown file at repo root) + sibling `INBOX.log.md` (resolved history).\n  Refusing to write `" + target + "`.\n  Use the repo's `INBOX.md` instead — add an `- [ ]` entry there; move resolved entries to `INBOX.log.md`. Folder-style `inbox/<kind>/<slug>.md` fragments the active state across many files and was retired. No opt-out by design."
+    _deny(reason)
+}

@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-27 — inbox-guard 0.1.0: `inbox/` 폴더 쓰기 차단 + 레거시 `inbox` 스킬 폐기
+
+사용자 지적 — "INBOX.md 시스템이 아니라 inbox/ 폴더도 자꾸 사용해 막아줘". 진단: cross-project handoff SSOT는 `INBOX.md` (repo 루트 단일 .md · `- [ ]` 열린 항목 + sibling `INBOX.log.md` 해소이력 — anima·demiurge·hexa-lang·sidecar 4개 repo 모두 보유)인데, 레거시 `inbox` skill이 `inbox/<kind>/<slug>.md` (kind ∈ notes/patches/poc/rfc_drafts) 폴더 엔트리를 양산해서 활성 handoff 상태가 단일 SSOT 대신 여러 파일에 파편화.
+
+- **`hooks/inbox-guard` 0.1.0** — PreToolUse(Write|Edit|NotebookEdit) 가드. `file_path`에 `/inbox/` 디렉토리 세그먼트가 있으면 deny, `INBOX.md` 안내 메시지 전달. 단일 파일명 `inbox.md`나 `INBOX.md`(폴더 아님)는 영향 없음. 폴더 진입만 막음. **No opt-out by design** (commons @D s11).
+- **레거시 skill 폐기** — `~/.claude/commands/inbox.md` (sidecar mirror로 깔린 user-level command) 제거. 참조하던 `_inbox.hexa`는 sidecar에서 이미 사라졌고(stale reference), command 파일만 잔존하며 available-skills 목록에 inbox skill을 계속 노출시키고 있었음.
+- 기존 `inbox/` 폴더 콘텐츠(예: anima/inbox/notes/...)는 그대로 유지 — 가드는 **신규 쓰기만** 차단, 정리는 유저 판단.
+- 한정 범위 (v0.1.0): Write/Edit/NotebookEdit만 잡음. Bash redirect (`>` / `tee` / heredoc into inbox/)는 v0.2.0 미루기 — Bash 케이스는 흔치 않고 파싱 정확도 낮음.
+- 검증: `/Users/ghost/core/anima/inbox/notes/foo.md` Write → ✅deny, `INBOX.md` Write → ✅allow, `commands/inbox.md` Edit → ✅allow (폴더 아님).
+
 ## 2026-05-27 — pool-route 0.8.3: pool-canonical `~/.hx/canon` 경로 — stale-컴파일러 근본해결
 
 사용자 지적 — "old compiler 문제등근본해결 필요". 진단: pool 호스트들의 `~/core/hexa-lang` 체크아웃이 origin/main 대비 심하게 뒤처짐 (ubu-1=42 commit 뒤·feature branch 2 미푸시·idle, ubu-2=**614 commit 뒤·main·미커밋 8개·활성 run 3개·systemd-resolved 죽음으로 github 접근 불가**). 0.8.2 preflight는 "hexa가 실행되는가"만 검사 → 614-뒤처진 컴파일러도 readiness PASS → anima 세션의 qwen_bpe round-trip이 miscompile. 단순한 git pull은 불가 — ubu-2의 5개 untracked WIP가 origin/main 트래킹 파일과 충돌, ubu-1의 미푸시 feature branch도 못 건드림.

@@ -411,3 +411,27 @@ bare /domain:
 - demiurge PR #380 (Cycle 15 edge 32개 + 그래프 고갈 실증)
 
 **우선순위**: medium-high · 사용자 패턴이 sidecar #190만으론 발산만 자동화, 수렴(점잇기)도 정식화하면 mining 워크플로 완결.
+
+## 2026-05-27 — /mining tidy|consolidate 정리 verb (from demiurge RTSC)
+
+`/mining` 슬래시(#190)에 *재정리* verb 추가 — 발산(lens)/수렴(connect)에 이어 *organize*.
+
+**상황**: demiurge RTSC mining 15 사이클 누적 후 chronological raw 형식이 가독성 떨어짐. 사용자 "마이닝 계속 고갈시까지 정리" → mining.md를 430→230줄로 phase 그룹화 + dedup (#382). 이 워크플로를 슬래시화.
+
+**제안 verbs**:
+- `/mining tidy` 또는 `/mining consolidate` — 누적된 사이클을 phase 그룹(발산/분석/수렴/외부)으로 재조직. 사이클 인덱스 표 + 통계 + 미커버 axis + 단일 closure box 자동 생성. content lossless (chronological 정보는 인덱스 표로 보존).
+- `/mining tidy --depth=light` — 헤더 + TOC만 추가 (Cycle 8 안전 모드).
+- `/mining tidy --depth=full` — 본문도 재조직 (Cycle 15 본 PR 패턴).
+- `/mining squash` — 중복 헤더(예: 반복되는 "다음 사이클 예정")만 단일화.
+
+**디자인 노트**:
+- lens(발산) + connect(수렴) + tidy(정리) = mining 워크플로 3종 완성 (lens/edges/organize).
+- tidy는 destructive 보임이나 chronological 정보를 *인덱스 표*로 보존 → lossless.
+- depth 매개변수: light=cosmetic / full=structural.
+- 자동 트리거 가능: 사이클 수 ≥10 + log 행 ≥500 시 `/mining tidy` 제안 메시지.
+
+**관련**:
+- sidecar #189 (`.brainstorm/.mining` 패턴) · #190 (`/mining` lens) · #191 (`/mining connect`)
+- demiurge #382 (mining.md v2 정리 본체 — phase 그룹 + 단일 closure)
+
+**우선순위**: medium · 발산/수렴 완성된 sidecar #190/#191 후 자연 다음 step. 누적 doc의 가독성·유지보수성 직격.

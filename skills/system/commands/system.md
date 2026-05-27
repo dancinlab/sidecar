@@ -50,6 +50,7 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 | `auto` | **auto** | full loop (status→watch→harvest→next) to depletion/budget/interrupt |
 | `cost` | **cost** | budget tracker, per-surface breakdown |
 | `queue [add\|rm\|ls]` | **queue** | manage the candidate backlog |
+| `upstream [<repo>]` | **upstream** | report the upstream-reflex trail — INBOX entries + merged PRs this campaign filed to linked repos (g59) |
 
 ## status (bare) — control-tower dashboard
 
@@ -143,6 +144,29 @@ The queue is what `next`/`auto` draws the re-dispatch target from.
 
 There is deliberately NO "awaiting-approval" status for an ordinary candidate. If you catch yourself about to write "발사 대기 / waiting for user go" on a `queued` or `blocked:<technical>` item — that's the anti-pattern; fire or auto-resolve instead.
 
+## upstream [<repo>] — report the upstream-reflex trail (g59)
+
+The reporting half of the `watch`/`harvest` **upstream-reflex** (when a `hexa cloud` / tooling gap surfaces, it's filed to the upstream repo's `INBOX.log.md` same-turn). `upstream` surfaces that trail — what this campaign/session pushed upstream — so "hexa upstream fix in this session" is a one-verb query, not a manual recall.
+
+**Repos scanned**: the linked upstream repos from `pods.json` `upstream_repos` (array of repo paths/slugs); default `~/core/hexa-lang` (the cloud/CLI substrate) + any repo referenced by a job's `kind`. `/system upstream <repo>` scopes to one.
+
+**Procedure**:
+1. **INBOX entries** — for each repo, `grep -nE '^## .*(from <campaign>|RTSC|<campaign-tag>)' <repo>/INBOX.log.md` (match the campaign tag the reflex stamped) → list date · slug · status (✅ resolved / 🟠 open).
+2. **Merged PRs** — `gh pr list --repo <owner/repo> --state merged --search "<campaign-tag> in:title,body" --json number,title,mergedAt --limit 20` → list PR# · title · mergedAt.
+3. **Session scope** — if a `--since <ISO>` or the session-start time is known, filter to this session; else show the campaign-tagged trail.
+4. Render:
+```
+🔗 upstream trail — <campaign> (g59 reflex)
+═══════════════════════════════════════
+<repo>
+   #<PR>  <slug>                        <status>  <mergedAt>
+   ...
+─── N filed · M merged · K open ───
+```
+Read-only (no filing here — that's the `watch`/`harvest` reflex). If a gap was hit THIS turn but not yet filed, flag it: `⚠ unfiled gap: <desc> — file to <repo>/INBOX (g59)`.
+
+This makes the upstream contribution auditable: every cloud/tooling gap the campaign hit leaves a queryable trail, closing the loop between "hit a gap" → "filed upstream" → "report what was filed".
+
 ## Honest constraints (commons-aligned)
 - **g8** — all pod ops via `hexa cloud {exec|run|nohup|copy-to|copy-from|poll|tail}`; never raw ssh/scp.
 - **g5** — paste verify verdicts VERBATIM; never LLM-judge correctness.
@@ -151,6 +175,7 @@ There is deliberately NO "awaiting-approval" status for an ordinary candidate. I
 - **g63** — every job reaches a verdict tier; FALSIFIED is a CLOSED negative, never skipped.
 - **g64** — declare + honor the budget cap; halt on breach.
 - **g65** — `exports/<campaign>/ledger.json` is the typed surface; never let it drift from the manifest.
+- **g59** — cloud/tooling gap → file upstream `INBOX.log.md` same-turn (`watch`/`harvest` reflex); `upstream` verb reports the trail.
 - Reuses **`/cloud` (pods.json)** + **`/micro-exp` (sweep launch)** + **/atlas** + **/verify** — `/system` is the orchestration layer ABOVE them, not a replacement.
 
 ## Closure
@@ -160,4 +185,5 @@ End every verb with one status line:
 ```
 
 Triggers — `/system`, `관제탑`, `캠페인 현황`, `전체 잡 현황`, `mission control`, `campaign status`,
+`upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `INBOX 올린 거`, `상류 기여`,
 `결과보고 추가발사`, `harvest 후 자동발사`, `자율 재발사 루프`, `control tower`, `잡 전부 모니터`.

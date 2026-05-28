@@ -50,6 +50,7 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 | `next` / `redispatch` | **next** | autonomous harvest→register→fire-next-queued (one step) |
 | `auto` | **auto** | full loop (status→watch→harvest→next) ONE in-session pass to depletion/budget/interrupt |
 | `drive [--budget $X] [--max-pods N]` | **drive** | AUTONOMOUS SELF-DRIVING — sticky cross-turn loop (ScheduleWakeup heartbeat + watcher-event re-entry) ticking harvest→verdict→re-dispatch until budget/depletion/interrupt |
+| `pursue` | **pursue** | **(0.8.0 all-paths autonomy)** enumerate EVERY open campaign thread (stalled-resumable jobs · tooling gaps to fix-at-source · queued waves · cost-leaks) and fan them ALL out in parallel — NO human "which next?" menu |
 | `stop` / `drive off` | **stop** | disengage self-driving (clear the drive marker) |
 | `cost` | **cost** | budget tracker, per-surface breakdown |
 | `queue [add\|rm\|ls]` | **queue** | manage the candidate backlog |
@@ -204,6 +205,41 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 **Distinction**: `auto` = one pass now (interactive). `drive` = the campaign drives itself to its physical limit (budget/drain) across hours/days, hands back only on a halt condition. This is "set the budget + queue, walk away."
 
 **Each drive tick LEADS with the campaign progress block** (g56) so every wake reports forward motion as a %: `📊 campaign ▓▓▓▓▓▓░░░░ NN% · jobs <t>/<T> · queue <d>/<Q> · budget ▓▓░░ $<s>/$<c>`. The % MUST be monotone-non-decreasing across ticks (a tick only adds terminals/done) — a drop signals a manifest drift to investigate.
+
+## pursue — all-paths autonomy (0.8.0) · campaign-level fan-out, NO menu
+
+`drive`/`next` automate the **per-job queue** (the candidate backlog). `pursue`
+extends that same autonomy ONE level up — to the **campaign-level "what next?"**
+that otherwise gets handed back to the user as an A/B/C menu. The anti-pattern
+it removes: ending a turn with *"next-move candidates: ① resume the stalled job
+· ② fix the tooling gap · ③ fire the next wave — which?"* when **every one of
+those branches is technically-resolvable**. That menu is the same
+`발사대기 / awaiting-approval` anti-pattern the queue taxonomy (0.2.0) banned —
+just at the campaign tier instead of the candidate tier.
+
+**`pursue` enumerates EVERY open campaign thread and fans them ALL out in
+parallel** (g24 research-parallel · g55 wall-time-first), no per-branch gate:
+
+1. **Enumerate open threads** — sweep the campaign for every non-terminal,
+   non-gated path:
+   - **stalled-resumable** jobs (a job `STUCK`/`GONE`/`TIMEOUT-RESUMABLE` per the `tick` taxonomy that has recoverable state) → diagnose + resume
+   - **tooling gaps** a job hit (a `hexa cloud`/CLI limitation) → fix-at-source + file upstream (g59), don't just work around
+   - **queued waves** (`queue` candidates `queued`/`blocked:<technical>`) → fire / auto-resolve-then-fire
+   - **cost-leaks** (orphan/idle/not-provisioned pods from `cloud reconcile`) → reconcile/teardown
+   - **un-harvested terminals** → harvest → verdict
+2. **Classify each** as `auto` (technically-resolvable → fan out) vs `gated:<human-only>` (credential · irreversible · genuine design decision → the ONLY kind that waits). A path is `gated` ONLY for a real human-input reason — "it's a judgment call about science direction" is usually NOT gated (pursue all viable directions in parallel, let evidence converge, g24).
+3. **Fan out ALL `auto` threads** — one background Agent per thread (`run_in_background`, `isolation: worktree`), THROTTLE-CAPPED at ≤2-3 concurrent (parallel-agent-cap; queue the rest, dispatch as slots free). Each Agent prompt is self-contained + carries the g8/g5/checkpoint-commit/throttle-resume clauses.
+4. **Report** the fan-out table + the (usually empty) `gated` list. End with the g56 progress block, NOT a menu.
+
+**The invariant** (the reason `pursue` exists): a campaign turn NEVER ends with
+*"which of these should I do?"* when the candidates are agent-resolvable. It ends
+with *"I fanned out all N open paths; here's the table; M gated-for-human (if
+any) wait."* The human's role shrinks to genuine gates, not routing.
+
+`pursue` is the campaign-tier sibling of `/all-bg-go` (fan out prior-turn
+branches) and `/cycle` (self-generating loop), specialized to the manifest's
+job/queue/pod/upstream threads. Reuses the `tick` taxonomy (0.7.0) to classify
+job-threads and the queue autonomy contract (0.2.0) to classify candidate-threads.
 
 ## stop / drive off — disengage self-driving
 

@@ -6,7 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
-## 2026-05-28 — system 0.7.0: 코드 하네스 — 결정론적 probe→classify→decide 코어
+## 2026-05-28 — system 0.8.0: all-paths autonomy — `pursue` (캠페인-레벨 자율 fan-out, 메뉴 폐지)
+
+🛰️ 사용자 "다음 한 수도 자율진행가능하게 시스템 개선(모든경로 진행하게끔) 및 모두 진행". 0.7.0 `tick` 이 **per-job** 결정을 자율화(decide 테이블)했지만, 캠페인 턴은 여전히 "다음 한 수: ① stalled job resume · ② tooling gap fix · ③ 다음 wave — 뭐 할까?" 식 **사람 A/B/C 메뉴**로 끝났다. 이건 queue 계약(0.2.0)이 candidate 티어에서 폐지한 `발사대기/awaiting-approval` anti-pattern 의 **캠페인 티어 재발**. 0.8.0 `pursue` = 그 자율 계약을 한 레벨 위로 확장 — 기술적으로 해소가능한 다음수는 메뉴 대신 전부 병렬 fan-out.
+
+- **`pursue` 신규 verb** — 열린 캠페인 thread 전부 enumerate: (a) stalled-resumable 잡(`tick` taxonomy 의 STUCK/GONE/TIMEOUT-RESUMABLE + recoverable state) · (b) 잡이 친 tooling gap(`hexa cloud`/CLI 한계 → fix-at-source + g59 upstream) · (c) queued wave(`queue` 의 queued/blocked:technical) · (d) cost-leak(orphan/idle/미provision pod, `cloud reconcile`) · (e) un-harvested terminal. 각각 `auto`(기술해소가능 → fan-out) vs `gated:<human-only>`(credential·irreversible·진짜 설계결정 — 유일하게 대기) 분류. **science-direction 판단은 gate 아님** — 모든 viable 방향 병렬 추구, evidence 수렴(g24).
+- **fan-out** — `auto` thread 마다 background Agent 1개(run_in_background·isolation worktree), throttle-cap ≤2-3 동시(나머지 큐잉). 각 prompt 는 self-contained + g8/g5/checkpoint/throttle-resume 절 포함.
+- **invariant**: 캠페인 턴이 "이 중 뭐 할까?" 로 끝나지 않음(후보가 agent-resolvable 일 때). "열린 N 경로 전부 fan-out 했고, 여기 표, M개 human-gated(있으면) 대기" 로 끝남. 사람 역할 = 진짜 gate 만, routing 아님.
+- 캠페인-티어 sibling of `/all-bg-go`(prior-turn 분기) + `/cycle`(self-generating). `tick` taxonomy(0.7.0) + queue 계약(0.2.0) 재사용.
+- SKILL+command+marketplace+plugin meta 0.7.0→0.8.0 lockstep(g22). 트리거 `모든 경로 진행`·`다음 한 수 자율`·`pursue` 추가.
+
+
 
 🛰️ 사용자 "후보 자율 되도록 시스템 좀더 개선, 코드수준 하네스도 필요". 0.6.0 까지 /system 은 **LLM 이 읽고 따라하는 산문 절차서** — 매 tick 의 probe·해석·후보선택을 사람 손으로 수행했고, 턴 끝마다 "①②③④ 골라줘" 메뉴가 사용자에게 노출됨. 0.7.0 = 그 산문을 **실제 도는 hexa 프로그램**으로 코드화 + 후보 선택을 결정론 테이블에 못박음 = "오토파일럿 + 예외만 기장 호출".
 

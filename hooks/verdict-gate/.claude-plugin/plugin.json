@@ -1,0 +1,9 @@
+{
+  "name": "verdict-gate",
+  "description": "PreToolUse(Write|Edit) hard block + Stop advisory enforcing commons @D g73 (a verdict is EARNED by independent recompute, never self-judged — anti-fake-closure). Strict filename gate: fires ONLY when the target basename matches `H_*.md` or equals `result.json`. Layer (A) HARD DENY — a Write/Edit that asserts a verdict token (🔵 / 🟢 / SUPPORTED-FORMAL / SUPPORTED-NUMERICAL) in such a file, while the backing repo-root `.verdicts/<slug>/` (slug = `H_<slug>.md` stripped of `H_`+`.md`, or the containing dir name for result.json) has no non-empty `*.txt` (verbatim `hexa verify` stdout), is denied with a redirect to run `hexa verify` and persist the output first. Layer (B) ADVISORY (non-blocking additionalContext) — a `.hexa` write containing a tautological smoke (a `check`'d `fn` whose single-statement body returns the literal/param it is compared against) warns 'tautological smoke — not verification (g73)'. Layer (C) Stop ADVISORY — if recent (mtime < 6h) `H_*.md` files assert 🔵/🟢 with 0% `.verdicts/` backing, emits a non-blocking Stop reason 'loop self-judging only · STOP & report (g73)'; never a hard stop-block. Non-applicable tokens ⚪ SPECULATION-FENCED / 🟡 CITATION / 🟠 INSUFFICIENT NEVER fire (already honest). Plain `.md` prose mentioning 🔵 (this RFC, commons.tape, README rubric) is NOT caught — the filename gate excludes it. Implemented in hexa-lang (`_verdict_gate.hexa` + `_verdict_stop.hexa`, invoked via `hexa run`). Closes the standing commons @D s7 gap (g73 landed without enforcement). NO opt-out by design (commons @D s11 — gated only on the real preconditions: missing binary skip, token absent skip, evidence present skip).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "verdict", "anti-fake-closure", "g73", "hexa"]
+}

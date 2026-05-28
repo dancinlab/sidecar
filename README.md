@@ -147,6 +147,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   plist-guard    .plist writes
 #   cloud-guard    runpodctl/vastai exec/ssh → hexa cloud (g8)
 #   verify-guard   wolframscript / inline-sympy → hexa verify (g5)
+#   verdict-gate   H_*.md/result.json 🔵/🟢 without .verdicts/ evidence → deny (g73); + tautology/loop advisory
 #   ai-api-guard   curl AI-host / inline AI-SDK → the CLI wrapper (g50)
 #   sign-guard     edits to commons.tape/project.tape/.gitignore until `sidecar sign` (s13)
 #   git-guard      force-push (+ stale-base push & merge advisory)

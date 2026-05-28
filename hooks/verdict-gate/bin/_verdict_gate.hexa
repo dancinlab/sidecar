@@ -1,0 +1,353 @@
+// _verdict_gate.hexa — PreToolUse(Write|Edit) enforcement of commons @D g73
+// (a verdict is EARNED by independent recompute — never self-judged).
+//
+// STRICT FILENAME GATE — fires ONLY when the target basename matches `H_*.md`
+// OR equals `result.json`. Plain `.md` prose mentioning 🔵 (this RFC,
+// commons.tape, a README rubric) is NOT caught.
+//
+// Layer (A) HARD DENY — the new content asserts a verdict token
+//   (🔵 / 🟢 / SUPPORTED-FORMAL / SUPPORTED-NUMERICAL) but there is no backing
+//   repo-root `.verdicts/<slug>/` directory holding at least one non-empty
+//   `*.txt` (verbatim `hexa verify` stdout). slug = `H_<slug>.md` stripped of
+//   leading `H_` + trailing `.md`; for `result.json` = containing dir name.
+//   For `result.json` the token must sit in a `"verdict_class"` / `"verdict"`
+//   JSON value. Repo root = nearest ancestor with a `.git`, else cwd.
+//
+// Layer (B) ADVISORY (non-blocking additionalContext) — a `.hexa` write
+//   containing a tautological smoke (a `check`'d call to a `fn` whose body is a
+//   single `return <param>` / `return <literal>` equal to the compared RHS)
+//   warns "tautological smoke — not verification (g73)". Heuristic, best-effort;
+//   false positives are harmless (advisory).
+//
+// Non-applicable tokens ⚪ / 🟡 / 🟠 NEVER fire (already honest).
+// NO opt-out by design (commons @D s11 — gated only on real preconditions:
+// missing payload skip, filename gate, token absent skip, evidence present skip).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _advise(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let nx = len(suffix)
+    if nx > ns { return false }
+    return s.substring(ns - nx, ns) == suffix
+}
+
+// basename — last path segment after the final `/`.
+fn _basename(p: string) -> string {
+    let n = len(p)
+    let mut cut = 0
+    let mut i = 0
+    while i < n {
+        if p[i] == "/" { cut = i + 1 }
+        i = i + 1
+    }
+    return p.substring(cut, n)
+}
+
+// dirname — everything up to (not including) the final `/`; "" if none.
+fn _dirname(p: string) -> string {
+    let n = len(p)
+    let mut cut = -1
+    let mut i = 0
+    while i < n {
+        if p[i] == "/" { cut = i }
+        i = i + 1
+    }
+    if cut < 0 { return "" }
+    return p.substring(0, cut)
+}
+
+fn _resolve(cwd: string, target: string) -> string {
+    if _starts_with(target, "/") { return target }
+    if cwd == "" { return target }
+    return cwd + "/" + target
+}
+
+// Walk up parent dirs of `start` for one containing a `.git`; else `fallback`.
+fn _repo_root(start: string, fallback: string) -> string {
+    let mut cur = start
+    while cur != "" && cur != "/" {
+        if file_exists(cur + "/.git") { return cur }
+        cur = _dirname(cur)
+    }
+    return fallback
+}
+
+// One of the four applicable verdict tokens present anywhere in `s`.
+fn _has_verdict_token(s: string) -> bool {
+    if s.contains("🔵") { return true }
+    if s.contains("🟢") { return true }
+    if s.contains("SUPPORTED-FORMAL") { return true }
+    if s.contains("SUPPORTED-NUMERICAL") { return true }
+    return false
+}
+
+// For result.json: a token must sit in a `"verdict_class"` / `"verdict"` value.
+// Best-effort substring scan — find each key, read a short window after it.
+fn _verdict_in_json_value(body: string, key: string) -> bool {
+    let needle = "\"" + key + "\""
+    let mut rest = body
+    while true {
+        let p = rest.index_of(needle)
+        if p < 0 { return false }
+        let after = rest.substring(p + len(needle), len(rest))
+        let na = len(after)
+        let mut i = 0
+        // skip whitespace + colon
+        while i < na && (after[i] == " " || after[i] == "\t" || after[i] == ":" || after[i] == "\r" || after[i] == "\n") { i = i + 1 }
+        // read the value window up to the next comma / closing brace / newline
+        let mut j = i
+        while j < na && after[j] != "," && after[j] != "}" && after[j] != "\n" { j = j + 1 }
+        let window = after.substring(i, j)
+        if _has_verdict_token(window) { return true }
+        // advance past this occurrence
+        rest = rest.substring(p + len(needle), len(rest))
+    }
+    return false
+}
+
+// Backing evidence: repo-root `.verdicts/<slug>/` holds >=1 non-empty `*.txt`.
+fn _has_backing(root: string, slug: string) -> bool {
+    if slug == "" { return false }
+    let dir = root + "/.verdicts/" + slug
+    // a non-empty regular .txt file anywhere under the slug dir
+    let r = exec_with_status("find " + dir + " -type f -name '*.txt' -size +0c 2>/dev/null | head -1")
+    if r[1] != 0 { return false }
+    return r[0].trim() != ""
+}
+
+// ── Layer B: tautological-smoke heuristic for a .hexa body ──────────────────
+// Detect a `fn <name>(<params>) -> ... { return <X> }` single-statement body
+// whose returned value <X> is later compared `<name>(...) == <X>` (or the call
+// appears inside a `check`). <X> is a bare param ident or a literal. Best-effort.
+fn _trim(s: string) -> string {
+    return s.trim()
+}
+
+// Collect names of fns whose single body statement is `return <token>`,
+// mapping each to its returned token (literal or param ident).
+// Returns two parallel arrays [names, tokens].
+fn _scan_passthrough_fns(body: string) -> array {
+    let lines = body.split("\n")
+    let total = len(lines)
+    let mut names = []
+    let mut rets = []
+    let mut isparam = []
+    let mut i = 0
+    while i < total {
+        let line = _trim(lines[i])
+        if _starts_with(line, "fn ") {
+            // extract fn name: between "fn " and "("
+            let rest = line.substring(3, len(line))
+            let pp = rest.index_of("(")
+            if pp > 0 {
+                let name = _trim(rest.substring(0, pp))
+                // find the body's single return statement — same line after `{`
+                // or the immediately following non-blank line.
+                let mut ret = ""
+                let bp = line.index_of("{")
+                if bp >= 0 {
+                    let inner = _trim(line.substring(bp + 1, len(line)))
+                    if _starts_with(inner, "return ") {
+                        let mut v = _trim(inner.substring(7, len(inner)))
+                        if _ends_with(v, "}") { v = _trim(v.substring(0, len(v) - 1)) }
+                        ret = v
+                    }
+                } else if i + 1 < total {
+                    let nxt = _trim(lines[i + 1])
+                    if _starts_with(nxt, "return ") {
+                        ret = _trim(nxt.substring(7, len(nxt)))
+                    }
+                }
+                if ret != "" {
+                    names.push(name)
+                    rets.push(ret)
+                    // is the returned token a bare identifier (param passthrough)
+                    // rather than a literal/expression? (no operator/space chars).
+                    let mut bare = len(ret) > 0
+                    let mut q = 0
+                    while q < len(ret) {
+                        let ch = ret[q]
+                        if ch == " " || ch == "+" || ch == "-" || ch == "*" || ch == "/" || ch == "(" || ch == ")" || ch == "." {
+                            bare = false
+                        }
+                        q = q + 1
+                    }
+                    // a leading letter/underscore marks it as an identifier (param),
+                    // not a numeric/string literal.
+                    let c0 = ret[0]
+                    let is_ident = bare && (c0 == "_" || (c0 >= "A" && c0 <= "Z") || (c0 >= "a" && c0 <= "z"))
+                    isparam.push(is_ident)
+                }
+            }
+        }
+        i = i + 1
+    }
+    return [names, rets, isparam]
+}
+
+// True if `body` contains a comparison `<name>(...) == <ret>` for one of the
+// passthrough fns, AND that fn/comparison sits in a check context (the file
+// uses `check` or the line itself is an `==` assertion of the passthrough).
+fn _is_tautological_smoke(body: string) -> bool {
+    let scan = _scan_passthrough_fns(body)
+    let names = scan[0]
+    let rets = scan[1]
+    let isparam = scan[2]
+    let m = len(names)
+    if m == 0 { return false }
+    let lines = body.split("\n")
+    let total = len(lines)
+    // For each passthrough fn, fire when EITHER:
+    //   (a) a single line both calls it and compares against its return value
+    //       (`name(...) == <ret>` — the direct fake form), OR
+    //   (b) the fn is called somewhere in the file AND some `==` assertion
+    //       compares against its return token (the call-then-check form, e.g.
+    //       `let v = name(...)` then `assert(v == <ret>)`).
+    let mut k = 0
+    while k < m {
+        let name = names[k]
+        let ret = rets[k]
+        let param_ret = isparam[k]
+        let mut called = false
+        let mut compared_to_ret = false
+        let mut i = 0
+        while i < total {
+            let line = lines[i]
+            let calls = line.contains(name + "(")
+            if calls { called = true }
+            if line.contains("==") {
+                // identity-param fn: `f(...)` equality-checked at all is the
+                // identity-passthrough tautology (`f(X) == X` — the arg matches).
+                if calls && param_ret { return true }
+                // literal-return fn, direct form on one line (`f(...) == <lit>`).
+                if calls && line.contains(ret) { return true }
+                // literal-return fn, call-then-check form (`v = f(...)` then
+                // `assert(v == <lit>)`): the fn is called and its literal return
+                // appears on an `==` assertion elsewhere.
+                if !param_ret && line.contains(ret) { compared_to_ret = true }
+            }
+            i = i + 1
+        }
+        if called && compared_to_ret { return true }
+        k = k + 1
+    }
+    return false
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    let tool = payload["tool_name"]
+    if tool != "Write" && tool != "Edit" { _allow() }
+
+    let mut cwd = ""
+    if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd = payload["cwd"] } }
+
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+
+    let mut target = ""
+    if has_key(ti, "file_path") { if type_of(ti["file_path"]) == "string" { target = ti["file_path"] } }
+    if target == "" { _allow() }
+
+    // New content: Write → `content`; Edit → `new_string`.
+    let mut content = ""
+    if has_key(ti, "content") { if type_of(ti["content"]) == "string" { content = ti["content"] } }
+    if content == "" {
+        if has_key(ti, "new_string") { if type_of(ti["new_string"]) == "string" { content = ti["new_string"] } }
+    }
+
+    let base = _basename(target)
+    let abs = _resolve(cwd, target)
+
+    // ── Layer A: H_*.md / result.json verdict-without-evidence DENY ──────────
+    let is_h_md = _starts_with(base, "H_") && _ends_with(base, ".md")
+    let is_result = base == "result.json"
+
+    if is_h_md || is_result {
+        let mut asserts = false
+        let mut slug = ""
+        if is_h_md {
+            asserts = _has_verdict_token(content)
+            // slug = base without leading "H_" and trailing ".md"
+            let inner = base.substring(2, len(base) - 3)
+            slug = inner
+        } else {
+            // result.json — token must be in a verdict_class / verdict value
+            asserts = _verdict_in_json_value(content, "verdict_class") || _verdict_in_json_value(content, "verdict")
+            // slug = name of the containing directory
+            slug = _basename(_dirname(abs))
+        }
+
+        if asserts {
+            let root = _repo_root(_dirname(abs), cwd)
+            if !_has_backing(root, slug) {
+                let reason = "verdict-gate (commons @D g73): `" + base + "` asserts a verdict token (🔵/🟢/SUPPORTED-FORMAL/SUPPORTED-NUMERICAL) but no backing `.verdicts/" + slug + "/*.txt` (non-empty) exists at repo root `" + root + "`.\n  A verdict is EARNED by INDEPENDENT recompute — not self-declared. Run `hexa verify` (g5) to reproduce the claim, save its verbatim stdout to `.verdicts/" + slug + "/<name>.txt`, THEN re-issue this write.\n  No calc path ⇒ use 🟠 INSUFFICIENT (honest). NO opt-out by design."
+                _deny(reason)
+            }
+        }
+        // H_*.md / result.json that earned its verdict (or asserts none) — allow.
+        _allow()
+    }
+
+    // ── Layer B: .hexa tautological-smoke ADVISORY (non-blocking) ────────────
+    if _ends_with(base, ".hexa") {
+        if _is_tautological_smoke(content) {
+            _advise("verdict-gate (commons @D g73, advisory): `" + base + "` appears to contain a TAUTOLOGICAL smoke — a `fn` whose body just `return`s the literal/param it is then compared against (`f(...) == <that value>`) ALWAYS passes, so it verifies nothing (Goodhart · p7). A check arranged to return true is not verification. Confirm the smoke exercises a real, independently-falsifiable path before treating any resulting 🔵/🟢 as earned. Heuristic — advisory only, write proceeds.")
+        }
+    }
+
+    _allow()
+}

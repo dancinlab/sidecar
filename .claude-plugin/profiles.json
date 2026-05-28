@@ -68,6 +68,7 @@
     "stdlib": "master",
     "inbox-log-lint": "personal",
     "inbox-guard": "personal",
+    "verdict-gate": "personal",
     "go": "core",
     "roi": "core",
     "mining": "core",

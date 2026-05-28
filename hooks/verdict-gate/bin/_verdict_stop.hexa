@@ -1,0 +1,148 @@
+// _verdict_stop.hexa — Stop hook, layer (C) of commons @D g73 enforcement.
+//
+// On Stop: scan the repo for `H_*.md` files modified recently (mtime within a
+// session window — last 6h) that assert a 🔵 / 🟢 verdict. Measure the fraction
+// backed by a repo-root `.verdicts/<slug>/` holding >=1 non-empty `*.txt`.
+// If >=1 such asserting H exists AND the backing ratio is 0% (all self-judged),
+// emit an ADVISORY (non-blocking additionalContext) Stop reason:
+//   "loop self-judging only · STOP & report (g73)".
+//
+// NEVER a hard stop-block — a hard block could trap an autonomous loop. This
+// hook emits additionalContext only; it does NOT set `decision: block`.
+//
+// NO opt-out by design (commons @D s11). Gated only on real preconditions:
+// missing payload skip, no repo skip, no recent asserting-H skip, any backing
+// present skip.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// Non-blocking advisory — additionalContext only, NO decision:block.
+fn _advise(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let nx = len(suffix)
+    if nx > ns { return false }
+    return s.substring(ns - nx, ns) == suffix
+}
+
+fn _basename(p: string) -> string {
+    let n = len(p)
+    let mut cut = 0
+    let mut i = 0
+    while i < n {
+        if p[i] == "/" { cut = i + 1 }
+        i = i + 1
+    }
+    return p.substring(cut, n)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+// slug for an H_*.md basename: strip leading "H_" + trailing ".md".
+fn _slug_of(base: string) -> string {
+    if !_starts_with(base, "H_") { return "" }
+    if !_ends_with(base, ".md") { return "" }
+    return base.substring(2, len(base) - 3)
+}
+
+// repo-root `.verdicts/<slug>/` holds >=1 non-empty `*.txt`.
+fn _has_backing(root: string, slug: string) -> bool {
+    if slug == "" { return false }
+    let dir = root + "/.verdicts/" + slug
+    let r = exec_with_status("find " + dir + " -type f -name '*.txt' -size +0c 2>/dev/null | head -1")
+    if r[1] != 0 { return false }
+    return r[0].trim() != ""
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    let mut cwd = ""
+    if has_key(payload, "cwd") { if type_of(payload["cwd"]) == "string" { cwd = payload["cwd"] } }
+    if cwd == "" { _allow() }
+
+    // Resolve repo root (nearest ancestor with .git, else cwd).
+    let rr = exec_with_status("git -C " + cwd + " rev-parse --show-toplevel 2>/dev/null")
+    let mut root = cwd
+    if rr[1] == 0 && rr[0].trim() != "" { root = rr[0].trim() }
+
+    // Recent H_*.md files (mtime < 6h), excluding .git + .verdicts trees.
+    let fr = exec_with_status("find " + root + " -path '*/.git' -prune -o -path '*/.verdicts' -prune -o -type f -name 'H_*.md' -newermt '6 hours ago' -print 2>/dev/null")
+    if fr[1] != 0 { _allow() }
+    let listing = fr[0].trim()
+    if listing == "" { _allow() }
+
+    let files = listing.split("\n")
+    let total = len(files)
+
+    let mut asserting = 0
+    let mut backed = 0
+    let mut i = 0
+    while i < total {
+        let path = files[i].trim()
+        if path != "" {
+            let body = _read_file_safe(path)
+            if body.contains("🔵") || body.contains("🟢") {
+                asserting = asserting + 1
+                let slug = _slug_of(_basename(path))
+                if _has_backing(root, slug) { backed = backed + 1 }
+            }
+        }
+        i = i + 1
+    }
+
+    // Fire only when >=1 recent asserting H exists AND backing ratio == 0%.
+    if asserting >= 1 && backed == 0 {
+        let msg = "verdict-gate (commons @D g73, advisory): " + to_string(asserting) + " recent `H_*.md` (last 6h) assert 🔵/🟢 with 0% `.verdicts/` backing at `" + root + "` — the loop is self-judging only. A verdict is EARNED by independent recompute (`hexa verify`, g5), not self-declared. STOP & report — do not treat these as earned 🔵/🟢; run `hexa verify` and persist verbatim stdout to `.verdicts/<slug>/`, or down-rate to 🟠 INSUFFICIENT. Advisory only — not a hard stop-block."
+        _advise(msg)
+    }
+
+    _allow()
+}

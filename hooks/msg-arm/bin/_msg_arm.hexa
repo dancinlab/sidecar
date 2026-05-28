@@ -1,0 +1,323 @@
+// _msg_arm.hexa — msg phase-2 AUTO-RECEIVE hook (NO MCP, sidecar @D s15).
+//
+// A UNIX domain socket is a CONNECTION, not a queue: phase-1 `/msg listen`
+// drops every message that arrives while no one is bound. This hook closes
+// that gap by making a DETACHED capture daemon own the socket and append all
+// received lines to a durable log, which the hook then drains to the agent.
+//
+// Verbs (dispatched from hooks.json):
+//   arm      — SessionStart: (1) upsert self into roster.json, (2) spawn the
+//              idempotent capture daemon, (3) deliver undelivered lines.
+//   deliver  — UserPromptSubmit: deliver undelivered lines only (cheap path).
+//
+// Shared SSOT with the `msg` command plugin, all under $HOME/.sidecar/msg/:
+//   self              self nick (one line) — written by `/msg nick <name>`
+//   roster.json       { "<nick>": {"sock","sid","ts"}, ... }
+//   <self>.sock       the capture daemon's LISTEN socket (daemon owns it)
+//   <self>.inbox.log  append-only capture log (daemon writes, hook reads)
+//   <self>.offset     byte offset already delivered to the agent
+//   <self>.daemon.pid pidfile for daemon idempotency
+//
+// s11 (no opt-out): no env-var/flag disables this. It gates ONLY on real
+// preconditions — self nick set + a socket binary (socat | nc) present.
+// Missing either → graceful exit 0 (never blocks session start).
+// NO absolute paths ($HOME only). setsid → nohup fallback (macOS).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// single-quote a string for safe embedding in a `sh -c` command.
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+fn _msg_dir() -> string {
+    return env_var("HOME") + "/.sidecar/msg"
+}
+
+// emit a SessionStart/UserPromptSubmit additionalContext payload + exit.
+fn _emit(ev: string, text: string) {
+    println("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(ev) + ",\"additionalContext\":" + _json_escape(text) + "}}")
+    exit(0)
+}
+
+// read self nick from $HOME/.sidecar/msg/self; "" when unset/empty.
+fn _self_nick(dir: string) -> string {
+    let f = dir + "/self"
+    if !file_exists(f) { return "" }
+    return _trim(_read_file_safe(f))
+}
+
+// transport binary present? "socat" | "nc" | "".
+fn _transport() -> string {
+    let s = _trim(to_string(exec("command -v socat 2>/dev/null")))
+    if len(s) > 0 { return "socat" }
+    let n = _trim(to_string(exec("command -v nc 2>/dev/null")))
+    if len(n) > 0 { return "nc" }
+    return ""
+}
+
+// upsert self into roster.json (atomic tmp+mv via shell, jq-aware fallback).
+fn _register_self(dir: string, self: string) {
+    let roster = dir + "/roster.json"
+    let sock = dir + "/" + self + ".sock"
+    let cmd =
+        "set -e; D=" + _shq(dir) + "; R=" + _shq(roster) + "; N=" + _shq(self) +
+        "; S=" + _shq(sock) + "; TS=$(date +%s); mkdir -p \"$D\";" +
+        " T=$(mktemp \"$D/.roster.XXXXXX\");" +
+        " if command -v jq >/dev/null 2>&1 && [ -s \"$R\" ]; then" +
+        "   jq --arg n \"$N\" --arg s \"$S\" --argjson ts \"$TS\" '.[$n]={sock:$s,sid:$n,ts:$ts}' \"$R\" > \"$T\" 2>/dev/null" +
+        "   || printf '{\"%s\":{\"sock\":\"%s\",\"sid\":\"%s\",\"ts\":%s}}\\n' \"$N\" \"$S\" \"$N\" \"$TS\" > \"$T\";" +
+        " else printf '{\"%s\":{\"sock\":\"%s\",\"sid\":\"%s\",\"ts\":%s}}\\n' \"$N\" \"$S\" \"$N\" \"$TS\" > \"$T\"; fi;" +
+        " mv \"$T\" \"$R\""
+    try { let _r = exec_with_status(cmd) } catch e { }
+}
+
+// True when the capture daemon for this self is already running.
+fn _daemon_alive(dir: string, self: string) -> bool {
+    let sock = dir + "/" + self + ".sock"
+    let pidf = dir + "/" + self + ".daemon.pid"
+    let cmd =
+        "P=" + _shq(pidf) + "; S=" + _shq(sock) + ";" +
+        " if [ -f \"$P\" ] && kill -0 \"$(cat \"$P\" 2>/dev/null)\" 2>/dev/null; then echo Y; exit 0; fi;" +
+        " if pgrep -f \"$S\" >/dev/null 2>&1; then echo Y; exit 0; fi; echo"
+    let mut out = ""
+    try { out = to_string(exec(cmd)) } catch e { return false }
+    return _trim(out) == "Y"
+}
+
+// spawn the detached capture daemon (idempotent: caller pre-checks alive).
+// socat preferred; nc -lkU fallback. setsid → nohup fallback (macOS).
+fn _spawn_daemon(dir: string, self: string, transport: string) {
+    let sock = dir + "/" + self + ".sock"
+    let log = dir + "/" + self + ".inbox.log"
+    let pidf = dir + "/" + self + ".daemon.pid"
+    let qs = _shq(sock)
+    let ql = _shq(log)
+    let qp = _shq(pidf)
+    // listener body, paths embedded LITERALLY (no outer-shell vars — this body
+    // becomes the single `sh -c <body>` argument under setsid/nohup, a fresh
+    // shell that would not inherit un-exported vars). Record OUR pid into the
+    // pidfile, rm any stale socket so bind won't fail, ensure the log exists,
+    // then exec the listener so the recorded pid == the listener pid.
+    let mut body = ""
+    if transport == "socat" {
+        body = "echo $$ > " + qp + "; rm -f " + qs + "; : >> " + ql +
+               "; exec socat UNIX-LISTEN:" + qs + ",fork OPEN:" + ql + ",append,create"
+    } else {
+        // nc fallback: -lkU keeps listening; append every connection to the log.
+        body = "echo $$ > " + qp + "; rm -f " + qs + "; : >> " + ql +
+               "; exec nc -lkU " + qs + " >> " + ql
+    }
+    let qbody = _shq(body)
+    // detach: prefer setsid, fall back to nohup (macOS has no setsid). The
+    // whole thing runs in ONE shell; `&` backgrounds the detached listener so
+    // exec_with_status returns immediately.
+    let launch =
+        "if command -v setsid >/dev/null 2>&1; then" +
+        " setsid sh -c " + qbody + " </dev/null >/dev/null 2>&1 &" +
+        " else" +
+        " nohup sh -c " + qbody + " </dev/null >/dev/null 2>&1 &" +
+        " fi"
+    try { let _r = exec_with_status(launch) } catch e { }
+}
+
+// drain $HOME/.sidecar/msg/<self>.inbox.log from <self>.offset, advancing it.
+// Returns the additionalContext body, or "" when there is nothing new.
+fn _drain(dir: string, self: string) -> string {
+    let log = dir + "/" + self + ".inbox.log"
+    let offf = dir + "/" + self + ".offset"
+    if !file_exists(log) { return "" }
+
+    // current size (bytes). wc -c is portable (macOS + Linux).
+    let mut size = 0
+    try { size = to_int(_trim(to_string(exec("wc -c < " + _shq(log) + " 2>/dev/null")))) } catch e { size = 0 }
+
+    let mut off = 0
+    if file_exists(offf) {
+        try { off = to_int(_trim(_read_file_safe(offf))) } catch e { off = 0 }
+    }
+    // truncation / rotation: log shrank below the stored offset → reset.
+    if size < off { off = 0 }
+    if size <= off {
+        // nothing new; persist a corrected offset if we reset it.
+        if off == 0 && file_exists(offf) { try { write_file(offf, "0\n") } catch e { } }
+        return ""
+    }
+
+    // read the new tail: bytes from (off+1) onward. tail -c +N is 1-based.
+    let from = off + 1
+    let chunk = _read_file_safe2(log, from)
+    // advance the offset to the current size (we consumed up to `size`).
+    try { write_file(offf, to_string(size) + "\n") } catch e { }
+
+    return _format(chunk)
+}
+
+// read $HOME/.sidecar/msg/<self>.inbox.log from a 1-based byte position.
+fn _read_file_safe2(path: string, from1: int) -> string {
+    let cmd = "tail -c +" + to_string(from1) + " " + _shq(path) + " 2>/dev/null"
+    let mut out = ""
+    try { out = to_string(exec(cmd)) } catch e { out = "" }
+    return out
+}
+
+// turn raw captured lines into a `📨 from X: text` block, capped ~20 lines.
+fn _format(chunk: string) -> string {
+    let raw = chunk.split("\n")
+    let mut lines = []
+    let mut i = 0
+    while i < len(raw) {
+        let t = _trim(raw[i])
+        if len(t) > 0 { lines.push(t) }
+        i = i + 1
+    }
+    if len(lines) == 0 { return "" }
+
+    let total = len(lines)
+    let CAP = 20
+    let mut start = 0
+    let mut overflow = 0
+    if total > CAP { start = total - CAP; overflow = total - CAP }
+
+    let mut parts = []
+    parts.push("# 📨 새 메시지 " + to_string(total) + "건 (msg auto-receive)")
+    if overflow > 0 {
+        parts.push("(오래된 " + to_string(overflow) + "건 생략 — 전체는 `/msg inbox`)")
+    }
+    let mut j = start
+    while j < total {
+        parts.push(_render_line(lines[j]))
+        j = j + 1
+    }
+    return parts.join("\n") + "\n"
+}
+
+// render one captured JSON line `{from,text,ts}` as `📨 from X: text`.
+// Falls back to the raw line when it isn't parseable JSON.
+fn _render_line(line: string) -> string {
+    let mut frm = ""
+    let mut txt = ""
+    try {
+        let m = json_parse(line)
+        if type_of(m) == "map" {
+            if has_key(m, "from") && type_of(m["from"]) == "string" { frm = m["from"] }
+            if has_key(m, "text") && type_of(m["text"]) == "string" { txt = m["text"] }
+        }
+    } catch e { }
+    if len(frm) > 0 || len(txt) > 0 {
+        if len(frm) == 0 { frm = "?" }
+        return "📨 from " + frm + ": " + txt
+    }
+    return "📨 " + line
+}
+
+fn main() {
+    let args = argv()
+    let mut verb = "deliver"
+    if len(args) > 1 { verb = args[1] }
+
+    // drain stdin (the host pipes the event JSON) so we don't block the pipe,
+    // and recover the firing event name to echo back (harness rejects a mismatch).
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { exit(0) }
+    let mut ev = ""
+    if type_of(payload) == "map" { ev = _event_of(payload) }
+    if ev == "" {
+        // fall back to the verb's canonical event when the payload lacks it.
+        if verb == "arm" { ev = "SessionStart" } else { ev = "UserPromptSubmit" }
+    }
+
+    let dir = _msg_dir()
+    let self = _self_nick(dir)
+
+    // precondition: no self nick → can't know the socket name. One-shot hint
+    // on SessionStart only (don't nag every UserPromptSubmit), else silent.
+    if self == "" {
+        if verb == "arm" {
+            _emit(ev, "📨 msg auto-receive 비활성 — `/msg nick <name>`을 실행하면 이 세션이 메시지를 자동 수신합니다.\n")
+        }
+        exit(0)
+    }
+
+    if verb == "arm" {
+        _register_self(dir, self)
+        let tr = _transport()
+        // precondition: no socket binary → can't run the daemon. Skip silently
+        // (s11 — a missing binary is a real precondition, not an opt-out).
+        if tr != "" {
+            if !_daemon_alive(dir, self) {
+                _spawn_daemon(dir, self, tr)
+            }
+        }
+    }
+
+    // both verbs deliver undelivered lines.
+    let body = _drain(dir, self)
+    if len(body) > 0 { _emit(ev, body) }
+    exit(0)
+}

@@ -180,6 +180,7 @@ case "$VERB" in
 
   listen)
     SELF_SOCK="$MSG_DIR/$SELF.sock"
+    SELF_LOG="$MSG_DIR/$SELF.inbox.log"
     # upsert self into roster.json atomically (tmp + mv)
     if [ "$HAVE_JQ" = "1" ]; then
       TMP=$(mktemp "$MSG_DIR/.roster.XXXXXX")
@@ -200,6 +201,26 @@ case "$VERB" in
     echo "ok: registered self in roster as '$SELF'"
     echo "    socket = $SELF_SOCK"
     echo
+    # phase-2 coexistence: if the msg-arm capture daemon is present it OWNS the
+    # socket (two listeners can't share one UNIX socket), and every received
+    # line is durably appended to <self>.inbox.log. In that case `listen` must
+    # RETARGET the Monitor to `tail -f <log>` instead of binding the socket.
+    # No log (msg-arm not enabled / phase-1 standalone) → keep the original
+    # behavior: Monitor directly on the socket.
+    if [ -f "$SELF_LOG" ]; then
+      echo "NOTE: msg-arm capture daemon detected (inbox log present) — it owns the"
+      echo "      socket. Tailing the durable log instead of binding the socket."
+      echo
+      LISTEN_CMD="tail -n0 -f $SELF_LOG"
+      echo "AGENT ACTION REQUIRED — arm a persistent Monitor on your inbox log so each"
+      echo "newly captured line becomes a chat task-notification. Run this exact command"
+      echo "through the Monitor tool (persistent=true), NOT a plain Bash call:"
+      echo
+      echo "    $LISTEN_CMD"
+      echo
+      echo "Each line is one JSON message {from,text,ts} a peer sent (captured by msg-arm)."
+      exit 0
+    fi
     if [ -S "$SELF_SOCK" ]; then
       echo "NOTE: a socket already exists at $SELF_SOCK — you may already be listening."
       echo "      if your Monitor is gone, rm it first:  rm -f \"$SELF_SOCK\""

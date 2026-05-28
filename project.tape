@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.7"
+  version = "1.8"
 
 @I := "sidecar" :: identity [active]
   kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
@@ -64,9 +64,9 @@
   do   = "relieve via CLI paths only — account swap (quota) · CLI routers · Bedrock/Vertex backends"
   dont = "suggest · mention · wire Anthropic API keys (pay-per-token) as a capacity remedy"
 
-@D s15 := "no MCP-server plugins — hook · command · skill concepts only" :: governance [required active]
-  do   = "expose capability via the 3 plugin concepts (hook · command · skill) over the host CLI"
-  dont = "add an MCP-server plugin (mcps/ dir · mcpServers in plugin.json) — stdio handshake blocks"
+@D s15 := "STDIO MCP-server plugins forbidden — HTTP/SSE-transport MCP permitted" :: governance [required active]
+  do   = "capability via hook · command · skill + host CLI · or HTTP/SSE MCP (url-based · no stdio)"
+  dont = "STDIO MCP server (mcps/ dir · command mcpServers) — stdin/stdout handshake collides w/ hexa"
 
 @D s16 := "co-locate by owner — no top-level kind-folders" :: governance [required active]
   do   = "store artifact WITH its owner — domain pair `<NAME>.md`+`.log.md` · plugin assets in plugin dir"

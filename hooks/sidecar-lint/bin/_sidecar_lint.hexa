@@ -13,7 +13,7 @@
 //   5. no CHANGELOG.md at repo root (commons @D g29)
 //   6. plugin missing a profiles.json tier (sidecar @D s7) — only when the
 //      repo has .claude-plugin/profiles.json (sidecar's multi-user profiles)
-//   7. MCP-server plugin registered — mcps/ source or mcpServers in plugin.json
+//   7. STDIO MCP-server plugin registered — mcps/ source or command-based mcpServers (HTTP/SSE url-based MCP is allowed)
 //      (project.tape @D s15: no MCP-server plugins; hook · command · skill only)
 //   8. unexpected top-level dir — ALLOWLIST (concept dir·plugin·.github·.claude-plugin);
 //      tracked only · rename-proof (project.tape @D s16: co-locate by owner/domain)
@@ -396,13 +396,21 @@ fn main() {
                             if src != "" {
                                 let pjpath = root + "/" + src + "/.claude-plugin/plugin.json"
                                 let pjraw = _read_file_safe(pjpath)
+                                // s15 (revised): STDIO MCP forbidden; HTTP/SSE-transport MCP permitted.
+                                // mcps/ source dir = legacy/ambiguous → always flagged.
+                                // mcpServers in plugin.json → flag ONLY when stdio (command-based):
+                                // an HTTP/SSE server entry carries a "url" (or http/sse transport),
+                                // a stdio entry carries "command". Allow when a url/http marker is present.
                                 let mut is_mcp = _starts_with(src, "mcps/")
                                 if !is_mcp && pjraw != "" {
                                     let pjm = json_parse(pjraw)
-                                    if type_of(pjm) == "map" && has_key(pjm, "mcpServers") { is_mcp = true }
+                                    if type_of(pjm) == "map" && has_key(pjm, "mcpServers") {
+                                        let has_url = pjraw.contains("\"url\"") || pjraw.contains("\"sse\"") || pjraw.contains("\"http\"") || pjraw.contains("streamable")
+                                        if !has_url { is_mcp = true }
+                                    }
                                 }
                                 if is_mcp && len(mcpban) < 8 {
-                                    mcpban.push("  " + name + " (" + src + "): MCP-server plugin — mcps/ source or mcpServers in plugin.json")
+                                    mcpban.push("  " + name + " (" + src + "): STDIO MCP-server plugin — mcps/ source or command-based (stdio) mcpServers; use HTTP/SSE transport (url-based)")
                                 }
                                 if _ver_marked(name) && len(verban) < 8 {
                                     verban.push("  " + name + " (" + src + "): version/generation marker in plugin name — use a minimal role name (version = semver in plugin.json)")
@@ -528,7 +536,7 @@ fn main() {
         sections.push("plugins missing a profiles.json tier (sidecar @D s7 — tag a tier {core·hexa·personal} so the multi-user profiles can place it; untagged defaults to 'personal'):\n" + untagged.join("\n"))
     }
     if len(mcpban) > 0 {
-        sections.push("MCP-server plugin(s) registered (project.tape @D s15 — no MCP-server plugins; expose capability via hook · command · skill + host CLI; stdio MCP handshake blocks sessions):\n" + mcpban.join("\n"))
+        sections.push("STDIO MCP-server plugin(s) registered (project.tape @D s15 — STDIO MCP forbidden; use hook · command · skill + host CLI, OR an HTTP/SSE-transport MCP (url-based); stdio JSON-RPC handshake collides with hexa hook stdio + fake-stdin):\n" + mcpban.join("\n"))
     }
     if len(verban) > 0 {
         sections.push("version/generation marker in plugin name(s) (commons @D g72 — minimal role-name identifiers; the version lives in semver / git tag, never the name):\n" + verban.join("\n"))

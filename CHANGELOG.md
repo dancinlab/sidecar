@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — STRUCTURE.md 신설: 허용 구성 명시 spec (s16/lint 연결)
+
+🗺️ 루트 `STRUCTURE.md` 추가 — sidecar 저장소의 허용 구성을 사람이 읽는 지도로 명시. top-level allowlist 표(concept dir `hooks`·`commands`·`skills`·`agents` + `bin`·`.github`·`.claude-plugin`) · 도메인쌍 관례(`<NAME>.md`+`<NAME>.log.md` + `DOMAINS.tape` roster) · where-goes 표 · 금지 종류별 버킷 · 정전 ASCII 트리. `@D s16`(규칙) ↔ `sidecar-lint` check (8) allowlist(강제) 를 단방향 cross-reference 하므로 project.tape re-sign 불필요. 범위 = sidecar-LOCAL (형제 저장소 `docs/`·`state/` 사용은 정당). README Layout 에 포인터 추가. 플러그인 버전 bump 없음(저장소 구조 문서).
+
 ## 2026-05-29 — sidecar-lint 0.8.1: top-level 체크 = allowlist (rename-proof) + 도메인 안내
 
 🔒 0.8.0의 name-blocklist(`docs`·`state`)는 폴더명만 바꾸면(`docs`→`documentation`) 빠져나가는 약점이 있었다. **allowlist로 전환** — 추적되는 top-level 디렉터리 중 concept dir(`hooks`·`commands`·`skills`·`agents`)·`bin`·`.github`·`.claude-plugin`이 **아닌 모든 것**을 flag. 이름 바꿔치기로 못 빠져나간다.

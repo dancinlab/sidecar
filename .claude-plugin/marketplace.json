@@ -475,6 +475,12 @@
       "source": "./skills/stdlib",
       "description": "/stdlib — hexa-lang stdlib SSOT helper (commons @D g61). `check` (bare) scans the cwd repo for g61 violations: abs-path cross-repo `.hexa` imports + local fn names duplicating a hexa-lang stdlib `pub fn`. `promote <file>` prints the move-to-stdlib + thin-shim runbook (engine⊥adapter; the phi_native / IIT4 #1051 flow). Read-only scan; promote prints a runbook. Pairs with the stdlib-ssot-guard hook.",
       "version": "0.1.0"
+    },
+    {
+      "name": "msg",
+      "source": "./skills/msg",
+      "description": "/msg — session-to-session messaging over a UNIX domain socket, NO MCP (sidecar @D s15). Two Claude Code TUI sessions exchange one-line JSON messages: the SEND side is a CLI one-liner (`socat - UNIX-CONNECT:<peer>.sock`, fallback `nc -U <path>`); the RECEIVE side is the agent arming a persistent Monitor on `socat UNIX-LISTEN:<self>.sock,fork -` so each received line surfaces as a chat task-notification. Local mailbox + roster under `~/.sidecar/msg/` (roster.json maps nick -> socket path + sid + ts) so pool-route keeps it LOCAL. Verbs — `send <nick> <text...>` (direct) · `broadcast <text...>` (= `send all <text>`) · `listen` (upsert self + print the Monitor command) · `who` (roster table, alive marked via `test -S`, dead rows flagged not deleted) · `nick <name>` · bare `/msg` (status). NL triggers via the skill — '세션끼리 통신' · '옆 세션에 보내' · 'send to session' · 'socket message' · 'inter-session'.",
+      "version": "0.1.0"
     }
   ]
 }

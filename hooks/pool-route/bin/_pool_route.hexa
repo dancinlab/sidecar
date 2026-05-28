@@ -946,10 +946,20 @@ fn main() {
     //                would double-dispatch. The `pool` CLI is the local SSH
     //                wrapper; it must always run on THIS workstation. (0.7.1 —
     //                fixes load-balanced mis-route of `pool on …` to a peer host.)
+    //   - sidecar  : the local marketplace CLI (sidecar-family, same class as
+    //                `pool`). It manages LOCAL state only — `~/.sidecar/` (handoff
+    //                registry · signs · local-paths whitelist · profiles) and
+    //                `~/.claude/` (installed_plugins.json · enabledPlugins). A
+    //                `sidecar handoff add …` / `sidecar sync` shipped to a pool
+    //                host writes the WRONG machine's state (or 127s on a host with
+    //                no `sidecar` binary). Mirrors the `pool` pin: always LOCAL.
+    //                (0.14.0 — the bare `sidecar <verb>` CLI was NOT covered by
+    //                the `$CLAUDE_PLUGIN_ROOT`/`~/.sidecar` literal pins below —
+    //                a `sidecar handoff add <repo> <text>` carries neither token.)
     //   - /Users/ or /home/ literal : host-specific absolute path
     // These are read/version-control/local-fs ops, never the heavy compute the
     // pool exists for, so an early _allow() is always correct.
-    if _has_word(cmd, "git") || _has_word(cmd, "gh") || _has_word(cmd, "pool") { _allow_count("local_bound") }
+    if _has_word(cmd, "git") || _has_word(cmd, "gh") || _has_word(cmd, "pool") || _has_word(cmd, "sidecar") { _allow_count("local_bound") }
     // node-package installers (0.7.4): npm/pnpm/yarn read package.json + write
     // node_modules in CWD — they are inherently cwd-bound, so routing them to a
     // pool host (where the CWD usually doesn't exist) fails preflight with

@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — lsp-rebuild 0.2.0 + hexa-lsp: stdlib/CLI-aware LSP + 자동반영 게이트 확장
+
+🧭 "hexa cli·stdlib 관련 LSP, AI agent가 grep-stale로 계속 헤맴" — hexa LSP를 stdlib/CLI 인식 수준으로 끌어올리고(hexa-lang #1977 머지), lsp-rebuild 자동반영을 hexa-lang 자체 LSP까지 확장.
+
+- **lsp-rebuild 게이트 확장 (0.1.0→0.2.0)** — 기존 `*/lsp/*_lsp.hexa` 패턴은 hexa-lang의 `self/lsp.hexa`(monolith)·`self/lsp/*.hexa`를 못 잡았다. 이 경우 repo의 3-stage 오케스트레이터 `tool/build_hexa_lsp.hexa` → `<repo>/bin/hexa-lsp`로 재빌드하는 분기 추가. 이제 tape/n6/kosmos/hxc와 동일하게 hexa-lang 편집도 자동반영.
+- **hexa-lsp 본체 (hexa-lang #1977)** — completion 핸들러 구현(keyword+builtin+stdlib `pub fn` 라이브 스캔+파일 심볼) · references/rename dispatch 배선 · agent one-shot CLI 모드(`hexa-lsp def/refs/sig/sym/complete` — grep을 stale-immune 조회로 대체) · 멀티메시지 framing 수정(`read_n_bytes` — 첫 메시지 이후 프레임 드롭 해소).
+- 검증(mini arm64): CLI `sym` 1629 stdlib pub fn · 멀티메시지 completion에 stdlib 1620 + keyword 56 + builtin 67 items.
+- plugin/marketplace 0.1.0→0.2.0 lockstep(g22).
+
 ## 2026-05-28 — system 0.9.0: watch 가 `cloud tail` 3-tier exit 위임 (upstream-reflex arc 완성)
 
 ✅ 사용자 "완료시 부수효과도 진행". gap1(#1889, 2026-05-28 머지+로컬빌드)이 `hexa cloud tail --until` 에 **failure-first 3-tier exit**(`0=DONE·3=TIMEOUT-RESUMABLE·4=CRASHED·255=transport`, sed `/CRASH/q4;/TIMEOUT/q3;/DONE/q0`)을 추가 — /system 의 caller-side "JOB DONE + 트레일링 STOP 스캔" STOPGAP 이 더는 필요 없음.

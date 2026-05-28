@@ -1,5 +1,7 @@
-## 2026-05-29 — pods.json + PROVIDERS.json 글로벌 SSOT 통합 디자인 트랙 (from demiurge RTSC discovery) 🟠 OPEN
+## 2026-05-29 — pods.json + PROVIDERS.json 글로벌 SSOT 통합 디자인 트랙 (from demiurge RTSC discovery) 🟢 흡수됨 → hexa-lang CLOUD 도메인 M8-M11
 
+> **CLOUD 도메인 흡수 (2026-05-29)**: 본 트랙의 구현 제안 (a)~(e) 는 hexa-lang `CLOUD.md` 의 milestone **M8-M11** 로 이관됨 (DOMAIN.md = canonical SSOT). 경로는 CLOUD M5 와 정합하여 `~/.hx/cloud/` 디렉토리로 통일 (아래 표 갱신). 본 entry 는 디자인 reference 로 보존. 진행 추적은 `~/core/hexa-lang/CLOUD.md` M8-M11 + `CLOUD.log.md` 2026-05-29 entry 에서.
+>
 > **사건**: 2026-05-28 commons hook 0.12.0 (`_pods_snapshot()`) + pods-route 0.1.0 (`--register` auto-inject) 머지 직후, demiurge 측 사용 패턴 추가 발견. 두 SSOT 가 demiurge git tree 에 실재:
 >
 > 1. **`demiurge/pods.temp.json`** (15KB, untracked) — schema_origin: "sidecar INBOX #193". campaign=`rtsc-293K-1atm`, budget(krw/usd), design_constraints(throttle/wall/load), pods{vast-ysbh6-pod-41837 + 계획 pod}, 각 pod 의 host/provider/cores/cost_usd_per_hr/load_1min/jobs[]. 사용자가 실제로 운영 중인 매니페스트 — 갭#2 (filename drift: hexa-lang `./pods.json` vs demiurge `pods.temp.json`) 의 demiurge 쪽 본체.
@@ -9,24 +11,24 @@
 >
 > **갭 #2 — demiurge providers.ts (Firestore) vs PROVIDERS.json (git) 디자인 격차**: web/lib/providers.ts 는 운영용 단순 카탈로그 (`enabled` + `priority` · gpu/llm/payment 3 카테고리). PROVIDERS.json 은 의사결정용 풍부 인벤토리 (cost · speedup · fit_score · highlight · ref_pr · 통합상태). 두 자료가 같은 "providers" 이름이지만 의도가 다름.
 >
-> **갭 #3 — 글로벌 ↔ 프로젝트 SSOT 이중 + 누락**: 현재 4-층 자원 모델 (사용자 의도):
+> **갭 #3 — 글로벌 ↔ 프로젝트 SSOT 이중 + 누락**: 4-층 자원 모델 (경로 = CLOUD 도메인 정합 후 `~/.hx/cloud/` 통일):
 >
->     ~/.hexa-cloud/pods.jsonl   📜 청구 장부 (append-only · billing)        ✅ 존재
->     ~/.hexa-cloud/manifest.json 🎬 작업 상태 (β · update-form work view)    ❌ 미존재 (cwd ./pods.json 가 substitute)
->     ~/.hexa-cloud/providers.json 📚 자원 카탈로그 (PROVIDERS.json 패턴)    ❌ 미존재 (demiurge PROVIDERS.json 가 substitute)
->     ~/.pool/pool.json            🏠 pool 호스트 카탈로그                   ✅ 존재
+>     ~/.hx/cloud/pods.jsonl       📜 청구 장부 (append-only · billing)       CLOUD M11 (현 ~/.hexa-cloud/pods.jsonl 에서 이관)
+>     ~/.hx/cloud/active-pods.json 🎬 작업 상태 (update-form work view)       CLOUD M5  (cwd ./pods.json substitute → 이관)
+>     ~/.hx/cloud/providers.json   📚 자원 카탈로그 (PROVIDERS.json 패턴)     CLOUD M8  (demiurge PROVIDERS.json substitute → 흡수)
+>     ~/.pool/pool.json            🏠 pool 호스트 카탈로그                    ✅ 존재 (불변)
 >
-> 가운데 두 층이 글로벌 SSOT 없음 → 프로젝트 별 local file 로 흩어짐 → agent 인지 부담 + drift.
+> 가운데 두 층이 글로벌 SSOT 없음 → 프로젝트 별 local file 로 흩어짐 → agent 인지 부담 + drift. CLOUD 도메인 M5/M8/M11 가 `~/.hx/cloud/` 단일 디렉토리로 해소.
 >
-> **구현 제안**
+> **구현 제안** (→ CLOUD 도메인 milestone 매핑 · 경로 `~/.hx/cloud/` 정합)
 >
-> - [ ] **(a) hexa-cloud `providers.json` SSOT 신설** — `~/.hexa-cloud/providers.json` schema = PROVIDERS.json 패턴 흡수 (4-tier providers + walltime_optimizations + integration_status). 단 `current_campaign_recommendation` 은 캠페인별 변동 → 프로젝트 manifest 측으로 이관. cloud_cli.hexa 에 `cloud providers [list|fit|recommend]` verb 추가 (read-only initially).
-> - [ ] **(b) hexa-cloud `manifest.json` SSOT 신설 (β 옵션)** — `~/.hexa-cloud/manifest.json` = update-form work view (pods{} + jobs{}). cwd ./pods.json deprecate · auto-migrate (b 옵션). cloud_cli.hexa 의 `cloud pods` / `cloud dispatch` verb 글로벌 manifest 로 redirect.
-> - [ ] **(c) commons hook `_providers_snapshot()` 추가** — 매 턴 `~/.hexa-cloud/providers.json` 의 enabled+highlight 한 줄 inject (pool roster · pods snapshot 옆). 부재 시 absent-hint (`PROVIDERS.json 패턴 흡수 진행 필요`).
-> - [ ] **(d) demiurge 측 정리** — `pods.temp.json` 은 글로벌 manifest 흡수 후 archive 또는 dark file (사용자 결정). `PROVIDERS.json` 은 demiurge 캠페인 특화 reference 로 유지하되 hexa-cloud 글로벌 providers.json 의 SUPERSET 으로 정합.
-> - [ ] **(e) commons.tape @D 룰 명문화** — `g??: providers/manifest 글로벌 SSOT (no cwd ./pods.json) - all pod/job state in ~/.hexa-cloud/`. 사용자 `! sidecar sign commons` 필요.
+> - [ ] **(a) → CLOUD M8** `~/.hx/cloud/providers.json` SSOT 신설 — schema = PROVIDERS.json 패턴 흡수 (4-tier providers + walltime_optimizations + integration_status). `current_campaign_recommendation` 은 캠페인별 변동 → 프로젝트 manifest 측으로 분리. (→ CLOUD M9: `cloud providers [list|fit|recommend]` verb).
+> - [ ] **(b) → CLOUD M5** `~/.hx/cloud/active-pods.json` SSOT (update-form work view · pods{} + jobs{}). cwd ./pods.json deprecate · auto-migrate. cloud_cli.hexa 의 `cloud pods` / `cloud dispatch` verb 글로벌 manifest 로 redirect.
+> - [ ] **(c) → CLOUD M10** commons hook `_providers_snapshot()` 추가 — 매 턴 `~/.hx/cloud/providers.json` highlight 한 줄 inject (pool roster · pods snapshot 옆). 동 M10 에서 `_pods_snapshot()` 도 `~/.hx/cloud/active-pods.json` 로 전환.
+> - [ ] **(d) → CLOUD M11** demiurge 정리 — `pods.temp.json` 은 글로벌 manifest 흡수 후 archive. `PROVIDERS.json` 은 `~/.hx/cloud/providers.json` 의 캠페인 특화 SUPERSET 으로 정합.
+> - [ ] **(e) commons.tape @D 룰 명문화** — `g??: providers/manifest 글로벌 SSOT (no cwd ./pods.json) - all pod/job state in ~/.hx/cloud/`. 사용자 `! sidecar sign commons` 필요. (CLOUD 도메인 밖 · sidecar 거버넌스 트랙).
 >
-> **우선순위**: (a) > (b) > (c) > (e) > (d). (a) 가 의사결정 reference 의 정식 SSOT 마련 — 가장 가치. (b) 는 이미 0.12.0/0.1.0 의 자연스러운 확장. (e) 는 sign 비용 (사용자 직접) 발생, 다른 작업 완료 후.
+> **우선순위** (CLOUD.md Q4): M5 (SSOT) → M10 (sidecar 정합) → M1/M2/M3 (안전망) → M8/M9 (카탈로그) → M11 (정리). (e) 는 sign 비용 (사용자 직접) 발생, 다른 작업 완료 후.
 >
 > **evidence**:
 > - `demiurge/pods.temp.json` (15KB, 2026-05-28T02:52, schema_origin=sidecar INBOX #193)
@@ -35,7 +37,7 @@
 > - sidecar `hooks/commons/bin/_commons.hexa:_pods_snapshot()` (2026-05-28 0.12.0 · cwd ./pods.json 기반)
 > - sidecar `hooks/pods-route/bin/_pods_route.hexa` (2026-05-28 0.1.0 · --register auto-inject)
 >
-> **관련**: INBOX #193 (`~/.pool/pods.json` ✅) → #1699 머지 → 2026-05-28 entry (갭#2 filename drift) → 본 entry = providers + manifest 글로벌 SSOT 확장 후속.
+> **관련**: INBOX #193 (`~/.pool/pods.json` ✅) → #1699 머지 → 2026-05-28 entry (갭#2 filename drift) → 본 entry = providers + manifest 글로벌 SSOT 확장 → **hexa-lang CLOUD 도메인 M8-M11 로 흡수** (`~/core/hexa-lang/CLOUD.md` · 2026-05-29).
 
 ---
 

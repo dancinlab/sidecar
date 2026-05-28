@@ -1065,38 +1065,37 @@ fn main() {
     while hi < len(hosts) {
         let h = hosts[hi]
         if type_of(h) == "map" {
-            let mut enabled = true
-            if has_key(h, "enabled") { if type_of(h["enabled"]) == "bool" { enabled = h["enabled"] } }
-            if enabled {
-                // host name — for the @D s8 akida governance check + ssh fallback
-                let mut hname = ""
-                if has_key(h, "name") { if type_of(h["name"]) == "string" { hname = h["name"] } }
-                // ssh target — the `ssh` field, falling back to `name`
-                let mut tgt = ""
-                if has_key(h, "ssh") { if type_of(h["ssh"]) == "string" { tgt = h["ssh"] } }
-                if tgt == "" { tgt = hname }
-                let mut pl = "linux"
-                if has_key(h, "os") { if type_of(h["os"]) == "string" { pl = h["os"] } }
-                // 0.6.6 — macOS pool hosts are now eligible for macOS-ONLY
-                // commands. The 0.6.1 blanket exclusion (`pl != "macos"`) was
-                // too coarse: it left swift/xcodebuild stuck on the workstation
-                // Mac even when an enabled `os: macos` pool host (e.g. mini)
-                // was in the roster. The capability filter below restricts mac
-                // hosts to is_macos commands only, so the workstation is still
-                // protected from general-heavy round-robin (linux-only there),
-                // but mini DOES receive Swift/Xcode work as the user asked.
-                // @D s8 — pi5-akida is anima-only: NEVER an auto-dispatch
-                // candidate (no route / load-balance / round-robin). Reached
-                // ONLY via explicit `pool on pi5-akida` (the pool CLI, not this
-                // hook). Match on name OR ssh so it never enters the elig set.
-                let is_akida = hname.contains("akida") || tgt.contains("akida")
-                if tgt != "" && !is_akida {
-                    h_name.push(tgt)
-                    h_plat.push(pl)
-                    let mut su = false
-                    if has_key(h, "sudo") { if type_of(h["sudo"]) == "bool" { su = h["sudo"] } }
-                    h_sudo.push(su)
-                }
+            // host name — for the @D s8 akida governance check + ssh fallback
+            let mut hname = ""
+            if has_key(h, "name") { if type_of(h["name"]) == "string" { hname = h["name"] } }
+            // ssh target — the `ssh` field, falling back to `name`
+            let mut tgt = ""
+            if has_key(h, "ssh") { if type_of(h["ssh"]) == "string" { tgt = h["ssh"] } }
+            if tgt == "" { tgt = hname }
+            let mut pl = "linux"
+            if has_key(h, "os") { if type_of(h["os"]) == "string" { pl = h["os"] } }
+            // 0.6.6 — macOS pool hosts are now eligible for macOS-ONLY
+            // commands. The 0.6.1 blanket exclusion (`pl != "macos"`) was
+            // too coarse: it left swift/xcodebuild stuck on the workstation
+            // Mac even when an os: macos pool host (e.g. mini) was in the
+            // roster. The capability filter below restricts mac hosts to
+            // is_macos commands only, so the workstation is still protected
+            // from general-heavy round-robin (linux-only there), but mini
+            // DOES receive Swift/Xcode work as the user asked.
+            //
+            // @D s8 — pi5-akida is anima-only: NEVER an auto-dispatch
+            // candidate (no route / load-balance / round-robin). Reached
+            // ONLY via explicit `pool on pi5-akida` (the pool CLI, not this
+            // hook). Match on name OR ssh so it never enters the elig set.
+            // Roster hosts are otherwise always-on (no enable toggle as of
+            // commons 0.12.0 / pool-route 0.10.0).
+            let is_akida = hname.contains("akida") || tgt.contains("akida")
+            if tgt != "" && !is_akida {
+                h_name.push(tgt)
+                h_plat.push(pl)
+                let mut su = false
+                if has_key(h, "sudo") { if type_of(h["sudo"]) == "bool" { su = h["sudo"] } }
+                h_sudo.push(su)
             }
         }
         hi = hi + 1

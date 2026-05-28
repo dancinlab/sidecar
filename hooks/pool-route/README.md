@@ -4,7 +4,7 @@ PreToolUse(Bash) pool **auto-router**. When the pool roster has hosts and a Bash
 
 ## When it routes
 
-The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** whenever it lists at least one enabled host. When armed, a command routes if it matches:
+The roster is the `pool` CLI's `~/.pool/pool.json`. Routing is **armed** whenever it lists at least one routing-eligible host (every host except pi5-akida — anima-only, @D s8). When armed, a command routes if it matches:
 
 - **heavy classifier** — `make` · `cargo` · `npm` · `pnpm` · `yarn` · `gradle` · `mvn` · `bazel` · `cmake` · `ctest` · `tox` · `pytest` · `jest` · `vitest` · `webpack` · `go build`/`test` · `swift build`/`test` · `xcodebuild` · `xcrun` · `swiftc` · `docker build` · `gcc`/`g++`/`clang`/`clang++`/`cc`/`c++` · `nvidia-smi` · `train` · `hexa kick`/`drill`/`loop`/`cc` (hexa-native heavy subverbs — kick-storm 2026-05-23 Mac kill: `/kick` = `hexa kick --seed`, multi-agent local fire drove load 80+) · `find $HOME/core/anima` big-tree scan
 - **root-needing** — `apt` · `dpkg` · `systemctl` · `yum` · … — always routable, and `sudo`-prefixed on a host with `sudo: true`
@@ -104,7 +104,7 @@ A command that is already routed (carries the `__SIDECAR_POOL__` marker), a here
 
 ## No opt-out
 
-There is none — no env var, no config file, no exception list. A guard you can switch off is a guard you will switch off. Routing is inert until `~/.pool/pool.json` has an enabled host; if `pool-route` is wrong for your workflow, clear the roster (via the `pool` CLI) or uninstall the plugin rather than routing around it.
+There is none — no env var, no config file, no exception list. A guard you can switch off is a guard you will switch off. Routing is inert until `~/.pool/pool.json` has at least one routing-eligible host (i.e. any host other than pi5-akida); if `pool-route` is wrong for your workflow, clear the roster (via the `pool` CLI) or uninstall the plugin rather than routing around it.
 
 ### 자주 시도되지만 작동하지 않는 우회 (0.7.3 기준)
 

@@ -62,9 +62,11 @@ fn _event_of(payload: map) -> string {
 }
 
 // Append a live `pool` roster snapshot to the injected context — host /
-// os / on-off / description, one line each — so the model sees the host
-// lineup without running `pool list` first. Roster source of truth is the
-// `pool` CLI's `~/.pool/pool.json`. Empty / missing / unreadable → "".
+// os, one line each — so the model sees the host lineup without running
+// `pool list` first. Roster source of truth is the `pool` CLI's
+// `~/.pool/pool.json`. Every listed host is always-on (no enable toggle);
+// pi5-akida exclusion is handled downstream in pool-route via name match.
+// Empty / missing / unreadable → "".
 fn _roster_snapshot() -> string {
     let home = env_var("HOME")
     if home == "" { return "" }
@@ -80,7 +82,7 @@ fn _roster_snapshot() -> string {
 
     // single-line CSV-ish form keeps the prepend small (hexa stdout caps at
     // 4095 B/fire; saving bytes here saves commons.tape tail rules from
-    // truncation). Format: name[os,on|off] separated by " · ".
+    // truncation). Format: name[os] separated by " · ".
     let mut parts = []
     let mut i = 0
     while i < len(hosts) {
@@ -91,11 +93,7 @@ fn _roster_snapshot() -> string {
             if name != "" {
                 let mut os = "linux"
                 if has_key(h, "os") { if type_of(h["os"]) == "string" { os = h["os"] } }
-                let mut enabled = true
-                if has_key(h, "enabled") { if type_of(h["enabled"]) == "bool" { enabled = h["enabled"] } }
-                let mut state = "off"
-                if enabled { state = "on" }
-                parts.push(name + "[" + os + "," + state + "]")
+                parts.push(name + "[" + os + "]")
             }
         }
         i = i + 1

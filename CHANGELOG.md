@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — commons 0.13.2: g67/g68/g70 NEXUS.tape → DOMAINS.tape SSOT 전환 (@link 연결그래프)
+
+🔗 hexa-lang이 `NEXUS.tape`(cross-project STAR 허브)를 폐기하고 관계 그래프를 `DOMAINS.tape`로 통합함(hexa-lang PR #2015/#2016 머지)에 따라, commons 거버넌스의 SSOT 포인터를 동기화.
+
+- **g67** (intra-project) — "reuse lattice · per-repo NEXUS.tape" → "connection graph · per-repo DOMAINS.tape"; cross-domain 재사용을 `@link <from> --reuses--> <to>` 엣지로 기록. `reused[]`/`provides[]` 스탬프 폐기.
+- **g68** (cross-project 허브) — 소비한 stdlib를 `from-hexa[]`/NEXUS.tape 대신 `DOMAINS.tape @link` 엣지로 기록; stdlib 발견은 hexa-lsp / `hexa atlas lookup`이 커버하므로 손-유지 `provides[]` 카탈로그 폐기.
+- **g70** — 용어 'NEXUS' = retired → repo-root `DOMAINS.tape` connection-graph SSOT.
+- **g73** — do-line 길이 cap(≤100) 잔여 1줄(L291) 축약(`INDEPENDENTLY` 제거 — title이 이미 "independent recompute" 보유, 의미보존).
+- commons @V 1.3 → 1.4.
+
 ## 2026-05-29 — lockstep + roster 정합: README sidecar-lint 버전 + DOMAINS.tape
 
 🧹 직전 ship들의 잔여 정합 2건.

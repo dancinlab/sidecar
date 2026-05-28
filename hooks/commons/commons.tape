@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.3"
+  version = "1.4"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -251,17 +251,17 @@
   do   = "keep pod_concurrent_max (rent budget) and parallel-agent-cap (≤3 · rate-limit) separate"
   dont = "conflate the two caps · apply the agent-cap to pod dispatch · the pod-cap to parse Agents"
 
-@D g67 := "intra-project domain reuse lattice — atlas-first · provenance · per-repo NEXUS.tape" :: governance [required active]
+@D g67 := "intra-project domain connection graph — atlas-first · provenance · per-repo DOMAINS.tape" :: governance [required active]
   do   = "before building a primitive, grep atlas + sibling-domain records for a verified one to reuse"
-  do   = "stamp each record with cross-domain edges — reused[] (borrowed) · provides[] (offered)"
-  do   = "keep a repo-root NEXUS.tape reuse graph current — nodes = domains, edges = reuse"
+  do   = "record each cross-domain reuse as a DOMAINS.tape @link edge — `@link <from> --reuses--> <to>`"
+  do   = "keep the repo-root DOMAINS.tape connection graph current — nodes = @domain roster, edges = @link"
   dont = "rebuild a primitive a sibling domain already verified · leave a reuse edge unrecorded"
   dont = "couple domains across separate repos — intra-project only (hexa-lang substrate hub exempt · g68)"
 
 @D g68 := "hexa-lang stdlib/atlas = shared substrate hub — the one cross-project link" :: governance [required active]
   do   = "draw shared primitives from the hexa-lang stdlib (code home · @D d3) + atlas (verified atoms)"
-  do   = "record consumed stdlib primitives as from-hexa[] in a repo's NEXUS.tape (star, not mesh)"
-  do   = "keep hexa-lang's root NEXUS.tape atlas-backed — atlas auto-folds atoms on verify, no manual sync"
+  do   = "record each consumed stdlib primitive as a DOMAINS.tape @link edge (star, not mesh)"
+  do   = "discover stdlib via hexa-lsp / `hexa atlas lookup` — no hand-maintained provides[] catalog"
   dont = "fork a hexa-lang stdlib primitive into a project · treat the hub as a peer inter-project mesh"
 
 @D g69 := "domain finalization gate — BLUE-MAX 🔵-pair audit at absorbed=true" :: governance [required active]
@@ -272,7 +272,7 @@
 @D g70 := "non-Latin term canonical-command map (stall-prevention)" :: glossary [required active]
   do   = "term 'blue-max bonghap' (KR phonetic) = `hexa verify --blue-max <D>` + absorbed=true (g69)"
   do   = "term 'bonghap' (KR phonetic) = the post-gate flip-to-absorbed closure-sequence tail (d5)"
-  do   = "term 'NEXUS' = repo-root NEXUS.tape reuse-lattice SSOT (g67 · hexa-lang hub g68)"
+  do   = "term 'NEXUS' = retired → repo-root DOMAINS.tape connection-graph SSOT (g67 · hexa-lang hub g68)"
   dont = "stall on a non-Latin term lookup — invoke the command per g67/g68/g69, do not grep-spin"
 
 @D g71 := "pool work — sync to origin/main first; avoid local sign-gate for heavy jobs" :: governance [required active]
@@ -288,7 +288,7 @@
   dont = "`_new`·`_old`·`_final` · Go-style `/vN` import-path — marker belongs in metadata not name"
 
 @D g73 := "verdict is EARNED by independent recompute — never self-judged (anti-fake-closure)" :: governance [required active]
-  do   = "🔵/🟢 only when `hexa verify` (g5) INDEPENDENTLY reproduces the claim — verdict from calculator"
+  do   = "🔵/🟢 only when `hexa verify` (g5) reproduces the claim — verdict from calculator"
   do   = "OR when a deterministic run that COULD have falsified it produced the number (verbatim verdict file)"
   do   = "no calc path ⇒ 🟠 INSUFFICIENT (honest, not promoted) — fix is to EXTEND verify primitive"
   dont = "self-judge a co-located smoke — a check arranged to return true is TAUTOLOGY (Goodhart · p7)"

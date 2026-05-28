@@ -60,8 +60,12 @@ fn _deny(reason: string) {
     exit(0)
 }
 
+// Non-blocking advisory — top-level `systemMessage`. PreToolUse JSON does NOT
+// accept `hookSpecificOutput.additionalContext` (only permissionDecision /
+// permissionDecisionReason / updatedInput); `systemMessage` surfaces the note
+// to the user without denying or auto-allowing the Write/Edit.
 fn _advise(text: string) {
-    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    let payload = "{\"systemMessage\":" + _json_escape(text) + "}"
     println(payload)
     exit(0)
 }

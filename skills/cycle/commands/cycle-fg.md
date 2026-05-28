@@ -58,7 +58,7 @@ Stage 5.
 - **Stage 1 next-list (ACTIVE DOMAIN ONLY)** — same enumeration + 1a auto-seed
   from `## deferred` (PRIMARY signal). Cap N (default 3) per round.
 - **Stage 2 dup-race precheck + 2b stale-milestone scan** — same 3-signal
-  resolved-class regex (INBOX [x] / merged PR / git-log fix). SKIP rows do NOT
+  resolved-class regex (handoff done / merged PR / git-log fix). SKIP rows do NOT
   execute in Stage 4.
 - **Stage 3 plan table** — same `| # | item | tool-set | resource | goal |
   precheck |` table. Drop the `subagent_type` + `iso` columns (foreground has

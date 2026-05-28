@@ -463,7 +463,7 @@ For each leaf the user (or `bare /mining` next-actions) selects for promotion:
 3. **dispatch**:
    - `actionable` → `/domain milestone <leaf-text-truncated-to-100ch>` then append `[promoted → <DOMAIN>:M<n>]` to the `.tape` `@X` line.
    - `verifiable closed-form` → `/atlas register --from-drill --seed "<leaf-text>"` then append `[promoted → atlas:<atom-id>]`.
-   - `cross-domain handoff` → file to target repo's `INBOX.log.md` then append `[promoted → <repo>:INBOX/<slug>]`.
+   - `cross-domain handoff` → `sidecar handoff add <repo> <leaf-text>` then append `[promoted → handoff:<repo>/<id>]`.
 4. **dedup**: before append, grep `<DOMAIN>.md` for the same text to avoid duplicate milestones.
 
 `bare /mining` should surface up to 3 highest-value undepoted leaves (by lens-novelty + cross-domain coverage) as `🎯 next promotion candidates: L<n> · L<m> · L<k>` so the user can drive the leaf→milestone flow without inspecting the whole file.

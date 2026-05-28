@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.4"
+  version = "1.5"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -50,8 +50,8 @@
   dont = "long job attached to the session (no detach/log) — rate-limit death SIGHUPs it, progress lost"
 
 @D g11 := "no gap workarounds — fix at source" :: governance [required active]
-  do   = "log hexa-lang upstream gaps to `<hexa-lang>/INBOX.log.md` (`/domain set INBOX`) on discovery"
-  dont = "implement workarounds for known gaps — log an upstream INBOX handoff, fix at source"
+  do   = "log hexa-lang upstream gaps via `sidecar handoff add hexa-lang <gap>` on discovery"
+  dont = "implement workarounds for known gaps — file an upstream handoff, fix at source"
 
 @D g13 := "portable paths only" :: governance [required active]
   do   = "resolve paths at runtime: `$HOME` · `${CLAUDE_PLUGIN_ROOT}` · `$CLAUDE_PLUGIN_DATA` · PATH binaries"
@@ -131,9 +131,9 @@
 @D g35 := "goal-driven execution — verifiable success criteria" :: governance [required active]
   do   = "recast tasks as verifiable goals — bug → failing test → green · loop until verified"
 
-@D g36 := "cross-project handoff via INBOX domain" :: governance [required active]
-  do   = "cross-repo gap/patch/bug/RFC → `cd <repo> && /domain set INBOX` then `/domain todo <handoff>`"
-  dont = "scatter handoffs in ad-hoc files — use the target repo's INBOX domain (INBOX.md/INBOX.log.md)"
+@D g36 := "cross-project handoff via `sidecar handoff` registry" :: governance [required active]
+  do   = "cross-repo gap/patch/bug/RFC → `sidecar handoff add <repo> <text>` (single ~/.sidecar registry)"
+  dont = "scatter handoffs in ad-hoc files/md or per-repo INBOX — use the `sidecar handoff` CLI"
 
 @D g37 := "plist — user-request only" :: governance [required active]
   dont = "create `.plist` (LaunchAgents · LaunchDaemons · Info.plist) unprompted — explicit request only"
@@ -170,8 +170,8 @@
   do   = "create one PR → merge (squash) → delete branch + remove its worktree → next · main-based"
   dont = "leave a PR unmerged · a merged branch · or a dead worktree behind at session end"
 
-@D g48 := "cross-project INBOX ack — close-then-notify" :: governance [required active]
-  do   = "handoff done → `/domain done <item>` in your INBOX + ack entry to sender's INBOX.log.md"
+@D g48 := "cross-project handoff ack — close-then-notify" :: governance [required active]
+  do   = "handoff done → `sidecar handoff done <id>` + ack via `sidecar handoff add <sender> <ack>`"
   dont = "close your handoff without ack-ing sender — handoff loop broken · sender stays in the dark"
 
 @D g49 := "GPU dispatch priority — pool first, cloud as fallback" :: governance [required active]
@@ -214,12 +214,12 @@
   do   = "next-list = active <NAME>.md `- [ ]` items · run `/domain set <NAME>` first if none active"
   dont = "enumerate off-domain work · add milestones to non-active domain · scope drift"
 
-@D g59 := "hexa improvement found → log upstream INBOX immediately (g11 specialization)" :: governance [required active]
-  do   = "hexa-lang / CLI / runtime gap → log to `~/core/hexa-lang/INBOX.log.md` (`/domain set INBOX`) now"
+@D g59 := "hexa improvement found → upstream handoff immediately (g11 specialization)" :: governance [required active]
+  do   = "hexa-lang / CLI / runtime gap → `sidecar handoff add hexa-lang <gap>` now"
   dont = "workaround silently · defer · note-in-chat-only · log under sidecar (wrong repo)"
 
-@D g60 := "upstream INBOX reflex — aggressive, same-turn, over-file (g11/g59 generalization)" :: governance [required active]
-  do   = "cross-repo gap / fix / idea → file that repo's INBOX same-turn · stub-first · dedup-check first"
+@D g60 := "upstream handoff reflex — aggressive, same-turn, over-file (g11/g59 generalization)" :: governance [required active]
+  do   = "cross-repo gap/fix/idea → `sidecar handoff add <repo>` same-turn · stub-first · dedup-check"
   dont = "defer · gate on full repro · chat-only downgrade · assume another session will file it"
 
 @D g61 := "hexa-lang stdlib is the SSOT for shared code — primitives + engines" :: governance [required active]

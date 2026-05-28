@@ -54,7 +54,7 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 | `stop` / `drive off` | **stop** | disengage self-driving (clear the drive marker) |
 | `cost` | **cost** | budget tracker, per-surface breakdown |
 | `queue [add\|rm\|ls]` | **queue** | manage the candidate backlog |
-| `upstream [<repo>]` | **upstream** | report the upstream-reflex trail — INBOX entries + merged PRs this campaign filed to linked repos (g59) |
+| `upstream [<repo>]` | **upstream** | report the upstream-reflex trail — `sidecar handoff` entries + merged PRs this campaign filed to linked repos (g59) |
 
 ## status (bare) — control-tower dashboard
 
@@ -140,7 +140,7 @@ For each `running` job WITHOUT a live watcher, arm a background while-loop (one 
 
 The watcher writes its terminal verdict to its task-output (the durable Monitor attach point). NO ScheduleWakeup (interactive-pace, not a cron loop). Record each watcher id back into `pods.json` `jobs.<id>.watcher`. State: `armed N watchers · debounce 2x · cap <Nmin>`.
 
-**Upstream-reflex (g59) — fix hexa cloud at source, not just here:** when `/system`'s watch/harvest hits a `hexa cloud` CLI limitation (a false-terminal the CLI should have classified, a transport ambiguity, a missing preflight axis), file it to `~/core/hexa-lang/INBOX.log.md` (g59) SAME-TURN with verbatim evidence — do not silently bake a permanent workaround into the watcher. **Reflex arc COMPLETED for the terminal taxonomy (2026-05-28)**: the caller-side trailing-scan was the STOPGAP → filed gap1 → fix landed in `cloud tail` (3-tier exit, #1889) → watcher now delegates (above). This is the template: a `/system` workaround is a TEMPORARY marker of an unfiled upstream gap, retired the moment the durable CLI fix lands.
+**Upstream-reflex (g59) — fix hexa cloud at source, not just here:** when `/system`'s watch/harvest hits a `hexa cloud` CLI limitation (a false-terminal the CLI should have classified, a transport ambiguity, a missing preflight axis), file it via `sidecar handoff add hexa-lang <gap>` (g59) SAME-TURN with verbatim evidence — do not silently bake a permanent workaround into the watcher. **Reflex arc COMPLETED for the terminal taxonomy (2026-05-28)**: the caller-side trailing-scan was the STOPGAP → filed gap1 → fix landed in `cloud tail` (3-tier exit, #1889) → watcher now delegates (above). This is the template: a `/system` workaround is a TEMPORARY marker of an unfiled upstream gap, retired the moment the durable CLI fix lands.
 
 **Re-arm on TIMEOUT** — a watcher that hits its cap without a terminal is re-armed (the job is still grinding). A watcher that fires DONE/STUCK/GONE hands off to `harvest`.
 
@@ -193,7 +193,7 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 4. **re-arm** watchers on all running jobs.
 5. **budget** check → halt on `spent ≥ cap` (g64).
 6. **depletion** check → halt on `queue empty AND all terminal AND no open axis`.
-7. **upstream-reflex** — any cloud/tooling gap hit this tick → file upstream INBOX (g59) before continuing.
+7. **upstream-reflex** — any cloud/tooling gap hit this tick → `sidecar handoff add <repo> <gap>` (g59) before continuing.
 8. **schedule next** — if not halted, `ScheduleWakeup` the heartbeat delay; else clear the drive marker + emit the halt verdict.
 
 **Halt conditions** (the ONLY stops — `drive` never pauses to ask "continue?"):
@@ -272,26 +272,26 @@ There is deliberately NO "awaiting-approval" status for an ordinary candidate. I
 
 ## upstream [<repo>] — report the upstream-reflex trail (g59)
 
-The reporting half of the `watch`/`harvest` **upstream-reflex** (when a `hexa cloud` / tooling gap surfaces, it's filed to the upstream repo's `INBOX.log.md` same-turn). `upstream` surfaces that trail — what this campaign/session pushed upstream — so "hexa upstream fix in this session" is a one-verb query, not a manual recall.
+The reporting half of the `watch`/`harvest` **upstream-reflex** (when a `hexa cloud` / tooling gap surfaces, it's filed via `sidecar handoff add <repo> <gap>` same-turn). `upstream` surfaces that trail — what this campaign/session pushed upstream — so "hexa upstream fix in this session" is a one-verb query, not a manual recall.
 
-**Repos scanned**: the linked upstream repos from `pods.json` `upstream_repos` (array of repo paths/slugs); default `~/core/hexa-lang` (the cloud/CLI substrate) + any repo referenced by a job's `kind`. `/system upstream <repo>` scopes to one.
+**Repos scanned**: the linked upstream repos from `pods.json` `upstream_repos` (array of repo paths/slugs); default `hexa-lang` (the cloud/CLI substrate) + any repo referenced by a job's `kind`. `/system upstream <repo>` scopes to one.
 
-**⚠ Query origin/main + gh remote — NEVER the local working tree** (`git -C <repo> show origin/main:INBOX.log.md`, not a working-tree `grep <repo>/INBOX.log.md`). The local tree may be stale, on another branch, or unpulled → a false-empty result. This gap was found by dogfooding 0.4.0 (the upstream-reflex catching its own reporting bug).
+**Source = the host-local `sidecar handoff` registry** (`~/.sidecar/handoff/handoff.jsonl`) — a single host-local store, so there is NO stale-working-tree hazard (the pre-registry model grepped per-repo `INBOX.log.md` on the local tree and could false-empty on a stale/other-branch checkout; the registry removes that failure mode). The merged-PR half still hits the gh remote.
 
 **Procedure**:
-1. **INBOX entries** — for each repo, scan origin/main (NOT the local tree): `git -C <repo> show origin/main:INBOX.log.md 2>/dev/null | grep -nE '^## .*(from <campaign>|RTSC|<campaign-tag>)'` (match the campaign tag the reflex stamped) → list date · slug. **Then parse each entry's own `🟠 OPEN` / `✅ RESOLVED` marker as the FIX status** — do NOT conflate "the entry's PR got merged" with "the fix landed". An INBOX **entry merged** only means the entry was recorded; the underlying fix may still be a 🟠 OPEN recommendation or a ✅ RESOLVED implementation. (Evidence this session: hexa-lang #1734 entry = ✅ RESOLVED implemented, but #1775 / #1828 entries = 🟠 OPEN recommendations despite their entry-PRs being merged.)
-2. **Merged PRs** — `gh pr list --repo <owner/repo> --state merged --search "<campaign-tag> in:title,body" --json number,title,mergedAt --limit 20` → list PR# · title · mergedAt. (gh hits the remote — already correct, never the local tree.)
+1. **Handoff entries** — `sidecar handoff ls <repo>` for each upstream repo → entries with their `STATUS` column (`open` / `done`). The handoff status is the FIX status: an `open` entry = the gap is still unfixed upstream; `done` = closed (fix landed or superseded). Do NOT conflate "the entry exists" with "the fix landed" — read the STATUS column. (Evidence this session: hexa-lang #1734 fix landed = closed, but #1775 / #1828 gaps stayed open despite their entry-PRs being merged.)
+2. **Merged PRs** — `gh pr list --repo <owner/repo> --state merged --search "<campaign-tag> in:title,body" --json number,title,mergedAt --limit 20` → list PR# · title · mergedAt. (gh hits the remote.)
 3. **Session scope** — if a `--since <ISO>` or the session-start time is known, filter to this session; else show the campaign-tagged trail.
-4. Render — show BOTH the entry-merged state AND the parsed fix status as distinct columns:
+4. Render — show BOTH the handoff status AND any matching merged PR as distinct columns:
 ```
-🔗 upstream trail — <campaign> (g59 reflex · origin/main + gh)
+🔗 upstream trail — <campaign> (g59 reflex · sidecar handoff + gh)
 ═══════════════════════════════════════
 <repo>
-   #<PR>  <slug>                  entry:merged   fix:🟠 OPEN / ✅ RESOLVED   <mergedAt>
+   [<id>]  <slug>                  handoff:open / done   PR:#<PR> <mergedAt>
    ...
-─── N filed · M entry-merged · K fix-open · L fix-resolved ───
+─── N filed · K open · L done ───
 ```
-Read-only (no filing here — that's the `watch`/`harvest` reflex). If a gap was hit THIS turn but not yet filed, flag it: `⚠ unfiled gap: <desc> — file to <repo>/INBOX (g59)`.
+Read-only (no filing here — that's the `watch`/`harvest` reflex). If a gap was hit THIS turn but not yet filed, flag it: `⚠ unfiled gap: <desc> — file via sidecar handoff add <repo> <gap> (g59)`.
 
 This makes the upstream contribution auditable: every cloud/tooling gap the campaign hit leaves a queryable trail, closing the loop between "hit a gap" → "filed upstream" → "report what was filed".
 
@@ -303,7 +303,7 @@ This makes the upstream contribution auditable: every cloud/tooling gap the camp
 - **g63** — every job reaches a verdict tier; FALSIFIED is a CLOSED negative, never skipped.
 - **g64** — declare + honor the budget cap; halt on breach.
 - **g65** — `exports/<campaign>/ledger.json` is the typed surface; never let it drift from the manifest.
-- **g59** — cloud/tooling gap → file upstream `INBOX.log.md` same-turn (`watch`/`harvest` reflex); `upstream` verb reports the trail.
+- **g59** — cloud/tooling gap → `sidecar handoff add <repo> <gap>` same-turn (`watch`/`harvest` reflex); `upstream` verb reports the trail.
 - Reuses **`/cloud` (pods.json)** + **`/micro-exp` (sweep launch)** + **/atlas** + **/verify** — `/system` is the orchestration layer ABOVE them, not a replacement.
 
 ## Closure
@@ -314,6 +314,6 @@ End every verb with one status line — LEAD with the g56 progress bar + %:
 The leading `▓▓▓▓▓▓░░░░ NN%` (10-cell bar + %) is mandatory on EVERY verb's closure (g56 — multi-step work always shows a % bar), not just status/drive.
 
 Triggers — `/system`, `관제탑`, `캠페인 현황`, `전체 잡 현황`, `mission control`, `campaign status`,
-`upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `INBOX 올린 거`, `상류 기여`,
+`upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `handoff 올린 거`, `상류 기여`,
 `자율주행`, `self-driving`, `drive`, `set and walk away`, `예산 걸고 알아서`, `campaign drive`, `자율 캠페인`, `멈춰`, `drive off`, `stop driving`,
 `결과보고 추가발사`, `harvest 후 자동발사`, `자율 재발사 루프`, `control tower`, `잡 전부 모니터`.

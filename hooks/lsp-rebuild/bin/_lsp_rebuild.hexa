@@ -1,0 +1,117 @@
+// _lsp_rebuild.hexa — PostToolUse(Write|Edit) auto-rebuild for hexa-native LSP
+// servers. When the agent edits an LSP grammar source `*/lsp/<lang>_lsp.hexa`,
+// the prebuilt binary `~/.local/bin/<lang>-lsp-hexa` is now STALE — the editor's
+// next LSP session would still run the old grammar. This hook rebuilds it in the
+// BACKGROUND (`HEXA_MAC_BUILD_OK=1 hexa build … -o ~/.local/bin/<lang>-lsp-hexa`)
+// and emits a non-blocking advisory so a grammar change propagates without a
+// manual rebuild step.
+//
+// Why a rebuild (not source-direct run): the hexa LSP stdio server needs the
+// `read_stdin_n_c` FFI which only links into a COMPILED binary; `hexa run` of the
+// source can't serve interactive stdin. So the canonical .hexa grammar source is
+// the SSOT and the prebuilt binary is its build artifact — this hook keeps the
+// artifact in lockstep with the source.
+//
+// Background + non-blocking by design: the build (~1s, non-heavy) is detached via
+// `nohup … &` so PostToolUse returns immediately; output appends to
+// ~/.sidecar/lsp-rebuild.log. Fires ONLY on the `*/lsp/*_lsp.hexa` source pattern
+// (project.tape @D s11: gate on a real precondition, no opt-out switch).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _emit(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// Extract a JSON string field by raw substring scan (file_path has no embedded
+// quotes in practice; mirrors memory-lint).
+fn _json_str_field(body: string, key: string) -> string {
+    let needle = "\"" + key + "\""
+    let n = len(body)
+    let p = body.index_of(needle)
+    if p < 0 { return "" }
+    let mut i = p + len(needle)
+    while i < n && (body[i] == " " || body[i] == "\t" || body[i] == ":") { i = i + 1 }
+    if i >= n || body[i] != "\"" { return "" }
+    i = i + 1
+    let start = i
+    while i < n && body[i] != "\"" {
+        if body[i] == "\\" && i + 1 < n { i = i + 2 }
+        else { i = i + 1 }
+    }
+    return body.substring(start, i)
+}
+
+fn _ends_with(s: string, suffix: string) -> bool {
+    let ns = len(s)
+    let nx = len(suffix)
+    if nx > ns { return false }
+    return s.substring(ns - nx, ns) == suffix
+}
+
+fn _basename(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return path }
+    return path.substring(i + 1, len(path))
+}
+
+fn main() {
+    let body = _read_stdin()
+    if body == "" { _allow() }
+
+    let tool = _json_str_field(body, "tool_name")
+    if tool != "Write" && tool != "Edit" { _allow() }
+
+    let file_path = _json_str_field(body, "file_path")
+    if file_path == "" { _allow() }
+
+    // gate: an LSP grammar source — `*/lsp/<lang>_lsp.hexa`
+    if !_ends_with(file_path, "_lsp.hexa") { _allow() }
+    if file_path.index_of("/lsp/") < 0 { _allow() }
+
+    let base = _basename(file_path)
+    let lang = base.substring(0, len(base) - len("_lsp.hexa"))
+    if lang == "" { _allow() }
+
+    let home = env_var("HOME")
+    let out = home + "/.local/bin/" + lang + "-lsp-hexa"
+    let logf = home + "/.sidecar/lsp-rebuild.log"
+
+    // background, SIGHUP-safe, Mac-build-guard bypass (non-heavy LSP compile).
+    // `&` detaches so PostToolUse returns immediately; output → log.
+    let cmd = "nohup env HEXA_MAC_BUILD_OK=1 hexa build '" + file_path + "' -o '" + out + "' >> '" + logf + "' 2>&1 &"
+    exec(cmd)
+
+    _emit("lsp-rebuild: `" + lang + "` LSP grammar source changed → rebuilding `" + lang + "-lsp-hexa` in the background (log: ~/.sidecar/lsp-rebuild.log). Reload the editor / LSP session to pick up the new grammar.")
+}

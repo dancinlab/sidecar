@@ -165,13 +165,14 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   monitor-guard  bg/long shell launch → detach + log + Monitor (g10, rate-limit survival)
 #   pod-monitor    GPU pod fire → SAVE_POD / detach reminders (g57)
 #   s9-guard       Mac load-check cmds → exclude claude PIDs (s9)
+#   lsp-rebuild    */lsp/*_lsp.hexa edit → bg rebuild <lang>-lsp-hexa (grammar auto-propagate)
 # SESSION lifecycle:
 #   easy-auto · quota-autoadd · worktree-gc · sidecar-auto-sync · subagent-route[POC]
 ```
 
 ## Plugins
 
-74 plugins across `{hook · command · skill}` — one concept each (35 `core` · 17 `hexa` · 20 `personal` · 2 `master`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+75 plugins across `{hook · command · skill}` — one concept each (35 `core` · 17 `hexa` · 21 `personal` · 2 `master`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -242,6 +243,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
 | [`askq-text`](hooks/askq-text/) | hook | `personal` | 0.1.0 | PreToolUse(AskUserQuestion) → plain-text chat redirect, in hexa-lang (`_askq_text.hexa`, via `hexa run`). DENIES the arrow-key option-tree box and instructs the model to re-ask the SAME question as plain chat text (options listed inline, recommendation marked, free-form answer accepted). A FORM redirect, not anti-punt — distinct from the `bypass` skill; plan approval keeps ExitPlanMode. Unconditional, NO opt-out (@D s11) |
+| [`lsp-rebuild`](hooks/lsp-rebuild/) | hook | `personal` | 0.1.0 | PostToolUse(Write\|Edit) auto-rebuild for hexa-native LSP servers, in hexa-lang (`_lsp_rebuild.hexa`, via `hexa run`). Editing a `*/lsp/<lang>_lsp.hexa` grammar source → background `HEXA_MAC_BUILD_OK=1 hexa build … -o ~/.local/bin/<lang>-lsp-hexa` (detached, log → ~/.sidecar/lsp-rebuild.log) + non-blocking advisory, so a grammar change auto-propagates without a manual rebuild. Rebuild-not-source-run: the stdio server needs the `read_stdin_n_c` FFI that only links into a compiled binary. Fires only on the `*/lsp/*_lsp.hexa` pattern (@D s11) |
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |
 | [`sidecar-auto-sync`](hooks/sidecar-auto-sync/) | hook | `personal` | 0.2.0 | SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync… |
 | [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.7.1 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (version drift · hardpath · stale-history · CHANGELOG · profiles tier · MCP-ban); 0.7.1 — MCP check now tests the parsed top-level `mcpServers` KEY (not a raw substring), so a plugin.json that merely mentions `mcpServers` in its description no longer false-positives (this lint's own did) |

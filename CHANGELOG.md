@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — lsp-rebuild 0.1.0: hexa-native LSP 문법 변경 자동 재빌드 훅
+
+🔁 "LSP 문법 바꾸면 자동 반영되게" — hexa-native LSP는 문법이 컴파일 바이너리(`~/.local/bin/<lang>-lsp-hexa`)에 박혀 있어, 소스(`<lang>_lsp.hexa`)를 고쳐도 수동 재빌드 전엔 옛 문법이 떴다. (조사 결과: tape만 .py 소스-직실행이라 자동이고, kosmos/n6/hxc·hexa는 prebuilt → 수동.)
+
+- **신규 `lsp-rebuild` 훅 (personal)** — PostToolUse(Write|Edit). 편집 파일이 `*/lsp/<lang>_lsp.hexa` 패턴이면 백그라운드로 `nohup env HEXA_MAC_BUILD_OK=1 hexa build <src> -o ~/.local/bin/<lang>-lsp-hexa` (detached `&` → PostToolUse 즉시 반환 · 로그 `~/.sidecar/lsp-rebuild.log`) + non-blocking advisory. 문법 소스(SSOT)와 빌드 산출물을 lockstep 유지.
+- **rebuild-not-source-run 이유** — hexa LSP stdio 서버는 `read_stdin_n_c` FFI 가 필요하고 이건 COMPILED 바이너리에만 링크됨(`hexa run` 소스는 인터랙티브 stdin 불가). 그래서 .hexa 가 SSOT, 바이너리는 그 산출물.
+- **빌드 가드** — Mac은 `hexa build` 가 기본 거부(커널패닉 이력)라 non-heavy LSP 컴파일은 `HEXA_MAC_BUILD_OK=1` 바이패스(`reference:hexa-lang-mac-build-loop`). 검증: kosmos 소스 → 훅 트리거 → 바이너리 갱신(5/26→5/28) + `--check` 진단 정상.
+- 게이트 = `*/lsp/*_lsp.hexa` 패턴만(@D s11 opt-out 없음). 3 repo(`~/core/{kosmos,n6,hxc}`)는 local-paths 화이트리스트 추가(빌드 pool-route 방지). plugin/marketplace 0.1.0 · profiles personal.
+- (B 작업 Stage 1 — 다음 단계: n6·hxc `.py→.hexa` 포팅.)
+
 ## 2026-05-28 — sidecar-lint 0.7.1: MCP-ban 오탐 수정 (substring → parsed KEY 검사)
 
 🐛 sidecar-lint 가 자기 자신을 "MCP-server plugin" 으로 오탐. 원인 = `_contains(pjraw, "mcpServers")` 가 plugin.json 원문을 substring 스캔하는데, sidecar-lint 의 **설명 문구**에 `mcpServers` 라는 단어가 들어있어(룰을 문서화하느라) 자기 텍스트를 매칭함. 키가 아니라 단순 언급을 잡은 것.

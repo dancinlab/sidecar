@@ -10,6 +10,7 @@ PreToolUse(Bash) auto-lint that fires on `git commit` inside any Claude Code mar
 | hardcoded `/Users/<u>/` or `/home/<u>/` in staged diff added lines | commons `@D g13` · sidecar `@D s3` (portable plugin scripts) |
 | marketplace.json plugin entry vs each plugin's `plugin.json` — version drift only | commons `@D g22` (lockstep version surfaces) |
 | `hooks/*/bin/*.sh` missing user-exec bit | hook fires die with Permission denied otherwise |
+| top-level by-KIND source folder (`docs/` · `state/`) — tracked dirs only | project.tape `@D s16` (co-locate by owner/domain, not by type; `build/`·`src/`·`archive/` are fine) |
 
 Description drift between `marketplace.json` and `plugin.json` is intentionally NOT checked — descriptions get rewritten often enough that drift-checking them adds noise without catching a real bug class.
 

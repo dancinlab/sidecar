@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — git-guard 0.7.0: 상류(UPSTREAM) stale-base advisory — 브랜치 생성시점 + SessionStart
+
+🧭 git-guard 0.6.0은 stale base를 **하류**에서만(push·merge 직전) 잡았다. 정작 stale가 시작되는 두 지점 — 브랜치/워크트리를 자르는 순간, 그리고 세션 시작 시 로컬 `main`이 origin 뒤로 밀린 상태 — 은 무방비였다. 이번 세션에서도 로컬 `main`이 da6755e에 멈춰 있는 사이 백그라운드 에이전트가 #221/#222를 origin에 머지해 origin/main이 b83130c로 2커밋 앞서 있었다(공유 워킹트리 드리프트). 두 advisory 레이어를 추가해 stale base를 **쓰기 전에** 표면화한다.
+
+- **레이어 4 — 생성시점 advisory (PreToolUse Bash)** — `git worktree add` / `git checkout -b` / `git switch -c` 감지. 베이스가 `origin/<default>`로 해소되지 않거나(로컬 main·HEAD·생략) `.git/FETCH_HEAD` mtime이 30분 초과면 non-blocking additionalContext로 "`git fetch origin` 후 `origin/<default>` 기준으로 자르라"고 유도. 생성은 절대 차단하지 않음.
+- **레이어 5 — SessionStart advisory (신설 이벤트, `_git_guard_session.hexa`)** — 이미 fetch된 ref만으로 `git rev-list --left-right --count origin/<default>...<default>`를 싸게 계산. 로컬 default가 origin보다 1커밋 이상 뒤처지면 "조용할 때 `git fetch origin && git pull --ff-only`로 정렬" advisory. FETCH_HEAD가 30분 초과면 fetch nudge도 덧붙임. up-to-date·git repo 아님·origin 없음이면 침묵.
+- **no-network 원칙(D5·s11)** — 훅은 네트워크 `git fetch`를 절대 실행하지 않음. `.git/FETCH_HEAD` mtime을 신선도 proxy로 쓰고(`find -mmin +30`, macOS·Linux 이식성) fetch 명령은 advisory 텍스트에만 둠. opt-out 없음.
+- 하류 레이어 1-3(force-push deny · stale-base push/merge advisory) 회귀 클린 — 6 스모크 전부 통과.
+- 4-surface lockstep(g22): plugin.json·marketplace.json 0.6.0→0.7.0 + description 갱신 · README 레이어 3·4·5 문서화 · CHANGELOG. commons.tape(sign-gated)는 건드리지 않음(D6).
+
 ## 2026-05-29 — verdict-gate 0.1.0: commons g73 강제 hook (s7 갭 닫음)
 
 🔒 거버넌스 `@D g73`(verdict는 `hexa verify` 독립 recompute로만 EARNED · self-judged smoke=tautology 금지)는 commons.tape:290 에 land 됐으나 그 강제 hook 이 미작성 — sidecar 자기 규칙 `@D s7`("거버넌스 + enforcement 를 같은 사이클에 ship") 위반 상태였다. 출처: anima UNIVERSE 자율 `/cycle` 매트릭스가 418 H + 261 tautology smoke 를 가짜 🔵 로 적층(폐기 anima#1027/#1034). 이 hook 이 그 재발을 막는 기계 backstop.

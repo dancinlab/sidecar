@@ -15,8 +15,8 @@
 //      repo has .claude-plugin/profiles.json (sidecar's multi-user profiles)
 //   7. MCP-server plugin registered — mcps/ source or mcpServers in plugin.json
 //      (project.tape @D s15: no MCP-server plugins; hook · command · skill only)
-//   8. top-level by-KIND source folder (docs/ · state/) — tracked only
-//      (project.tape @D s16: co-locate by owner/domain, not by type)
+//   8. unexpected top-level dir — ALLOWLIST (concept dir·plugin·.github·.claude-plugin);
+//      tracked only · rename-proof (project.tape @D s16: co-locate by owner/domain)
 //
 // Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
 // NO opt-out by design — no env var, no config file, no exception
@@ -486,9 +486,13 @@ fn main() {
         } catch e { untagged = untagged }
     }
 
-    // (8) top-level by-KIND source folder (project.tape @D s16 — co-locate by
-    // owner, no kind buckets). Only TRACKED dirs flag (git ls-files), so
-    // gitignored runtime (state/ · build/) never false-fires.
+    // (8) unexpected top-level directory (project.tape @D s16 — co-locate by
+    // owner). ALLOWLIST, not a name-blocklist: any TRACKED top-level dir that
+    // is NOT a concept dir / plugin-pack dir is flagged — so renaming a bucket
+    // (docs→documentation, state→tmp) does NOT dodge it. Only tracked dirs
+    // (git ls-files), so gitignored runtime/scratch (state/ · build/ · drafts/)
+    // never false-fires. Allowed: hooks · commands · skills · agents · bin ·
+    // .github · .claude-plugin.
     let mut kindfolders = []
     let kr = exec_with_status("git -C '" + root + "' ls-files 2>/dev/null | awk -F/ 'NF>1{print $1}' | sort -u")
     if kr[1] == 0 {
@@ -496,8 +500,9 @@ fn main() {
         let mut ti = 0
         while ti < len(tops) {
             let d = _trim(tops[ti])
-            if d == "docs" || d == "state" {
-                kindfolders.push("  " + d + "/: top-level by-KIND bucket — co-locate by owner (domain pair · plugin dir · root *_POLICY.md); runtime → $CLAUDE_PLUGIN_DATA/~/.sidecar (s3)")
+            let ok = d == "" || d == "hooks" || d == "commands" || d == "skills" || d == "agents" || d == "bin" || d == ".github" || d == ".claude-plugin"
+            if !ok {
+                kindfolders.push("  " + d + "/: 예상 밖 top-level 디렉터리 — 이 폴더 내용을 소속 도메인/플러그인 밑으로 옮기세요 (by-owner, s16). 새 top-level 은 concept dir(hooks·commands·skills)·plugin·루트 reference doc(.md)만 — 폴더명만 바꿔 재등록해도 걸립니다")
             }
             ti = ti + 1
         }
@@ -529,7 +534,7 @@ fn main() {
         sections.push("version/generation marker in plugin name(s) (commons @D g72 — minimal role-name identifiers; the version lives in semver / git tag, never the name):\n" + verban.join("\n"))
     }
     if len(kindfolders) > 0 {
-        sections.push("top-level by-KIND source folder (project.tape @D s16 — co-locate by owner/domain; no docs/·state/ source buckets):\n" + kindfolders.join("\n"))
+        sections.push("예상 밖 top-level 디렉터리 (project.tape @D s16 — 소속 도메인/플러그인 밑으로 co-locate; 허용 = concept dir(hook·command·skill)·plugin·루트 reference doc. 폴더명만 바꿔도 걸리는 allowlist 방식):\n" + kindfolders.join("\n"))
     }
 
     if len(sections) == 0 { _allow() }

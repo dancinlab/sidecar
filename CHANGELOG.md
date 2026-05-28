@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — INBOX domain 폐기 → `sidecar handoff` 레지스트리 (commons 0.14.0 + CLI verb + 참조 갱신)
+
+🔀 cross-repo 핸드오프 표면을 per-repo `INBOX.md`/`INBOX.log.md` domain 에서 sidecar CLI 가 보유하는 단일 레지스트리(`~/.sidecar/handoff/handoff.jsonl`, JSONL — structured carrier per s2)로 일원화. 거버넌스 룰 + 그 메커니즘 + 잔재 정리를 한 PR 로 동반(s7).
+
+- **commons 0.14.0** (선행 커밋) — `@D g11`·`g36`·`g48`·`g59`·`g60` 의 핸드오프 경로를 INBOX domain → `sidecar handoff add/ls/done` 으로 재지정. commons @V 1.4→1.5.
+- **`sidecar handoff` CLI verb** (`bin/sidecar`) — `add <repo> <text...>` (open JSONL 엔트리 atomic append) · `ls [<repo>]` (표 렌더 · repo 필터) · `done <id>` (status → done atomic rewrite) · bare (카운트 요약). 저장소 `~/.sidecar/handoff/` (repo-외부 runtime state · $HOME 포터블). JSON 직렬화/escape 는 python3 사용.
+- **INBOX 파일 삭제** — `INBOX.md` · `INBOX.log.md` · `INBOX.archive.log.md` `git rm` (open 0건 · history = git log).
+- **플러그인 참조 갱신** — `sidecar` command 0.7.0→**0.8.0** (handoff verb surface) · `cycle` 0.10.0→**0.10.1** (dup-race precheck + handoff-ledger → 레지스트리) · `system` 0.9.0→**0.9.1** (upstream-reflex trail → 레지스트리) · `mining` 0.5.0→**0.5.1** (cross-domain handoff 승격 → `sidecar handoff add`). `COMMANDS.md`·README·`DOMAINS.tape`(INBOX roster 행 제거) 동기.
+- commons `@D g36` dont 의 "per-repo INBOX 쓰지 말 것" 의도적 금지 언급은 유지(stale 아님). hexa 코드/논문의 `INBOX #NN` 이슈번호는 과거 provenance 라 보존.
+
 ## 2026-05-29 — commons 0.13.2: g67/g68/g70 NEXUS.tape → DOMAINS.tape SSOT 전환 (@link 연결그래프)
 
 🔗 hexa-lang이 `NEXUS.tape`(cross-project STAR 허브)를 폐기하고 관계 그래프를 `DOMAINS.tape`로 통합함(hexa-lang PR #2015/#2016 머지)에 따라, commons 거버넌스의 SSOT 포인터를 동기화.

@@ -32,13 +32,13 @@ Engage the `cycle` skill. In ONE message run all five stages:
    - **No-signal fallback** — if context yields NO defensible candidate (domain truly closed: zero open milestones AND empty `deferred` AND no user hint / `/gap` / `/check` / log-tail signal), stop with one line: `🛑 no open milestones + empty deferred + no seed signal — choose: extend domain (/domain milestone <text>), switch (/domain set <other>), or close (/end)`. Do NOT fabricate off-domain items just to keep the loop running.
    - **Cap** — seed at most N items per /cycle invocation (default N = 3); further items wait for the next round so each batch stays reviewable. The cap throttles per-round WIDTH; the auto-continue in Stage 5 provides the DEPTH — bare `/cycle` self-drains the whole `deferred` backlog batch-by-batch to depletion (the `*-loop` variants add explicit continuous intent + ScheduleWakeup pacing, but bare `/cycle` is already depletion-driving by default).
 
-2. **Dup-race precheck** — for each item whose label names an INBOX handoff entry (slug/header present in `INBOX.log.md` in the current repo), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
+2. **Dup-race precheck** — for each item whose label names a cross-repo handoff entry (in the `sidecar handoff` registry, `~/.sidecar/handoff/handoff.jsonl`), run a 3-signal grep before fan-out and mark SKIP / PROCEED:
 
-   - **Signal A — INBOX entry status:** `grep -niE -A6 '<slug>' INBOX.log.md` to locate the entry, then test its checkbox/status line against the resolved-class regex `(fixed|resolved|closed|landed|shipped|absorbed|superseded|merged|done|✅|🟢|- \[x\])`. A `- [x]` checkbox or `Status: resolved` under the entry counts.
+   - **Signal A — handoff entry status:** `sidecar handoff ls | grep -iE '<slug>'` to locate the entry, then read its `STATUS` column — a `done` status (or `sidecar handoff ls` showing it closed) counts as resolved.
    - **Signal B — merged PR for slug:** `gh pr list --state merged --search "<slug>" --json number,title,mergedAt --limit 5` — any hit ⇒ resolved.
    - **Signal C — git log mentions slug as fix/close:** `git log --all --oneline --grep="<slug>" -n 5` plus a same-line resolved-class regex check (commit subjects like `fix(<slug>): …`, `close <slug>`, `land <slug>`).
 
-   Treat as SKIP if **any** of A/B/C fires resolved-class; otherwise PROCEED. Print one judgement line per item: `precheck <slug>: SKIP (A:[x] done) | PROCEED (no signal)`. Items whose label does NOT name an INBOX entry bypass this scan (continue to Stage 2b below).
+   Treat as SKIP if **any** of A/B/C fires resolved-class; otherwise PROCEED. Print one judgement line per item: `precheck <slug>: SKIP (A:done) | PROCEED (no signal)`. Items whose label does NOT name a handoff entry bypass this scan (continue to Stage 2b below).
 
    **2b. Stale-milestone scan (@D dup_race_precheck scan-B)** — for each open `- [ ]` item, attempt to extract a stable label from the bolded portion (e.g., falsifier IDs like `F-FUSION-ATTENTION-FLASH`, RFC IDs like `RFC-072`, slug-shaped tokens with hyphens). If a label exists, scan resolved signals:
    - `gh pr list --state merged --search "<label>" --json number,title,mergedAt --limit 3`

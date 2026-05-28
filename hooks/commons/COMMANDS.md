@@ -23,7 +23,7 @@ NOTE: plugin slash commands are ALWAYS namespaced `/plugin:command` in Claude Co
 
 # ── Cross-project ───────────────────────────────────────────
 /domain:domain <task>             <NAME>.md snapshot + <NAME>.log.md checkbox-task log
-#                                 cross-repo handoff → `cd <target> && /domain:domain set INBOX`
+#                                 cross-repo handoff → `sidecar handoff add <repo> <text>`
 
 # ── Verify / help ───────────────────────────────────────────
 /verify:verify <args>             hexa verify — tier rubric (🔵🟢🟡🟠🔴⚪)

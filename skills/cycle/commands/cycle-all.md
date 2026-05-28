@@ -29,7 +29,7 @@ safety/correctness, NOT selection, so ALL-mode does NOT waive them):**
 - **Stage 0 SSOT-freshness** — same fail-open probe (untracked / behind-main /
   content-stale / perpetual marker). A stale SSOT makes the full next-list wrong.
 - **Stage 2 dup-race precheck + 2b stale-milestone scan** — still SKIP items
-  already resolved (INBOX `[x]` / merged PR / git-log fix). SKIP is correctness,
+  already resolved (handoff `done` / merged PR / git-log fix). SKIP is correctness,
   not curation: never dispatch an already-done item just because "all". Print
   the precheck reason per item; SKIP rows get no Agent.
 - **Stage 3 plan table + pre-fan-out worktree-leak sweep** — print the

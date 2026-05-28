@@ -14,12 +14,13 @@
 #   sidecar unshadow    Revert shadow — re-enable the shadowed plugins (namespaced again) + remove created skill mirrors.
 #   sidecar paths       Show / add / remove path prefixes in the LOCAL-EXECUTION WHITELIST (~/.sidecar/local-paths). pool-route forces any Bash cmd whose argv contains a `/`-prefix matching a registered prefix to run LOCAL (skip pool routing). Sub-forms: `paths` = list · `paths add` = register cwd · `paths add <dir>` = register an absolute-resolved dir · `paths rm <prefix>` = remove. add/rm are SIGN-GATED (key `paths`: `! sidecar sign paths` first) since the list overrides pool-route. Seeded on first use with sidecar's own cache + repo paths.
 #   sidecar reap        Reap stale `hexa-lsp` servers (idle > 2h) — fork-storm hygiene. Dry-run by default; `reap --kill` terminates them. Never touches claude (@D s9) or active hexa runs.
+#   sidecar handoff     Cross-project handoff registry (~/.sidecar/handoff/handoff.jsonl) — the single SSOT for cross-repo gap/patch/bug/RFC handoffs (commons g11·g36·g48·g59·g60; retires the per-repo INBOX domain). Sub-forms: `handoff add <repo> <text...>` = append an open entry · `handoff ls [<repo>]` = table (filter by repo) · `handoff done <id>` = flip status → done · `handoff` = counts summary. JSONL store, repo-external, portable via $HOME.
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,17p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,18p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Mirror plugin commands to ~/.claude/commands/ so they're bare-invocable
@@ -529,6 +530,195 @@ TAPE
       echo "sidecar reap: DRY RUN — run 'sidecar reap --kill' to terminate the ${n} above."
     fi
     ;;
+  handoff)
+    # Cross-project handoff registry — the single SSOT for cross-repo gap /
+    # patch / bug / RFC handoffs (commons.tape g11 · g36 · g48 · g59 · g60).
+    # Retires the per-repo INBOX domain: one JSONL store under $HOME/.sidecar
+    # (repo-external runtime state · portable via $HOME · structured carrier per
+    # project.tape s2 — JSONL, not markdown). One line per entry:
+    #   {id, ts, from, to, kind, text, status}
+    # Sub-forms:
+    #   sidecar handoff add <repo> <text...>  append an open entry to <repo>
+    #   sidecar handoff ls [<repo>]           table of entries (filtered by repo)
+    #   sidecar handoff done <id>             flip an entry's status → done
+    #   sidecar handoff                       counts summary (open / done / total)
+    HANDOFF_DIR="$HOME/.sidecar/handoff"
+    HANDOFF_FILE="$HANDOFF_DIR/handoff.jsonl"
+    SUB="${1:-}"
+    [ "$#" -gt 0 ] && shift
+    command -v python3 >/dev/null 2>&1 || { echo "sidecar handoff: python3 not on PATH" >&2; exit 1; }
+    case "$SUB" in
+      add)
+        TO="${1:-}"
+        [ "$#" -gt 0 ] && shift
+        if [ -z "$TO" ] || [ "$#" -eq 0 ]; then
+          echo "usage: sidecar handoff add <repo> <text...>" >&2
+          exit 1
+        fi
+        FROM=$(basename "$PWD")
+        mkdir -p "$HANDOFF_DIR"
+        HANDOFF_FILE="$HANDOFF_FILE" HF_TO="$TO" HF_FROM="$FROM" HF_TEXT="$*" \
+          python3 - <<'PY'
+import json, os, sys, time, uuid, tempfile
+path = os.environ["HANDOFF_FILE"]
+entry = {
+    "id": uuid.uuid4().hex[:8],
+    "ts": int(time.time()),
+    "from": os.environ["HF_FROM"],
+    "to": os.environ["HF_TO"],
+    "kind": "handoff",
+    "text": os.environ["HF_TEXT"],
+    "status": "open",
+}
+line = json.dumps(entry, ensure_ascii=False) + "\n"
+# Atomic append: read existing, rewrite via tmp + os.replace (no torn line).
+prev = ""
+if os.path.exists(path):
+    with open(path, encoding="utf-8") as fh:
+        prev = fh.read()
+d = os.path.dirname(path)
+fd, tmp = tempfile.mkstemp(dir=d)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(prev)
+        fh.write(line)
+    os.replace(tmp, path)
+except Exception:
+    os.path.exists(tmp) and os.unlink(tmp)
+    raise
+print("sidecar handoff: added %s → %s  [%s]" % (entry["from"], entry["to"], entry["id"]))
+print("  " + entry["text"])
+PY
+        ;;
+      ls|list)
+        FILTER="${1:-}"
+        if [ ! -f "$HANDOFF_FILE" ]; then
+          echo "sidecar handoff: registry empty (no entries yet)."
+          exit 0
+        fi
+        HANDOFF_FILE="$HANDOFF_FILE" HF_FILTER="$FILTER" python3 - <<'PY'
+import json, os, time
+path = os.environ["HANDOFF_FILE"]
+flt = os.environ.get("HF_FILTER", "")
+rows = []
+with open(path, encoding="utf-8") as fh:
+    for ln in fh:
+        ln = ln.strip()
+        if not ln:
+            continue
+        try:
+            e = json.loads(ln)
+        except Exception:
+            continue
+        if flt and e.get("to") != flt:
+            continue
+        rows.append(e)
+if not rows:
+    print("sidecar handoff: no entries%s." % (" for '%s'" % flt if flt else ""))
+    raise SystemExit(0)
+def age(ts):
+    d = int(time.time()) - int(ts)
+    if d < 3600: return "%dm" % (d // 60)
+    if d < 86400: return "%dh" % (d // 3600)
+    return "%dd" % (d // 86400)
+print("  %-8s %-6s %-12s %-12s %-4s %s" % ("ID", "STATUS", "FROM", "TO", "AGE", "TEXT"))
+for e in rows:
+    txt = e.get("text", "")
+    if len(txt) > 50:
+        txt = txt[:47] + "..."
+    print("  %-8s %-6s %-12s %-12s %-4s %s" % (
+        e.get("id", "?"), e.get("status", "?"),
+        e.get("from", "?")[:12], e.get("to", "?")[:12],
+        age(e.get("ts", 0)), txt))
+op = sum(1 for e in rows if e.get("status") == "open")
+print("  — %d entr%s (%d open · %d done)" % (
+    len(rows), "y" if len(rows) == 1 else "ies", op, len(rows) - op))
+PY
+        ;;
+      done)
+        ID="${1:-}"
+        if [ -z "$ID" ]; then
+          echo "usage: sidecar handoff done <id>" >&2
+          exit 1
+        fi
+        if [ ! -f "$HANDOFF_FILE" ]; then
+          echo "sidecar handoff: registry empty — no '$ID' to close." >&2
+          exit 1
+        fi
+        HANDOFF_FILE="$HANDOFF_FILE" HF_ID="$ID" python3 - <<'PY'
+import json, os, sys, tempfile
+path = os.environ["HANDOFF_FILE"]
+target = os.environ["HF_ID"]
+out, hit = [], False
+with open(path, encoding="utf-8") as fh:
+    for ln in fh:
+        s = ln.strip()
+        if not s:
+            continue
+        try:
+            e = json.loads(s)
+        except Exception:
+            out.append(s)
+            continue
+        if e.get("id") == target:
+            e["status"] = "done"
+            hit = True
+        out.append(json.dumps(e, ensure_ascii=False))
+if not hit:
+    sys.stderr.write("sidecar handoff: no entry with id '%s'\n" % target)
+    raise SystemExit(1)
+d = os.path.dirname(path)
+fd, tmp = tempfile.mkstemp(dir=d)
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write("\n".join(out) + "\n")
+    os.replace(tmp, path)
+except Exception:
+    os.path.exists(tmp) and os.unlink(tmp)
+    raise
+print("sidecar handoff: closed [%s] → done" % target)
+PY
+        ;;
+      ""|status)
+        if [ ! -f "$HANDOFF_FILE" ]; then
+          echo "sidecar handoff — cross-project handoff registry ($HANDOFF_FILE)"
+          echo "  registry empty. add one: sidecar handoff add <repo> <text...>"
+          exit 0
+        fi
+        HANDOFF_FILE="$HANDOFF_FILE" python3 - <<'PY'
+import json, os
+from collections import Counter
+path = os.environ["HANDOFF_FILE"]
+total = op = 0
+by_repo = Counter()
+with open(path, encoding="utf-8") as fh:
+    for ln in fh:
+        s = ln.strip()
+        if not s:
+            continue
+        try:
+            e = json.loads(s)
+        except Exception:
+            continue
+        total += 1
+        if e.get("status") == "open":
+            op += 1
+            by_repo[e.get("to", "?")] += 1
+print("sidecar handoff — cross-project handoff registry")
+print("  %d total · %d open · %d done" % (total, op, total - op))
+if by_repo:
+    print("  open by repo:")
+    for repo, n in sorted(by_repo.items(), key=lambda kv: -kv[1]):
+        print("    %-16s %d" % (repo, n))
+print("  verbs: add <repo> <text...> · ls [<repo>] · done <id>")
+PY
+        ;;
+      *)
+        echo "usage: sidecar handoff [add <repo> <text...> | ls [<repo>] | done <id>]" >&2
+        exit 1
+        ;;
+    esac
+    ;;
   master)
     # creator-only marker. master-tier plugins enable ONLY while ~/.sidecar/master
     # exists (install.hexa gate). on = mint marker · off = remove · status = show.
@@ -543,7 +733,7 @@ TAPE
     ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · reap · master" >&2
+    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · reap · handoff · master" >&2
     exit 1
     ;;
 esac

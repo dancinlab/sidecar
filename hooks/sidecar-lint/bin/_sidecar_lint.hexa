@@ -15,6 +15,8 @@
 //      repo has .claude-plugin/profiles.json (sidecar's multi-user profiles)
 //   7. MCP-server plugin registered — mcps/ source or mcpServers in plugin.json
 //      (project.tape @D s15: no MCP-server plugins; hook · command · skill only)
+//   8. top-level by-KIND source folder (docs/ · state/) — tracked only
+//      (project.tape @D s16: co-locate by owner/domain, not by type)
 //
 // Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
 // NO opt-out by design — no env var, no config file, no exception
@@ -484,6 +486,23 @@ fn main() {
         } catch e { untagged = untagged }
     }
 
+    // (8) top-level by-KIND source folder (project.tape @D s16 — co-locate by
+    // owner, no kind buckets). Only TRACKED dirs flag (git ls-files), so
+    // gitignored runtime (state/ · build/) never false-fires.
+    let mut kindfolders = []
+    let kr = exec_with_status("git -C '" + root + "' ls-files 2>/dev/null | awk -F/ 'NF>1{print $1}' | sort -u")
+    if kr[1] == 0 {
+        let tops = to_string(kr[0]).split("\n")
+        let mut ti = 0
+        while ti < len(tops) {
+            let d = _trim(tops[ti])
+            if d == "docs" || d == "state" {
+                kindfolders.push("  " + d + "/: top-level by-KIND bucket — co-locate by owner (domain pair · plugin dir · root *_POLICY.md); runtime → $CLAUDE_PLUGIN_DATA/~/.sidecar (s3)")
+            }
+            ti = ti + 1
+        }
+    }
+
     let mut sections = []
     if nochangelog {
         sections.push("no CHANGELOG.md at repo root (commons @D g29 — create + maintain CHANGELOG.md as the chronological history surface)")
@@ -508,6 +527,9 @@ fn main() {
     }
     if len(verban) > 0 {
         sections.push("version/generation marker in plugin name(s) (commons @D g72 — minimal role-name identifiers; the version lives in semver / git tag, never the name):\n" + verban.join("\n"))
+    }
+    if len(kindfolders) > 0 {
+        sections.push("top-level by-KIND source folder (project.tape @D s16 — co-locate by owner/domain; no docs/·state/ source buckets):\n" + kindfolders.join("\n"))
     }
 
     if len(sections) == 0 { _allow() }

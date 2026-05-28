@@ -16,6 +16,14 @@ For the full audit trail, see `git log`.
 - 하류 레이어 1-3(force-push deny · stale-base push/merge advisory) 회귀 클린 — 6 스모크 전부 통과.
 - 4-surface lockstep(g22): plugin.json·marketplace.json 0.6.0→0.7.0 + description 갱신 · README 레이어 3·4·5 문서화 · CHANGELOG. commons.tape(sign-gated)는 건드리지 않음(D6).
 
+## 2026-05-29 — by-owner 보관 (project.tape @D s16) + sidecar-lint 0.8.0 enforcement
+
+📁 "타입별 top-level 잡동사니 폴더 대신 도메인/주인 옆에 끼리끼리 보관" 원칙을 명문화하고 강제한다.
+
+- **project.tape `@D s16`** — co-locate by owner. domain pair(`<NAME>.md`+`.log.md`)·plugin asset은 plugin dir·cross-cutting reference doc은 루트(`*_POLICY.md` 스타일). runtime/ephemeral state는 repo 밖(`$CLAUDE_PLUGIN_DATA`·`~/.sidecar/`·hx-managed, s3). top-level by-KIND source bucket(`docs/`·`state/`) 금지 — 무조건 도메인 따라가게.
+- **sidecar-lint 0.8.0** — check (8) 신설: `git commit` 시 추적되는 top-level `docs/`·`state/` 디렉터리를 advisory 로 flag(`git ls-files` 기반이라 gitignored 런타임 `state/`는 false-fire 안 함). 형제 repo 조사(anima·hexa-lang·phanes·demiurge)로 blocklist 를 right-size — `build/`·`src/`·`archive/`는 생태계 표준이라 제외. lint 는 `marketplace.json` 보유 repo 에서만 발동하므로 형제 repo 무영향. (s7: 거버넌스 + enforcement 동반 ship.)
+- **docs/ 제거** — sidecar 유일의 추적 kind-folder 였던 `docs/meta-domain-pattern.md` → 루트 `META-DOMAIN-PATTERN.md` 로 이동(루트 reference-doc 관례).
+
 ## 2026-05-29 — verdict-gate 0.1.0: commons g73 강제 hook (s7 갭 닫음)
 
 🔒 거버넌스 `@D g73`(verdict는 `hexa verify` 독립 recompute로만 EARNED · self-judged smoke=tautology 금지)는 commons.tape:290 에 land 됐으나 그 강제 hook 이 미작성 — sidecar 자기 규칙 `@D s7`("거버넌스 + enforcement 를 같은 사이클에 ship") 위반 상태였다. 출처: anima UNIVERSE 자율 `/cycle` 매트릭스가 418 H + 261 tautology smoke 를 가짜 🔵 로 적층(폐기 anima#1027/#1034). 이 hook 이 그 재발을 막는 기계 backstop.

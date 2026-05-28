@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.6"
+  version = "1.7"
 
 @I := "sidecar" :: identity [active]
   kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
@@ -67,3 +67,10 @@
 @D s15 := "no MCP-server plugins — hook · command · skill concepts only" :: governance [required active]
   do   = "expose capability via the 3 plugin concepts (hook · command · skill) over the host CLI"
   dont = "add an MCP-server plugin (mcps/ dir · mcpServers in plugin.json) — stdio handshake blocks"
+
+@D s16 := "co-locate by owner — no top-level kind-folders" :: governance [required active]
+  do   = "store artifact WITH its owner — domain pair `<NAME>.md`+`.log.md` · plugin assets in plugin dir"
+  do   = "reference docs at root (`*_POLICY.md`·`LIMIT.md` style) — not a `docs/` bucket"
+  do   = "runtime/ephemeral state OUTSIDE the repo — `$CLAUDE_PLUGIN_DATA`·`$HOME/.sidecar/`·hx (s3)"
+  dont = "add a top-level by-KIND source bucket (`docs/`·`state/`) — follow the domain not the type"
+  dont = "top-level shape beyond 3 concept dirs (hook·command·skill) + root reference docs"

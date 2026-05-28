@@ -395,7 +395,10 @@ fn main() {
                                 let pjpath = root + "/" + src + "/.claude-plugin/plugin.json"
                                 let pjraw = _read_file_safe(pjpath)
                                 let mut is_mcp = _starts_with(src, "mcps/")
-                                if !is_mcp && _contains(pjraw, "mcpServers") { is_mcp = true }
+                                if !is_mcp && pjraw != "" {
+                                    let pjm = json_parse(pjraw)
+                                    if type_of(pjm) == "map" && has_key(pjm, "mcpServers") { is_mcp = true }
+                                }
                                 if is_mcp && len(mcpban) < 8 {
                                     mcpban.push("  " + name + " (" + src + "): MCP-server plugin — mcps/ source or mcpServers in plugin.json")
                                 }

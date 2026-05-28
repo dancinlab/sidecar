@@ -44,6 +44,7 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 | token | verb | does |
 |---|---|---|
 | (empty) | **status** | unified control-tower dashboard |
+| `tick [--apply]` | **tick** | **(0.7.0 code harness)** deterministic probe→classify→decide pass; partitions auto vs escalate; --apply executes resume |
 | `watch` | **watch** | arm one event-driven watcher per active job |
 | `harvest [<id>]` | **harvest** | terminal job → parse metric + g5 verdict + ledger |
 | `next` / `redispatch` | **next** | autonomous harvest→register→fire-next-queued (one step) |
@@ -81,6 +82,46 @@ Render (lead with the **campaign progress block** per commons g56 — a 10-cell 
 **Budget sub-bar** — `▓▓░░ $<spent>/$<cap> (<b%>)` 10-cell on the budget axis (g56 applies to the cost axis too).
 
 Read-only. NEVER infer a verdict here (status ≠ harvest) — the per-job bar is PROGRESS (how far), not VERDICT (pass/fail).
+
+## tick [--apply] — code-backed deterministic decision pass (0.7.0)
+
+`tick` is the **code-level harness** sitting under everything below. Where prior
+verbs are runbooks an LLM follows, `tick` is a real program (`${CLAUDE_PLUGIN_ROOT}/bin/system_harness.hexa`)
+that probes every running job via the surface (g8: pod→`hexa cloud exec` ·
+pool→`pool on` · local→direct), classifies each into the exit-code-aware
+terminal taxonomy, and decides the next action from a fixed table. The output
+is partitioned into two lists:
+
+- **auto** — actions the harness handles itself (`wait` no-op · `retry` backoff). With `--apply`, also executes deterministic side-effects: `resume` = `hexa cloud nohup … recover=.true.` for a TIMEOUT-RESUMABLE job with recovery state + a `resume_cmd` field in the manifest.
+- **escalate** — actions the LLM acts on: `harvest` (needs g5 verify VERBATIM + atlas), `triage` (novel CRASHED classification), `requeue` (GONE pod-down decision), `restart` (TIMEOUT with NO recovery state — cold restart decision).
+
+This is the **autonomous candidate selector**: instead of ending a turn with a
+"pick option 1/2/3/4" menu for the human, the decision table in `decide()`
+resolves the next action per job from {state, recov, has_resume_cmd}. The 7-state
+taxonomy + 7 decisions cover everything `auto`/`drive` previously did in prose.
+
+Run it directly:
+```
+hexa run ${CLAUDE_PLUGIN_ROOT}/bin/system_harness.hexa tick [--apply] [--manifest ./pods.json]
+hexa run ${CLAUDE_PLUGIN_ROOT}/bin/system_harness.hexa selftest
+hexa run ${CLAUDE_PLUGIN_ROOT}/bin/system_harness.hexa status
+```
+
+**`drive` uses `tick --apply` as its per-tick body** — drive's ScheduleWakeup
+heartbeat or watcher-event re-entry calls `tick --apply`, reads the resulting
+auto/escalate report, then the LLM acts on `escalate` only. This compresses the
+0.6.0 prose drive steps 1-2 (status sweep + harvest dispatch) into one binary
+call (~1s wall, no LLM tokens for routine probing).
+
+**bare-marker trap codified** — `classify()` tests `maxcpu/stopnz/err` BEFORE
+the terminal marker. QE printing `JOB DONE.` on a walltime-stop+`STOP 1` now
+becomes `TIMEOUT-RESUMABLE`, not `DONE`. The 22.5h phonon false-success is
+deterministically impossible.
+
+**`--selftest` (load-bearing logic regression guard)** — 8 cases:
+running · clean-done · walltime-trap (marker+maxcpu) · crash-with-marker
+(marker+STOP n≠0) · error-trace · noworkdir-gone · transport-255 ·
+walltime-no-recov. Run before merging any change to `classify`/`decide`.
 
 ## watch — arm event-driven watchers (commons g10 · g57)
 

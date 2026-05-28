@@ -108,23 +108,30 @@ fn classify(alive: int, marker: int, stopnz: int, err: int, maxcpu: int, nowork:
     return "GONE"
 }
 
+// build a [action, tier, why] triple — push form (hexa array-literal-safe)
+fn _d(action: string, tier: string, why: string) -> array {
+    let mut r = []
+    r.push(action); r.push(tier); r.push(why)
+    return r
+}
+
 // Autonomy decision table — the candidate selector. Returns [action, tier, why].
 // tier "auto" = the harness can run it (--apply); "escalate" = the LLM acts.
 // This replaces the human-facing "pick 1/2/3/4" menu.
 fn decide(state: string, recov: int, has_resume: bool) -> array {
-    if state == "RUNNING" { return ["wait", "auto", "grinding"] }
+    if state == "RUNNING" { return _d("wait", "auto", "grinding") }
     if state == "DONE" {
-        return ["harvest", "escalate", "clean marker, no stop/err/maxcpu — copy-from + g5 verify (verbatim) + atlas"]
+        return _d("harvest", "escalate", "clean marker, no stop/err/maxcpu — copy-from + g5 verify (verbatim) + atlas")
     }
     if state == "TIMEOUT-RESUMABLE" {
-        if recov > 0 && has_resume { return ["resume", "auto", "walltime stop + recovery state + resume_cmd (recover=.true.)"] }
-        if recov > 0 { return ["resume", "escalate", "recovery state present but no resume_cmd in manifest — supply relaunch cmd"] }
-        return ["restart", "escalate", "walltime stop, NO recovery state — cold restart decision needed"]
+        if recov > 0 && has_resume { return _d("resume", "auto", "walltime stop + recovery state + resume_cmd (recover=.true.)") }
+        if recov > 0 { return _d("resume", "escalate", "recovery state present but no resume_cmd — supply relaunch cmd") }
+        return _d("restart", "escalate", "walltime stop, NO recovery state — cold restart decision needed")
     }
-    if state == "CRASHED" { return ["triage", "escalate", "STOP n!=0 / error trace — novel triage (classify + fix)"] }
-    if state == "GONE" { return ["requeue", "escalate", "process gone + no marker — pod/proc died, re-queue candidate"] }
-    if state == "TRANSPORT" { return ["retry", "auto", "ssh-255 / probe-timeout — transient gateway, backoff + retry next tick"] }
-    return ["escalate", "escalate", "unclassified state"]
+    if state == "CRASHED" { return _d("triage", "escalate", "STOP n!=0 / error trace — novel triage (classify + fix)") }
+    if state == "GONE" { return _d("requeue", "escalate", "process gone + no marker — pod/proc died, re-queue") }
+    if state == "TRANSPORT" { return _d("retry", "auto", "ssh-255 / probe-timeout — transient gateway, backoff + retry") }
+    return _d("escalate", "escalate", "unclassified state")
 }
 
 fn _is_terminal_verdict(v: string) -> bool {
@@ -192,11 +199,15 @@ fn _surface_for(pod_id: string, pods: array) -> array {
     while i < len(pods) {
         let row = pods[i]
         if _tsv(row, 0) == pod_id {
-            return [_tsv(row, 1), _tsv(row, 2), _tsv(row, 3), _tsv(row, 4)]
+            let mut s = []
+            s.push(_tsv(row, 1)); s.push(_tsv(row, 2)); s.push(_tsv(row, 3)); s.push(_tsv(row, 4))
+            return s
         }
         i = i + 1
     }
-    return ["", "pod", "", "false"]
+    let mut d = []
+    d.push(""); d.push("pod"); d.push(""); d.push("false")
+    return d
 }
 
 // ---- progress render --------------------------------------------------------
@@ -248,7 +259,9 @@ fn _probe_job(jobrow: string, pods: array) -> array {
     let maxcpu = _atoi(_kv(body, "maxcpu"))
     let recov = _atoi(_kv(body, "recov"))
     let st = classify(alive, marker, stopnz, err, maxcpu, nowork, rc)
-    return [st, to_string(alive), to_string(marker), to_string(recov)]
+    let mut p = []
+    p.push(st); p.push(to_string(alive)); p.push(to_string(marker)); p.push(to_string(recov))
+    return p
 }
 
 fn do_status(path: string) {
@@ -347,33 +360,38 @@ fn _case(label: string, got_state: string, got_action: string, exp_state: string
     return 0
 }
 
+fn _act(state: string, recov: int, has_resume: bool) -> string {
+    let d = decide(state, recov, has_resume)
+    return d[0]
+}
+
 fn selftest() {
     let mut ok = 0
     let mut tot = 0
     // running
     let s1 = classify(6, 0, 0, 0, 0, false, 0)
-    ok = ok + _case("running", s1, decide(s1, 0, false)[0], "RUNNING", "wait"); tot = tot + 1
+    ok = ok + _case("running", s1, _act(s1, 0, false), "RUNNING", "wait"); tot = tot + 1
     // clean done
     let s2 = classify(0, 1, 0, 0, 0, false, 0)
-    ok = ok + _case("clean-done", s2, decide(s2, 0, false)[0], "DONE", "harvest"); tot = tot + 1
+    ok = ok + _case("clean-done", s2, _act(s2, 0, false), "DONE", "harvest"); tot = tot + 1
     // bare-marker trap: marker AND maxcpu -> TIMEOUT-RESUMABLE, never DONE
     let s3 = classify(0, 1, 1, 0, 1, false, 0)
-    ok = ok + _case("walltime-trap", s3, decide(s3, 5, true)[0], "TIMEOUT-RESUMABLE", "resume"); tot = tot + 1
+    ok = ok + _case("walltime-trap", s3, _act(s3, 5, true), "TIMEOUT-RESUMABLE", "resume"); tot = tot + 1
     // crash: marker present but STOP n!=0 -> CRASHED
     let s4 = classify(0, 1, 1, 0, 0, false, 0)
-    ok = ok + _case("crash-with-marker", s4, decide(s4, 0, false)[0], "CRASHED", "triage"); tot = tot + 1
+    ok = ok + _case("crash-with-marker", s4, _act(s4, 0, false), "CRASHED", "triage"); tot = tot + 1
     // error trace
     let s5 = classify(0, 0, 0, 1, 0, false, 0)
-    ok = ok + _case("error-trace", s5, decide(s5, 0, false)[0], "CRASHED", "triage"); tot = tot + 1
+    ok = ok + _case("error-trace", s5, _act(s5, 0, false), "CRASHED", "triage"); tot = tot + 1
     // gone (no workdir)
     let s6 = classify(0, 0, 0, 0, 0, true, 0)
-    ok = ok + _case("noworkdir-gone", s6, decide(s6, 0, false)[0], "GONE", "requeue"); tot = tot + 1
+    ok = ok + _case("noworkdir-gone", s6, _act(s6, 0, false), "GONE", "requeue"); tot = tot + 1
     // transport
     let s7 = classify(0, 0, 0, 0, 0, false, 255)
-    ok = ok + _case("transport-255", s7, decide(s7, 0, false)[0], "TRANSPORT", "retry"); tot = tot + 1
+    ok = ok + _case("transport-255", s7, _act(s7, 0, false), "TRANSPORT", "retry"); tot = tot + 1
     // resumable but no recovery state -> escalate restart
     let s8 = classify(0, 0, 0, 0, 1, false, 0)
-    ok = ok + _case("walltime-no-recov", s8, decide(s8, 0, false)[0], "TIMEOUT-RESUMABLE", "restart"); tot = tot + 1
+    ok = ok + _case("walltime-no-recov", s8, _act(s8, 0, false), "TIMEOUT-RESUMABLE", "restart"); tot = tot + 1
     println("selftest: " + to_string(ok) + "/" + to_string(tot) + " taxonomy cases pass")
     if ok != tot { exit(1) }
 }

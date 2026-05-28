@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — verdict-gate 0.1.0: commons g73 강제 hook (s7 갭 닫음)
+
+🔒 거버넌스 `@D g73`(verdict는 `hexa verify` 독립 recompute로만 EARNED · self-judged smoke=tautology 금지)는 commons.tape:290 에 land 됐으나 그 강제 hook 이 미작성 — sidecar 자기 규칙 `@D s7`("거버넌스 + enforcement 를 같은 사이클에 ship") 위반 상태였다. 출처: anima UNIVERSE 자율 `/cycle` 매트릭스가 418 H + 261 tautology smoke 를 가짜 🔵 로 적층(폐기 anima#1027/#1034). 이 hook 이 그 재발을 막는 기계 backstop.
+
+- **신규 `hooks/verdict-gate/` (0.1.0)** — 단일 hook 플러그인, 2 이벤트.
+  - **PreToolUse(Write|Edit)** `_verdict_gate.hexa` — 엄격 파일명 게이트(basename 이 `H_*.md` 이거나 `result.json` 일 때만 발동, 일반 `.md` 산문의 🔵 언급은 미발동):
+    - **(A) HARD DENY** — verdict 토큰(🔵/🟢/SUPPORTED-FORMAL/SUPPORTED-NUMERICAL) 을 주장하는데 repo-root `.verdicts/<slug>/*.txt`(비어있지 않은 `hexa verify` verbatim) 백킹 부재 시 차단 + "`hexa verify` 돌려 verbatim 저장 후 재시도" 리다이렉트. slug = `H_<slug>.md` → `H_`/`.md` 스트립 · `result.json` → 상위 디렉터리명. repo root = `.git` 조상, 없으면 cwd.
+    - **(B) ADVISORY** — `.hexa` 의 tautological smoke(검사 대상 `fn` 본문이 비교 RHS 와 동일한 literal/param 을 그대로 반환) 비차단 WARN. 휴리스틱(false-positive 무해).
+  - **Stop** `_verdict_stop.hexa` — **(C) ADVISORY** — 최근(mtime <6h) `H_*.md` 가 🔵/🟢 주장하면서 `.verdicts/` 백킹 0% 면 비차단 advisory "loop self-judging only · STOP & report (g73)". 절대 hard stop-block 아님(루프 트랩 방지).
+  - **비적용**: ⚪ SPECULATION-FENCED · 🟡 CITATION · 🟠 INSUFFICIENT 는 어떤 레이어도 발동 안 함(이미 정직). opt-out 변수 없음(commons s11).
+- **g22 lockstep** — plugin.json · marketplace.json · profiles.json(tier=personal) · README guard catalogue · 본 CHANGELOG.
+- **검증** — `hexa parse` 양 바이너리 clean. 6-smoke 전부 PASS: H_*.md 🔵 no-backing→DENY · 🔵 backed→ALLOW · result.json verdict_class 🔵→DENY · 🟠→ALLOW · notes.md 산문 🔵→ALLOW(파일명 게이트) · .hexa tautology→WARN. Stop layer C: 0% 백킹→advisory · 백킹 있음→silent.
+
 ## 2026-05-29 — commons 0.13.1: plugin.json invalid-JSON 핫픽스
 
 🐛 commons 0.13.0(2bba720)의 plugin.json description에 이스케이프 안 된 큰따옴표(`canonical "what pods are alive + billing right now" SSOT`)가 들어가 JSON 파싱이 깨졌다 → `/reload-plugins` "1 error during load" + `commons@0.13.0 plugin.json invalid JSON, cache evicted`.

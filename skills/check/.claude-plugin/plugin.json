@@ -1,9 +1,9 @@
 {
   "name": "check",
-  "description": "Task dashboard skill — /check prints current-state status across surfaces in one shot: `<UPPERCASE>.log.md` checkbox tasks (open vs done count + first 10 open items per log), `gh pr list` open PRs in this repo, `git status -sb` (uncommitted / ahead / behind), `git log --oneline -5` (recent merges). Read-only; no side effects. Triggers: /check · 상태 · 체크 · 현황 · status check · dashboard.",
-  "version": "0.1.0",
+  "description": "In-flight progress dashboard skill — /check reports ONLY the progress of work that is currently running: background shell/agent jobs (ps: pool / verify / ssh / cloud / sub-agent eval'd commands), their freshly-touched task output files (bash output tail + agent-transcript one-liners), and recent subagent dispatch. The agent pairs this shell scan with TaskList state + active monitors. Read-only; no side effects. Does NOT survey repo state (no `.log.md` backlog / open-PR / git-status / recent-merge enumeration). Triggers: /check · 상태 · 체크 · 현황 · 진행상황 · status check · dashboard.",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",
-  "keywords": ["claude-code", "skill", "command", "check", "status", "dashboard", "tasks"]
+  "keywords": ["claude-code", "skill", "command", "check", "status", "dashboard", "tasks", "monitor", "progress", "in-flight"]
 }

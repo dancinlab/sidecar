@@ -1,0 +1,12 @@
+{
+  "name": "msg-mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "msg phase-3 idle-push broker — HTTP/SSE MCP channels server. Tails ~/.sidecar/msg/<self>.inbox.log and emits notifications/claude/channel per new inbound line. node_modules is NEVER committed; installed on-demand by the SessionStart launcher.",
+  "type": "module",
+  "main": "msg-mcp-server.mjs",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
+}

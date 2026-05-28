@@ -56,11 +56,14 @@ sidecar/
 ├── LATTICE_POLICY.md         # real-limits-first policy (→ hooks/commons/, dropped by `sidecar init`)
 ├── CLOSURE_POLICY.md         # closure-honesty policy (SSOT freshness + perpetual domains)
 ├── DESIGN.md / DESIGN.log.md # live design-rules pointer + decision audit trail
+├── STRUCTURE.md              # 허용 구성 spec — top-level allowlist · 도메인쌍 관례 (s16/lint 연결)
 ├── CHANGELOG.md              # chronological ship log
 └── .claude-plugin/
     ├── marketplace.json      # plugin manifest (name · source · version)
     └── profiles.json         # enable-profile tiers (core · hexa · personal · master[creator-only])
 ```
+
+허용 top-level 구성 · 도메인쌍 관례 · where-goes 표는 [`STRUCTURE.md`](STRUCTURE.md) 에 명시되어 있다 (`@D s16` 규칙 ↔ `sidecar-lint` allowlist 강제).
 
 ## Profiles
 

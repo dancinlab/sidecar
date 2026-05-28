@@ -1,0 +1,131 @@
+// _msg_mcp_up.hexa — SessionStart launcher for the msg phase-3 idle-push broker.
+//
+// Idempotently brings up ONE local Node MCP-channels broker per machine
+// (Streamable HTTP on 127.0.0.1:7717) that tails $HOME/.sidecar/msg/<self>.inbox.log
+// and emits an MCP channel notification per new inbound line. The broker is the
+// RECEIVE-PUSH half of `msg`; send stays the existing `/msg send` socket path.
+//
+// s11 (no opt-out): no env-var/flag disables this. It gates ONLY on real
+// preconditions — node present + self nick set. Missing either → graceful
+// exit 0 (never blocks SessionStart). NO absolute paths ($HOME / $CLAUDE_PLUGIN_ROOT).
+//
+// Idempotency: pidfile ($HOME/.sidecar/msg/msg-mcp.daemon.pid) + pgrep guard,
+// exactly like the msg-arm capture daemon. On first run, if node_modules is
+// absent, `npm install --omit=dev` into the server/ dir (node_modules NEVER
+// committed); then self-launch the broker. node/npm absent → graceful exit 0.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+// single-quote a string for safe embedding in a `sh -c` command.
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _which(bin: string) -> string {
+    let s = _trim(to_string(exec("command -v " + bin + " 2>/dev/null")))
+    return s
+}
+
+fn main() {
+    // drain stdin (host pipes the event JSON) so we never block the pipe.
+    let _raw = _read_stdin()
+
+    let root = env_var("CLAUDE_PLUGIN_ROOT")
+    if root == "" { exit(0) }                       // not under a plugin host
+    let server = root + "/server/msg-mcp-server.mjs"
+    if !file_exists(server) { exit(0) }
+
+    let home = env_var("HOME")
+    let msgdir = home + "/.sidecar/msg"
+    let selff = msgdir + "/self"
+
+    // precondition: self nick set (shared SSOT with msg / msg-arm). No nick →
+    // the broker would not know which inbox.log to tail. Silent skip (s11).
+    if !file_exists(selff) { exit(0) }
+    if _trim(_read_file_safe(selff)) == "" { exit(0) }
+
+    // precondition: node present (sidecar's first non-hexa executable). Absent → skip.
+    let node = _which("node")
+    if node == "" { exit(0) }
+
+    let pidf = msgdir + "/msg-mcp.daemon.pid"
+    let log = msgdir + "/msg-mcp.daemon.log"
+
+    // already up? pidfile alive OR a server process matching our script path.
+    let alive_cmd =
+        "P=" + _shq(pidf) + ";" +
+        " if [ -f \"$P\" ] && kill -0 \"$(cat \"$P\" 2>/dev/null)\" 2>/dev/null; then echo Y; exit 0; fi;" +
+        " if pgrep -f msg-mcp-server.mjs >/dev/null 2>&1; then echo Y; exit 0; fi; echo"
+    let mut alive = ""
+    try { alive = to_string(exec(alive_cmd)) } catch e { alive = "" }
+    if _trim(alive) == "Y" { exit(0) }
+
+    let qnode = _shq(node)
+    let qserver = _shq(server)
+    let qlog = _shq(log)
+    let qpidf = _shq(pidf)
+    let qsrvdir = _shq(root + "/server")
+    let sdkdir = root + "/server/node_modules/@modelcontextprotocol/sdk"
+
+    // launcher body (paths embedded literally — becomes the single `sh -c` arg
+    // under setsid/nohup, a fresh shell that wouldn't inherit un-exported vars).
+    let mut body = ""
+    if file_exists(sdkdir) {
+        // deps present → spawn the broker directly.
+        body = qnode + " " + qserver + " >" + qlog + " 2>&1 & echo $! > " + qpidf
+    } else {
+        // on-demand dependency install (first run only). node_modules NEVER committed.
+        let npm = _which("npm")
+        if npm == "" { exit(0) }                    // no npm → cannot vend the SDK → skip
+        let qnpm = _shq(npm)
+        body = "cd " + qsrvdir + " && " + qnpm + " install --omit=dev >" + qlog + ".npm 2>&1 && " +
+               qnode + " " + qserver + " >" + qlog + " 2>&1 & echo $! > " + qpidf
+    }
+
+    let qbody = _shq(body)
+    // detach: prefer setsid, fall back to nohup (macOS has no setsid).
+    let launch =
+        "mkdir -p " + _shq(msgdir) + ";" +
+        " if command -v setsid >/dev/null 2>&1; then" +
+        " setsid sh -c " + qbody + " </dev/null >/dev/null 2>&1 &" +
+        " else" +
+        " nohup sh -c " + qbody + " </dev/null >/dev/null 2>&1 &" +
+        " fi"
+    try { let _r = exec_with_status(launch) } catch e { }
+    exit(0)
+}

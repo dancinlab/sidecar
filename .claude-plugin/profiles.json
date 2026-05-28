@@ -72,6 +72,7 @@
     "mining": "core",
     "pool-route": "personal",
     "s9-guard": "personal",
+    "askq-text": "personal",
     "plist-guard": "personal",
     "ai-api-guard": "personal",
     "subagent-route": "personal",

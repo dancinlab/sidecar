@@ -1,0 +1,9 @@
+{
+  "name": "askq-text",
+  "description": "PreToolUse(AskUserQuestion) → plain-text chat redirect, implemented in hexa-lang (`_askq_text.hexa`, invoked via `hexa run`). AskUserQuestion renders an arrow-key option-tree box in the TUI; this host prefers plain CHAT — questions asked as ordinary text and answered conversationally. A PreToolUse hook cannot re-render the box as text (no transform API), so the hook DENIES the call with an instruction that tells the model to re-emit the SAME question as plain text in its reply: state the question in prose, list any options inline (marking a recommendation), and accept a free-form answer. This is a FORM redirect, NOT anti-punt — the model SHOULD still ask, just in chat rather than the box (distinct from the `bypass` skill, which is about NOT asking clearly-OK reversible work). Plan approval keeps its own path (ExitPlanMode) and is NOT touched. Unconditional by design — the tool name IS the precondition, with NO env-var / flag escape hatch (project.tape @D s11: any opt-out gets auto-flipped to silence the guard).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "hexa", "askuserquestion", "plain-text", "guard"]
+}

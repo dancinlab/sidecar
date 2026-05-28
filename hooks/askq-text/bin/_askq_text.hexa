@@ -1,0 +1,75 @@
+// _askq_text.hexa — PreToolUse(AskUserQuestion) → plain-text chat redirect.
+//
+// AskUserQuestion renders an arrow-key option-tree box in the TUI. This host
+// prefers plain CHAT: questions asked as ordinary text, answered conversation-
+// ally. A PreToolUse hook cannot re-render the box as text (no transform API),
+// so the only lever is DENY + an instruction that tells the model to re-emit
+// the SAME question as plain text in its reply (options preserved inline).
+//
+// This is a FORM redirect, not anti-punt: the model SHOULD still ask — just in
+// chat, not in the box. Distinct from the `bypass` skill (which is about NOT
+// asking clearly-OK reversible work).
+//
+// Unconditional by design (project.tape @D s11: gate on a real precondition,
+// never an opt-out switch). The precondition IS the tool name; no env-var /
+// flag escape hatch, because any such hatch gets auto-flipped to silence it.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _deny(reason: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+fn _deny_askq() {
+    let reason = "askq-text: this session asks questions in plain CHAT, not the arrow-key option box.\n"
+        + "  Re-ask your question conversationally as plain text in your reply — do NOT call AskUserQuestion:\n"
+        + "    - state the question in prose;\n"
+        + "    - if you had options, list them inline (short bullets) and mark the one you'd recommend;\n"
+        + "    - accept a free-form answer — the user may pick an option OR reply in their own words.\n"
+        + "  (Plan approval still uses ExitPlanMode — that path is unaffected.)\n"
+        + "  NO env-var / flag override by design (project.tape @D s11)."
+    _deny(reason)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+
+    if type_of(payload) != "map" { _allow() }
+    if !has_key(payload, "tool_name") { _allow() }
+    if payload["tool_name"] != "AskUserQuestion" { _allow() }
+
+    _deny_askq()
+}

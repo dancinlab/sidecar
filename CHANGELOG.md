@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — askq-text 0.1.0: AskUserQuestion → 평문 채팅 질문 리다이렉트
+
+🔀 사용자 의도 — AskUserQuestion(화살표 옵션박스)을 "평문 채팅 질문으로만" 작동시키고 싶다. 처음엔 bypass anti-punt 차단(=묻지 말고 실행)으로 잘못 잡았다가, "금지가 아니라 형태 변환"으로 정정 → bypass와 분리한 전용 훅으로.
+
+- **신규 `askq-text` 훅 (personal)** — PreToolUse(AskUserQuestion) deny. PreToolUse 훅은 박스를 텍스트로 재렌더할 수 없어(transform API 없음) deny + 지시메시지로 모델이 **같은 질문을 평문으로 다시 묻게** 유도. 선택지는 인라인 보존 + 추천 표시 + 자유응답 수용.
+- **FORM 리다이렉트 (≠ anti-punt)** — `bypass` skill(=clearly-OK 작업은 안 묻고 실행)과 결이 달라 분리. 플랜 승인(ExitPlanMode)은 미터치.
+- 무조건 발동 · env/flag opt-out 없음 (@D s11: opt-out은 자동으로 꺼져 가드를 무력화). hexa-lang 구현 (`_askq_text.hexa`). plugin/marketplace 0.1.0 · profiles `personal` · README DENY 카탈로그 + 표 행 + 플러그인 수 73→74.
+
 ## 2026-05-28 — system 0.8.0: all-paths autonomy — `pursue` (캠페인-레벨 자율 fan-out, 메뉴 폐지)
 
 🛰️ 사용자 "다음 한 수도 자율진행가능하게 시스템 개선(모든경로 진행하게끔) 및 모두 진행". 0.7.0 `tick` 이 **per-job** 결정을 자율화(decide 테이블)했지만, 캠페인 턴은 여전히 "다음 한 수: ① stalled job resume · ② tooling gap fix · ③ 다음 wave — 뭐 할까?" 식 **사람 A/B/C 메뉴**로 끝났다. 이건 queue 계약(0.2.0)이 candidate 티어에서 폐지한 `발사대기/awaiting-approval` anti-pattern 의 **캠페인 티어 재발**. 0.8.0 `pursue` = 그 자율 계약을 한 레벨 위로 확장 — 기술적으로 해소가능한 다음수는 메뉴 대신 전부 병렬 fan-out.
@@ -68,7 +76,6 @@ For the full audit trail, see `git log`.
 - **origin/main 조회 보정 (local stale-tree false-empty)** — INBOX-scan 단계가 LOCAL working tree(`grep <repo>/INBOX.log.md`) 를 grep 해서 stale·다른-브랜치·미-pull 시 false-empty 반환. `git -C <repo> show origin/main:INBOX.log.md 2>/dev/null | grep -nE '^## ...'` 로 교체 — origin/main + gh remote 만 조회, working tree 절대 금지 note 명시. (gh PR list 단계는 이미 remote → 유지.)
 - **entry-merged ≠ fix-status 구분** — INBOX 항목의 entry-PR 가 merged 됐다(=항목 기록됨)는 사실과 그 fix 가 landed 됐다(🟠 OPEN 권고 vs ✅ RESOLVED 구현)는 별개. 항목의 `🟠 OPEN` / `✅ RESOLVED` 마커를 파싱해 별도 컬럼으로 렌더. (증거: hexa-lang #1734 = ✅ RESOLVED 구현, #1775/#1828 = 🟠 OPEN 권고 — entry-PR 는 모두 merged.)
 - command + plugin/marketplace 0.4.0→0.4.1.
-
 
 ## 2026-05-28 — system 0.4.0: `upstream` verb — report the g59 upstream-reflex trail
 

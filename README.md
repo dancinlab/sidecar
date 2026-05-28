@@ -151,6 +151,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 #   sign-guard     edits to commons.tape/project.tape/.gitignore until `sidecar sign` (s13)
 #   git-guard      force-push (+ stale-base push & merge advisory)
 #   tape-lint      .tape edits (fields · length · authoring-language)
+#   askq-text      AskUserQuestion box → re-ask as plain chat text (no option tree)
 # REWRITE / ROUTE:
 #   pool-route     heavy Bash → ssh to a pool host
 #   pr-cycle       `gh pr create` → appends && gh pr merge + worktree clean (g47); DENIES auto-merge on mass-deletion outlier (deletion-sanity gate, anima #1105)
@@ -170,7 +171,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 
 ## Plugins
 
-73 plugins across `{hook · command · skill}` — one concept each (35 `core` · 17 `hexa` · 19 `personal` · 2 `master`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
+74 plugins across `{hook · command · skill}` — one concept each (35 `core` · 17 `hexa` · 20 `personal` · 2 `master`). The **Tier** column is the [enable profile](#profiles) a plugin belongs to.
 
 | Name | Kind | Tier | Version | Summary |
 |---|---|---|---|---|
@@ -240,6 +241,7 @@ All slash commands at a glance, grouped by purpose. Each is backed by a plugin i
 | [`pr-cycle-hook`](hooks/pr-cycle-hook/) | hook | `personal` | 0.2.0 | PreToolUse(Bash) router — appends merge + worktree/branch cleanup to `gh pr create` (commons @D g47; pr-cycle split); 0.2.0 adds a deletion-sanity gate that DENIES the auto-merge on a mass-deletion outlier (D>50 or deletions >= 10x additions — anima #1105's 35190-file stale-base regression) |
 | [`project-tape`](hooks/project-tape/) | hook | `personal` | 0.2.1 | PreCompact + PostCompact hook |
 | [`s9-guard`](hooks/s9-guard/) | hook | `personal` | 0.1.0 | PreToolUse(Bash) advisory hook for load-assessment commands (project.tape @D s9) |
+| [`askq-text`](hooks/askq-text/) | hook | `personal` | 0.1.0 | PreToolUse(AskUserQuestion) → plain-text chat redirect, in hexa-lang (`_askq_text.hexa`, via `hexa run`). DENIES the arrow-key option-tree box and instructs the model to re-ask the SAME question as plain chat text (options listed inline, recommendation marked, free-form answer accepted). A FORM redirect, not anti-punt — distinct from the `bypass` skill; plan approval keeps ExitPlanMode. Unconditional, NO opt-out (@D s11) |
 | [`ship`](skills/ship/) | command + skill | `personal` | 0.3.2 | Atomic ship tail for sidecar plugin changes |
 | [`sidecar-auto-sync`](hooks/sidecar-auto-sync/) | hook | `personal` | 0.2.0 | SessionStart hook that runs `sidecar sync` once per Claude Code session, implemented in hexa-lang (`_sidecar_auto_sync… |
 | [`sidecar-lint`](hooks/sidecar-lint/) | hook | `personal` | 0.7.0 | PreToolUse(Bash) auto-lint that fires on `git commit` in any Claude Code marketplace plugin pack (any repo with .claud… |

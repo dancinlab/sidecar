@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — lockstep + roster 정합: README sidecar-lint 버전 + DOMAINS.tape
+
+🧹 직전 ship들의 잔여 정합 2건.
+
+- **README 버전 정정** — 플러그인 카탈로그의 `sidecar-lint` 행이 `0.7.1`로 stale → `0.8.1` + 설명을 allowlist(top-level-dir) 체크로 갱신 (g22 lockstep 누락분 보정; lint check(3)은 marketplace↔plugin.json만 봐서 README prose는 미검출이었음).
+- **DOMAINS.tape roster sync** — `POOL-OFFLOAD`만 등록돼 있던 roster에 디스크에 존재하는 도메인쌍 `DESIGN`·`GH-STACK`·`INBOX`·`SIDECAR` 등록 (`/domain list` ghost 경고 해소).
+
 ## 2026-05-29 — STRUCTURE.md 신설: 허용 구성 명시 spec (s16/lint 연결)
 
 🗺️ 루트 `STRUCTURE.md` 추가 — sidecar 저장소의 허용 구성을 사람이 읽는 지도로 명시. top-level allowlist 표(concept dir `hooks`·`commands`·`skills`·`agents` + `bin`·`.github`·`.claude-plugin`) · 도메인쌍 관례(`<NAME>.md`+`<NAME>.log.md` + `DOMAINS.tape` roster) · where-goes 표 · 금지 종류별 버킷 · 정전 ASCII 트리. `@D s16`(규칙) ↔ `sidecar-lint` check (8) allowlist(강제) 를 단방향 cross-reference 하므로 project.tape re-sign 불필요. 범위 = sidecar-LOCAL (형제 저장소 `docs/`·`state/` 사용은 정당). README Layout 에 포인터 추가. 플러그인 버전 bump 없음(저장소 구조 문서).

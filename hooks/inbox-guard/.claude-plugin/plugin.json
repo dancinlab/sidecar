@@ -1,9 +1,0 @@
-{
-  "name": "inbox-guard",
-  "description": "PreToolUse(Write|Edit|NotebookEdit) hard block for any write into an `inbox/` folder. The canonical cross-project handoff SSOT is `INBOX.md` (single markdown file at repo root, `- [ ]` open items + sibling `INBOX.log.md` for resolved history) — agents repeatedly created `inbox/<kind>/<slug>.md` (notes / patches / poc / rfc_drafts) folder entries in parallel, fragmenting the handoff state across many files instead of accumulating in the single SSOT. Any file_path containing `/inbox/` as a directory segment is denied with a redirecting message pointing to INBOX.md. No opt-out by design (commons @D s11 — guards unconditional, gated only on the real precondition). Bare `INBOX.md` / `INBOX.log.md` files are NOT caught (no `/inbox/` segment); only writes INTO an `inbox/` directory are refused. Companion: the legacy `inbox` skill that scaffolded `inbox/<kind>/<slug>.md` is retired in the same cycle.",
-  "version": "0.1.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "hook", "guard", "inbox", "ssot", "hexa"]
-}

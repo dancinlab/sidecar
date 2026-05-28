@@ -1,0 +1,9 @@
+{
+  "name": "pods-route",
+  "description": "PreToolUse(Bash) auto-register: when a Bash command launches a pod via `hexa cloud nohup` or `hexa cloud fire` WITHOUT a `--register` flag, the hook transparently rewrites the command via `updatedInput` to APPEND `--register` — so the launched pod/job is auto-written to the cwd `./pods.json` per-project manifest (the /system control-tower SSOT). Idempotent: a command that already carries `--register` (with or without a `<jid>` argument) passes through untouched. Pair feature with commons hook 0.12.0 `_pods_snapshot()` which injects the live manifest each turn — Layer 1 makes the agent SEE the SSOT, Layer 2 makes ad-hoc pod launches AUTO-LAND in the SSOT. Closes the canonical agent-blindspot: pods.json is cwd-local + had no per-turn surface, so the agent forgot it existed and skipped `--register`, leaving pods un-tracked + watch/harvest/auto-redispatch (`/system` autonomy) silently incomplete. Scope is narrow on purpose — only the pod-creating verbs `nohup` and `fire` are rewritten (`cloud run` is synchronous · `cloud rent` writes the global registry not this manifest · other verbs already operate on tracked pods). Pool-route patterns reused for transport: hexa-native (`_pods_route.hexa` invoked via `hexa run`), env-prefix + wrapper-stripped tokenization, `updatedInput` emission. NO opt-out (sidecar @D s11) — the whitelist IS the opt-in (only nohup/fire rewrite; everything else passes).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "pods", "cloud", "manifest", "hexa"]
+}

@@ -51,6 +51,7 @@
     "verify-guard": "hexa",
     "cloud-guard": "hexa",
     "pod-monitor": "hexa",
+    "pods-route": "hexa",
     "atlas": "hexa",
     "kick": "hexa",
     "verify": "hexa",

@@ -102,6 +102,65 @@ fn _roster_snapshot() -> string {
     return "# pool (~/.pool/pool.json · `pool on <host> <cmd>` · g9): " + parts.join(" · ") + "\n\n"
 }
 
+// Append a live cwd `./pods.json` snapshot to the injected context — one
+// line per active job, so the agent ALWAYS sees the per-project pod/job
+// manifest without running `hexa cloud pods` first. The manifest is the
+// /system control-tower SSOT (per-project, cwd-local; distinct from the
+// global $HOME/.hexa-cloud/pods.jsonl billing/orphan registry). Without
+// this snapshot the agent has historically been blind to the manifest
+// and forgotten to register pods on launch — see Layer 2 (`pods-route`
+// hook) for the matching auto-`--register` enforcement.
+//
+// File present + has jobs → enumerate `jobs{}` map as `<jid>[<pod>,<stage>,<verdict>]`.
+// File present, empty jobs → blank line (no clutter).
+// File absent → 1-line hint pointing at `hexa cloud nohup … --register`
+// so a new project starts tracking without having to recall the verb.
+//
+// PWD-based cwd lookup. If PWD is unset (rare), skip silently.
+fn _pods_snapshot() -> string {
+    let pwd = env_var("PWD")
+    if pwd == "" { return "" }
+    let path = pwd + "/pods.json"
+    let raw = _read_file_safe(path)
+    if raw == "" {
+        // Absent: emit a one-line hint so the agent knows the SSOT exists
+        // and how to start tracking. Skip on $HOME itself (no project), so
+        // top-level shells don't churn the hint.
+        let home = env_var("HOME")
+        if pwd == home { return "" }
+        return "# pods (cwd ./pods.json absent — `hexa cloud nohup … --register` to start per-project pod/job tracking · /system SSOT)\n\n"
+    }
+    let mut cfg = json_parse("{}")
+    try { cfg = json_parse(raw) } catch e { return "" }
+    if type_of(cfg) != "map" { return "" }
+    if !has_key(cfg, "jobs") { return "" }
+    let jobs = cfg["jobs"]
+    if type_of(jobs) != "map" { return "" }
+    let jids = keys(jobs)
+    if len(jids) == 0 { return "" }
+
+    // Format mirrors the pool roster line — one CSV-ish summary that fits
+    // the 4095 B hexa stdout cap. Per-job: `<jid>[<pod>,<stage>,<verdict>]`.
+    let mut parts = []
+    let mut i = 0
+    while i < len(jids) {
+        let jid = jids[i]
+        let j = jobs[jid]
+        if type_of(j) == "map" {
+            let mut pod = "?"
+            if has_key(j, "pod") { if type_of(j["pod"]) == "string" { pod = j["pod"] } }
+            let mut stage = "?"
+            if has_key(j, "stage") { if type_of(j["stage"]) == "string" { stage = j["stage"] } }
+            let mut verdict = "?"
+            if has_key(j, "verdict") { if type_of(j["verdict"]) == "string" { verdict = j["verdict"] } }
+            parts.push(jid + "[" + pod + "," + stage + "," + verdict + "]")
+        }
+        i = i + 1
+    }
+    if len(parts) == 0 { return "" }
+    return "# pods (cwd ./pods.json · /system SSOT · per-project): " + parts.join(" · ") + "\n\n"
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -114,11 +173,13 @@ fn main() {
 
     let root = env_var("CLAUDE_PLUGIN_ROOT")
     let body = _read_file_safe(root + "/commons.tape")
-    // roster snapshot is PREPENDED so the live pool host lineup leads the
-    // payload. On SessionStart only, the COMMANDS.md catalog is appended
-    // (once per session, not every turn) so the agent sees the full
-    // cross-project slash-command surface and can use it autonomously.
-    let mut full = _roster_snapshot() + body
+    // Snapshots are PREPENDED so the live state leads the payload:
+    //   1. pool roster   (~/.pool/pool.json)         — host lineup
+    //   2. pods manifest (cwd ./pods.json)           — per-project jobs
+    // On SessionStart only, the COMMANDS.md catalog is appended (once per
+    // session, not every turn) so the agent sees the full cross-project
+    // slash-command surface and can use it autonomously.
+    let mut full = _roster_snapshot() + _pods_snapshot() + body
     if event == "SessionStart" {
         let cat = _read_file_safe(root + "/COMMANDS.md")
         if cat != "" { full = full + "\n\n" + cat }

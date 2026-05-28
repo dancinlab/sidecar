@@ -1,0 +1,303 @@
+// _pods_route.hexa — PreToolUse(Bash) auto-register for pod launches.
+//
+// When a Bash command launches a pod via the cwd-local /system manifest
+// (`hexa cloud nohup` or `hexa cloud fire`) but does NOT carry the
+// `--register` flag, this hook rewrites the command via `updatedInput`
+// to APPEND `--register` immediately before the post-argv `--` separator.
+// The rewritten command auto-writes a row to the cwd `./pods.json`
+// manifest on success (ghost-pod L2-auto · cloud_cli.hexa internal).
+//
+// Idempotent: a command that already carries `--register` (with or
+// without a `<jid>` argument) passes through untouched.
+//
+// Scope (intentionally narrow — keeps the rewrite predictable):
+//   * `hexa cloud nohup` — bg argv, prints remote pid           → rewrite
+//   * `hexa cloud fire`  — atomic nohup + auto-log + Monitor    → rewrite
+//
+//   * `hexa cloud run`   — synchronous, completes before return → skip
+//                          (no long-running pod to track)
+//   * `hexa cloud rent`  — provisions pod, writes the GLOBAL
+//                          ~/.hexa-cloud/pods.jsonl registry    → skip
+//                          (this hook only manages the per-project manifest)
+//   * any other verb     — operates on already-tracked state    → skip
+//
+// Companion: hooks/commons 0.12.0 _pods_snapshot() — Layer 1 injection
+// of the live manifest every turn so the agent SEES the SSOT. This hook
+// is Layer 2 — auto-LAND launches in the SSOT even if the agent forgets.
+//
+// NO opt-out (sidecar @D s11). The narrow `nohup`/`fire`-only scope IS the
+// safety guard — every other Bash command, every other hexa subverb, every
+// non-cloud invocation passes through verbatim. A real precondition (the
+// command names a pod-creating verb without --register), not a switch.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+// `_json_str(s)` — minimal JSON string encoder (quote + backslash + control).
+// Mirrors pool-route's _json_str so the emitted hookSpecificOutput parses.
+fn _json_str(s: string) -> string {
+    let mut out = "\""
+    let mut i = 0
+    let n = len(s)
+    while i < n {
+        let c = s.substring(i, i + 1)
+        if c == "\"" {
+            out = out + "\\\""
+        } else if c == "\\" {
+            out = out + "\\\\"
+        } else if c == "\n" {
+            out = out + "\\n"
+        } else if c == "\r" {
+            out = out + "\\r"
+        } else if c == "\t" {
+            out = out + "\\t"
+        } else {
+            out = out + c
+        }
+        i = i + 1
+    }
+    return out + "\""
+}
+
+// `_tokenize(cmd)` — whitespace-split the cmd into argv-ish tokens. This
+// is INTENTIONALLY simple: pod-launch invocations come from the agent in
+// a canonical `hexa cloud nohup <host> <log> [flags] -- <argv...>` shape,
+// so a full shell parser is overkill. Quoted strings inside `<argv>` are
+// preserved by ECHO copying back the original substring around the
+// rewrite point — we never join tokens back together, we splice into the
+// raw command string at a discovered offset.
+fn _tokenize(cmd: string) -> array {
+    let mut toks = []
+    let mut cur = ""
+    let mut i = 0
+    let n = len(cmd)
+    while i < n {
+        let c = cmd.substring(i, i + 1)
+        if c == " " || c == "\t" || c == "\n" {
+            if len(cur) > 0 { toks.push(cur); cur = "" }
+        } else {
+            cur = cur + c
+        }
+        i = i + 1
+    }
+    if len(cur) > 0 { toks.push(cur) }
+    return toks
+}
+
+// `_strip_env_prefix(toks)` — drop leading `IDENT=value` env-var prefix
+// tokens (POSIX env-prefix form). Mirrors pool-route's hardening so an
+// `FOO=bar hexa cloud nohup ...` invocation is still classified as a
+// pod-launch. Returns the index of the first non-env-prefix token.
+fn _strip_env_prefix(toks: array) -> int {
+    let mut i = 0
+    let n = len(toks)
+    while i < n {
+        let t = toks[i]
+        let eq = t.index_of("=")
+        // env-prefix shape: IDENT=value where IDENT is non-empty + has no
+        // shell metacharacter. A `=` at position 0 or absent means not env.
+        if eq <= 0 { return i }
+        // IDENT must be all [A-Za-z0-9_] — bail out conservatively otherwise.
+        let mut k = 0
+        let mut ok = true
+        while k < eq {
+            let ch = t.substring(k, k + 1)
+            let is_alpha = (ch >= "A" && ch <= "Z") || (ch >= "a" && ch <= "z")
+            let is_digit = ch >= "0" && ch <= "9"
+            let is_under = ch == "_"
+            if !(is_alpha || is_digit || is_under) { ok = false; k = eq }
+            k = k + 1
+        }
+        if !ok { return i }
+        i = i + 1
+    }
+    return i
+}
+
+// `_strip_wrappers(toks, start)` — drop leading wrappers (`env`, `exec`,
+// `nohup`, `nice`, `command`, `sudo`, `stdbuf`, `ionice`, `timeout`) so a
+// wrapped `nice -n 10 hexa cloud nohup ...` is still classified. Returns
+// the index of the real first token (or len(toks) if nothing remains).
+// NOTE: this is a conservative scan — option-args on the wrapper are
+// best-effort (per-wrapper option-arg awareness is in pool-route; for
+// pods-route the agent rarely wraps cloud launches, so we keep it simple).
+fn _strip_wrappers(toks: array, start: int) -> int {
+    let mut i = start
+    let n = len(toks)
+    while i < n {
+        let t = toks[i]
+        if t == "env" || t == "exec" || t == "nohup" || t == "nice" ||
+           t == "command" || t == "sudo" || t == "stdbuf" || t == "ionice" ||
+           t == "timeout" {
+            i = i + 1
+            // skip option args that begin with `-` (best-effort)
+            while i < n {
+                let s = toks[i]
+                if len(s) > 0 && s.substring(0, 1) == "-" { i = i + 1 } else { i = n + 1 }
+            }
+            if i == n + 1 { i = i - 1 } else { return i }
+        } else {
+            return i
+        }
+    }
+    return i
+}
+
+// Strip a leading `\` from the first real token (e.g. `\hexa` shell escape).
+fn _unescape_first(toks: array, idx: int) -> string {
+    if idx >= len(toks) { return "" }
+    let t = toks[idx]
+    if len(t) > 1 && t.substring(0, 1) == "\\" { return t.substring(1, len(t)) }
+    return t
+}
+
+// `_basename(p)` — strip directory components for first-token classification.
+fn _basename(p: string) -> string {
+    let mut i = len(p) - 1
+    while i >= 0 {
+        if p.substring(i, i + 1) == "/" { return p.substring(i + 1, len(p)) }
+        i = i - 1
+    }
+    return p
+}
+
+// `_is_pod_launch(toks, start)` — does the post-prefix, post-wrapper token
+// sequence at `start` match `hexa cloud (nohup|fire)`? Allow `hexa.real`,
+// `hexac`, `hexadrv`, `hxv2` variants as the real verb head (pool-route
+// HEXA whitelist set), but the SUBverb pair must be `cloud (nohup|fire)`.
+fn _is_pod_launch(toks: array, start: int) -> bool {
+    if start + 2 >= len(toks) { return false }
+    let first = _basename(_unescape_first(toks, start))
+    let is_hexa = first == "hexa" || first == "hexa.real" || first == "hexac" ||
+                  first == "hexadrv" || first == "hxv2"
+    if !is_hexa { return false }
+    if toks[start + 1] != "cloud" { return false }
+    let sub = toks[start + 2]
+    return sub == "nohup" || sub == "fire"
+}
+
+// `_has_register_flag(toks, start)` — scan tokens from `start` onward for
+// `--register` (with or without a `<jid>` value). Stop at the post-argv
+// `--` separator: anything after that is the REMOTE argv, not a hook flag,
+// so a `--register` literal that happens to appear inside the remote argv
+// (extremely unlikely but defensible) is NOT treated as the flag. Returns
+// true only if a real pre-`--` `--register` is present.
+fn _has_register_flag(toks: array, start: int) -> bool {
+    let mut i = start
+    let n = len(toks)
+    while i < n {
+        let t = toks[i]
+        if t == "--" { return false }
+        if t == "--register" { return true }
+        // also catch the `--register=<jid>` form (single-token assignment)
+        if len(t) > 11 && t.substring(0, 11) == "--register=" { return true }
+        i = i + 1
+    }
+    // no `--` seen → still scanned every token; return false (no flag found)
+    return false
+}
+
+// `_find_separator(toks, start)` — index of the first standalone `--`
+// token at/after `start`, or -1 if absent.
+fn _find_separator(toks: array, start: int) -> int {
+    let mut i = start
+    let n = len(toks)
+    while i < n {
+        if toks[i] == "--" { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+// `_rebuild(toks, insert_at, insert_tok)` — splice `insert_tok` into the
+// token list at position `insert_at` (shifting tail right) and re-join
+// with single spaces. The inserted `--register` is bare (no jid arg) so
+// the cloud verb's bare-form auto-jid (`auto-<ts>-<host-short>`) is used.
+fn _rebuild(toks: array, insert_at: int, insert_tok: string) -> string {
+    let mut out_parts = []
+    let mut i = 0
+    let n = len(toks)
+    while i < n {
+        if i == insert_at { out_parts.push(insert_tok) }
+        out_parts.push(toks[i])
+        i = i + 1
+    }
+    if insert_at >= n { out_parts.push(insert_tok) }
+    return out_parts.join(" ")
+}
+
+// `_emit_rewrite(ti, new_cmd, note)` — emit the updatedInput rewrite.
+// Mirrors pool-route's _emit so the JSON shape is identical.
+fn _emit_rewrite(ti: map, new_cmd: string, note: string) {
+    let ks = keys(ti)
+    let mut parts = []
+    let mut i = 0
+    while i < len(ks) {
+        let k = ks[i]
+        if k == "command" {
+            parts.push(_json_str(k) + ":" + _json_str(new_cmd))
+        } else {
+            parts.push(_json_str(k) + ":" + json_stringify(ti[k]))
+        }
+        i = i + 1
+    }
+    let updated = "{" + parts.join(",") + "}"
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"allow\",\"updatedInput\":" + updated + ",\"additionalContext\":" + _json_str(note) + "}}"
+    println(out)
+    exit(0)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { exit(0) }
+    if type_of(payload) != "map" { exit(0) }
+
+    // Only act on PreToolUse(Bash); other events / tools pass through.
+    let event = _event_of(payload)
+    if event != "PreToolUse" { _allow() }
+    if !has_key(payload, "tool_input") { _allow() }
+    let ti = payload["tool_input"]
+    if type_of(ti) != "map" { _allow() }
+    if !has_key(ti, "command") { _allow() }
+    let cmd = ti["command"]
+    if type_of(cmd) != "string" { _allow() }
+    if cmd == "" { _allow() }
+
+    // Fast path: cheap substring presence check first. The full classifier
+    // only fires on commands that mention BOTH `cloud` and one of
+    // `nohup`/`fire`. Saves us the tokenize cost on every Bash invocation.
+    if cmd.index_of("cloud") < 0 { _allow() }
+    if cmd.index_of("nohup") < 0 && cmd.index_of("fire") < 0 { _allow() }
+
+    let toks = _tokenize(cmd)
+    if len(toks) < 3 { _allow() }
+
+    let i_after_env = _strip_env_prefix(toks)
+    let i_after_wrap = _strip_wrappers(toks, i_after_env)
+    if !_is_pod_launch(toks, i_after_wrap) { _allow() }
+
+    // Already carries --register → idempotent no-op.
+    if _has_register_flag(toks, i_after_wrap) { _allow() }
+
+    // Find the post-argv `--` separator. Insert `--register` IMMEDIATELY
+    // before it; if absent (a `cloud nohup` form without remote argv —
+    // unusual but possible), append at end so the cloud verb still parses
+    // it as a flag, not as a positional.
+    let sep = _find_separator(toks, i_after_wrap)
+    let insert_at = if sep >= 0 { sep } else { len(toks) }
+    let new_cmd = _rebuild(toks, insert_at, "--register")
+    let note = "pods-route: auto-injected `--register` (cwd ./pods.json · /system SSOT). Use `--register <jid>` explicitly to override the auto-generated job id."
+    _emit_rewrite(ti, new_cmd, note)
+}

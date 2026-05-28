@@ -1,7 +1,7 @@
 {
   "name": "commons",
-  "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape + a live `pool` roster snapshot (~/.pool/pool.json); UserPromptSubmit re-injects every turn so the layer never fades from context. 0.11.0 (2026-05-28) drops the per-host `enabled` field + `[os,on|off]` rendering from the roster snapshot — every roster host is treated as always-on; SessionStart now renders `name[os]` per host, pi5-akida exclusion is handled downstream by pool-route's name-substring akida match. Companion ships: pool 0.8.9 + pool-route 0.12.0 (same always-on roster theme).",
-  "version": "0.11.0",
+  "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape + a live `pool` roster snapshot (~/.pool/pool.json); UserPromptSubmit re-injects every turn so the layer never fades from context. 0.12.0 (2026-05-28) adds `_pods_snapshot()` — every turn the agent now sees a one-line summary of the cwd `./pods.json` per-project pod/job manifest (the /system control-tower SSOT), or a hint if the file is absent (`hexa cloud nohup … --register` to start). Closes the canonical agent blindspot where pods.json was cwd-local with no per-turn surface, so the agent forgot it existed and skipped registration; pair feature with the new `pods-route` hook (auto-injects `--register` on `hexa cloud nohup`/`fire`). 0.11.0 (2026-05-28) drops the per-host `enabled` field + `[os,on|off]` rendering from the roster snapshot — every roster host is treated as always-on; SessionStart now renders `name[os]` per host, pi5-akida exclusion is handled downstream by pool-route's name-substring akida match. Companion ships: pool 0.8.9 + pool-route 0.12.0 (same always-on roster theme).",
+  "version": "0.12.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

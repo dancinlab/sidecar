@@ -111,54 +111,77 @@ fn _roster_snapshot() -> string {
 // and forgotten to register pods on launch — see Layer 2 (`pods-route`
 // hook) for the matching auto-`--register` enforcement.
 //
-// File present + has jobs → enumerate `jobs{}` map as `<jid>[<pod>,<stage>,<verdict>]`.
-// File present, empty jobs → blank line (no clutter).
-// File absent → 1-line hint pointing at `hexa cloud nohup … --register`
-// so a new project starts tracking without having to recall the verb.
-//
-// PWD-based cwd lookup. If PWD is unset (rare), skip silently.
+// 0.13.0 (CLOUD M10) — reads the GLOBAL M5 registry `~/.hx/cloud/active-pods.json`
+// (cwd-independent · cost-bearing · always-relevant) instead of the cwd-local
+// `./pods.json`. The M5 registry (hexa-lang `pod_registry.hexa`) is the canonical
+// "what pods are alive + billing right now" SSOT — populated by `cloud rent`/`rm`.
+// Schema: {"version":N,"pods":[{id,provider,status,ttl_sec,max_cost_usd,
+// cumulative_cost_usd,...}]}. Absent/empty → "" (no rented pods = normal idle,
+// no clutter). Present → `<id>[<provider>,<status>]` + `$<cost>` when cumulative
+// spend > 0, so the agent always sees live billing without `hexa cloud list`.
 fn _pods_snapshot() -> string {
-    let pwd = env_var("PWD")
-    if pwd == "" { return "" }
-    let path = pwd + "/pods.json"
-    let raw = _read_file_safe(path)
-    if raw == "" {
-        // Absent: emit a one-line hint so the agent knows the SSOT exists
-        // and how to start tracking. Skip on $HOME itself (no project), so
-        // top-level shells don't churn the hint.
-        let home = env_var("HOME")
-        if pwd == home { return "" }
-        return "# pods (cwd ./pods.json absent — `hexa cloud nohup … --register` to start per-project pod/job tracking · /system SSOT)\n\n"
-    }
+    let home = env_var("HOME")
+    if home == "" { return "" }
+    let raw = _read_file_safe(home + "/.hx/cloud/active-pods.json")
+    if raw == "" { return "" }
     let mut cfg = json_parse("{}")
     try { cfg = json_parse(raw) } catch e { return "" }
     if type_of(cfg) != "map" { return "" }
-    if !has_key(cfg, "jobs") { return "" }
-    let jobs = cfg["jobs"]
-    if type_of(jobs) != "map" { return "" }
-    let jids = keys(jobs)
-    if len(jids) == 0 { return "" }
+    if !has_key(cfg, "pods") { return "" }
+    let pods = cfg["pods"]
+    if type_of(pods) != "array" { return "" }
+    if len(pods) == 0 { return "" }
 
-    // Format mirrors the pool roster line — one CSV-ish summary that fits
-    // the 4095 B hexa stdout cap. Per-job: `<jid>[<pod>,<stage>,<verdict>]`.
     let mut parts = []
     let mut i = 0
-    while i < len(jids) {
-        let jid = jids[i]
-        let j = jobs[jid]
-        if type_of(j) == "map" {
-            let mut pod = "?"
-            if has_key(j, "pod") { if type_of(j["pod"]) == "string" { pod = j["pod"] } }
-            let mut stage = "?"
-            if has_key(j, "stage") { if type_of(j["stage"]) == "string" { stage = j["stage"] } }
-            let mut verdict = "?"
-            if has_key(j, "verdict") { if type_of(j["verdict"]) == "string" { verdict = j["verdict"] } }
-            parts.push(jid + "[" + pod + "," + stage + "," + verdict + "]")
+    while i < len(pods) {
+        let p = pods[i]
+        if type_of(p) == "map" {
+            let mut id = "?"
+            if has_key(p, "id") { if type_of(p["id"]) == "string" { id = p["id"] } }
+            let mut prov = "?"
+            if has_key(p, "provider") { if type_of(p["provider"]) == "string" { prov = p["provider"] } }
+            let mut status = "?"
+            if has_key(p, "status") { if type_of(p["status"]) == "string" { status = p["status"] } }
+            let mut tail = ""
+            // cost flag — surface cumulative spend so a forgotten billing pod is visible
+            if has_key(p, "cumulative_cost_usd") {
+                let c = p["cumulative_cost_usd"]
+                if type_of(c) == "float" { if c > 0.0 { tail = tail + ",$" + to_string(c) } }
+                if type_of(c) == "int" { if c > 0 { tail = tail + ",$" + to_string(c) } }
+            }
+            parts.push(id + "[" + prov + "," + status + tail + "]")
         }
         i = i + 1
     }
     if len(parts) == 0 { return "" }
-    return "# pods (cwd ./pods.json · /system SSOT · per-project): " + parts.join(" · ") + "\n\n"
+    return "# pods (~/.hx/cloud/active-pods.json · /system M5 registry · rented): " + parts.join(" · ") + "\n\n"
+}
+
+// 0.13.0 (CLOUD M10) — providers catalog one-liner from the M8 SSOT
+// `~/.hx/cloud/providers.json` (the `cloud providers` decision reference).
+// Present → `NN providers · cloud providers list`. Absent → "" (no clutter).
+fn _providers_snapshot() -> string {
+    let home = env_var("HOME")
+    if home == "" { return "" }
+    let raw = _read_file_safe(home + "/.hx/cloud/providers.json")
+    if raw == "" { return "" }
+    let mut cfg = json_parse("{}")
+    try { cfg = json_parse(raw) } catch e { return "" }
+    if type_of(cfg) != "map" { return "" }
+    if !has_key(cfg, "providers") { return "" }
+    let provs = cfg["providers"]
+    if type_of(provs) != "map" { return "" }
+    let tiers = keys(provs)
+    let mut total = 0
+    let mut ti = 0
+    while ti < len(tiers) {
+        let arr = provs[tiers[ti]]
+        if type_of(arr) == "array" { total = total + len(arr) }
+        ti = ti + 1
+    }
+    if total == 0 { return "" }
+    return "# providers (~/.hx/cloud/providers.json · M8 카탈로그 · " + to_string(total) + "): `cloud providers list|fit|recommend`\n\n"
 }
 
 fn main() {
@@ -174,12 +197,13 @@ fn main() {
     let root = env_var("CLAUDE_PLUGIN_ROOT")
     let body = _read_file_safe(root + "/commons.tape")
     // Snapshots are PREPENDED so the live state leads the payload:
-    //   1. pool roster   (~/.pool/pool.json)         — host lineup
-    //   2. pods manifest (cwd ./pods.json)           — per-project jobs
+    //   1. pool roster    (~/.pool/pool.json)              — host lineup
+    //   2. pods registry  (~/.hx/cloud/active-pods.json)   — rented pods (M5 · billing)
+    //   3. providers      (~/.hx/cloud/providers.json)     — catalog (M8 · decision ref)
     // On SessionStart only, the COMMANDS.md catalog is appended (once per
     // session, not every turn) so the agent sees the full cross-project
     // slash-command surface and can use it autonomously.
-    let mut full = _roster_snapshot() + _pods_snapshot() + body
+    let mut full = _roster_snapshot() + _pods_snapshot() + _providers_snapshot() + body
     if event == "SessionStart" {
         let cat = _read_file_safe(root + "/COMMANDS.md")
         if cat != "" { full = full + "\n\n" + cat }

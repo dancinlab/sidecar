@@ -4,11 +4,11 @@
 // session window — last 6h) that assert a 🔵 / 🟢 verdict. Measure the fraction
 // backed by a repo-root `.verdicts/<slug>/` holding >=1 non-empty `*.txt`.
 // If >=1 such asserting H exists AND the backing ratio is 0% (all self-judged),
-// emit an ADVISORY (non-blocking additionalContext) Stop reason:
+// emit an ADVISORY (non-blocking `systemMessage`) Stop reason:
 //   "loop self-judging only · STOP & report (g73)".
 //
 // NEVER a hard stop-block — a hard block could trap an autonomous loop. This
-// hook emits additionalContext only; it does NOT set `decision: block`.
+// hook emits `systemMessage` only; it does NOT set `decision: block`.
 //
 // NO opt-out by design (commons @D s11). Gated only on real preconditions:
 // missing payload skip, no repo skip, no recent asserting-H skip, any backing
@@ -45,9 +45,12 @@ fn _json_escape(s: string) -> string {
     return parts.join("")
 }
 
-// Non-blocking advisory — additionalContext only, NO decision:block.
+// Non-blocking advisory — top-level `systemMessage` only, NO decision:block.
+// Stop-event JSON does NOT accept `hookSpecificOutput.additionalContext`
+// (that field is UserPromptSubmit/PostToolUse-only); `systemMessage` surfaces
+// the advisory to the user without blocking the stop.
 fn _advise(text: string) {
-    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"additionalContext\":" + _json_escape(text) + "}}"
+    let payload = "{\"systemMessage\":" + _json_escape(text) + "}"
     println(payload)
     exit(0)
 }

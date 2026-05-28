@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — sidecar-lint 0.8.1: top-level 체크 = allowlist (rename-proof) + 도메인 안내
+
+🔒 0.8.0의 name-blocklist(`docs`·`state`)는 폴더명만 바꾸면(`docs`→`documentation`) 빠져나가는 약점이 있었다. **allowlist로 전환** — 추적되는 top-level 디렉터리 중 concept dir(`hooks`·`commands`·`skills`·`agents`)·`bin`·`.github`·`.claude-plugin`이 **아닌 모든 것**을 flag. 이름 바꿔치기로 못 빠져나간다.
+
+- advisory 메시지가 명시적으로 안내: "이 폴더 내용을 **소속 도메인/플러그인 밑으로 옮기세요** (by-owner). 새 top-level 은 concept dir·plugin·루트 reference doc(.md)만." → 도메인쌍 `<NAME>.md`+`<NAME>.log.md` 관례로 유도.
+- 추적(`git ls-files`) 기반이라 gitignored 런타임/스크래치(`state/`·`drafts/`·`build/`)는 여전히 false-fire 안 함.
+- project.tape `@D s16` dont 예시도 `drafts/`·`audit/` 추가(allowlist가 본 규칙이고 이름 목록은 예시).
+
 ## 2026-05-29 — git-guard 0.7.0: 상류(UPSTREAM) stale-base advisory — 브랜치 생성시점 + SessionStart
 
 🧭 git-guard 0.6.0은 stale base를 **하류**에서만(push·merge 직전) 잡았다. 정작 stale가 시작되는 두 지점 — 브랜치/워크트리를 자르는 순간, 그리고 세션 시작 시 로컬 `main`이 origin 뒤로 밀린 상태 — 은 무방비였다. 이번 세션에서도 로컬 `main`이 da6755e에 멈춰 있는 사이 백그라운드 에이전트가 #221/#222를 origin에 머지해 origin/main이 b83130c로 2커밋 앞서 있었다(공유 워킹트리 드리프트). 두 advisory 레이어를 추가해 stale base를 **쓰기 전에** 표면화한다.

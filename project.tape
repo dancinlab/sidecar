@@ -72,5 +72,5 @@
   do   = "store artifact WITH its owner — domain pair `<NAME>.md`+`.log.md` · plugin assets in plugin dir"
   do   = "reference docs at root (`*_POLICY.md`·`LIMIT.md` style) — not a `docs/` bucket"
   do   = "runtime/ephemeral state OUTSIDE the repo — `$CLAUDE_PLUGIN_DATA`·`$HOME/.sidecar/`·hx (s3)"
-  dont = "add a top-level by-KIND source bucket (`docs/`·`state/`) — follow the domain not the type"
+  dont = "add a top-level by-KIND source bucket (`docs/`·`state/`·`drafts/`·`audit/`) — domain not type"
   dont = "top-level shape beyond 3 concept dirs (hook·command·skill) + root reference docs"

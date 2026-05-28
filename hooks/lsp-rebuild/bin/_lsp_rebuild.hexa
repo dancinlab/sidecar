@@ -14,8 +14,12 @@
 //
 // Background + non-blocking by design: the build (~1s, non-heavy) is detached via
 // `nohup … &` so PostToolUse returns immediately; output appends to
-// ~/.sidecar/lsp-rebuild.log. Fires ONLY on the `*/lsp/*_lsp.hexa` source pattern
-// (project.tape @D s11: gate on a real precondition, no opt-out switch).
+// ~/.sidecar/lsp-rebuild.log. Fires on the generic `*/lsp/*_lsp.hexa` source
+// pattern (tape/n6/kosmos/hxc), AND on hexa-lang's own LSP — which is NOT named
+// `*_lsp.hexa` (`<repo>/self/lsp.hexa` monolith + `<repo>/self/lsp/*.hexa`
+// submodules) — rebuilt via the repo's 3-stage orchestrator
+// `tool/build_hexa_lsp.hexa` → `<repo>/bin/hexa-lsp`.
+// (project.tape @D s11: gate on a real precondition, no opt-out switch.)
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -86,6 +90,22 @@ fn _basename(path: string) -> string {
     return path.substring(i + 1, len(path))
 }
 
+// hexa-lang's own LSP isn't named `*_lsp.hexa`: the canonical monolith is
+// `<repo>/self/lsp.hexa` and its submodules live under `<repo>/self/lsp/*.hexa`.
+// Returns the repo root for either shape, else "" (not a hexa-lang LSP source).
+fn _hexa_lsp_repo(path: string) -> string {
+    let mono = "/self/lsp.hexa"
+    if _ends_with(path, mono) {
+        return path.substring(0, len(path) - len(mono))
+    }
+    let subdir = "/self/lsp/"
+    let p = path.index_of(subdir)
+    if p >= 0 && _ends_with(path, ".hexa") {
+        return path.substring(0, p)
+    }
+    return ""
+}
+
 fn main() {
     let body = _read_stdin()
     if body == "" { _allow() }
@@ -96,7 +116,20 @@ fn main() {
     let file_path = _json_str_field(body, "file_path")
     if file_path == "" { _allow() }
 
-    // gate: an LSP grammar source — `*/lsp/<lang>_lsp.hexa`
+    // Case A — hexa-lang's own LSP (`self/lsp.hexa` | `self/lsp/*.hexa`). The
+    // prebuilt `<repo>/bin/hexa-lsp` is now stale; rebuild via the 3-stage
+    // orchestrator (module_loader + `hexa build` + initialize smoke). Heavier
+    // than the generic 1-shot build, but still detached so the hook returns now.
+    let hexa_repo = _hexa_lsp_repo(file_path)
+    if hexa_repo != "" {
+        let logf_h = env_var("HOME") + "/.sidecar/lsp-rebuild.log"
+        let orch = hexa_repo + "/tool/build_hexa_lsp.hexa"
+        let cmd_h = "nohup env HEXA_MAC_BUILD_OK=1 HEXA_LANG='" + hexa_repo + "' hexa run '" + orch + "' >> '" + logf_h + "' 2>&1 &"
+        exec(cmd_h)
+        _emit("lsp-rebuild: hexa-lang LSP source changed → rebuilding `" + hexa_repo + "/bin/hexa-lsp` in the background (log: ~/.sidecar/lsp-rebuild.log). Reload the editor / LSP session to pick up the change.")
+    }
+
+    // Case B (generic) — an LSP grammar source `*/lsp/<lang>_lsp.hexa`
     if !_ends_with(file_path, "_lsp.hexa") { _allow() }
     if file_path.index_of("/lsp/") < 0 { _allow() }
 

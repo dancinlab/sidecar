@@ -66,8 +66,6 @@
     "sidecar-lint": "personal",
     "stdlib-ssot-guard": "master",
     "stdlib": "master",
-    "inbox-log-lint": "personal",
-    "inbox-guard": "personal",
     "verdict-gate": "personal",
     "go": "core",
     "roi": "core",
@@ -87,6 +85,9 @@
     "ship": "personal",
     "inject": "personal",
     "imagine": "personal",
-    "system": "personal"
+    "system": "personal",
+    "msg": "personal",
+    "msg-arm": "personal",
+    "msg-mcp": "personal"
   }
 }

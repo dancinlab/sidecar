@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-28 — system 0.9.0: watch 가 `cloud tail` 3-tier exit 위임 (upstream-reflex arc 완성)
+
+✅ 사용자 "완료시 부수효과도 진행". gap1(#1889, 2026-05-28 머지+로컬빌드)이 `hexa cloud tail --until` 에 **failure-first 3-tier exit**(`0=DONE·3=TIMEOUT-RESUMABLE·4=CRASHED·255=transport`, sed `/CRASH/q4;/TIMEOUT/q3;/DONE/q0`)을 추가 — /system 의 caller-side "JOB DONE + 트레일링 STOP 스캔" STOPGAP 이 더는 필요 없음.
+
+- **watch verb → cloud tail exit 위임** — `hexa cloud tail <host> <log> --until '' [conn]` 무장 후 종료코드 분기(3→`next` resume · 4→triage · 0→harvest). hand-rolled marker+STOP grep 대신. trailing-scan 은 **pre-gap1 로컬 바이너리 fallback** 으로만 유지(`cloud tail --help | grep -q '3-tier'` 프로브, 부재 시 fallback + rebuild nudge).
+- **upstream-reflex arc 완성 명문화** — caller-side workaround = 미파일 upstream gap 의 임시 마커, durable CLI fix 랜딩 시 retire. terminal-taxonomy 가 그 template: STOPGAP → 갭1 파일 → cloud tail 3-tier fix(#1889) → watcher 위임. SKILL @D + command watch 섹션 + upstream-reflex 섹션 갱신.
+- bare-marker trap 설명은 "왜 exit-code-aware 인가"의 근거로 보존(회귀 방지 교훈), 단 해결책이 caller-side→upstream 으로 이동.
+- SKILL+command+marketplace+plugin meta 0.8.0→0.9.0 lockstep(g22).
+
 ## 2026-05-28 — lsp-rebuild 0.1.0: hexa-native LSP 문법 변경 자동 재빌드 훅
 
 🔁 "LSP 문법 바꾸면 자동 반영되게" — hexa-native LSP는 문법이 컴파일 바이너리(`~/.local/bin/<lang>-lsp-hexa`)에 박혀 있어, 소스(`<lang>_lsp.hexa`)를 고쳐도 수동 재빌드 전엔 옛 문법이 떴다. (조사 결과: tape만 .py 소스-직실행이라 자동이고, kosmos/n6/hxc·hexa는 prebuilt → 수동.)

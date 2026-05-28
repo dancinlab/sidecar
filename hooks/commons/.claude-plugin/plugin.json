@@ -1,7 +1,7 @@
 {
   "name": "commons",
   "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects a cross-project do/dont layer from commons.tape + a live `pool` roster snapshot (~/.pool/pool.json); UserPromptSubmit re-injects every turn so the layer never fades from context. 0.13.0 (2026-05-29 · CLOUD 도메인 M10) repoints `_pods_snapshot()` from the cwd-local `./pods.json` to the GLOBAL M5 registry `~/.hx/cloud/active-pods.json` (cwd-independent · cost-bearing · canonical \"what pods are alive + billing right now\" SSOT populated by `cloud rent`/`rm`) — renders `<id>[<provider>,<status>]` + `$<cost>` when cumulative spend > 0 so a forgotten billing pod is always visible; AND adds `_providers_snapshot()` reading the M8 catalog `~/.hx/cloud/providers.json` (one-liner `NN providers · cloud providers list|fit|recommend`). Both global ~/.hx/cloud/ → cwd-independent, always visible; absent → silent (no clutter). 0.12.0 (2026-05-28) added `_pods_snapshot()` reading cwd `./pods.json` (superseded by M5 global registry in 0.13.0); pair feature with the `pods-route` hook (auto-injects `--register` on `hexa cloud nohup`/`fire`). 0.11.0 (2026-05-28) drops the per-host `enabled` field + `[os,on|off]` rendering from the roster snapshot — every roster host is treated as always-on; SessionStart now renders `name[os]` per host, pi5-akida exclusion is handled downstream by pool-route's name-substring akida match. Companion ships: pool 0.8.9 + pool-route 0.12.0 (same always-on roster theme).",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

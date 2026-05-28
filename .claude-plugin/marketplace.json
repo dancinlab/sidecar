@@ -216,7 +216,7 @@
       "name": "check",
       "source": "./skills/check",
       "description": "In-flight progress dashboard skill — /check reports ONLY the progress of work that is currently running: background shell/agent jobs (ps: pool / verify / ssh / cloud / sub-agent eval'd commands), their freshly-touched task output files (bash output tail + agent-transcript one-liners), and recent subagent dispatch. The agent pairs this shell scan with TaskList state + active monitors. Read-only; no side effects. Does NOT survey repo state (no `.log.md` backlog / open-PR / git-status / recent-merge enumeration). Triggers: /check · 상태 · 체크 · 현황 · 진행상황 · status check · dashboard.",
-      "version": "0.2.0"
+      "version": "0.2.1"
     },
     {
       "name": "system",

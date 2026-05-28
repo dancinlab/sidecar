@@ -1,3 +1,17 @@
+## 2026-05-29 — ⚠ stale 로컬 toolchain 으로 cross-repo 빌드 짜깁기 = 반나절 삽질 (264-커밋 stale 단일근원)
+
+> **사건 (anima BC-ANIMA M5 fire)**: anima trainer 를 H100 pod 에서 빌드하려다, 로컬 `~/core/hexa-lang` 이 origin/main 보다 **264 커밋 stale** 인 걸 모르고 self/ 트리를 손으로 짜깁기하느라 pod 5+개($5+) + 여러 시간을 태움. 증상 cascade: (1) `flame_bpe_corpus_lib` "module not found" (stale install) → (2) shallow clone 의 self/ 가 generated 파일(`runtime_core.c`·`runtime_cuda.c`·`runtime_hi_gen.c`·`runtime_bf16.c`) 누락 → (3) main self/ + cloud-m3 worktree self/ 혼합 시도 → runtime.c↔runtime.h carrier-vs-function 불일치, ce_seed shim append 위치로 nvcc `expected ;`, 두 트리의 서로 다른 `#include` 세트 누락. **결국 origin/main fresh 는 M2/M3 builtin(#1920·#1924) + ce_seed 5-arg kernel emit(runtime_cuda_emit.hexa:1311) + 모든 include 가 이미 정합** — 짜깁기·shim 전부 불필요했음.
+
+**교훈 (같은 실수 방지 — 빌드/fire 전 체크리스트)**:
+1. **cross-repo 의존 작업 전 `git -C <repo> log --oneline HEAD..origin/main | wc -l` 로 stale 깊이 먼저 측정**. >0 이면 fetch+checkout origin/main (또는 fresh clone) 부터. 264-stale 를 30초 점검으로 잡았으면 전체 삽질 회피.
+2. **self/ 짜깁기(파일 골라 섞기) 금지** — generated 파일(`runtime_core.c`·`runtime_cuda.c`·`runtime_hi_gen.c`·`runtime_bf16.c` = `git ls-tree` 에 없는 emit/include 산물) 때문에 두 트리 혼합은 거의 항상 include-누락/심볼-불일치로 깨짐. **단일 일관 트리(fresh origin/main)** 를 통째로 쓸 것.
+3. **"빌트인/kernel 미머지" 단정 전 origin/main 을 grep** — agent 가 `_hx_cuda_farr_ce_seed` "정의 없음" 으로 판단해 shim 을 손수 작성했으나, 실은 stale clone 이라 그랬고 origin/main `runtime_cuda_emit.hexa` 에 이미 emit 됨. `git show origin/main:<file> | grep` 으로 확인 후 작성.
+4. **pod-side 빌드는 fresh `git clone --depth 1` 가 아니라 origin/main full-fetch** (shallow 가 generated 파일을 빠뜨리진 않으나 동기화 상태가 핵심). 또는 검증된 `self.tar.gz`(완전 트리) 전송.
+
+**positive carry (M5 에서 영구 확립된 것, 재사용)**: hexa cloud SSH recipe = `runpodctl create --ports '22/tcp' --startSSH --env "PUBLIC_KEY=$(cat ~/.runpod/ssh/RunPod-Key-Go.pub)"` + `hexa cloud run "root@<IP>" --port <P> --insecure -- bash -lc '<script>'` (multi-line argv 는 cloud-guard 거부 → 스크립트 파일 copy-to 후 `bash <file>`). hexa-lang #1959 (accept-new host key) 가 `--insecure` 와 동등 효과. 상세 = anima `CORE/DECODER/STEP_RATE_LOG.md` (1)~(4).
+
+**severity**: high (반복 시 매번 pod 비용 + 시간 낭비). 본 entry 는 prevention-checklist. cross-link: hexa-lang #1920/#1924/#1959, anima BC-ANIMA STEP_RATE_LOG.
+
 ## 2026-05-29 — pods.json + PROVIDERS.json 글로벌 SSOT 통합 디자인 트랙 (from demiurge RTSC discovery) 🟢 흡수됨 → hexa-lang CLOUD 도메인 M8-M11
 
 > **CLOUD 도메인 흡수 (2026-05-29)**: 본 트랙의 구현 제안 (a)~(e) 는 hexa-lang `CLOUD.md` 의 milestone **M8-M11** 로 이관됨 (DOMAIN.md = canonical SSOT). 경로는 CLOUD M5 와 정합하여 `~/.hx/cloud/` 디렉토리로 통일 (아래 표 갱신). 본 entry 는 디자인 reference 로 보존. 진행 추적은 `~/core/hexa-lang/CLOUD.md` M8-M11 + `CLOUD.log.md` 2026-05-29 entry 에서.

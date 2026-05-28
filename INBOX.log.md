@@ -1,3 +1,44 @@
+## 2026-05-29 — pods.json + PROVIDERS.json 글로벌 SSOT 통합 디자인 트랙 (from demiurge RTSC discovery) 🟠 OPEN
+
+> **사건**: 2026-05-28 commons hook 0.12.0 (`_pods_snapshot()`) + pods-route 0.1.0 (`--register` auto-inject) 머지 직후, demiurge 측 사용 패턴 추가 발견. 두 SSOT 가 demiurge git tree 에 실재:
+>
+> 1. **`demiurge/pods.temp.json`** (15KB, untracked) — schema_origin: "sidecar INBOX #193". campaign=`rtsc-293K-1atm`, budget(krw/usd), design_constraints(throttle/wall/load), pods{vast-ysbh6-pod-41837 + 계획 pod}, 각 pod 의 host/provider/cores/cost_usd_per_hr/load_1min/jobs[]. 사용자가 실제로 운영 중인 매니페스트 — 갭#2 (filename drift: hexa-lang `./pods.json` vs demiurge `pods.temp.json`) 의 demiurge 쪽 본체.
+> 2. **`demiurge/PROVIDERS.json`** (origin/main · PR #488 + #489 canonical 이름 정합) — title="RTSC compute services registry". 구조: `_meta`(campaign_anchor 포함) + `providers/{vast_alternatives_cpu[10], hpc_tier_walltime_killers[6], gpu_accelerated_dft[5], academic_free[6]}` + `walltime_optimizations/{free_software_tips[7], preflight_and_caching[4]}` + `current_campaign_recommendation/{maintenance_16jobs, hard_walltime_crunch, elph_dense_qgrid, long_term_free, immediate_no_cost}` + `hexa_cloud_integration_status/{fully_integrated[vast,runpod], not_integrated_but_usable_via_adopt, ...}`. 각 항목 메타: cost_usd_per_hr · walltime_speedup · fit_score (1-3) · qe_gpu_compatible · highlight · notes · ref_pr.
+>
+> **갭 #1 — 자원목록 SSOT 부재 (hexa-cloud 측)**: hexa cloud CLI 는 `cloud rent <provider>` (vast|runpod) verb 만 있고, "어떤 provider 가 어떤 cost 로 어떤 walltime_speedup 을 주는가" 의 자원 카탈로그가 없음. demiurge 가 그 갭을 자체 `PROVIDERS.json` 으로 메꿈 → 캠페인-anchored 의사결정 reference. 다른 사용자/repo 에는 없는 자료.
+>
+> **갭 #2 — demiurge providers.ts (Firestore) vs PROVIDERS.json (git) 디자인 격차**: web/lib/providers.ts 는 운영용 단순 카탈로그 (`enabled` + `priority` · gpu/llm/payment 3 카테고리). PROVIDERS.json 은 의사결정용 풍부 인벤토리 (cost · speedup · fit_score · highlight · ref_pr · 통합상태). 두 자료가 같은 "providers" 이름이지만 의도가 다름.
+>
+> **갭 #3 — 글로벌 ↔ 프로젝트 SSOT 이중 + 누락**: 현재 4-층 자원 모델 (사용자 의도):
+>
+>     ~/.hexa-cloud/pods.jsonl   📜 청구 장부 (append-only · billing)        ✅ 존재
+>     ~/.hexa-cloud/manifest.json 🎬 작업 상태 (β · update-form work view)    ❌ 미존재 (cwd ./pods.json 가 substitute)
+>     ~/.hexa-cloud/providers.json 📚 자원 카탈로그 (PROVIDERS.json 패턴)    ❌ 미존재 (demiurge PROVIDERS.json 가 substitute)
+>     ~/.pool/pool.json            🏠 pool 호스트 카탈로그                   ✅ 존재
+>
+> 가운데 두 층이 글로벌 SSOT 없음 → 프로젝트 별 local file 로 흩어짐 → agent 인지 부담 + drift.
+>
+> **구현 제안**
+>
+> - [ ] **(a) hexa-cloud `providers.json` SSOT 신설** — `~/.hexa-cloud/providers.json` schema = PROVIDERS.json 패턴 흡수 (4-tier providers + walltime_optimizations + integration_status). 단 `current_campaign_recommendation` 은 캠페인별 변동 → 프로젝트 manifest 측으로 이관. cloud_cli.hexa 에 `cloud providers [list|fit|recommend]` verb 추가 (read-only initially).
+> - [ ] **(b) hexa-cloud `manifest.json` SSOT 신설 (β 옵션)** — `~/.hexa-cloud/manifest.json` = update-form work view (pods{} + jobs{}). cwd ./pods.json deprecate · auto-migrate (b 옵션). cloud_cli.hexa 의 `cloud pods` / `cloud dispatch` verb 글로벌 manifest 로 redirect.
+> - [ ] **(c) commons hook `_providers_snapshot()` 추가** — 매 턴 `~/.hexa-cloud/providers.json` 의 enabled+highlight 한 줄 inject (pool roster · pods snapshot 옆). 부재 시 absent-hint (`PROVIDERS.json 패턴 흡수 진행 필요`).
+> - [ ] **(d) demiurge 측 정리** — `pods.temp.json` 은 글로벌 manifest 흡수 후 archive 또는 dark file (사용자 결정). `PROVIDERS.json` 은 demiurge 캠페인 특화 reference 로 유지하되 hexa-cloud 글로벌 providers.json 의 SUPERSET 으로 정합.
+> - [ ] **(e) commons.tape @D 룰 명문화** — `g??: providers/manifest 글로벌 SSOT (no cwd ./pods.json) - all pod/job state in ~/.hexa-cloud/`. 사용자 `! sidecar sign commons` 필요.
+>
+> **우선순위**: (a) > (b) > (c) > (e) > (d). (a) 가 의사결정 reference 의 정식 SSOT 마련 — 가장 가치. (b) 는 이미 0.12.0/0.1.0 의 자연스러운 확장. (e) 는 sign 비용 (사용자 직접) 발생, 다른 작업 완료 후.
+>
+> **evidence**:
+> - `demiurge/pods.temp.json` (15KB, 2026-05-28T02:52, schema_origin=sidecar INBOX #193)
+> - `demiurge/PROVIDERS.json` (origin/main, 80+ 라인, PR #488/#489 머지)
+> - `demiurge/web/lib/providers.ts` (Firestore registry · gpu/llm/payment with enabled+priority)
+> - sidecar `hooks/commons/bin/_commons.hexa:_pods_snapshot()` (2026-05-28 0.12.0 · cwd ./pods.json 기반)
+> - sidecar `hooks/pods-route/bin/_pods_route.hexa` (2026-05-28 0.1.0 · --register auto-inject)
+>
+> **관련**: INBOX #193 (`~/.pool/pods.json` ✅) → #1699 머지 → 2026-05-28 entry (갭#2 filename drift) → 본 entry = providers + manifest 글로벌 SSOT 확장 후속.
+
+---
+
 ## 2026-05-28 — tape-lsp × mining `.tape` false-positive — idea-cart schema 가 commons grammar 로 검사됨 🟠 OPEN
 
 > **트리거**: anima `ANIMA.mining.tape` 작성 시 tape-lsp 가 매 turn 9 diagnostic 발생 — `@goal` (line 1, "unknown entry type @g") · `@P1`/`@P2`/... (line 6/11/16/21/26, "malformed header") · `@c` (line 32, "unknown entry type @c"). 모두 false positive.

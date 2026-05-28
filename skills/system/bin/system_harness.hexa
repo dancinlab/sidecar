@@ -1,0 +1,436 @@
+// system_harness.hexa — deterministic core of the /system campaign control-tower.
+//
+// The /system SKILL.md is the prose runbook an LLM follows; THIS is the code
+// harness it shells out to so the routine probe -> classify -> decide cycle is
+// deterministic, unit-testable, and runnable WITHOUT an LLM in the loop. The LLM
+// acts only on the `escalate` partition of a tick report (novel crashes, blocked
+// candidates needing research, human-gated decisions); the harness decides and
+// (with --apply) executes the rest itself.
+//
+// This is the autonomous candidate selector: instead of ending a turn with a
+// "pick option 1/2/3/4" menu for the human, decide() resolves the next action
+// per job from a fixed table — the exit-code-aware terminal taxonomy + the
+// autonomy contract baked into /system 0.2.0-0.6.0.
+//
+// Surfaces (commons g8 — pod ops via `hexa cloud` ONLY, never raw ssh/scp):
+//   pod   -> hexa cloud exec <host> [--port P] [--insecure] -- <probe>
+//   pool  -> pool on <host> <probe>
+//   local -> the probe directly
+//
+// Manifest JSON is read via `jq` (no native JSON parser); the load-bearing
+// logic (classify/decide) is pure hexa and is asserted by --selftest.
+//
+// usage:
+//   hexa run system_harness.hexa status   [--manifest pods.json]
+//   hexa run system_harness.hexa tick      [--apply] [--manifest pods.json]
+//   hexa run system_harness.hexa selftest
+
+// ---- string helpers ---------------------------------------------------------
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" } else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _atoi(s: string) -> int {
+    let t = _trim(s)
+    let n = len(t)
+    let mut i = 0
+    let mut v = 0
+    while i < n {
+        let k = char_code(t[i], 0)
+        if k < 48 || k > 57 { break }
+        v = v * 10 + (k - 48)
+        i = i + 1
+    }
+    return v
+}
+
+// field at index `idx` of a tab-separated line ("" if absent)
+fn _tsv(line: string, idx: int) -> string {
+    let parts = line.split("\t")
+    if idx < len(parts) { return parts[idx] }
+    return ""
+}
+
+// value of `key`= token in a "k1=v1 k2=v2 ..." line (space-separated)
+fn _kv(line: string, key: string) -> string {
+    let toks = line.split(" ")
+    let mut i = 0
+    while i < len(toks) {
+        let t = toks[i]
+        let pre = key + "="
+        if t.index_of(pre) == 0 { return t.substring(len(pre), len(t)) }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _has(hay: string, needle: string) -> bool { return hay.index_of(needle) >= 0 }
+
+// ---- THE DETERMINISTIC CORE: classify + decide ------------------------------
+
+// Exit-code-aware terminal taxonomy. ORDER MATTERS — maxcpu and error are tested
+// BEFORE the terminal marker, because a routine prints its done-marker (e.g. QE
+// `JOB DONE.`) even on a walltime stop or a crash. This encodes the bare-marker
+// trap that once mis-read a 22.5h phonon walltime-stop as success.
+fn classify(alive: int, marker: int, stopnz: int, err: int, maxcpu: int, nowork: bool, rc: int) -> string {
+    if rc == 255 { return "TRANSPORT" }
+    if nowork { return "GONE" }
+    if maxcpu > 0 { return "TIMEOUT-RESUMABLE" }
+    if stopnz > 0 || err > 0 { return "CRASHED" }
+    if marker > 0 { return "DONE" }
+    if alive > 0 { return "RUNNING" }
+    return "GONE"
+}
+
+// build a [action, tier, why] triple — push form (hexa array-literal-safe)
+fn _d(action: string, tier: string, why: string) -> array {
+    let mut r = []
+    r.push(action); r.push(tier); r.push(why)
+    return r
+}
+
+// Autonomy decision table — the candidate selector. Returns [action, tier, why].
+// tier "auto" = the harness can run it (--apply); "escalate" = the LLM acts.
+// This replaces the human-facing "pick 1/2/3/4" menu.
+fn decide(state: string, recov: int, has_resume: bool) -> array {
+    if state == "RUNNING" { return _d("wait", "auto", "grinding") }
+    if state == "DONE" {
+        return _d("harvest", "escalate", "clean marker, no stop/err/maxcpu — copy-from + g5 verify (verbatim) + atlas")
+    }
+    if state == "TIMEOUT-RESUMABLE" {
+        if recov > 0 && has_resume { return _d("resume", "auto", "walltime stop + recovery state + resume_cmd (recover=.true.)") }
+        if recov > 0 { return _d("resume", "escalate", "recovery state present but no resume_cmd — supply relaunch cmd") }
+        return _d("restart", "escalate", "walltime stop, NO recovery state — cold restart decision needed")
+    }
+    if state == "CRASHED" { return _d("triage", "escalate", "STOP n!=0 / error trace — novel triage (classify + fix)") }
+    if state == "GONE" { return _d("requeue", "escalate", "process gone + no marker — pod/proc died, re-queue") }
+    if state == "TRANSPORT" { return _d("retry", "auto", "ssh-255 / probe-timeout — transient gateway, backoff + retry") }
+    return _d("escalate", "escalate", "unclassified state")
+}
+
+fn _is_terminal_verdict(v: string) -> bool {
+    if _has(v, "🔵") { return true }
+    if _has(v, "🟢") { return true }
+    if _has(v, "🟠") { return true }
+    if _has(v, "🔴") { return true }
+    return false
+}
+
+// ---- remote probe -----------------------------------------------------------
+
+fn _build_probe(wd: string, log: string, marker: string, bins: string, recov: string) -> string {
+    let mut p = ""
+    p = p + "cd \"" + wd + "\" 2>/dev/null || { echo \"PROBE state=NOWORKDIR alive=0 marker=0 stopnz=0 err=0 maxcpu=0 recov=0\"; exit 0; }; "
+    p = p + "A=0; for b in " + bins + "; do n=$(pgrep -x \"$b\" 2>/dev/null | wc -l | tr -d \" \"); A=$((A+n)); done; "
+    p = p + "M=$(grep -c \"" + marker + "\" \"" + log + "\" 2>/dev/null); M=${M:-0}; "
+    p = p + "S=$(grep -cE \"STOP [1-9]\" \"" + log + "\" 2>/dev/null); S=${S:-0}; "
+    p = p + "E=$(grep -cE \"Error in routine|Traceback|out of memory|Out Of Memory\" \"" + log + "\" 2>/dev/null); E=${E:-0}; "
+    p = p + "X=$(grep -c \"Maximum CPU time exceeded\" \"" + log + "\" 2>/dev/null); X=${X:-0}; "
+    p = p + "R=$(ls " + recov + " 2>/dev/null | wc -l | tr -d \" \"); R=${R:-0}; "
+    p = p + "echo \"PROBE state=LIVE alive=$A marker=$M stopnz=$S err=$E maxcpu=$X recov=$R\""
+    return p
+}
+
+// surface row = [host, surface, port, insecure]; returns [stdout, rc]
+fn _run_probe(probe: string, surface_row: array) -> array {
+    let host = surface_row[0]
+    let surface = surface_row[1]
+    let port = surface_row[2]
+    let insec = surface_row[3]
+    if surface == "pod" {
+        let mut cmd = "hexa cloud exec " + host
+        if port != "" && port != "null" { cmd = cmd + " --port " + port }
+        if insec == "true" { cmd = cmd + " --insecure" }
+        cmd = cmd + " -- " + _shq(probe)
+        return exec_with_status(cmd + " 2>&1")
+    }
+    if surface == "pool" {
+        return exec_with_status("pool on " + host + " " + _shq(probe) + " 2>&1")
+    }
+    return exec_with_status(probe)
+}
+
+// ---- manifest reads via jq --------------------------------------------------
+
+fn _jq(filter: string, path: string) -> string {
+    return to_string(exec("jq -r " + _shq(filter) + " " + _shq(path) + " 2>/dev/null"))
+}
+
+// one line per job: key \t pod \t workdir \t log \t marker \t bins \t recov \t verdict \t resume \t stage
+fn _jobs_tsv(path: string) -> array {
+    let f = ".jobs | to_entries[] | [.key,(.value.pod//\"\"),(.value.workdir//\"\"),(.value.log//\"chain.log\"),(.value.terminal_marker//\"CHAIN DONE\"),(.value.alive_bins//\"pw.x ph.x\"),(.value.recover_glob//\"_ph0/*recover*\"),(.value.verdict//\"PENDING\"),(.value.resume_cmd//\"\"),(.value.stage//\"\")] | @tsv"
+    return _trim(_jq(f, path)).split("\n")
+}
+
+// one line per pod: key \t host \t surface \t port \t insecure
+fn _pods_tsv(path: string) -> array {
+    let f = ".pods | to_entries[] | [.key,(.value.host//\"\"),(.value.surface//\"pod\"),(.value.port//\"\"|tostring),(.value.insecure//false|tostring)] | @tsv"
+    return _trim(_jq(f, path)).split("\n")
+}
+
+fn _surface_for(pod_id: string, pods: array) -> array {
+    let mut i = 0
+    while i < len(pods) {
+        let row = pods[i]
+        if _tsv(row, 0) == pod_id {
+            let mut s = []
+            s.push(_tsv(row, 1)); s.push(_tsv(row, 2)); s.push(_tsv(row, 3)); s.push(_tsv(row, 4))
+            return s
+        }
+        i = i + 1
+    }
+    let mut d = []
+    d.push(""); d.push("pod"); d.push(""); d.push("false")
+    return d
+}
+
+// ---- progress render --------------------------------------------------------
+
+fn _bar(pct: int) -> string {
+    let mut fill = pct / 10
+    if pct % 10 >= 5 { fill = fill + 1 }
+    if fill > 10 { fill = 10 }
+    if fill < 0 { fill = 0 }
+    let mut out = ""
+    let mut i = 0
+    while i < fill { out = out + "▓"; i = i + 1 }
+    while i < 10 { out = out + "░"; i = i + 1 }
+    return out
+}
+
+fn _progress_line(path: string, terminal: int, total: int) -> string {
+    let name = _trim(_jq(".campaign // \"campaign\"", path))
+    let qtot = _atoi(_jq(".queue | length", path))
+    let qdone = _atoi(_jq("[.queue[]|select(.status==\"done\")] | length", path))
+    let cap = _trim(_jq("(.budget.cap_usd // 0)|tostring", path))
+    let spent = _trim(_jq("(.budget.spent_usd // 0)|tostring", path))
+    let bpct = _atoi(_jq("(((.budget.spent_usd//0)/((.budget.cap_usd//0)|if .==0 then 1 else . end))*100)|floor|tostring", path))
+    let mut denom = total + qtot
+    if denom == 0 { denom = 1 }
+    let pct = (terminal + qdone) * 100 / denom
+    return "📊 " + name + "  " + _bar(pct) + " " + to_string(pct) + "% · jobs " + to_string(terminal) + "/" + to_string(total) + " · queue " + to_string(qdone) + "/" + to_string(qtot) + " · budget " + _bar(bpct) + " $" + spent + "/$" + cap
+}
+
+// ---- verbs ------------------------------------------------------------------
+
+// shared probe+classify pass. Returns [state, alive, marker, recov, resume_present]
+fn _probe_job(jobrow: string, pods: array) -> array {
+    let pod_id = _tsv(jobrow, 1)
+    let probe = _build_probe(_tsv(jobrow, 2), _tsv(jobrow, 3), _tsv(jobrow, 4), _tsv(jobrow, 5), _tsv(jobrow, 6))
+    let surface = _surface_for(pod_id, pods)
+    let r = _run_probe(probe, surface)
+    let out = to_string(r[0])
+    let rc = r[1]
+    let line = ""
+    let pi = out.index_of("PROBE ")
+    let body = ""
+    if pi >= 0 { let rest = out.substring(pi, len(out)); body = rest.split("\n")[0] }
+    let nowork = _has(body, "state=NOWORKDIR")
+    let alive = _atoi(_kv(body, "alive"))
+    let marker = _atoi(_kv(body, "marker"))
+    let stopnz = _atoi(_kv(body, "stopnz"))
+    let err = _atoi(_kv(body, "err"))
+    let maxcpu = _atoi(_kv(body, "maxcpu"))
+    let recov = _atoi(_kv(body, "recov"))
+    let st = classify(alive, marker, stopnz, err, maxcpu, nowork, rc)
+    let mut p = []
+    p.push(st); p.push(to_string(alive)); p.push(to_string(marker)); p.push(to_string(recov))
+    return p
+}
+
+fn do_status(path: string) {
+    let jobs = _jobs_tsv(path)
+    let pods = _pods_tsv(path)
+    println("🛰️ " + _trim(_jq(".campaign // \"campaign\"", path)) + " — control tower (" + _trim(to_string(exec("date -u +%Y-%m-%dT%H:%M:%SZ"))) + ")")
+    println("=======================================================")
+    let mut terminal = 0
+    let mut total = 0
+    let mut rows = []
+    let mut i = 0
+    while i < len(jobs) {
+        let jr = jobs[i]
+        i = i + 1
+        if _trim(jr) == "" { continue }
+        total = total + 1
+        let jid = _tsv(jr, 0)
+        let verdict = _tsv(jr, 7)
+        let stage = _tsv(jr, 9)
+        if _is_terminal_verdict(verdict) {
+            terminal = terminal + 1
+            rows.push("   " + jid + "   " + stage + "   " + verdict)
+            continue
+        }
+        let pj = _probe_job(jr, pods)
+        let st = pj[0]
+        if st == "DONE" || st == "CRASHED" { terminal = terminal + 1 }
+        rows.push("   " + jid + "   " + stage + "   [" + st + "] alive=" + pj[1] + " marker=" + pj[2] + " recov=" + pj[3])
+    }
+    println(_progress_line(path, terminal, total))
+    println("")
+    let mut j = 0
+    while j < len(rows) { println(rows[j]); j = j + 1 }
+}
+
+fn do_tick(path: string, apply: bool) {
+    let jobs = _jobs_tsv(path)
+    let pods = _pods_tsv(path)
+    let mut terminal = 0
+    let mut total = 0
+    let mut autos = []
+    let mut escs = []
+    let mut i = 0
+    while i < len(jobs) {
+        let jr = jobs[i]
+        i = i + 1
+        if _trim(jr) == "" { continue }
+        total = total + 1
+        let jid = _tsv(jr, 0)
+        let verdict = _tsv(jr, 7)
+        if _is_terminal_verdict(verdict) { terminal = terminal + 1; continue }
+        let pj = _probe_job(jr, pods)
+        let st = pj[0]
+        if st == "DONE" || st == "CRASHED" { terminal = terminal + 1 }
+        let recov = _atoi(pj[3])
+        let resume_cmd = _tsv(jr, 8)
+        let has_resume = resume_cmd != ""
+        let d = decide(st, recov, has_resume)
+        let action = d[0]
+        let tier = d[1]
+        let why = d[2]
+        let mut note = ""
+        if apply && action == "resume" && tier == "auto" {
+            let surface = _surface_for(_tsv(jr, 1), pods)
+            let host = surface[0]
+            let mut cmd = ""
+            if surface[1] == "pod" {
+                cmd = "hexa cloud nohup " + host
+                if surface[2] != "" && surface[2] != "null" { cmd = cmd + " --port " + surface[2] }
+                if surface[3] == "true" { cmd = cmd + " --insecure" }
+                cmd = cmd + " -- bash -lc " + _shq(resume_cmd)
+            } else { if surface[1] == "pool" { cmd = "pool on " + host + " " + _shq(resume_cmd) } else { cmd = resume_cmd } }
+            let ar = exec_with_status(cmd + " 2>&1")
+            note = " [applied rc=" + to_string(ar[1]) + "]"
+        }
+        let entry = "   " + jid + "   " + action + "   " + st + "   " + why + note
+        if tier == "auto" { autos.push(entry) } else { escs.push(entry) }
+    }
+    println(_progress_line(path, terminal, total))
+    println("--- auto (" + to_string(len(autos)) + ") — harness handles ---")
+    let mut a = 0
+    while a < len(autos) { println(autos[a]); a = a + 1 }
+    println("--- escalate (" + to_string(len(escs)) + ") — LLM acts on these ---")
+    let mut e = 0
+    while e < len(escs) { println(escs[e]); e = e + 1 }
+}
+
+// ---- selftest: the taxonomy is the load-bearing logic, assert it ------------
+
+fn _case(label: string, got_state: string, got_action: string, exp_state: string, exp_action: string) -> int {
+    if got_state == exp_state && got_action == exp_action {
+        println("  ok   " + label + " -> " + got_state + "/" + got_action)
+        return 1
+    }
+    println("  FAIL " + label + " -> " + got_state + "/" + got_action + "  expected " + exp_state + "/" + exp_action)
+    return 0
+}
+
+fn _act(state: string, recov: int, has_resume: bool) -> string {
+    let d = decide(state, recov, has_resume)
+    return d[0]
+}
+
+fn selftest() {
+    let mut ok = 0
+    let mut tot = 0
+    // running
+    let s1 = classify(6, 0, 0, 0, 0, false, 0)
+    ok = ok + _case("running", s1, _act(s1, 0, false), "RUNNING", "wait"); tot = tot + 1
+    // clean done
+    let s2 = classify(0, 1, 0, 0, 0, false, 0)
+    ok = ok + _case("clean-done", s2, _act(s2, 0, false), "DONE", "harvest"); tot = tot + 1
+    // bare-marker trap: marker AND maxcpu -> TIMEOUT-RESUMABLE, never DONE
+    let s3 = classify(0, 1, 1, 0, 1, false, 0)
+    ok = ok + _case("walltime-trap", s3, _act(s3, 5, true), "TIMEOUT-RESUMABLE", "resume"); tot = tot + 1
+    // crash: marker present but STOP n!=0 -> CRASHED
+    let s4 = classify(0, 1, 1, 0, 0, false, 0)
+    ok = ok + _case("crash-with-marker", s4, _act(s4, 0, false), "CRASHED", "triage"); tot = tot + 1
+    // error trace
+    let s5 = classify(0, 0, 0, 1, 0, false, 0)
+    ok = ok + _case("error-trace", s5, _act(s5, 0, false), "CRASHED", "triage"); tot = tot + 1
+    // gone (no workdir)
+    let s6 = classify(0, 0, 0, 0, 0, true, 0)
+    ok = ok + _case("noworkdir-gone", s6, _act(s6, 0, false), "GONE", "requeue"); tot = tot + 1
+    // transport
+    let s7 = classify(0, 0, 0, 0, 0, false, 255)
+    ok = ok + _case("transport-255", s7, _act(s7, 0, false), "TRANSPORT", "retry"); tot = tot + 1
+    // resumable but no recovery state -> escalate restart
+    let s8 = classify(0, 0, 0, 0, 1, false, 0)
+    ok = ok + _case("walltime-no-recov", s8, _act(s8, 0, false), "TIMEOUT-RESUMABLE", "restart"); tot = tot + 1
+    println("selftest: " + to_string(ok) + "/" + to_string(tot) + " taxonomy cases pass")
+    if ok != tot { exit(1) }
+}
+
+// ---- main -------------------------------------------------------------------
+
+fn _arg_after(a: array, flag: string, dflt: string) -> string {
+    let mut i = 0
+    while i < len(a) {
+        if a[i] == flag && i + 1 < len(a) { return a[i + 1] }
+        i = i + 1
+    }
+    return dflt
+}
+
+fn _has_flag(a: array, flag: string) -> bool {
+    let mut i = 0
+    while i < len(a) { if a[i] == flag { return true } i = i + 1 }
+    return false
+}
+
+fn _find_manifest(a: array) -> string {
+    let m = _arg_after(a, "--manifest", "")
+    if m != "" { return m }
+    if exec_with_status("test -f pods.json")[1] == 0 { return "pods.json" }
+    if exec_with_status("test -f pods.temp.json")[1] == 0 { return "pods.temp.json" }
+    return "pods.json"
+}
+
+fn main() {
+    let a = argv()
+    let verb = ""
+    if len(a) >= 2 { verb = a[1] }
+    if verb == "selftest" { selftest(); exit(0) }
+    let path = _find_manifest(a)
+    if exec_with_status("test -f " + _shq(path))[1] != 0 {
+        eprintln("no manifest (" + path + ") — scaffold ./pods.json first")
+        exit(2)
+    }
+    if verb == "tick" { do_tick(path, _has_flag(a, "--apply")); exit(0) }
+    do_status(path)
+}

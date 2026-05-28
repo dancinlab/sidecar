@@ -6,7 +6,30 @@ For the full audit trail, see `git log`.
 
 ---
 
-## 2026-05-28 — system 0.6.0: g56 campaign progress block (ASCII % bar)
+## 2026-05-28 — system 0.7.0: 코드 하네스 — 결정론적 probe→classify→decide 코어
+
+🛰️ 사용자 "후보 자율 되도록 시스템 좀더 개선, 코드수준 하네스도 필요". 0.6.0 까지 /system 은 **LLM 이 읽고 따라하는 산문 절차서** — 매 tick 의 probe·해석·후보선택을 사람 손으로 수행했고, 턴 끝마다 "①②③④ 골라줘" 메뉴가 사용자에게 노출됨. 0.7.0 = 그 산문을 **실제 도는 hexa 프로그램**으로 코드화 + 후보 선택을 결정론 테이블에 못박음 = "오토파일럿 + 예외만 기장 호출".
+
+- **`skills/system/bin/system_harness.hexa` (NEW 418 lines)** — 결정론 코어. 순수함수 `classify(alive, marker, stopnz, err, maxcpu, nowork, rc) -> state` + `decide(state, recov, has_resume) -> [action, tier, why]` 둘이 load-bearing 로직. surface 분기 (pod→`hexa cloud exec` · pool→`pool on` · local→직접; commons g8) + jq 로 manifest 읽기 (네이티브 JSON 파서 없음).
+- **`tick [--apply]` 신규 verb** — 한 패스: probe 모든 잡 → classify (exit-code-aware) → decide (자율 결정 테이블) → auto 와 escalate 두 파티션으로 분리해서 출력. `--apply` 면 결정론 자동행동(`resume`) 을 하네스가 직접 실행 (`hexa cloud nohup` 으로 recover=.true. 재발사). harvest/triage/requeue/restart 는 escalate 파티션 → LLM 이 처리 (g5 verbatim verify 필요).
+- **autonomy 결정 테이블 = "후보 자율"의 핵심** — 7-state 종료 taxonomy × 결정:
+
+  | state | action | tier | who |
+  |---|---|---|---|
+  | RUNNING | wait | auto | 하네스 (no-op) |
+  | DONE | harvest | escalate | LLM (g5 verify + atlas) |
+  | TIMEOUT-RESUMABLE + recov + resume_cmd | resume | auto | 하네스 (--apply) |
+  | TIMEOUT-RESUMABLE (no recov) | restart | escalate | LLM (cold restart 결정) |
+  | CRASHED | triage | escalate | LLM (오류 분류) |
+  | GONE (2x debounce) | requeue | escalate | LLM (pod-down 결정) |
+  | TRANSPORT (255) | retry | auto | 하네스 (백오프) |
+
+- **bare-marker trap 코드화** — classify 순서가 maxcpu/stopnz/err 를 marker 보다 먼저 검사. QE 가 walltime 정지+STOP 1 인데도 `JOB DONE.` 을 찍는 22.5h 폰논 사고를 다신 mis-read 못하게 못박음.
+- **`--selftest`** — 8 케이스 taxonomy 단언 (running · clean-done · walltime-trap · crash-with-marker · error-trace · noworkdir-gone · transport-255 · walltime-no-recov). load-bearing 로직이 회귀 안 하도록 코드 레벨 보증.
+- **drive 의 매 tick 이 곧 `tick --apply`** — 0.6.0 prose drive 루프의 step 1-2 (status → harvest 결정) 가 이제 하네스 호출 1줄로 압축. drive 의 ScheduleWakeup heartbeat 가 매 wake 마다 `hexa run system_harness.hexa tick --apply` 실행 → 결정론 + 빠름 + LLM 토큰 절약.
+- **SKILL+command+marketplace+plugin meta 0.6.0→0.7.0 lockstep** (g22).
+
+
 
 📊 사용자 "진행 척도 ASCII % 있어야하고 블럭". status/drive/closure 가 commons g56(다단계 작업 = % bar) 정합되도록 progress block 추가.
 

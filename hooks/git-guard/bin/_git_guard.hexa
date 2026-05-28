@@ -23,9 +23,27 @@
 // deletion lives in pr-cycle-hook's deletion-sanity gate. Cross-repo
 // (`--repo X`) merges are skipped (cwd HEAD is unrelated to that base).
 //
+// (4) ADVISORY (non-blocking) — stale-base CREATION (UPSTREAM). The
+// push/merge advisories above are DOWNSTREAM backstops; this one fires
+// at the moment a branch/worktree is cut, before any work lands on a
+// stale base. When the command creates a branch/worktree
+// (`git worktree add` / `git checkout -b` / `git switch -c`), it warns
+// when EITHER (a) the base argument does not resolve to
+// `origin/<default>` (base is local main/HEAD/omitted), OR (b)
+// `.git/FETCH_HEAD` mtime is older than FETCH_STALE_MIN minutes (the
+// local `origin/*` refs are themselves likely stale). Steers: fetch
+// first, then base off `origin/<default>`. NO network fetch in the hook
+// (s11 precondition discipline) — FETCH_HEAD mtime is the freshness
+// proxy. Advisory-only (guards-narrow-scope); creation never denied.
+//
 // NO opt-out by design — no env var, no config file, no exception
 // list. A guard you can switch off is a guard you will switch off;
 // a mis-firing guard is fixed at the guard.
+
+// FETCH_HEAD older than this many minutes ⇒ local origin/* refs are
+// likely stale, so even basing off origin/<default> may be off the
+// real remote tip. The advisory then nudges a `git fetch origin` first.
+let FETCH_STALE_MIN = 30
 
 // Branch is flagged stale when it trails the remote default base by at
 // least this many commits. Short-lived stacked PRs (the family norm)
@@ -228,6 +246,153 @@ fn _stale_base_merge_advisory(toks: array) {
     _emit_advisory(msg)
 }
 
+// Detect a branch/worktree CREATION verb in the token stream and return
+// its base-arg start index (the index just AFTER the verb's flag/name),
+// or -1 when the command is not a creation. Recognized forms:
+//   git worktree add [<flags>] <path> [<commit-ish>]
+//   git checkout -b <name> [<start-point>]
+//   git switch -c <name> [<start-point>]   (also -C / --create)
+// Returns the index of the FIRST positional that could be the base, so
+// the caller can scan trailing positionals for the commit-ish.
+fn _creation_base_idx(toks: array) -> int {
+    let n = len(toks)
+    let mut i = 0
+    while i + 1 < n {
+        if toks[i] == "git" {
+            let v = toks[i + 1]
+            if v == "worktree" && i + 2 < n && toks[i + 2] == "add" {
+                return i + 3
+            }
+            if v == "checkout" {
+                // need a -b / -B somewhere after `checkout`
+                let mut j = i + 2
+                while j < n {
+                    if toks[j] == "-b" || toks[j] == "-B" { return j + 2 }
+                    j = j + 1
+                }
+            }
+            if v == "switch" {
+                let mut j = i + 2
+                while j < n {
+                    if toks[j] == "-c" || toks[j] == "-C" || toks[j] == "--create" { return j + 2 }
+                    j = j + 1
+                }
+            }
+        }
+        i = i + 1
+    }
+    return -1
+}
+
+// True when the command's creation verb is `git worktree add` — its first
+// positional is a PATH, not a base commit-ish (so a lone positional means
+// the base is omitted). For checkout -b / switch -c the base index already
+// points PAST the branch name, so a lone positional there IS the base.
+fn _is_worktree_add(toks: array) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i + 2 < n {
+        if toks[i] == "git" && toks[i + 1] == "worktree" && toks[i + 2] == "add" { return true }
+        i = i + 1
+    }
+    return false
+}
+
+// True when `find <gitdir>/FETCH_HEAD -mmin +<FETCH_STALE_MIN>` matches —
+// i.e. FETCH_HEAD exists and is older than the freshness window (portable
+// across macOS + Linux). False when FETCH_HEAD is missing (never fetched
+// is treated as "not stale-by-age"; the base-resolution check still fires)
+// or fresh. NO network — pure local stat via `find`.
+fn _fetch_head_stale() -> bool {
+    let probe = "g=$(git rev-parse --git-dir 2>/dev/null) || exit 0; [ -f \"$g/FETCH_HEAD\" ] || exit 0; find \"$g/FETCH_HEAD\" -mmin +" + to_string(FETCH_STALE_MIN) + " 2>/dev/null"
+    let mut out = ""
+    try { out = to_string(exec(probe)) } catch e { return false }
+    return out.trim() != ""
+}
+
+// Resolve the remote default short base name (origin/HEAD → e.g. "main",
+// else "main"). Read-only, no network.
+fn _default_base_name() -> string {
+    let mut out = ""
+    try { out = to_string(exec("git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/main")) } catch e { return "main" }
+    let d = out.trim()
+    let slash = d.index_of("/")
+    if slash >= 0 { return d.substring(slash + 1, len(d)) }
+    return d
+}
+
+// True when `base` resolves to origin/<default>. Accepts the explicit
+// `origin/<default>` spelling (the recommended fresh base). A bare
+// `origin/HEAD` also counts. Anything else (local main / HEAD / omitted)
+// is treated as NOT origin-based → advisory.
+fn _is_origin_default(base: string, def: string) -> bool {
+    if base == "" { return false }
+    if base == "origin/" + def { return true }
+    if base == "origin/HEAD" { return true }
+    return false
+}
+
+// Layer (4): creation-time stale-base advisory. `vi` is the verb's base
+// index from _creation_base_idx (>= 0). For `worktree add`, the first
+// positional is the PATH and the base commit-ish is the SECOND positional;
+// for checkout -b / switch -c the base is the first positional after the
+// branch name. We approximate by scanning positionals and taking the LAST
+// one as the base when there is more than one (worktree path + base), else
+// the single positional, else "" (omitted). Advisory when base is not
+// origin/<default> OR FETCH_HEAD is stale-by-age.
+fn _creation_advisory(toks: array, vi: int) {
+    let n = len(toks)
+    // Collect positionals from vi onward, skipping flags AND the argument
+    // of value-taking flags (so `-b <name>` / `-c <name>` / `--track <x>`
+    // don't get mistaken for the path/base positional).
+    let mut pos = []
+    let mut i = vi
+    while i < n {
+        let t = toks[i]
+        if len(t) > 0 && t[0] == "-" {
+            // value-taking flags consume the following token (when present
+            // and not itself a flag)
+            if t == "-b" || t == "-B" || t == "-c" || t == "-C" || t == "-t" || t == "--track" || t == "--orphan" || t == "--reason" {
+                if i + 1 < n && (len(toks[i + 1]) == 0 || toks[i + 1][0] != "-") { i = i + 1 }
+            }
+        } else {
+            pos.push(t)
+        }
+        i = i + 1
+    }
+    // Resolve the base commit-ish:
+    //  • worktree add <path> [<base>] — vi points at <path>; base is the
+    //    SECOND positional (index 1) when present, else omitted.
+    //  • checkout -b <name> [<start>] / switch -c <name> [<start>] — vi
+    //    points PAST <name> (at <start>); base is the FIRST positional
+    //    when present, else omitted.
+    let wt = _is_worktree_add(toks)
+    let mut base = ""
+    if wt {
+        if len(pos) >= 2 { base = pos[1] }
+    } else {
+        if len(pos) >= 1 { base = pos[0] }
+    }
+
+    let def = _default_base_name()
+    let stale_age = _fetch_head_stale()
+    let base_ok = _is_origin_default(base, def)
+
+    if base_ok && !stale_age { return }   // fresh origin-based cut — silent
+
+    let mut shown = base
+    if shown == "" { shown = "(생략됨 — 로컬 HEAD)" }
+    let mut msg = "⚠ STALE-BASE 생성 — 브랜치/워크트리를 '" + shown + "' 기준으로 자르려 함. "
+    if !base_ok {
+        msg = msg + "이 베이스는 origin/" + def + "로 해소되지 않음(로컬 " + def + "/HEAD/생략) — 공유 워킹트리에서 로컬 " + def + "는 origin보다 뒤처져 있을 수 있어 stale base 위에서 작업이 시작될 위험이 있음. "
+    }
+    if stale_age {
+        msg = msg + "또한 .git/FETCH_HEAD가 " + to_string(FETCH_STALE_MIN) + "분 이상 경과 — 로컬 origin/* 참조 자체가 stale일 수 있음. "
+    }
+    msg = msg + "먼저 `git fetch origin` 후 `origin/" + def + "` 기준으로 자르세요 (예: `git worktree add -b <br> /tmp/<wt> origin/" + def + "`). (non-blocking · 생성은 진행됨)"
+    _emit_advisory(msg)
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -261,6 +426,9 @@ fn main() {
         // push-time stale-base check never saw (anima #1105). Surface the
         // merge-time stale-base advisory, then allow.
         if _gh_pr_merge_idx(toks) >= 0 { _stale_base_merge_advisory(toks) }
+        // Layer (4): branch/worktree CREATION on a stale/local base.
+        let vi = _creation_base_idx(toks)
+        if vi >= 0 { _creation_advisory(toks, vi) }
         _allow()
     }
 

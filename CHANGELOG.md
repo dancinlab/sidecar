@@ -6,6 +6,13 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — commons 0.13.1: plugin.json invalid-JSON 핫픽스
+
+🐛 commons 0.13.0(2bba720)의 plugin.json description에 이스케이프 안 된 큰따옴표(`canonical "what pods are alive + billing right now" SSOT`)가 들어가 JSON 파싱이 깨졌다 → `/reload-plugins` "1 error during load" + `commons@0.13.0 plugin.json invalid JSON, cache evicted`.
+
+- inner 큰따옴표 `\"` 이스케이프. marketplace.json commons description은 별도 텍스트라 무사.
+- 캐시는 버전 디렉토리 기반이라 0.13.0 유지로는 갱신이 안 됨 → plugin/marketplace 0.13.0→0.13.1 patch bump으로 강제 재캐시(g22 lockstep).
+
 ## 2026-05-29 — lsp-rebuild 0.2.0 + hexa-lsp: stdlib/CLI-aware LSP + 자동반영 게이트 확장
 
 🧭 "hexa cli·stdlib 관련 LSP, AI agent가 grep-stale로 계속 헤맴" — hexa LSP를 stdlib/CLI 인식 수준으로 끌어올리고(hexa-lang #1977 머지), lsp-rebuild 자동반영을 hexa-lang 자체 LSP까지 확장.

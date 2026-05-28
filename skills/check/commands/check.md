@@ -1,63 +1,50 @@
 ---
-description: /check — task dashboard. Aggregates current-state status across surfaces in one shot — domain log checkboxes (open vs done), gh open PRs in this repo, git status (uncommitted / ahead / behind), recent merged commits. Read-only; no side effects.
+description: /check — in-flight progress dashboard. Reports ONLY the progress of work that is currently running — background shell/agent jobs (ps) + their freshly-touched output files. Read-only; no side effects. Does NOT survey repo state (no domain backlog / open-PR / git-status enumeration).
 allowed-tools: Bash
 ---
 
-!`set -e
+!`echo "═══ in-flight background jobs (shell · ps) ═══"
 
-echo "═══ domain log (checkbox tasks) ═══"
-shopt -s nullglob 2>/dev/null || true
-LOGS=( *.log.md )
-if [ ${#LOGS[@]} -eq 0 ]; then
-  echo "(no <UPPERCASE>.log.md at repo root)"
-else
-  for f in "${LOGS[@]}"; do
+# Running background jobs: claude sub-agent eval'd commands · pool / verify / ssh / cloud jobs.
+# Exclude this pipeline's own tools (grep/sed/awk/cut/ps) so the scan does not match itself.
+JOBS=$(ps -eo pid,etime,command 2>/dev/null \
+  | grep -E "eval |__SIDECAR_POOL__|hexa (verify|run|atlas)|pool on |hexa cloud|ssh " \
+  | grep -vE "grep -|ugrep|sed -E|awk |cut -c|ps -eo" \
+  | awk '\''{ printf "  %-7s %-9s %s\n", $1, $2, substr($0, index($0,$3)) }'\'' \
+  | cut -c1-180)
+if [ -n "$JOBS" ]; then echo "$JOBS"; else echo "  (no background shell jobs running)"; fi
+
+echo
+echo "═══ background task outputs (touched < 20m) ═══"
+# /tmp is a symlink to /private/tmp on macOS — dedupe by basename so each file shows once.
+OUTS=$(find /private/tmp/claude-* /tmp/claude-* -path "*/tasks/*.output" -mmin -20 2>/dev/null | awk -F/ '\''!seen[$NF]++'\'')
+if [ -n "$OUTS" ]; then
+  printf "%s\n" "$OUTS" | head -n 20 | while IFS= read -r f; do
+    [ -f "$f" ] || continue
+    SZ=$(wc -c < "$f" 2>/dev/null | tr -d " ")
+    MT=$(stat -f "%Sm" -t "%H:%M:%S" "$f" 2>/dev/null)
+    LAST=$(tail -1 "$f" 2>/dev/null)
     echo
-    echo "── $f ──"
-    OPEN=$(grep -c '^- \[ \]' "$f" 2>/dev/null || true)
-    DONE=$(grep -c '^- \[x\]' "$f" 2>/dev/null || true)
-    echo "  open: $OPEN · done: $DONE"
-    grep '^- \[ \]' "$f" 2>/dev/null | head -10 | sed 's/^/    /'
+    case "$LAST" in
+      '\''{'\''*)  echo "  ▸ $(basename "$f")  agent transcript · ${SZ}B · last ${MT} (in-flight)" ;;
+      *)      echo "  ▸ $(basename "$f")  (${SZ}B · last ${MT})"
+              tail -3 "$f" 2>/dev/null | cut -c1-160 | sed "s/^/      /" ;;
+    esac
   done
-fi
-
-echo
-echo "═══ open PRs (gh) ═══"
-if command -v gh >/dev/null 2>&1; then
-  gh pr list --state open --limit 10 2>/dev/null || echo "  (gh: not authenticated or not a GitHub repo)"
 else
-  echo "  (gh CLI not installed)"
+  echo "  (no task output files touched in last 20m)"
 fi
 
 echo
-echo "═══ git status ═══"
-git status -sb 2>/dev/null || echo "  (not a git repo)"
-
-echo
-echo "═══ recent merged commits (last 5) ═══"
-git log --oneline -5 2>/dev/null || true
-
-echo
-echo "═══ pool-route counters (~/.pool/route-counters.tally) ═══"
-TALLY="$HOME/.pool/route-counters.tally"
-if [ -f "$TALLY" ]; then
-  ROUTED=$(awk -F= '/^routed=/{print $2}' "$TALLY")
-  LOCAL=$(awk -F= '/^local_bound=/{print $2}' "$TALLY")
-  LIGHT=$(awk -F= '/^light_allowed=/{print $2}' "$TALLY")
-  FAILED=$(awk -F= '/^heavy_failed=/{print $2}' "$TALLY")
-  TOTAL=$(awk -F= '/^total=/{print $2}' "$TALLY")
-  if [ "${TOTAL:-0}" -gt 0 ]; then
-    awk -v r="${ROUTED:-0}" -v l="${LOCAL:-0}" -v li="${LIGHT:-0}" -v f="${FAILED:-0}" -v t="$TOTAL" 'BEGIN{
-      printf "  routed       : %5d  (%5.1f%%)  — heavy → Linux pool\n",  r,  100*r/t
-      printf "  local_bound  : %5d  (%5.1f%%)  — git/gh/pool/npm/~/.X early-exit\n", l, 100*l/t
-      printf "  light_allowed: %5d  (%5.1f%%)  — classifier passed, not heavy\n", li, 100*li/t
-      printf "  heavy_failed : %5d  (%5.1f%%)  — heavy but no eligible host\n", f, 100*f/t
-      printf "  total        : %5d  decisions counted\n", t
-    }'
-  else
-    echo "  (counters file empty — no classifier decisions recorded yet)"
-  fi
+echo "═══ recent subagent dispatch (~/.sidecar/subagent-route.log · last 3) ═══"
+RL="$HOME/.sidecar/subagent-route.log.jsonl"
+if [ -f "$RL" ]; then
+  tail -3 "$RL" 2>/dev/null | sed -E "s/.*\"t\":\"([^\"]*)\".*\"prompt_preview\":\"([^\"]*)\".*/  \1  \2…/" | cut -c1-160
 else
-  echo "  (no counters yet — pool-route 0.7.5+ writes ~/.pool/route-counters.tally)"
+  echo "  (no subagent-route log yet)"
 fi
+
+echo
+echo "─── tasks · monitors are agent-tool surfaces ───"
+echo "  (the agent pairs this shell scan with TaskList + active monitors — see SKILL.md)"
 `

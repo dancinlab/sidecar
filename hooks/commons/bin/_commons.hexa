@@ -203,7 +203,8 @@ fn main() {
     // On SessionStart only, the COMMANDS.md catalog is appended (once per
     // session, not every turn) so the agent sees the full cross-project
     // slash-command surface and can use it autonomously.
-    let mut full = _roster_snapshot() + _pods_snapshot() + _providers_snapshot() + body
+    let preamble = "# ⬇ BINDING governance layer — cross-project hard rules (commons.tape). MUST FOLLOW every reply · re-injected every turn so it never fades · NOT background context.\n\n"
+    let mut full = _roster_snapshot() + _pods_snapshot() + _providers_snapshot() + preamble + body
     if event == "SessionStart" {
         let cat = _read_file_safe(root + "/COMMANDS.md")
         if cat != "" { full = full + "\n\n" + cat }

@@ -1,0 +1,9 @@
+{
+  "name": "dojo",
+  "description": "/dojo <domain> <slug> '<spec-json>' [--lang=hexa|py|both] — 🥋 cloud training-job 빵틀 generator. Thin wrapper around `hexa-lang stdlib/dojo/cli.hexa` (invoked via `hexa run $HOME/.hx/install/hexa-lang/stdlib/dojo/cli.hexa …` — stdlib hot-swap, no binary rebuild; `dojo` is also registered as a first-class `hexa dojo` verb in self/main.hexa for the next toolchain build). deck(DFT input deck)의 학습 형제: spec-json 받아서 cloud pod에서 돌릴 training-job 한 세트를 emit — job.hexa (.hexa 드라이버 · hexa cloud nohup <host> <log> -- python3 train.py 디스패치) + train.py (.py 페이로드 · HuggingFace Trainer causal-LM fine-tune) + run.sh (.sh 글루 · cd + d16 free pool dry-run hint + 드라이버 호출). Output dir = exports/<domain>/dojo/<slug>/. --lang=hexa|py|both (default both) filters which subset emits. llm 도메인 full impl (d6 first); vision/rl/tabular stub (TODO — graduation = emit_<domain>() + dispatch branch in stdlib/dojo/gen.hexa). Generic dispatch (d4) — domain routing by manifest, no per-domain hardcoded class. .py/.sh는 hexa 제너레이터 write_text 가 써내는 emit-string 산출물 — agent Write/Edit 아님 → hexa-native 가드 범위 밖 (deck run.sh emit과 동일 원리). spec keys (llm) = model · dataset · dataset_config · epochs · batch_size · lr · max_steps · host · output_dir. Triggers — '/dojo', '학습 빵틀', 'dojo-gen', 'training job 생성', 'bake training job', 'cloud 학습 굽기', 'dojo 만들어', 'train job 빵틀'.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "skill", "dojo", "training-job", "cloud", "llm", "huggingface", "학습", "빵틀", "generator"]
+}

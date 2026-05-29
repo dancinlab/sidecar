@@ -63,3 +63,51 @@ clean `exit 0` (never blocks SessionStart):
 
 receive-PUSH only. To send, use the existing `/walkie call <handle> <text>` — its
 socket path is unchanged.
+
+## steer recipe (main → sub)
+
+The point of `walkie` is a PARENT agent actively **steering** a SUB-agent
+mid-task — change priorities, feed a correction, abort a path — without waiting
+for the sub to finish. `/walkie arm` makes this turnkey:
+
+```
+1. PARENT          /walkie on                 # parent arms its own listener (handle "main")
+2. PARENT spawns SUB, embedding in the prompt:
+       /walkie arm sub1                        # parent runs this; pastes the printed
+                                               # listen command into the sub's prompt +
+                                               # "arm a persistent Monitor on it and react
+                                               #  to inbound STEER lines mid-task"
+3. SUB             <arms the Monitor, starts multi-step work>
+4. PARENT          /walkie call sub1 "STEER: skip step 3, jump to validation"
+5. SUB             <Monitor surfaces the line mid-task → reacts>
+6. SUB             /walkie call main "ack: skipping to validation"
+```
+
+ASCII timeline:
+
+```
+  parent: on ──────call sub1 "STEER…"──────────────────► (waits for ack)
+                          │ transport ~0s                       ▲
+                          ▼                                      │ ack
+  sub:    arm ─ work… ─ [Monitor line] ─ react ─ call main "ack"┘
+                          └── agent-reaction: ~single-digit seconds ──┘
+```
+
+**benchmark** — socket transport is effectively instantaneous (`~0s`, local
+UNIX domain socket); the dominant latency is the sub-agent's reaction time (the
+Monitor surfaces the line, the model reads it and acts) — measured at roughly
+**single-digit seconds** end-to-end.
+
+### macOS ms-timing note
+
+To measure sub-second latency on macOS, **BSD `date` has no `%N`** (it prints a
+literal `N`). Use coreutils `gdate` or python3 instead:
+
+```sh
+gdate +%s.%3N                                   # coreutils (brew install coreutils)
+python3 -c 'import time; print(f"{time.time():.3f}")'
+```
+
+The plugin itself uses whole-second `date +%s` for the message `ts` field — that
+is intentional and unchanged; the ms-timing note is only for hand-benchmarking
+the round trip.

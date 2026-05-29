@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — 📻 walkie 0.3.1: `arm` verb + main→sub steer recipe + macOS ms-timing note
+
+📻 진짜 AI 에이전트가 walkie를 **능동적으로** 쓰게 만드는 active-use 조각. (rename 스택 PR2)
+
+- **`arm [<handle>]` verb** — 타깃 세션(인자 없으면 self, 있으면 roster lookup)의 **정확한 persistent-Monitor listen 명령**을 AGENT-ACTION-REQUIRED 배너와 함께 출력. 부모 에이전트가 이걸 서브 에이전트 프롬프트에 그대로 붙여넣어 main→sub steer 구성. walkie-arm 캡처 데몬이 소켓을 소유 중이면(inbox log 존재) `tail -f <log>`로 자동 retarget, 아니면 `socat UNIX-LISTEN`(nc fallback). bare-status verbs 줄 + usage + argument-hint에 `arm` 추가.
+- **steer recipe 문서** (`hooks/walkie-mcp/README.md`) — main→sub 4-step 레시피 + ASCII 타임라인 + 벤치마크(transport ~0s · agent-reaction ~single-digit s). SKILL.md `@D` 블록에 steer do-line 추가(s6 준수 — 본문 prose 금지라 README가 산문 surface).
+- **macOS ms-timing note** — BSD `date`는 `%N` 없음 → sub-second 타이밍은 `gdate +%s.%3N`(coreutils) 또는 `python3 time.time()`. 플러그인 자체는 whole-second `date +%s` 유지(메시지 ts).
+- 버전 lockstep(g22): walkie 0.3.0 → **0.3.1** (plugin.json + marketplace.json + CHANGELOG).
+
 ## 2026-05-29 — 📻 `msg` 3-plugin 패밀리 → `walkie` 리네임 (walkie 0.3.0 · walkie-arm 0.1.1 · walkie-mcp 0.1.1)
 
 📻 세션간 통신 패밀리를 워키토키 테마로 리네임 + 무전(radio) 동사로 재테마. `msg`→`walkie`·`msg-arm`→`walkie-arm`·`msg-mcp`→`walkie-mcp` (`git mv`로 history 보존). 데이터 디렉토리 `~/.sidecar/msg/` → `~/.sidecar/walkie/` 전면 이전(command + 두 hexa hook + Node 서버). ephemeral runtime이라 마이그레이션 shim 없음.

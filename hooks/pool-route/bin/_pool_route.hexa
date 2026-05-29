@@ -986,7 +986,14 @@ fn main() {
     // pool peer, so routing it → `source not found` and deck BREAKS. Pin any cmd
     // referencing the deck generator to a clean local allow. Mirrors the cloud/
     // atlas pins. Unconditional · no opt-out env (@D s11).
-    if cmd.contains("stdlib/deck/gen.hexa") { _allow_count("local_bound") }
+    // 0.16.0 broadens the match from the single path-string `stdlib/deck/gen.hexa`
+    // to IDENTITY-based, so NO deck-generator invocation form can slip to a pool
+    // resource (bypass the local pin): (1) `deck/gen.hexa` also catches a relative
+    // form run from inside the stdlib dir / via a symlinked cwd (`hexa run
+    // deck/gen.hexa`), not just the absolute `stdlib/deck/gen.hexa`; (2) a future
+    // `hexa deck` verb form. The cloud pin below already matches `hexa cloud`
+    // adjacency so it needs no analogous broadening.
+    if cmd.contains("deck/gen.hexa") || cmd.contains("hexa deck") { _allow_count("local_bound") }
     // home-dotstate pin (0.6.9): `~/.` and `$HOME/.` references point at
     // per-host HIDDEN state (`~/.zsh_history` · `~/.hexa-cache` · `~/.pool` ·
     // `~/.sidecar` · `~/.config` · …) that is NOT user-synced. Routing them to a

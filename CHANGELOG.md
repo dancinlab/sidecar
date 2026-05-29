@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — pool-route 0.16.0: deck 로컬 핀 식별 기반 확장 (자원 우회 봉합)
+
+🔌 `hexa cloud`·`deck` 같은 Mac-local 전용 도구가 pool 자원(호스트)으로 라우팅돼 우회·파손되지 않도록 pool-route 로컬 핀을 강건화. cloud-guard 0.3.0 (직접 provider CLI deny)의 짝 — 정문(`hexa cloud`)이 엉뚱한 창고로 안 가게 고정.
+
+- **deck 핀 확장** — 기존 핀은 절대 경로 문자열 `stdlib/deck/gen.hexa` 하나에만 의존했다. 상대경로 형태(`hexa run deck/gen.hexa` — stdlib 디렉터리 안 / 심링크된 cwd에서 실행)나 미래 `hexa deck` verb 형태로 부르면 자원으로 샐 여지가 있었다. 매칭을 **식별 기반**으로 넓힘: `cmd.contains("deck/gen.hexa") || cmd.contains("hexa deck")` → 어떤 호출 형태든 로컬 고정.
+- **cloud 핀** — 이미 `hexa cloud` adjacency(L1147)로 견고 → 변경 없음.
+- 둘 다 구조적 LOCAL-EXECUTION 예외 · unconditional · no opt-out env (@D s11).
+- **버전 lockstep (g22)** — pool-route `plugin.json`·`marketplace.json` 0.15.0→**0.16.0** + 0.16.0 description 노트 · CHANGELOG.
+
 ## 2026-05-29 — cloud-guard 0.3.0 + commons 0.16.0: 직접 provider CLI/API 전면 deny + g8 명시 강화
 
 🛡️ rented-GPU 직접 접근(runpod `runpodctl` · vast `vastai`/`vast` · provider REST/GraphQL API · python/node SDK)을 전면 deny 하고 `hexa cloud` 로 유도. 거버넌스 룰(commons g8)과 그 enforcement(cloud-guard 훅)를 한 사이클에 동반(s7).

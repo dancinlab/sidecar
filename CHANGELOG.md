@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — 📻 walkie 0.3.2: `call` roster-miss 폴백 (arm-only 피어 도달)
+
+🐛 shipped 0.3.1 라이브 main→sub steer 데모에서 발견된 버그 수정. `/walkie call <handle>`이 roster.json만 조회해, 타깃이 `/walkie on`(roster 등록) 대신 `/walkie arm <handle>`(소켓 bind만, roster 미등록)로 리스너를 무장한 경우 `! unknown handle '<h>' (not in roster)` → exit 1로 실패. steer 레시피가 sub를 `arm`으로 띄우므로 `call <sub>`이 결코 도달하지 못함.
+
+- **`call|send` roster-miss 폴백** — `resolve_sock`가 비면 기본 소켓 경로 관례 `$WALKIE_DIR/<handle>.sock`로 폴백(`arm` 동사와 동일 관례). 소켓이 live가 아니면 기존 `send_to_sock` 실패 경로가 graceful "peer offline — ... run /walkie on" 힌트를 그대로 출력 → 진짜 오프라인 피어도 hard-crash 없이 안내. `all-call|broadcast`(roster 순회)는 무관·미변경.
+- **steer recipe 문서** (`hooks/walkie-mcp/README.md`) — sub가 `/walkie arm <handle>`(bind-only)로 무장해도 부모의 `call`이 기본-소켓 폴백으로 도달함을 한 줄 명시.
+- 버전 lockstep(g22): walkie 0.3.1 → **0.3.2** (plugin.json + marketplace.json + CHANGELOG).
+
 ## 2026-05-29 — 📻 walkie 0.3.1: `arm` verb + main→sub steer recipe + macOS ms-timing note
 
 📻 진짜 AI 에이전트가 walkie를 **능동적으로** 쓰게 만드는 active-use 조각. (rename 스택 PR2)

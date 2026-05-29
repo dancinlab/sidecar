@@ -83,6 +83,8 @@ for the sub to finish. `/walkie arm` makes this turnkey:
 6. SUB             /walkie call main "ack: skipping to validation"
 ```
 
+> sub는 `/walkie arm <handle>`(소켓 bind만, roster 미등록)로 무장해도 됩니다 — 부모의 `call`이 0.3.2부터 기본-소켓(`<handle>.sock`) 폴백으로 도달합니다. sub가 `scan`(roster 등록)에도 보여야 하면 `/walkie on`을 쓰세요.
+
 ASCII timeline:
 
 ```

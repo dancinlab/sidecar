@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — ☁️ commons 0.18.0: M5 pod 프로젝트 귀속 렌더 (@project · "purpose")
+
+🛡️ cross-repo 동반 변경 (hexa-lang PR #2080과 페어). 최근 anima RTSC pod가 타 프로젝트 세션에서 거의 파괴될 뻔한 near-miss를 받아, M5 레지스트리(`~/.hx/cloud/active-pods.json`)에 pod별 `project`/`purpose` 필드가 추가됐고 cross-project `cloud down`을 거부하는 가드가 hexa-lang에 들어갔다. 이 commons 변경은 SessionStart 주입에서 그 귀속을 가시화한다.
+
+- **`_pods_snapshot()` project 렌더** — 각 rented pod가 이제 `<id>[<provider>,<status>] @<project> · "<purpose>"` 형식으로 출력된다. project가 비었거나 없으면 `@⚠unattributed`(소유 없는 billing pod를 시끄럽게 노출), purpose는 비면 생략. 부재/빈 레지스트리 → "" (idle, 무출력) 종전대로.
+- 동작은 hexa-lang `pod_registry.hexa`의 새 project/purpose 스키마 + `cloud down` 가드와 정합.
+- 버전 lockstep(g22): commons 0.17.0 → **0.18.0** (plugin.json + marketplace.json + CHANGELOG).
+
+---
+
 ## 2026-05-29 — 📻 walkie 0.3.2: `call` roster-miss 폴백 (arm-only 피어 도달)
 
 🐛 shipped 0.3.1 라이브 main→sub steer 데모에서 발견된 버그 수정. `/walkie call <handle>`이 roster.json만 조회해, 타깃이 `/walkie on`(roster 등록) 대신 `/walkie arm <handle>`(소켓 bind만, roster 미등록)로 리스너를 무장한 경우 `! unknown handle '<h>' (not in roster)` → exit 1로 실패. steer 레시피가 sub를 `arm`으로 띄우므로 `call <sub>`이 결코 도달하지 못함.

@@ -150,7 +150,20 @@ fn _pods_snapshot() -> string {
                 if type_of(c) == "float" { if c > 0.0 { tail = tail + ",$" + to_string(c) } }
                 if type_of(c) == "int" { if c > 0 { tail = tail + ",$" + to_string(c) } }
             }
-            parts.push(id + "[" + prov + "," + status + tail + "]")
+            // project attribution (cross-project down-guard SSOT) — empty/absent
+            // project surfaces as ⚠unattributed so an unowned billing pod is loud.
+            let mut project = ""
+            if has_key(p, "project") { if type_of(p["project"]) == "string" { project = p["project"] } }
+            let mut proj_tag = " @⚠unattributed"
+            if project != "" { proj_tag = " @" + project }
+            // purpose (free-form) — only rendered when present.
+            let mut purpose_tag = ""
+            if has_key(p, "purpose") {
+                if type_of(p["purpose"]) == "string" {
+                    if p["purpose"] != "" { purpose_tag = " · \"" + p["purpose"] + "\"" }
+                }
+            }
+            parts.push(id + "[" + prov + "," + status + tail + "]" + proj_tag + purpose_tag)
         }
         i = i + 1
     }

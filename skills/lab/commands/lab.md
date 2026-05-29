@@ -58,7 +58,7 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 | `cost` | **cost** | budget tracker, per-surface breakdown |
 | `queue [add\|rm\|ls]` | **queue** | manage the candidate backlog |
 | `upstream [<repo>]` | **upstream** | report the upstream-reflex trail — `sidecar handoff` entries + merged PRs this campaign filed to linked repos (g59) |
-| `mirror [<seed>] [--engine] [--max-rounds]` | **mirror** | **(1.2.0 거울방 / mirror room)** DELEGATE to the `mirror-loop` skill — the active domain's mining→kick→atlas→mining self-evolution ouroboros. d4 single-dispatch reuse, NOT a reimplementation |
+| `mirror [<seed>] [--engine] [--max-rounds]` | **mirror** | **(1.2.0 거울방 / mirror room)** DELEGATE to the `hexa-loop` skill with `--adapter=atlas` (the old mirror-loop preset) — the active domain's mining→kick→atlas→mining self-evolution ouroboros. d4 single-dispatch reuse, NOT a reimplementation |
 
 ## status (bare) — control-tower dashboard
 
@@ -350,35 +350,39 @@ Read-only (no filing here — that's the `watch`/`harvest` reflex). If a gap was
 
 This makes the upstream contribution auditable: every cloud/tooling gap the campaign hit leaves a queryable trail, closing the loop between "hit a gap" → "filed upstream" → "report what was filed".
 
-## mirror — the 거울방 / mirror room (1.2.0 · delegate to mirror-loop)
+## mirror — the 거울방 / mirror room (1.2.0 · delegate to hexa-loop --adapter=atlas)
 
 `mirror` is the lab's **self-evolution room** — the `mining → kick → atlas →
 mining` ouroboros that turns the campaign's own findings back into new frontier
-seeds. It is a **pure delegation** to the existing `mirror-loop` skill (d4
-single-generic-dispatch reuse): `/lab` does NOT reimplement the loop, it invokes
-the canonical one.
+seeds. It is a **pure delegation** to the canonical `hexa-loop` skill's
+`--adapter=atlas` preset (the universal loop's atlas-fold verify-adapter, which
+reproduces the retired `mirror-loop` behavior exactly · d4 single-generic-dispatch
+reuse): `/lab` does NOT reimplement the loop, it invokes the canonical one.
 
-**Dispatch** — invoke the `mirror-loop` skill via the Skill tool with the
-forwarded args (`$ARGUMENTS` after the `mirror` token), e.g.:
+**Dispatch** — invoke the `hexa-loop` skill via the Skill tool with
+`--adapter=atlas` plus the forwarded args (`$ARGUMENTS` after the `mirror`
+token), e.g.:
 ```
-/lab mirror                                 →  mirror-loop  (bare · mk9 · max 25)
-/lab mirror "<seed>"                         →  mirror-loop "<seed>"
-/lab mirror --engine mk10 --max-rounds 10    →  mirror-loop --engine mk10 --max-rounds 10
+/lab mirror                                 →  hexa-loop --adapter=atlas  (bare · mk9 · max 25)
+/lab mirror "<seed>"                         →  hexa-loop "<seed>" --adapter=atlas
+/lab mirror --engine mk10 --max-rounds 10    →  hexa-loop --adapter=atlas --engine mk10 --max-rounds 10
 ```
 The verb is a thin pass-through: parse the trailing args, then call the
-`mirror-loop` skill with them verbatim. All of mirror-loop's contracts hold
-unchanged — ACTIVE-DOMAIN ONLY (g58 · stops if no `~/.sidecar/active-domain`),
-HONEST (g63 · drill SKIP/FALSIFIED rejected), IDEMPOTENT (atlas dump dedup
-pre-check), ScheduleWakeup 1200s heartbeat to depletion.
+`hexa-loop` skill with `--adapter=atlas` + them verbatim. All of the atlas-fold
+loop's contracts hold unchanged — ACTIVE-DOMAIN ONLY (g58 · stops if no
+`~/.sidecar/active-domain`), HONEST (g63 · drill SKIP/FALSIFIED rejected),
+IDEMPOTENT (atlas dump dedup pre-check), ScheduleWakeup 1200s heartbeat to
+depletion.
 
-**Why a `lab mirror` alias at all** (vs just `/mirror-loop`): inside a long
-campaign the lab IS the control surface — `mirror` sits in the same verb family
-as `harvest`/`next`/`pursue` so the self-evolution lane is reachable without
-leaving the control tower. It is the **knowledge-folding** counterpart to
-`pursue` (which fans out open execution threads): `pursue` drains the campaign's
-OPEN work; `mirror` folds its CLOSED findings back into the atlas as new seeds.
+**Why a `lab mirror` alias at all** (vs just `/hexa-loop --adapter=atlas`):
+inside a long campaign the lab IS the control surface — `mirror` sits in the
+same verb family as `harvest`/`next`/`pursue` so the self-evolution lane is
+reachable without leaving the control tower. It is the **knowledge-folding**
+counterpart to `pursue` (which fans out open execution threads): `pursue` drains
+the campaign's OPEN work; `mirror` folds its CLOSED findings back into the atlas
+as new seeds.
 
-**No duplication invariant**: if mirror-loop's behavior changes, `lab mirror`
+**No duplication invariant**: if hexa-loop's behavior changes, `lab mirror`
 inherits it for free (it holds no copy of the loop logic). A future divergence
 (lab-specific mirror behavior) would be a NEW verb, never a fork of the loop.
 
@@ -393,7 +397,7 @@ land as its own additive PR, same pattern as `progress`/`mirror`.
 | planned verb | role | intended impl |
 |---|---|---|
 | `notebook [<entry>]` | **lab journal / decision log** — an append-only chronological record of what was decided + why + the verdict that closed it (the lab's "wet-notebook"). bare = render the journal; `notebook <text>` = append a timestamped entry. | append-only `LAB_NOTEBOOK.md` (or per-domain `<NAME>.lab.log.md`); mirror /domain log discipline (snapshot vs append-only log) |
-| `bench <scope>` | **micro-experiment sweep** — fire N small verify-able experiments in parallel (the inverse of one-big-run), then aggregate. | thin wrapper that DELEGATES to `/micro-exp` (d4 reuse, like `mirror`→mirror-loop); forwards scope + budget, harvests into the lab ledger |
+| `bench <scope>` | **micro-experiment sweep** — fire N small verify-able experiments in parallel (the inverse of one-big-run), then aggregate. | thin wrapper that DELEGATES to `/micro-exp` (d4 reuse, like `mirror`→hexa-loop); forwards scope + budget, harvests into the lab ledger |
 | `review [<slug>]` | **verdict-matrix audit** — sweep every claim's verdict tier, flag any 🟠 INCONCLUSIVE / unfenced / un-backed (g73), and render the closure matrix. | read `.verdicts/<slug>/*.txt` + `CLAIMS.tape` (where present); cross-check each claim has a typed record; report the audit grid (no LLM self-judge, g5) |
 
 These three + the shipped `progress` + `mirror` round out the lab lifecycle:

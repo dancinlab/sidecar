@@ -64,7 +64,7 @@
     "hexa": "hexa",
     "micro-exp": "hexa",
     "deck": "hexa",
-    "mirror-loop": "hexa",
+    "hexa-loop": "hexa",
 
     "commons": "personal",
     "project-tape": "personal",
@@ -76,7 +76,6 @@
     "verdict-gate": "personal",
     "go": "core",
     "roi": "core",
-    "mining": "core",
     "pool-route": "personal",
     "s9-guard": "personal",
     "askq-text": "personal",

@@ -1,9 +1,0 @@
-{
-  "name": "mirror-loop",
-  "description": "/mirror-loop [seed] [--engine mk9|mk10] [--max-rounds N] — 거울방 자율 ouroboros 드라이버. One user invocation drains the active domain's mining→kick→atlas→mining 회전 to genuine depletion. Each round: (1) /mining auto on active domain (lens divergence + connect convergence saturate), (2) rank top-3 promotion candidates from <NAME>.mining.tape (impact = lens-novelty + cross-domain coverage + bracket-tag uniqueness), (3) hexa atlas register --from-drill --seed '<text>' [--engine mk9|mk10] on each (mk9 default, mk10 opt-in), (4) feed newly-folded atom_id self-descriptions into mining.md as cycle N+1 frontier, (5) disk checkpoint per round (throttle-resilient · 0.5.0 mining checkpoint discipline), (6) depletion test — 0 new leaf AND 0 new atom = real drained; else ScheduleWakeup heartbeat for next round (long interval 1200s, cache window). HONEST: drill SKIP / FALSIFIED rejected (g63 · d6). IDEMPOTENT: atlas dump --json | jq pre-check skips already-folded atom_id. ACTIVE-DOMAIN ONLY (g58). Demonstrated by demiurge RTSC session 2026-05-29 — E33 (smash_l217_verify-atlas_atl) + E42 (smash_l263_mining_lens_self_seed) paired meta-우로보러스, atlas 16,201 nodes live SSOT, cycle 25 real-drained (5 lens all saturate · 174 leaves · 61 edges). Triggers — '/mirror-loop', 'mirror loop', '거울방', 'ouroboros 드라이버', 'mining kick atlas 자동', 'self-evolve atlas', 'mining→kick→atlas 회전'.",
-  "version": "0.1.1",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "command", "skill", "mirror-loop", "ouroboros", "mining", "kick", "atlas", "self-evolve", "drained"]
-}

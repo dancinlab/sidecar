@@ -3,9 +3,8 @@
 //
 // HARD CONSTRAINT (@L6): the Claude Code TUI canvas is owned by Ink — this hook
 // NEVER writes ANSI/animation to /dev/tty (that corrupts the screen). The only
-// channels it uses are (1) additionalContext into the chat (static ASCII text),
-// (2) the terminal bell, and (3) a SEPARATE Terminal window (macOS only) that
-// runs the ANSI animation in its own process — never touching the Claude TUI.
+// channels it uses are (1) additionalContext into the chat (static ASCII text)
+// and (2) the terminal bell. In-session static only — no animation, no window.
 //
 // Trigger (@L2): active DOMAIN.md milestone progress crosses prev<100 → now=100.
 // Last-seen percent per domain lives in $HOME/.sidecar/celebrate/<key>.seen.
@@ -312,55 +311,6 @@ fn _bell() {
     let _r = exec_with_status("printf '\\a'")
 }
 
-// (3) macOS only: spawn a SEPARATE Terminal window running _fireworks.hexa (a
-//     ~3s ANSI loop) detached. The window is its own process — it NEVER touches
-//     the Claude TUI. Graceful no-op when osascript/Terminal is unavailable.
-fn _spawn_window(hexa: string, fireworks: string) {
-    // the command the new Terminal window runs: `<hexa> run <fireworks>`.
-    let inner = _shq(hexa) + " run " + _shq(fireworks)
-    // AppleScript string: double-quote the inner command, escaping " and \.
-    let mut osa = ""
-    let n = len(inner)
-    let mut i = 0
-    while i < n {
-        let c = inner[i]
-        if c == "\\" { osa = osa + "\\\\" }
-        else if c == "\"" { osa = osa + "\\\"" }
-        else { osa = osa + c }
-        i = i + 1
-    }
-    let script = "tell application \"Terminal\" to do script \"" + osa + "\""
-    // detach: setsid → nohup fallback (macOS has no setsid by default).
-    let launch =
-        "if command -v setsid >/dev/null 2>&1; then" +
-        " setsid osascript -e " + _shq(script) + " </dev/null >/dev/null 2>&1 &" +
-        " else" +
-        " nohup osascript -e " + _shq(script) + " </dev/null >/dev/null 2>&1 &" +
-        " fi"
-    try { let _r = exec_with_status(launch) } catch e { }
-}
-
-fn _is_macos() -> bool {
-    let r = exec_with_status("uname -s 2>/dev/null")
-    if r[1] != 0 { return false }
-    return _trim(to_string(r[0])) == "Darwin"
-}
-
-// resolve the hexa binary the same way hooks.json does, for the spawned window.
-fn _hexa_bin() -> string {
-    let h = _env("HEXA")
-    if h != "" && _exists(h) { return h }
-    let home = _env("HOME")
-    let dflt = home + "/.hx/bin/hexa"
-    if home != "" && _exists(dflt) { return dflt }
-    let r = exec_with_status("command -v hexa 2>/dev/null")
-    if r[1] == 0 {
-        let p = _trim(to_string(r[0]))
-        if p != "" { return p }
-    }
-    return "hexa"
-}
-
 fn main() {
     // drain stdin (the host pipes the Stop event JSON) so the pipe never blocks.
     let raw = _read_stdin()
@@ -414,13 +364,5 @@ fn main() {
     _emit(_burst_text(name))
     // (2) terminal bell.
     _bell()
-    // (3) macOS: separate Terminal window with the ~3s ANSI animation, detached.
-    if _is_macos() {
-        let proot = _env("CLAUDE_PLUGIN_ROOT")
-        if proot != "" {
-            let fw = proot + "/bin/_fireworks.hexa"
-            if _exists(fw) { _spawn_window(_hexa_bin(), fw) }
-        }
-    }
     exit(0)
 }

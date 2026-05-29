@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🎆 celebrate 0.1.1: 애니메이션(별도 창) 제거 — 이 세션 ASCII 폭죽 + bell 만 유지
+
+🎆 축포를 **인-세션 정적**으로만 한정. macOS 별도 Terminal 창 ANSI 애니메이션(효과 ③) 을 전면 제거하고, 효과는 ① 대화 스트림 ASCII 폭죽 버스트 + ② 터미널 bell **2종** 으로 단순화. 발사 조건·교차 1회·suppression·silent-skip 은 그대로.
+
+- **효과 ③ 제거(별도 창 애니 삭제)** — `_celebrate.hexa` 의 macOS Terminal-창 spawn 호출 + 사장된 헬퍼(`_spawn_window` · `_is_macos` · `_hexa_bin`) 삭제. 자매 파일 `bin/_fireworks.hexa`(~3s ANSI 루프) 도 `git rm`. `osascript`/`Terminal`/`uname` 참조 0건.
+- **효과 ①② 보존** — ① `_emit(_burst_text(name))` 가 `{"hookSpecificOutput":{"hookEventName":"Stop","additionalContext":…🎆…BOOM!…}}` emit · ② `_bell()` 가 `printf '\a'`(BEL 문자만). `_shq`/`_exists` 는 ①②·state·main 에서 여전히 쓰여 유지.
+- **헤더 코멘트 갱신** — 채널 설명을 "(1) additionalContext + (2) terminal bell · 인-세션 정적 전용 — 애니메이션·창 없음" 으로 정정.
+- **무조건·게이트 불변(@D s11)** — escape-hatch env/flag/config 없음, 게이트 = real precondition 뿐(활성 도메인 + milestone ≥1 + 100% 교차). 무활성/0 milestone/미교차 → silent exit 0 그대로.
+
 ## 2026-05-30 — 🎆 celebrate 0.1.0 (신규 훅): 활성 도메인 100% 도달 시 ASCII+bell+macOS 별도창 폭죽 축포
 
 🎆 활성 `/domain` 의 진행도가 100% 로 교차(직전 <100 → 현재 =100)하는 순간 = novel goal 도달. 그 1회에만 Stop 훅이 ① 대화 스트림에 ASCII 폭죽 버스트 ② 터미널 bell ③ macOS 면 별도 Terminal 창에 ~3s ANSI 폭죽 애니메이션(detached) 을 터뜨린다. TUI 캔버스(Ink 소유)는 절대 건드리지 않는다.

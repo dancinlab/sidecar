@@ -1,0 +1,255 @@
+// _plan_lint.hexa — plan-guard core: parse a step-by-step plan.md's locked
+// `@L<n> … assert:<kind> <arg>` contract and verify each assert against the
+// repo (or, with `--diff <files…>`, a restricted file set).
+//
+// CLI form (PR-2):
+//   hexa run _plan_lint.hexa <plan.md> [--diff <file> <file> …]
+//   → prints each @L's verdict (✓ / ✗), exits NONZERO if any assert unmet.
+//
+// assert kinds (the marker spec, step-by-step 0.8.0):
+//   grep <pat>        the term MUST appear in the checked surface
+//   grep !<pat>       the term MUST be ABSENT from the checked surface
+//   file <path>       the path MUST exist (repo-root relative)
+//   verdict <slug>/<id>   `.verdicts/<slug>/<id>.txt` MUST exist + be non-empty
+//
+// Backward compatible: a plan.md with no `@L` lines → 0 asserts → exit 0.
+// Advisory by design (@L5): the linter EXITS nonzero so a caller can surface
+// it, but plan-guard's hooks only ever emit additionalContext — never deny.
+
+// ── small string helpers ───────────────────────────────────────────────────
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    if needle == "" { return true }
+    return hay.index_of(needle) >= 0
+}
+
+// ── @L contract model ───────────────────────────────────────────────────────
+// each entry = map { id, human, kind, arg, negate }
+
+// Parse one `## locked decisions` bullet of the form:
+//   - @L<n> (<axis>): <human option> · assert:<kind> <arg>
+// Returns a map, or an empty map when the line carries no `@L…assert:`.
+fn _parse_l_line(raw: string) -> map {
+    let line = _trim(raw)
+    // strip a leading "- " / "* " bullet marker
+    let mut body = line
+    if _starts_with(body, "- ") { body = _trim(body.substring(2, len(body))) }
+    else if _starts_with(body, "* ") { body = _trim(body.substring(2, len(body))) }
+    if !_starts_with(body, "@L") { return #{} }
+
+    let ap = body.index_of("assert:")
+    if ap < 0 { return #{} }
+
+    // id = "@L" + digits up to first space or "("
+    let mut i = 2
+    let n = len(body)
+    while i < n {
+        let c = body[i]
+        if c < "0" || c > "9" { break }
+        i = i + 1
+    }
+    let id = body.substring(0, i)
+
+    // assert clause = everything after "assert:"
+    let clause = _trim(body.substring(ap + 7, n))
+    // first token = kind, remainder = arg
+    let sp = clause.index_of(" ")
+    let mut kind = clause
+    let mut arg = ""
+    if sp >= 0 {
+        kind = clause.substring(0, sp)
+        arg = _trim(clause.substring(sp + 1, len(clause)))
+    }
+    // human label = body between id and " · assert:" (best-effort, display-only)
+    let mut human = ""
+    let dot = body.index_of(" · assert:")
+    if dot >= 0 { human = _trim(body.substring(len(id), dot)) }
+    else { human = _trim(body.substring(len(id), ap)) }
+
+    let mut negate = false
+    if _starts_with(arg, "!") { negate = true; arg = _trim(arg.substring(1, len(arg))) }
+
+    return #{ "id": id, "human": human, "kind": kind, "arg": arg, "negate": negate }
+}
+
+// Collect every @L assert inside the `## locked decisions` section of a plan.
+fn _parse_asserts(plan_text: string) -> array {
+    let lines = plan_text.split("\n")
+    let n = len(lines)
+    let mut in_locked = false
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        let t = _trim(lines[i])
+        if _starts_with(t, "## ") {
+            in_locked = _contains(t, "locked decisions")
+        } else if in_locked && t != "" {
+            let m = _parse_l_line(lines[i])
+            if len(keys(m)) > 0 { out.push(m) }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// ── assert evaluation ───────────────────────────────────────────────────────
+// surface = either the whole repo (diff_files empty) or a fixed file list.
+
+// Does `pat` appear anywhere in the diff_files contents (or repo via grep)?
+fn _grep_present(pat: string, diff_files: array, repo_root: string) -> bool {
+    if len(diff_files) > 0 {
+        let mut i = 0
+        while i < len(diff_files) {
+            let body = _read_file_safe(diff_files[i])
+            if _contains(body, pat) { return true }
+            i = i + 1
+        }
+        return false
+    }
+    // repo-wide: ripgrep if present, else grep -r. Quote the pattern as a
+    // fixed string (-F) to avoid regex surprises.
+    let q = "'" + pat.split("'").join("'\\''") + "'"
+    let cmd = "cd " + repo_root + " && (rg -F -q -- " + q + " . 2>/dev/null || grep -R -F -q -- " + q + " . 2>/dev/null)"
+    let mut code = 1
+    try { code = exec_with_status(cmd)[1] } catch e { code = 1 }
+    return code == 0
+}
+
+fn _file_exists_rel(path: string, repo_root: string) -> bool {
+    if file_exists(path) { return true }
+    if file_exists(repo_root + "/" + path) { return true }
+    return false
+}
+
+fn _verdict_ok(slug_id: string, repo_root: string) -> bool {
+    let p = repo_root + "/.verdicts/" + slug_id + ".txt"
+    if !file_exists(p) { return false }
+    return _trim(_read_file_safe(p)) != ""
+}
+
+// Returns map { ok: bool, why: string } for one assert.
+fn _eval(a: map, diff_files: array, repo_root: string) -> map {
+    let kind = a["kind"]
+    let arg = a["arg"]
+    let negate = a["negate"]
+    if kind == "grep" {
+        let present = _grep_present(arg, diff_files, repo_root)
+        let ok = if negate { !present } else { present }
+        let want = if negate { "absent" } else { "present" }
+        let got = if present { "present" } else { "absent" }
+        return #{ "ok": ok, "why": "grep " + want + " '" + arg + "' → " + got }
+    }
+    if kind == "file" {
+        let ex = _file_exists_rel(arg, repo_root)
+        let ok = if negate { !ex } else { ex }
+        return #{ "ok": ok, "why": "file '" + arg + "' " + (if ex { "exists" } else { "missing" }) }
+    }
+    if kind == "verdict" {
+        let ok = _verdict_ok(arg, repo_root)
+        return #{ "ok": ok, "why": ".verdicts/" + arg + ".txt " + (if ok { "non-empty" } else { "missing/empty" }) }
+    }
+    // unknown kind → treat as unmet but explicit (don't silently pass)
+    return #{ "ok": false, "why": "unknown assert kind '" + kind + "'" }
+}
+
+fn _repo_root() -> string {
+    let mut r = ""
+    try {
+        let res = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+        if res[1] == 0 { r = _trim(res[0]) }
+    } catch e { r = "" }
+    if r == "" { r = _trim(to_string(exec("pwd"))) }
+    return r
+}
+
+// ── CLI entrypoint ──────────────────────────────────────────────────────────
+
+fn main() {
+    let args = argv()
+    if len(args) < 2 {
+        println("usage: plan-lint <plan.md> [--diff <file> …]")
+        exit(2)
+    }
+    let plan_path = args[1]
+
+    // collect --diff file list (everything after the --diff token)
+    let mut diff_files = []
+    let mut i = 2
+    while i < len(args) {
+        if args[i] == "--diff" {
+            let mut j = i + 1
+            while j < len(args) { diff_files.push(args[j]); j = j + 1 }
+            break
+        }
+        i = i + 1
+    }
+
+    let plan_text = _read_file_safe(plan_path)
+    if plan_text == "" {
+        println("plan-lint: cannot read " + plan_path)
+        exit(2)
+    }
+
+    let asserts = _parse_asserts(plan_text)
+    if len(asserts) == 0 {
+        // backward compatible: no @L contract → nothing to enforce
+        println("plan-lint: " + plan_path + " — no @L asserts (legacy plan, skipped)")
+        exit(0)
+    }
+
+    let repo_root = _repo_root()
+    let scope = if len(diff_files) > 0 { to_string(len(diff_files)) + " diff file(s)" } else { "repo " + repo_root }
+    println("plan-lint: " + plan_path + " — " + to_string(len(asserts)) + " assert(s) vs " + scope)
+
+    let mut unmet = []
+    let mut k = 0
+    while k < len(asserts) {
+        let a = asserts[k]
+        let r = _eval(a, diff_files, repo_root)
+        let mark = if r["ok"] { "✓" } else { "✗" }
+        println("  " + mark + " " + a["id"] + ": " + r["why"])
+        if !r["ok"] { unmet.push(a["id"] + " (" + r["why"] + ")") }
+        k = k + 1
+    }
+
+    if len(unmet) == 0 {
+        println("plan-lint: PASS — all " + to_string(len(asserts)) + " @L asserts met")
+        exit(0)
+    }
+    println("plan-lint: FAIL — " + to_string(len(unmet)) + "/" + to_string(len(asserts)) + " @L asserts unmet:")
+    let mut u = 0
+    while u < len(unmet) {
+        println("  - " + unmet[u])
+        u = u + 1
+    }
+    exit(1)
+}

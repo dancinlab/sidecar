@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — cloud-guard 0.4.0: M5 pod 레지스트리 직접편집 차단 (active-pods.json write-guard)
+
+🔒 M5 pod 레지스트리 `~/.hx/cloud/active-pods.json` 를 agent 가 **직접 편집하지 못하게** 구조적으로 막는다. 모든 쓰기는 cost-bearing + race-corruptible 한 레지스트리에 대해 **오직 `hexa cloud` 서브명령**(rent·adopt·down·watchdog)으로만 일어나야 한다 — 이들은 `pod_registry._m5_write_atomic()`(temp+rename) 로 원자적 쓰기를 하며, hexa 내부 subprocess 라 PreToolUse 에 안 보임(오탐 0). 빠져 있던 단 하나는 agent-facing 직접편집 가드 → s7/s11.
+
+- **detector (f) 신설 (Bash)** — 토큰이 `active-pods.json` 를 가리키고 **AND** 변형 연산자/바이너리(`>`·`>>`·tee·sed·cp·mv·dd·truncate·rm·install·ln)가 있으면 DENY. 읽기(cat·jq·grep·head·tail·wc·less)는 write-op 토큰이 없어 통과. `hexa cloud …` 는 경로를 내부에서 조립하므로 write-op 토큰 부재 → 통과. `_normalize` 가 `>`/`>>` 보존 + glued redirect(`>active-pods.json`)는 substring 스캔으로 포착.
+- **Write/Edit/MultiEdit 분기 신설** — `tool_input.file_path` 의 basename 이 `active-pods.json` 이면 DENY. `main()` 의 `tool_name != "Bash"` early-exit **앞**에 추가.
+- **hooks.json** — 기존 `Bash` 매처 옆에 `Write|Edit|MultiEdit` 매처 1개 추가(동일 스크립트 호출 · 스크립트가 tool_name 으로 내부 분기).
+- deny 메시지: `hexa cloud {rent|adopt <id> --project P --purpose T|down <id>|watchdog}` 라우팅 노출. opt-out 없음(s11).
+- **버전 lockstep (g22)** — cloud-guard `plugin.json`·`marketplace.json` 0.3.0→**0.4.0** · README cloud-guard 행 0.2.2→0.4.0(stale 동반 교정) · CHANGELOG.
+- hexa-lang handoff 등록 — active-pods.json: stale binary rebuild(#2080) + optional `hexa cloud attribute <id> --project P --purpose T` verb.
+
 ## 2026-05-29 — ☁️ commons 0.18.0: M5 pod 프로젝트 귀속 렌더 (@project · "purpose")
 
 🛡️ cross-repo 동반 변경 (hexa-lang PR #2080과 페어). 최근 anima RTSC pod가 타 프로젝트 세션에서 거의 파괴될 뻔한 near-miss를 받아, M5 레지스트리(`~/.hx/cloud/active-pods.json`)에 pod별 `project`/`purpose` 필드가 추가됐고 cross-project `cloud down`을 거부하는 가드가 hexa-lang에 들어갔다. 이 commons 변경은 SessionStart 주입에서 그 귀속을 가시화한다.

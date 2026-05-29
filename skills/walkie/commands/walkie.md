@@ -1,15 +1,15 @@
 ---
-description: /msg — session-to-session messaging over a UNIX domain socket (NO MCP). Verbs — send <nick> <text...> · broadcast <text...> (= send all <text>) · listen (arm a Monitor on your socket) · who (roster table) · nick <name> · bare (status). Mailbox + roster under ~/.sidecar/msg/.
-argument-hint: "<send <nick> <text> | broadcast <text> | listen | who | nick <name>>"
+description: 📻 /walkie — session-to-session walkie-talkie over a UNIX domain socket (NO MCP). Radio verbs — on (listen on your socket) · call <handle> <text...> · all-call <text...> (every peer) · scan (roster table) · handle <name> · arm [<handle>] (print a sub-agent's listen command for main→sub steer) · bare (status). OLD verbs (listen/send/broadcast/who/nick) still dispatch as silent aliases. Mailbox + roster under ~/.sidecar/walkie/.
+argument-hint: "<on | call <handle> <text> | all-call <text> | scan | handle <name> | arm [<handle>]>"
 allowed-tools: Bash, Monitor, Read
 ---
 
 !`set -e
 
-MSG_DIR="$HOME/.sidecar/msg"
-ROSTER="$MSG_DIR/roster.json"
-SELF_FILE="$MSG_DIR/self"
-mkdir -p "$MSG_DIR"
+WALKIE_DIR="$HOME/.sidecar/walkie"
+ROSTER="$WALKIE_DIR/roster.json"
+SELF_FILE="$WALKIE_DIR/self"
+mkdir -p "$WALKIE_DIR"
 
 # ---- transport detection: socat preferred, nc -U fallback ----
 HAVE_SOCAT=0; HAVE_NC=0
@@ -18,8 +18,8 @@ command -v nc >/dev/null 2>&1 && HAVE_NC=1
 HAVE_JQ=0
 command -v jq >/dev/null 2>&1 && HAVE_JQ=1
 
-# ---- self nick: stored file, else "anon" ----
-self_nick() {
+# ---- self handle: stored file, else "anon" ----
+self_handle() {
   if [ -s "$SELF_FILE" ]; then
     head -n1 "$SELF_FILE" | tr -d '[:space:]'
   else
@@ -27,29 +27,29 @@ self_nick() {
   fi
 }
 
-# ---- resolve a nick to its socket path from roster.json ----
-# roster.json is a JSON object: { "<nick>": {"sock":"...","sid":"...","ts":<n>}, ... }
-# caller sets NICK_Q before calling. functions take NO positional params: the
+# ---- resolve a handle to its socket path from roster.json ----
+# roster.json is a JSON object: { "<handle>": {"sock":"...","sid":"...","ts":<n>}, ... }
+# caller sets HANDLE_Q before calling. functions take NO positional params: the
 # slash-command preprocessor rewrites dollar-N tokens with the command args.
 resolve_sock() {
   if [ ! -s "$ROSTER" ]; then echo ""; return; fi
   if [ "$HAVE_JQ" = "1" ]; then
-    jq -r --arg n "$NICK_Q" '.[$n].sock // empty' "$ROSTER" 2>/dev/null
+    jq -r --arg n "$HANDLE_Q" '.[$n].sock // empty' "$ROSTER" 2>/dev/null
   else
     # fallback: default socket path convention
-    echo "$MSG_DIR/$NICK_Q.sock"
+    echo "$WALKIE_DIR/$HANDLE_Q.sock"
   fi
 }
 
-# ---- list all roster nicks ----
-roster_nicks() {
+# ---- list all roster handles ----
+roster_handles() {
   if [ ! -s "$ROSTER" ]; then return; fi
   if [ "$HAVE_JQ" = "1" ]; then
     jq -r 'keys[]' "$ROSTER" 2>/dev/null
   fi
 }
 
-# ---- send one JSON line to a socket path ----
+# ---- key the mic: send one JSON line to a socket path ----
 # caller sets SOCK_PATH + PAYLOAD before calling
 send_to_sock() {
   if [ ! -S "$SOCK_PATH" ]; then
@@ -84,40 +84,40 @@ no_transport_hint() {
 }
 
 VERB="${1:-}"
-SELF=$(self_nick)
+SELF=$(self_handle)
 TS=$(date +%s)
 
 case "$VERB" in
-  nick)
+  handle|nick)
     NAME="${2:-}"
     if [ -z "$NAME" ]; then
-      echo "! usage: /msg nick <name>" >&2
+      echo "! usage: /walkie handle <name>" >&2
       exit 1
     fi
     printf '%s\n' "$NAME" > "$SELF_FILE"
-    echo "ok: self nick = $NAME"
+    echo "ok: self handle = $NAME"
     ;;
 
-  send)
+  call|send)
     TARGET="${2:-}"
     if [ -z "$TARGET" ]; then
-      echo "! usage: /msg send <nick> <text...>   (or: /msg send all <text...>)" >&2
+      echo "! usage: /walkie call <handle> <text...>   (or: /walkie call all <text...>)" >&2
       exit 1
     fi
     shift 2
     TEXT="$*"
     if [ -z "$TEXT" ]; then
-      echo "! usage: /msg send <nick> <text...>  (text required)" >&2
+      echo "! usage: /walkie call <handle> <text...>  (text required)" >&2
       exit 1
     fi
     if [ "$HAVE_SOCAT" = "0" ] && [ "$HAVE_NC" = "0" ]; then
       no_transport_hint; exit 0
     fi
-    # "send all <text>" == broadcast
+    # "call all <text>" == all-call
     if [ "$TARGET" = "all" ]; then
-      roster_nicks | while read -r RN; do
+      roster_handles | while read -r RN; do
         [ "$RN" = "$SELF" ] && continue
-        NICK_Q="$RN"; RP=$(resolve_sock)
+        HANDLE_Q="$RN"; RP=$(resolve_sock)
         [ -z "$RP" ] && continue
         FROM_V="$SELF"; TEXT_V="$TEXT"; TS_V="$TS"; J=$(build_json)
         SOCK_PATH="$RP"; PAYLOAD="$J"
@@ -127,45 +127,45 @@ case "$VERB" in
           echo "  -> $RN  (peer offline — socket not live: $RP)"
         fi
       done
-      echo "broadcast done (from=$SELF)"
+      echo "all-call done (from=$SELF)"
       exit 0
     fi
-    NICK_Q="$TARGET"; SOCK=$(resolve_sock)
+    HANDLE_Q="$TARGET"; SOCK=$(resolve_sock)
     if [ -z "$SOCK" ]; then
-      echo "! unknown nick '$TARGET' (not in roster $ROSTER). known peers:"
-      roster_nicks | sed 's/^/    /'
-      echo "  (peer must run /msg listen first to register)"
+      echo "! unknown handle '$TARGET' (not in roster $ROSTER). known peers:"
+      roster_handles | sed 's/^/    /'
+      echo "  (peer must run /walkie on first to register)"
       exit 1
     fi
     FROM_V="$SELF"; TEXT_V="$TEXT"; TS_V="$TS"; J=$(build_json)
     SOCK_PATH="$SOCK"; PAYLOAD="$J"
     if send_to_sock; then
-      echo "ok: sent to $TARGET ($SOCK)"
+      echo "ok: called $TARGET ($SOCK)"
       echo "    $J"
     else
       echo "! peer offline — $TARGET socket not live: $SOCK"
-      echo "  (ask the peer to run /msg listen)"
+      echo "  (ask the peer to run /walkie on)"
       exit 0
     fi
     ;;
 
-  broadcast)
+  all-call|broadcast)
     shift 1
     TEXT="$*"
     if [ -z "$TEXT" ]; then
-      echo "! usage: /msg broadcast <text...>" >&2
+      echo "! usage: /walkie all-call <text...>" >&2
       exit 1
     fi
     if [ "$HAVE_SOCAT" = "0" ] && [ "$HAVE_NC" = "0" ]; then
       no_transport_hint; exit 0
     fi
     if [ ! -s "$ROSTER" ]; then
-      echo "(roster empty — no peers to broadcast to. peers register via /msg listen)"
+      echo "(roster empty — no peers to all-call. peers register via /walkie on)"
       exit 0
     fi
-    roster_nicks | while read -r RN; do
+    roster_handles | while read -r RN; do
       [ "$RN" = "$SELF" ] && continue
-      NICK_Q="$RN"; RP=$(resolve_sock)
+      HANDLE_Q="$RN"; RP=$(resolve_sock)
       [ -z "$RP" ] && continue
       FROM_V="$SELF"; TEXT_V="$TEXT"; TS_V="$TS"; J=$(build_json)
       SOCK_PATH="$RP"; PAYLOAD="$J"
@@ -175,15 +175,62 @@ case "$VERB" in
         echo "  -> $RN  (peer offline: $RP)"
       fi
     done
-    echo "broadcast done (from=$SELF)"
+    echo "all-call done (from=$SELF)"
     ;;
 
-  listen)
-    SELF_SOCK="$MSG_DIR/$SELF.sock"
-    SELF_LOG="$MSG_DIR/$SELF.inbox.log"
+  arm)
+    # arm [<handle>] — print the EXACT persistent-Monitor listen command for a
+    # target session (self when no arg, else a roster peer) so a PARENT agent can
+    # paste it verbatim into a SUB-agent's prompt: main->sub steer. The sub runs
+    # the printed command through the Monitor tool so each inbound line surfaces
+    # mid-task. Resolution mirrors `on`'s socket/log logic but does NOT bind here.
+    ARM_TARGET="${2:-}"
+    if [ -z "$ARM_TARGET" ]; then
+      ARM_HANDLE="$SELF"
+      ARM_SOCK="$WALKIE_DIR/$SELF.sock"
+      ARM_LOG="$WALKIE_DIR/$SELF.inbox.log"
+    else
+      ARM_HANDLE="$ARM_TARGET"
+      HANDLE_Q="$ARM_TARGET"; ARM_SOCK=$(resolve_sock)
+      if [ -z "$ARM_SOCK" ]; then
+        # not yet in roster — fall back to the default socket-path convention so
+        # a parent can pre-arm a sub that hasn't registered itself yet.
+        ARM_SOCK="$WALKIE_DIR/$ARM_TARGET.sock"
+        echo "NOTE: '$ARM_TARGET' not in roster yet — using default socket path convention."
+      fi
+      ARM_LOG="$WALKIE_DIR/$ARM_HANDLE.inbox.log"
+    fi
+    if [ "$HAVE_SOCAT" = "0" ] && [ "$HAVE_NC" = "0" ]; then
+      no_transport_hint; exit 0
+    fi
+    # phase-2 coexistence: if walkie-arm's capture daemon owns the socket (inbox
+    # log present) the listener must tail the durable log, not bind the socket.
+    if [ -f "$ARM_LOG" ]; then
+      ARM_CMD="tail -n0 -f $ARM_LOG"
+    elif [ "$HAVE_SOCAT" = "1" ]; then
+      ARM_CMD="socat UNIX-LISTEN:$ARM_SOCK,fork -"
+    else
+      ARM_CMD="rm -f $ARM_SOCK; while true; do nc -lU $ARM_SOCK; done"
+    fi
+    echo "=== 📻 walkie arm — listen command for '$ARM_HANDLE' ==="
+    echo
+    echo "AGENT ACTION REQUIRED — paste the block below into the SUB-agent's prompt"
+    echo "(or run it yourself). The sub must arm a persistent Monitor on this exact"
+    echo "command (Monitor tool, persistent=true — NOT a plain Bash call) and react"
+    echo "to each inbound line MID-TASK, then ack via /walkie call <parent> \"ack\":"
+    echo
+    echo "    $ARM_CMD"
+    echo
+    echo "Each line the Monitor surfaces is one JSON message {from,text,ts} — a STEER"
+    echo "from the parent. Treat it as a high-priority interrupt to the current task."
+    ;;
+
+  on|listen)
+    SELF_SOCK="$WALKIE_DIR/$SELF.sock"
+    SELF_LOG="$WALKIE_DIR/$SELF.inbox.log"
     # upsert self into roster.json atomically (tmp + mv)
     if [ "$HAVE_JQ" = "1" ]; then
-      TMP=$(mktemp "$MSG_DIR/.roster.XXXXXX")
+      TMP=$(mktemp "$WALKIE_DIR/.roster.XXXXXX")
       if [ -s "$ROSTER" ]; then
         jq --arg n "$SELF" --arg s "$SELF_SOCK" --argjson ts "$TS" \
           '.[$n] = {sock:$s, sid:$n, ts:$ts}' "$ROSTER" > "$TMP" 2>/dev/null \
@@ -193,7 +240,7 @@ case "$VERB" in
       fi
       mv "$TMP" "$ROSTER"
     else
-      TMP=$(mktemp "$MSG_DIR/.roster.XXXXXX")
+      TMP=$(mktemp "$WALKIE_DIR/.roster.XXXXXX")
       printf '{"%s":{"sock":"%s","sid":"%s","ts":%s}}\n' "$SELF" "$SELF_SOCK" "$SELF" "$TS" > "$TMP"
       mv "$TMP" "$ROSTER"
       echo "(jq not found — roster reset to self-only; install jq to preserve peers)"
@@ -201,14 +248,14 @@ case "$VERB" in
     echo "ok: registered self in roster as '$SELF'"
     echo "    socket = $SELF_SOCK"
     echo
-    # phase-2 coexistence: if the msg-arm capture daemon is present it OWNS the
+    # phase-2 coexistence: if the walkie-arm capture daemon is present it OWNS the
     # socket (two listeners can't share one UNIX socket), and every received
-    # line is durably appended to <self>.inbox.log. In that case `listen` must
+    # line is durably appended to <self>.inbox.log. In that case `on` must
     # RETARGET the Monitor to `tail -f <log>` instead of binding the socket.
-    # No log (msg-arm not enabled / phase-1 standalone) → keep the original
+    # No log (walkie-arm not enabled / phase-1 standalone) → keep the original
     # behavior: Monitor directly on the socket.
     if [ -f "$SELF_LOG" ]; then
-      echo "NOTE: msg-arm capture daemon detected (inbox log present) — it owns the"
+      echo "NOTE: walkie-arm capture daemon detected (inbox log present) — it owns the"
       echo "      socket. Tailing the durable log instead of binding the socket."
       echo
       LISTEN_CMD="tail -n0 -f $SELF_LOG"
@@ -218,11 +265,11 @@ case "$VERB" in
       echo
       echo "    $LISTEN_CMD"
       echo
-      echo "Each line is one JSON message {from,text,ts} a peer sent (captured by msg-arm)."
+      echo "Each line is one JSON message {from,text,ts} a peer sent (captured by walkie-arm)."
       exit 0
     fi
     if [ -S "$SELF_SOCK" ]; then
-      echo "NOTE: a socket already exists at $SELF_SOCK — you may already be listening."
+      echo "NOTE: a socket already exists at $SELF_SOCK — you may already be on."
       echo "      if your Monitor is gone, rm it first:  rm -f \"$SELF_SOCK\""
       echo
     fi
@@ -242,13 +289,13 @@ case "$VERB" in
     echo "Each line the Monitor surfaces is one JSON message {from,text,ts} from a peer."
     ;;
 
-  who)
+  scan|who)
     if [ ! -s "$ROSTER" ]; then
-      echo "(roster empty — $ROSTER has no peers yet. register via /msg listen)"
+      echo "(roster empty — $ROSTER has no peers yet. register via /walkie on)"
       exit 0
     fi
-    echo "=== msg roster (self=$SELF) ==="
-    printf '  %-16s %-8s %s\n' "NICK" "STATUS" "SOCKET"
+    echo "=== 📻 walkie roster (self=$SELF) ==="
+    printf '  %-16s %-8s %s\n' "HANDLE" "STATUS" "SOCKET"
     if [ "$HAVE_JQ" = "1" ]; then
       jq -r 'to_entries[] | "\(.key)\t\(.value.sock)"' "$ROSTER" 2>/dev/null \
       | while IFS="$(printf '\t')" read -r RN RP; do
@@ -267,13 +314,13 @@ case "$VERB" in
     ;;
 
   ""|status)
-    SELF_SOCK="$MSG_DIR/$SELF.sock"
-    echo "=== msg status ==="
-    echo "  self nick : $SELF"
+    SELF_SOCK="$WALKIE_DIR/$SELF.sock"
+    echo "=== 📻 walkie status ==="
+    echo "  self handle : $SELF"
     if [ -S "$SELF_SOCK" ]; then
-      echo "  listening : yes (socket live: $SELF_SOCK)"
+      echo "  on          : yes (socket live: $SELF_SOCK)"
     else
-      echo "  listening : no (run /msg listen to arm a Monitor)"
+      echo "  on          : no (run /walkie on to arm a Monitor)"
     fi
     if [ -s "$ROSTER" ] && [ "$HAVE_JQ" = "1" ]; then
       PEERS=$(jq -r 'keys | length' "$ROSTER" 2>/dev/null)
@@ -283,18 +330,18 @@ case "$VERB" in
     else
       PEERS=0
     fi
-    echo "  roster    : $PEERS peer(s) in $ROSTER"
+    echo "  roster      : $PEERS peer(s) in $ROSTER"
     TR="(none)"
     [ "$HAVE_SOCAT" = "1" ] && TR="socat"
     [ "$HAVE_SOCAT" = "0" ] && [ "$HAVE_NC" = "1" ] && TR="nc -U"
-    echo "  transport : $TR"
+    echo "  transport   : $TR"
     echo
-    echo "verbs: send <nick> <text> | broadcast <text> | listen | who | nick <name>"
+    echo "verbs: on | call <handle> <text> | all-call <text> | scan | handle <name> | arm [<handle>]"
     ;;
 
   *)
     echo "! unknown verb '$VERB'" >&2
-    echo "  verbs: send <nick> <text> | broadcast <text> | listen | who | nick <name> | (bare = status)" >&2
+    echo "  verbs: on | call <handle> <text> | all-call <text> | scan | handle <name> | arm [<handle>] | (bare = status)" >&2
     exit 1
     ;;
 esac

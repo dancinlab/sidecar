@@ -1,0 +1,9 @@
+{
+  "name": "walkie",
+  "description": "📻 /walkie — session-to-session walkie-talkie over a UNIX domain socket, NO MCP (sidecar @D s15). Two Claude Code TUI sessions exchange one-line JSON messages: the CALL side is a CLI one-liner (`socat - UNIX-CONNECT:<peer>.sock`, fallback `nc -U <path>`); the receive side is the agent arming a persistent Monitor — `on` directly on `socat UNIX-LISTEN:<self>.sock,fork -` (phase-1 standalone), OR, when the `walkie-arm` hook plugin's capture daemon owns the socket and durably captures to `<self>.inbox.log`, on `tail -f <self>.inbox.log` (phase-2 coexistence; `on` auto-retargets) — so each received line surfaces as a chat task-notification. Local mailbox + roster under `~/.sidecar/walkie/` (roster.json maps handle -> socket path + sid + ts) so pool-route keeps it LOCAL. Radio verbs — `on` (listen: upsert self into roster + print the exact Monitor command to arm) · `call <handle> <text...>` (direct one-line JSON `{from,text,ts}`) · `all-call <text...>` (every roster peer except self) · `scan` (roster table, each socket marked alive via `test -S`, dead rows flagged not deleted) · `handle <name>` (store self handle in `~/.sidecar/walkie/self`) · `arm [<handle>]` (print the exact persistent-Monitor listen command for self or a named peer so a parent can paste it into a sub-agent prompt — main->sub steer) · bare `/walkie` (status: my handle · am I on · roster peer count). OLD verbs (listen/send/broadcast/who/nick) still dispatch as silent aliases. NL triggers via the skill — '무전' · '워키토키' · '세션끼리 통신' · '옆 세션에 보내' · 'call session' · 'socket message' · 'inter-session' · 'steer sub-agent'.",
+  "version": "0.3.1",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "walkie", "walkie-talkie", "radio", "steer", "socket", "ipc", "session", "unix-socket", "no-mcp"]
+}

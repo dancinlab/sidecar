@@ -1,0 +1,9 @@
+{
+  "name": "walkie-arm",
+  "description": "📻 SessionStart + UserPromptSubmit hook — phase-2 AUTO-RECEIVE for the `walkie` plugin (NO MCP, sidecar @D s15). A UNIX socket is a connection not a queue, so `/walkie on` drops messages when no one is bound. walkie-arm fixes that: on SessionStart it (a) upserts self into `~/.sidecar/walkie/roster.json`, (b) spawns a DETACHED capture daemon (`socat UNIX-LISTEN:<self>.sock,fork OPEN:<self>.inbox.log,append,create`, fallback `nc -lkU`) that OWNS the socket and appends every received line to `<self>.inbox.log` — idempotent via a `<self>.daemon.pid` pidfile + pgrep guard. On SessionStart + every UserPromptSubmit it reads `<self>.inbox.log` from the byte offset in `<self>.offset`, emits new lines as additionalContext (`📨 from X: ...`, capped ~20 lines), and advances the offset (resets to 0 on truncation). Self handle comes from `~/.sidecar/walkie/self` (shared with the `walkie` command plugin). NO opt-out switch (s11): gates only on real preconditions — handle set + a socket binary present; otherwise graceful exit 0. hexa-lang (`_walkie_arm.hexa`, via `hexa run`). Hook half of walkie; pairs with `walkie` 0.3.0 whose `on` verb retargets to `tail -f <self>.inbox.log` when the daemon owns the socket.",
+  "version": "0.1.1",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "user-prompt-submit", "walkie", "walkie-talkie", "radio", "socket", "unix-socket", "auto-receive", "daemon", "no-mcp", "hexa"]
+}

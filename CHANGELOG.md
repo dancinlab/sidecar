@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — hexa-native 0.6.0: 차단셋에 `.cpp` · `.cxx` · `.h` 추가 (C/C++ 패밀리 완성)
+
+🚫 hexa-native 차단셋에 `.cpp` · `.cxx` · `.h` 추가 (0.5.0 `.cc`/`.s`/`.o` · 0.4.0 `.c` 위에). 전체 차단셋 = `.py .sh .c .cc .cpp .cxx .h .s .o`. C/C++ 패밀리 + asm + object 손작성 전면 차단 → `.hexa` 유도.
+
+- Write/Edit gate + Bash 쓰기채널 둘 다 신규 3 확장자 커버.
+- **literal 매칭** — `.h`≠`.sh`/`.hexa`/`.hpp` · `.s`≠`.css`/`.js`/`.ts` · `.o`≠`.go`/`.io`. `.hpp`/`.hh`/`.inl`은 비대상(미요청).
+- 비쓰기(`gcc -c X.cpp -o X.o`) 통과 (컴파일러 `-o` 출력 미커버 채널).
+- 버전 lockstep(g22): plugin.json·marketplace.json 0.5.0→**0.6.0** · CHANGELOG.
+
 ## 2026-05-29 — hexa-native 0.5.0: 차단셋에 `.cc` · `.s` · `.o` 추가
 
 🚫 hexa-native 차단 확장자에 `.cc`(C++) · `.s`(assembly) · `.o`(object) 추가 (0.4.0의 `.c` 위에 · 기존 `.py`/`.sh`). project.tape 프로젝트에서 손으로 C/C++/asm/object를 쓰면 deny → `.hexa` 유도. 컴파일 산출물은 `hexa cc --regen` (훅 미적용 CLI 내부 경로)이 생성하므로 무관.

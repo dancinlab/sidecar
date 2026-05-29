@@ -120,7 +120,7 @@ Resolve the adapter (explicit `--adapter=` wins; else from `@kind:`):
 | domain kind | adapter | verify step | terminal verdict |
 |---|---|---|---|
 | math / atom / theorem | **atlas** | `hexa atlas register --from-drill --seed "<text>" --engine <mk9\|mk10>` (or `hexa verify <id>`) | 🔵 formal · 🟢 GATE_CLOSED_MEASURED · 🔴 CLOSED-negative |
-| perf / bench / throughput | **bench** | measure the candidate → assert **byte-diff IDENTICAL** (correctness preserved) **AND** record **Δ vs baseline** (the finding) | 🟢 measured Δ (faster/slower/identical) · 🔴 regression |
+| perf / bench / throughput | **bench** | measure the candidate → assert **byte-diff IDENTICAL** (correctness preserved) **AND** report **roofline %** (achieved ÷ binding-roof, binding = compute/memory roof auto-selected by arithmetic-intensity vs ridge-point; denominator = achieved-peak microbench, NOT spec-sheet) **AND** record **Δ vs baseline** (the relative finding) | 🟢 measured roofline % + Δ (faster/slower/identical) · 🔴 regression |
 | codegen / compiler / regen | **byte-diff** | regenerate the artifact (`hexa cc --regen` etc.) → assert **byte-equality** vs the committed artifact | 🟢 byte-identical · 🔴 byte-divergent |
 | web / service / saas | **smoke** | hit the endpoint/surface → assert **liveness** (HTTP 200 / expected body / non-error) | 🟢 live · 🔴 down |
 | `~/.sidecar/loop-adapter/<name>.md` | **custom** | the file's verify-step block | the file's terminal-verdict set |
@@ -139,7 +139,7 @@ If match → SKIP-DUP, log, advance. Accumulate `absorb.count_this_round`.
 
 For each accepted verdict, write into the adapter's absorb target:
 - **atlas** → fold to `compiler/atlas/embedded.gen.hexa` (the `--from-drill` register auto-folds on accept).
-- **bench** → append the row + Δ to `<DOMAIN>.bench.md` (or the domain's `*.bench.md`).
+- **bench** → append the row + roofline % + Δ to `<DOMAIN>.bench.md` (or the domain's `*.bench.md`).
 - **byte-diff** → write `.verdicts/<slug>/<id>.txt` (raw stdout verbatim).
 - **smoke** → append to the campaign `ledger.json`.
 - **custom** → the adapter file's absorb-target.

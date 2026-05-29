@@ -275,8 +275,8 @@
     {
       "name": "hexa",
       "source": "./skills/hexa",
-      "description": "/hexa <verb> [args...] — generic passthrough to the hexa CLI (`hexa $ARGUMENTS`). Covers the 80+ verbs without a dedicated wrapper; /kick /atlas /verify /cloud take the hot paths. Routed to pool by pool-route. NL trigger via skill.",
-      "version": "0.1.0"
+      "description": "/hexa <verb> [args...] — generic passthrough to the hexa CLI (`hexa $ARGUMENTS`). Covers the 80+ verbs without a dedicated wrapper; /kick /atlas /verify /cloud take the hot paths. Guarded passthrough: dedicated-wrapper verbs (cloud·deck·kick·atlas·verify) are refused + redirected to their dedicated skill so guards/preflight aren't bypassed. Routed to pool by pool-route. NL trigger via skill.",
+      "version": "0.1.1"
     },
     {
       "name": "secret",

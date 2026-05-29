@@ -6,4 +6,4 @@ allowed-tools: Bash
 
 @D hexa := "generic passthrough to the hexa CLI" :: skill
   do   = "`/hexa <verb> [args]` → `hexa $ARGUMENTS` for any verb lacking a dedicated wrapper · paste output verbatim"
-  dont = "shadow a dedicated wrapper — prefer /kick /atlas /verify /cloud for those hot-path verbs"
+  dont = "proxy a dedicated-wrapper verb (cloud·deck·kick·atlas·verify) — /hexa refuses + redirects to the dedicated skill so its guards/preflight aren't bypassed"

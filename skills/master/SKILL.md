@@ -5,5 +5,5 @@ allowed-tools: Bash, WebSearch, WebFetch, Skill, Read
 ---
 
 @D master := "owner-only sidecar maintenance control-plane" :: skill
-  do   = "`/master <verb>` — status·update·check·audit·lint·sync · `update` delegates all edits to `/sbs auto` (runs to the `go` checkpoint) · read-only verbs never mutate"
+  do   = "`/master <verb>` — status·update·check·audit·lint·sync · `update` regenerates root `TOOLKIT.jsonl` (s17) then delegates all edits to `/sbs auto` (runs to the `go` checkpoint) · read-only verbs never mutate"
   dont = "edit governance SSOT (commons.tape·project.tape) or ship directly from /master — route every change through /sbs (s7·s13)"

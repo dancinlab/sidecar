@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.8"
+  version = "1.9"
 
 @I := "sidecar" :: identity [active]
   kind     = "Claude Code marketplace plugin pack — concept-separated guardrails · commands · skills"
@@ -74,3 +74,8 @@
   do   = "runtime/ephemeral state OUTSIDE the repo — `$CLAUDE_PLUGIN_DATA`·`$HOME/.sidecar/`·hx (s3)"
   dont = "add a top-level by-KIND source bucket (`docs/`·`state/`·`drafts/`·`audit/`) — domain not type"
   dont = "top-level shape beyond hook·command·skill + `bin/` (marketplace CLI) + root docs"
+
+@D s17 := "dev capability catalog — generated root SSOT `TOOLKIT.jsonl`" :: governance [required active]
+  do   = "consult ROOT `TOOLKIT.jsonl` for usable hooks·markers·CLIs · regen on `/master update`"
+  do   = "auto-gen from `marketplace.json` + per-plugin hooks.json (kind·events·version·use)"
+  dont = "hand-edit `TOOLKIT.jsonl` · let it drift · ship a capability without regenerating it"

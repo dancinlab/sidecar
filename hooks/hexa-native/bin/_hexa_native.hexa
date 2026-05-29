@@ -6,12 +6,19 @@
 // `.s` / `.S` / `.asm` / `.o`, deny the write with a fixed message redirecting
 // to `.hexa`.
 //
-// Two write channels are covered:
+// Three write channels are covered:
 //   1. Structured file tools — Write / Edit / NotebookEdit (file_path).
 //   2. Bash redirect channel — `> X.py`, `>> X.sh`, heredoc-to-redirect
 //      (`cat > X.py << EOF`), and `tee [-a] X.py`. Relative targets are
 //      resolved against the payload `cwd`. `python X.py` / `cat X.py` /
 //      `chmod X.sh` (non-write commands) pass through untouched.
+//   3. python-write channel — `python3 -c "open('x.py','w').write(…)"` and
+//      `python3 - <<EOF … open('y.sh','w') … EOF`. These write from inside the
+//      interpreter (not a shell redirect), so the whole command string is
+//      scanned for an `open(…,'w'|'a')` / `.write_text` / `.write` whose path
+//      literal ends in `.py` / `.sh`. Read mode (`open('x.py')`,
+//      `open('x.py','r')`) and data writes (`.json` / `.txt` / `.csv` / `.md`)
+//      pass through.
 //
 // DESIGN NOTE — explicitly no opt-out: no env-var bypass, no
 // ~/.claude/sidecar/disabled.json honoring, no per-project exception
@@ -256,6 +263,145 @@ fn _cp_mv_dest(toks: array) -> array {
     return out
 }
 
+// ── python-write channel ────────────────────────────────────────────────
+// `python3 -c "open('x.py','w').write(...)"` and `python3 - <<EOF … EOF`
+// write files from INSIDE the interpreter, so they are not shell redirects and
+// the redirect/tee/dd/cp scan never sees them. We scan the WHOLE command
+// string (same approach as the heredoc-redirect scan) for write-mode file
+// creations whose path literal ends in `.py` / `.sh`. Read-mode `open('x.py')`
+// / `open('x.py','r')`, data writes (`.json` / `.txt` / `.csv` / `.md`), and
+// `python x.py` (executing a script) all pass through.
+
+// Is this a python interpreter invocation? First non-flag token is python /
+// python3 / a path ending in `/python` or `/python3` (e.g. `/usr/bin/python3`).
+fn _is_python_cmd(toks: array) -> bool {
+    let n = len(toks)
+    let mut i = 0
+    while i < n {
+        let t = toks[i]
+        if t == "python" || t == "python3"
+            || _ends_with(t, "/python") || _ends_with(t, "/python3") {
+            return true
+        }
+        i = i + 1
+    }
+    return false
+}
+
+// Does `s` end in a .py/.sh source extension (for python-write gating)?
+fn _is_py_sh(s: string) -> bool {
+    return _ends_with(s, ".py") || _ends_with(s, ".sh")
+}
+
+// Read the quoted python string literal that begins at index `i` (cmd[i] must
+// be `'` or `"`). Returns the inner value (quotes stripped). `end_box` is a
+// 1-element array the caller passes to receive the index just past the closing
+// quote. Returns "" if cmd[i] is not a quote.
+fn _read_py_literal(cmd: string, i: int, end_box: array) -> string {
+    let n = len(cmd)
+    if i >= n { end_box[0] = i; return "" }
+    let q = cmd[i]
+    if q != "'" && q != "\"" { end_box[0] = i; return "" }
+    let mut j = i + 1
+    let mut val = ""
+    while j < n {
+        let c = cmd[j]
+        // honor python backslash escape so `\'` inside a literal does not end it
+        if c == "\\" && j + 1 < n {
+            val = val + c + cmd[j + 1]
+            j = j + 2
+            continue
+        }
+        if c == q { j = j + 1; break }
+        val = val + c
+        j = j + 1
+    }
+    end_box[0] = j
+    return val
+}
+
+// Skip spaces/tabs/newlines from index i; return new index.
+fn _skip_ws(cmd: string, i: int) -> int {
+    let n = len(cmd)
+    let mut j = i
+    while j < n && (cmd[j] == " " || cmd[j] == "\t" || cmd[j] == "\n" || cmd[j] == "\r") { j = j + 1 }
+    return j
+}
+
+// Does `cmd` contain `needle` at index i (substring match)?
+fn _has_at(cmd: string, i: int, needle: string) -> bool {
+    let nn = len(needle)
+    if i + nn > len(cmd) { return false }
+    return cmd.substring(i, i + nn) == needle
+}
+
+// Scan `cmd` for write-mode file creations targeting `.py` / `.sh`. Heuristic,
+// not a parser; anchored on `open(` and `write_text` so SHELL-level quoting of
+// the whole `-c "<code>"` arg does not hide the PYTHON-level literals inside.
+// Covers the canonical channels:
+//   • open('x.py','w')            open("y.sh", 'a+')   open('x.py','wb')
+//   • Path('p.py').write_text(…)  'p.sh'.write_text? (receiver literal)
+//   • open('x.py','w').write(…)
+// Read mode (`open('x.py')` / `open('x.py','r')`) and data writes
+// (`.json` / `.txt` / `.csv` / `.md`) are NOT collected.
+fn _python_write_targets(cmd: string) -> array {
+    let n = len(cmd)
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        // ── open( … ) anchor ──────────────────────────────────────────────
+        if _has_at(cmd, i, "open(") {
+            let mut p = _skip_ws(cmd, i + 5)
+            let box = [0]
+            let path = _read_py_literal(cmd, p, box)
+            p = box[0]
+            if _is_py_sh(path) {
+                // advance to the comma, then read the mode literal (if any)
+                let mut q = _skip_ws(cmd, p)
+                if q < n && cmd[q] == "," {
+                    q = _skip_ws(cmd, q + 1)
+                    let box2 = [0]
+                    // mode may be `mode=` kw — skip a leading `mode=`
+                    if _has_at(cmd, q, "mode=") { q = _skip_ws(cmd, q + 5) }
+                    let mode = _read_py_literal(cmd, q, box2)
+                    let q0 = q
+                    // reconstruct quoted form to reuse _is_write_mode_literal:
+                    // mode value first char is enough (w/a → write).
+                    if len(mode) > 0 {
+                        let m = mode[0]
+                        if m == "w" || m == "a" { out.push(path) }
+                    }
+                }
+                // NOTE: `open('x.py')` with no mode arg = read default → skip.
+            }
+            i = i + 5
+            continue
+        }
+        // ── write_text anchor — receiver literal ends in .py/.sh ───────────
+        // pattern: <quote>x.py<quote> ... .write_text(   OR   Path('x.py').write_text
+        if _has_at(cmd, i, ".write_text") || _has_at(cmd, i, ".write(") || _has_at(cmd, i, ".writelines") {
+            // walk backwards to find the nearest preceding string literal
+            let mut b = i - 1
+            // skip a trailing `)` from Path('x.py').write_text
+            while b >= 0 && (cmd[b] == ")" || cmd[b] == " " || cmd[b] == "\t") { b = b - 1 }
+            if b >= 0 && (cmd[b] == "'" || cmd[b] == "\"") {
+                let q = cmd[b]
+                let mut s = b - 1
+                let mut val = ""
+                while s >= 0 && cmd[s] != q {
+                    val = cmd[s] + val
+                    s = s - 1
+                }
+                if _is_py_sh(val) { out.push(val) }
+            }
+            i = i + 6
+            continue
+        }
+        i = i + 1
+    }
+    return out
+}
+
 // Resolve a redirect target to an absolute path using the payload `cwd`.
 fn _resolve(cwd: string, target: string) -> string {
     if _starts_with(target, "/") { return target }
@@ -297,6 +443,21 @@ fn _handle_bash(payload: map, ti: map) {
         }
         k = k + 1
     }
+
+    // python-write channel — `python3 -c "open('x.py','w')…"` / heredoc python.
+    // The whole command string is scanned (incl. heredoc body) so both `-c` and
+    // `python3 - <<EOF … EOF` are covered. Gate is already .py/.sh + write-mode.
+    if _is_python_cmd(toks) {
+        let pys = _python_write_targets(cmd)
+        let mut p = 0
+        while p < len(pys) {
+            let abs = _resolve(cwd, pys[p])
+            let root = _find_project_root(abs)
+            if root != "" { _deny_for(root, abs, "python-write") }
+            p = p + 1
+        }
+    }
+
     _allow()
 }
 

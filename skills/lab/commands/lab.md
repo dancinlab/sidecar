@@ -1,12 +1,14 @@
 ---
-description: /system — campaign control-tower. Unified dashboard + event-driven watch + harvest→verdict + autonomous re-dispatch loop over all in-flight jobs of a long-running campaign, across any surface (pod/pool/local). Domain-agnostic. Arg = verb (bare=status · watch · harvest · next · auto · cost · queue).
+description: /lab — research-lab control-tower. Unified dashboard + event-driven watch + harvest→verdict + autonomous re-dispatch loop over all in-flight jobs of a long-running campaign, across any surface (pod/pool/local). Domain-agnostic. Arg = verb (bare=status · watch · harvest · next · auto · cost · queue). `/system` (+ 관제탑 · mission control · control tower · campaign status) kept as DEPRECATED aliases.
 ---
 
-# /system — campaign control-tower (domain-agnostic)
+# /lab — research-lab control-tower (domain-agnostic)
 
-You are running **`/system`**: one persistent mission-control over EVERY in-flight job
-of a long-running campaign, across ANY execution surface. It ties together four things
-that are otherwise run by hand:
+You are running **`/lab`** (formerly `/system` — that invocation + `관제탑` ·
+`mission control` · `control tower` · `campaign status` stay live as **DEPRECATED
+aliases**, lossless, so existing muscle memory never breaks): one persistent
+mission-control over EVERY in-flight job of a long-running campaign, across ANY
+execution surface. It ties together four things that are otherwise run by hand:
 
 ```
    manifest          watch              harvest            re-dispatch
@@ -22,7 +24,7 @@ different `terminal_marker` + `metric_parser` values. The loop is identical.
 
 ## Manifest SSOT — `./pods.json` (extended)
 
-Reuse the cloud-dispatch manifest (`/cloud dispatch` writes it · atomic + .bak). `/system`
+Reuse the cloud-dispatch manifest (`/cloud dispatch` writes it · atomic + .bak). `/lab`
 reads it and uses three sections (creating the latter two on first use):
 
 ```json
@@ -140,7 +142,7 @@ For each `running` job WITHOUT a live watcher, arm a background while-loop (one 
 
 The watcher writes its terminal verdict to its task-output (the durable Monitor attach point). NO ScheduleWakeup (interactive-pace, not a cron loop). Record each watcher id back into `pods.json` `jobs.<id>.watcher`. State: `armed N watchers · debounce 2x · cap <Nmin>`.
 
-**Upstream-reflex (g59) — fix hexa cloud at source, not just here:** when `/system`'s watch/harvest hits a `hexa cloud` CLI limitation (a false-terminal the CLI should have classified, a transport ambiguity, a missing preflight axis), file it via `sidecar handoff add hexa-lang <gap>` (g59) SAME-TURN with verbatim evidence — do not silently bake a permanent workaround into the watcher. **Reflex arc COMPLETED for the terminal taxonomy (2026-05-28)**: the caller-side trailing-scan was the STOPGAP → filed gap1 → fix landed in `cloud tail` (3-tier exit, #1889) → watcher now delegates (above). This is the template: a `/system` workaround is a TEMPORARY marker of an unfiled upstream gap, retired the moment the durable CLI fix lands.
+**Upstream-reflex (g59) — fix hexa cloud at source, not just here:** when `/lab`'s watch/harvest hits a `hexa cloud` CLI limitation (a false-terminal the CLI should have classified, a transport ambiguity, a missing preflight axis), file it via `sidecar handoff add hexa-lang <gap>` (g59) SAME-TURN with verbatim evidence — do not silently bake a permanent workaround into the watcher. **Reflex arc COMPLETED for the terminal taxonomy (2026-05-28)**: the caller-side trailing-scan was the STOPGAP → filed gap1 → fix landed in `cloud tail` (3-tier exit, #1889) → watcher now delegates (above). This is the template: a `/system` workaround is a TEMPORARY marker of an unfiled upstream gap, retired the moment the durable CLI fix lands.
 
 **Re-arm on TIMEOUT** — a watcher that hits its cap without a terminal is re-armed (the job is still grinding). A watcher that fires DONE/STUCK/GONE hands off to `harvest`.
 
@@ -157,7 +159,7 @@ For a terminal job (or all terminal jobs if no id):
 
 ## next / redispatch — the autonomous loop (one step)
 
-This is the **harvest→re-dispatch autonomy** — the reason `/system` exists. For each harvested-terminal job:
+This is the **harvest→re-dispatch autonomy** — the reason `/lab` exists. For each harvested-terminal job:
 1. **atlas register** on a 🟢/🔵 verdict (g62) — `/atlas register --from-verify ...` (verified closed-form folds into the atlas).
 2. **fire the next candidate** from `queue` (highest priority). Resolve its status FIRST (see taxonomy below):
    - `queued` (ready) → provision/reuse a surface, dispatch, arm watcher, flip → `fired`. State the incremental cost in ONE line, then fire — **no "shall I continue?" gate** (same autonomy as the initial cost-bearing fire).
@@ -165,7 +167,7 @@ This is the **harvest→re-dispatch autonomy** — the reason `/system` exists. 
 3. 🔴 FALSIFIED is a valid terminal → STILL advance to the next candidate (a closed-negative rules out an axis; the campaign continues).
 4. If `queue` is empty AND no open axis remains → report depletion (NOT a pause-for-approval).
 
-**Autonomy invariant (the reason this verb exists):** "queued" / "blocked" NEVER means "waiting for the user to say go." `queued` auto-fires; `blocked:<technical>` auto-resolves-then-fires. The ONLY status that legitimately stops the loop for a human is `gated:<human-only-input>` — a credential, a destructive/irreversible action, or a genuine design decision (rare). Re-framing a technically-resolvable candidate as "발사 대기 / awaiting approval" is the exact anti-pattern `/system` removes.
+**Autonomy invariant (the reason this verb exists):** "queued" / "blocked" NEVER means "waiting for the user to say go." `queued` auto-fires; `blocked:<technical>` auto-resolves-then-fires. The ONLY status that legitimately stops the loop for a human is `gated:<human-only-input>` — a credential, a destructive/irreversible action, or a genuine design decision (rare). Re-framing a technically-resolvable candidate as "발사 대기 / awaiting approval" is the exact anti-pattern `/lab` removes.
 
 ## auto — full loop to depletion
 
@@ -174,7 +176,7 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 - **budget hit** — `spent_usd ≥ cap_usd` → `🛑 budget cap $<cap> reached` (g64; halt, do not silently exceed).
 - **user interrupt**.
 
-`auto` NEVER asks "fire next?" between candidates — that gate is exactly what `/system` removes. The only halts are drain / budget / interrupt / a surface-transport failure it can't recover.
+`auto` NEVER asks "fire next?" between candidates — that gate is exactly what `/lab` removes. The only halts are drain / budget / interrupt / a surface-transport failure it can't recover.
 
 `auto` is ONE in-session pass. For a campaign whose jobs run for HOURS (DFT · training fleets), the loop must survive ACROSS turns — that is `drive`.
 
@@ -200,7 +202,7 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 - 🏁 **drained** — queue empty + all terminal + no open axis → final ledger + verdict matrix, clear marker.
 - 🛑 **budget** — `spent ≥ cap_usd` (g64) → halt, do NOT exceed silently, clear marker.
 - ⏸ **gated:<human-only>** — a candidate needs a credential / irreversible-action OK / design decision → PAUSE that ONE candidate (surface it), keep driving the rest; only a campaign-wide human gate stops the whole loop.
-- **user interrupt** / explicit `/system stop`.
+- **user interrupt** / explicit `/lab stop` (alias `/system stop`).
 
 **Crash/throttle survival**: the drive marker + `pods.json` manifest are the durable state. On a rate-limit death mid-tick, the next watcher-event or heartbeat re-enters and re-reads state (no work lost — checkpoint = the manifest + the per-job recovery files). `drive` itself is replay-safe: a re-entered tick re-derives terminals/queue from the manifest, never re-fires an already-`fired` candidate.
 
@@ -274,7 +276,7 @@ There is deliberately NO "awaiting-approval" status for an ordinary candidate. I
 
 The reporting half of the `watch`/`harvest` **upstream-reflex** (when a `hexa cloud` / tooling gap surfaces, it's filed via `sidecar handoff add <repo> <gap>` same-turn). `upstream` surfaces that trail — what this campaign/session pushed upstream — so "hexa upstream fix in this session" is a one-verb query, not a manual recall.
 
-**Repos scanned**: the linked upstream repos from `pods.json` `upstream_repos` (array of repo paths/slugs); default `hexa-lang` (the cloud/CLI substrate) + any repo referenced by a job's `kind`. `/system upstream <repo>` scopes to one.
+**Repos scanned**: the linked upstream repos from `pods.json` `upstream_repos` (array of repo paths/slugs); default `hexa-lang` (the cloud/CLI substrate) + any repo referenced by a job's `kind`. `/lab upstream <repo>` scopes to one.
 
 **Source = the host-local `sidecar handoff` registry** (`~/.sidecar/handoff/handoff.jsonl`) — a single host-local store, so there is NO stale-working-tree hazard (the pre-registry model grepped per-repo `INBOX.log.md` on the local tree and could false-empty on a stale/other-branch checkout; the registry removes that failure mode). The merged-PR half still hits the gh remote.
 
@@ -304,16 +306,17 @@ This makes the upstream contribution auditable: every cloud/tooling gap the camp
 - **g64** — declare + honor the budget cap; halt on breach.
 - **g65** — `exports/<campaign>/ledger.json` is the typed surface; never let it drift from the manifest.
 - **g59** — cloud/tooling gap → `sidecar handoff add <repo> <gap>` same-turn (`watch`/`harvest` reflex); `upstream` verb reports the trail.
-- Reuses **`/cloud` (pods.json)** + **`/micro-exp` (sweep launch)** + **/atlas** + **/verify** — `/system` is the orchestration layer ABOVE them, not a replacement.
+- Reuses **`/cloud` (pods.json)** + **`/micro-exp` (sweep launch)** + **/atlas** + **/verify** — `/lab` is the orchestration layer ABOVE them, not a replacement.
 
 ## Closure
 End every verb with one status line — LEAD with the g56 progress bar + %:
 ```
-🛰️ system: <campaign> ▓▓▓▓▓▓░░░░ NN% · jobs <terminal>/<total> · queue <N> · budget ▓▓░░ $<spent>/$<cap> · verdicts <🟢n 🟠n 🔴n> · loop <idle|watching|driving|draining>
+🛰️ lab: <campaign> ▓▓▓▓▓▓░░░░ NN% · jobs <terminal>/<total> · queue <N> · budget ▓▓░░ $<spent>/$<cap> · verdicts <🟢n 🟠n 🔴n> · loop <idle|watching|driving|draining>
 ```
 The leading `▓▓▓▓▓▓░░░░ NN%` (10-cell bar + %) is mandatory on EVERY verb's closure (g56 — multi-step work always shows a % bar), not just status/drive.
 
-Triggers — `/system`, `관제탑`, `캠페인 현황`, `전체 잡 현황`, `mission control`, `campaign status`,
+Triggers — `/lab`, `랩`, `연구실`, `research lab`, `lab status`,
+`/system` (deprecated alias), `관제탑` (deprecated), `캠페인 현황`, `전체 잡 현황`, `mission control` (deprecated), `campaign status` (deprecated),
 `upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `handoff 올린 거`, `상류 기여`,
 `자율주행`, `self-driving`, `drive`, `set and walk away`, `예산 걸고 알아서`, `campaign drive`, `자율 캠페인`, `멈춰`, `drive off`, `stop driving`,
-`결과보고 추가발사`, `harvest 후 자동발사`, `자율 재발사 루프`, `control tower`, `잡 전부 모니터`.
+`결과보고 추가발사`, `harvest 후 자동발사`, `자율 재발사 루프`, `control tower` (deprecated), `잡 전부 모니터`.

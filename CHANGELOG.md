@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🔑 secret-guard 0.1.0 (신규 훅) + commons 0.19.0: "키 있는데 등록하라" 반복 봉인 (commons @D g77)
+
+🔑 agent 가 `secret` 스토어에 키가 **있는데도** "못 찾음 / 등록하라"를 반복하는 안티패턴을 봉인한다. 계기 = 2026-05-30 HF 토큰 사고: agent 가 `huggingface.token` 401 만 보고 유저에게 "등록하라"고 했는데, 실은 `hf.token` 에 유효한 토큰이 이미 있었다. 거버넌스 룰(commons @D g77)은 이미 land 됐고, 이 사이클은 그 **enforcement** 훅을 동반 출하한다(s7 — 룰+enforcement 한 사이클).
+
+- **secret-guard 0.1.0 (신규 PreToolUse(Bash) ADVISORY 훅)** — hexa-lang(`_secret_guard.hexa`, `hexa run`). cloud-guard 구조(stdin JSON 파싱 · `_normalize`/`_tokens`/`_str_contains` 헬퍼) + git-guard 의 non-blocking `_emit_advisory` emit shape 를 그대로 미러. ADVISORY only — `permissionDecision:"allow"` + `additionalContext`, **deny 절대 안 함**(commons @D g5 / guards-narrow-scope: 정당한 재등록·rotation 을 막으면 안 됨).
+- **탐지 (a)** — `secret set <K>` 인데 `<K>` 가 이미 `secret list` 에 존재 → "이미 존재, 읽으려면 `secret get <K>`, rotation 일 때만 덮어써라" advisory.
+- **탐지 (b)** — credential 취득 명령(`hf auth login` · `huggingface-cli login` · `gh auth login` · `aws configure` · `<tool> login`)인데 대응 키가 `secret list` 에 존재 → 매칭 키 이름 + 별칭 힌트(huggingface.token ↔ hf.token) 를 띄우고 `secret get <key>` 로 해소하라고 안내. 서비스→키 휴리스틱: hf/huggingface → `hf`/`hugg`, gh/github → `github`/`gh`, aws → `aws`.
+- **CONSERVATIVE** — 실제 매칭(진짜 `secret set`/login AND 존재하는 키)에만 발화. `secret list` / `secret get` / `--help` / bare read 는 **무음 통과**. 에러 시 FAIL-OPEN(advisory 없음 · 절대 차단 안 함). `secret list` 는 키 **이름만** 반환 — 값은 절대 읽거나 출력하지 않음. opt-out 없음(project.tape @D s11).
+- **commons @D g77** — "credential exists-check before register / login": 키가 없다고 말하거나 등록/login 시키기 전에 `secret list` 실행 · 별칭 확인 · 401 은 기존 키 align/rotate(재발급 강요 금지).
+- **버전 lockstep (g22)** — secret-guard `plugin.json`·`marketplace.json` 신규 0.1.0 · commons `plugin.json`·`marketplace.json` 0.18.0→**0.19.0**(g77 동반) · profiles.json `secret-guard: core` 태깅(s7) · README 표 + DENY/ADVISORY 주석블록 · CHANGELOG. commons @V(tape spec) 는 1.8 유지(@D 추가는 spec 버전 불변).
+- **로컬 검증** — `secret set hf.token` → advisory · `hf auth login` → advisory(hf.token, huggingface.token + 별칭) · `gh auth login` → advisory(github.token) · `secret list`/`secret get`/`ls` → 무음 · deny 0건.
+
 ## 2026-05-29 — cloud-guard 0.4.0: M5 pod 레지스트리 직접편집 차단 (active-pods.json write-guard)
 
 🔒 M5 pod 레지스트리 `~/.hx/cloud/active-pods.json` 를 agent 가 **직접 편집하지 못하게** 구조적으로 막는다. 모든 쓰기는 cost-bearing + race-corruptible 한 레지스트리에 대해 **오직 `hexa cloud` 서브명령**(rent·adopt·down·watchdog)으로만 일어나야 한다 — 이들은 `pod_registry._m5_write_atomic()`(temp+rename) 로 원자적 쓰기를 하며, hexa 내부 subprocess 라 PreToolUse 에 안 보임(오탐 0). 빠져 있던 단 하나는 agent-facing 직접편집 가드 → s7/s11.

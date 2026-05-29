@@ -314,3 +314,10 @@
   do   = "rewrite a stale passage wholesale into the new fact — the replacement is self-contained"
   dont = "re-evoke the removed thing via negation/contrast — 'was X now not'·'no longer X'·past-vs-now"
   dont = "leave SUPERSEDED/FALSIFIED pointers in cleaned docs — the mention itself is the elephant"
+
+@D g77 := "credential exists-check before register / login" :: governance [required active]
+  do   = "before saying a credential is missing or telling the user to register/login — run `secret list`"
+  do   = "check known aliases (huggingface.token ↔ hf.token style) · resolve via `secret get <key>`"
+  do   = "a 401 on a present key → align/rotate the existing key · do not ask the user to re-mint"
+  dont = "tell the user to register/login a credential that already exists in `secret list`"
+  dont = "trust one key name without checking aliases · re-mint when a valid key already exists"

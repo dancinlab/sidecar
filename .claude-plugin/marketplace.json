@@ -267,6 +267,12 @@
       "version": "0.2.1"
     },
     {
+      "name": "hexa",
+      "source": "./skills/hexa",
+      "description": "/hexa <verb> [args...] — generic passthrough to the hexa CLI (`hexa $ARGUMENTS`). Covers the 80+ verbs without a dedicated wrapper; /kick /atlas /verify /cloud take the hot paths. Routed to pool by pool-route. NL trigger via skill.",
+      "version": "0.1.0"
+    },
+    {
       "name": "secret",
       "source": "./skills/secret",
       "description": "/secret <args> — wraps the `secret` CLI (macOS Keychain-backed credentials, dancinlab/secret 0.4.0, dual-channel sync). Verbs: get · set · rotate · check · delete · list · service · init [icloud|github <url>] · backup [enable <url>|disable|status] · sync · migrate. Two independent sync channels (iCloud Drive primary + optional private GitHub mirror) push the same encrypted blob — master password is the only decryption secret. Auto-push ON by default once `backup enable` runs (opt out via SECRET_BACKUP_AUTO=0). High-value protection on set (BIP39 wordlist-validated · xprv/WIF/64-hex auto-detect → refuse without --allow-mnemonic + stdin/tty). rotate emits sentinel only.",

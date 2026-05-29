@@ -35,6 +35,11 @@ Without the flag the broker still tails the log and logs each emit attempt
 
 - **transport** — Streamable HTTP (NOT stdio — sidecar @D s15: STDIO MCP
   forbidden, HTTP/SSE allowed) on a fixed loopback broker `127.0.0.1:7717`.
+- **sessions** — STATEFUL: one transport + one dedicated `Server` per connected
+  channel client, keyed by the SDK-minted session id; channel emits fan out to
+  every session. (0.1.2 fix — a single shared `Server` re-`connect()`ed per
+  request orphaned a prior client's long-lived push stream → host-side
+  `socket connection closed unexpectedly` mid-turn.)
 - **capability** — declares `experimental["claude/channel"]`, which the host
   requires (`server did not declare claude/channel capability` → skip otherwise).
 - **registration** — `plugin.json` exposes an http url-based `mcpServers` entry

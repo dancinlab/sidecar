@@ -13,8 +13,8 @@
 //   emits an MCP channel notification:
 //     method: "notifications/claude/channel"
 //     params: { content: "📨 from <handle>: <text>", meta: { from, ts } }
-//   Claude Code then PUSHES that content into the live-but-idle session that
-//   has selected this channel (no turn needed) — closing walkie phase-2's poll gap.
+//   Claude Code then PUSHES that content into the live-but-idle session(s) that
+//   have selected this channel (no turn needed) — closing walkie phase-2's poll gap.
 //
 //   IDLE-PUSH is gated by the host: it only delivers when Claude Code was
 //   launched with `--dangerously-load-development-channels walkie-mcp` (or, once
@@ -22,6 +22,17 @@
 //   (Bedrock/Vertex skip channels). Until a channel client connects, the server
 //   still tails the log and logs each emit attempt — so the read+emit path is
 //   observable even without a live client. receive-PUSH only; send stays /walkie.
+//
+// TRANSPORT — STATEFUL, ONE SESSION PER CLIENT (0.1.2 fix)
+//   Server-initiated push needs a LONG-LIVED SSE stream. The SDK's stateless mode
+//   (sessionIdGenerator: undefined) tears down per request, so binding ONE shared
+//   Server to a fresh transport on EVERY request orphaned the previous client's
+//   push stream — when a second session (another Claude window) connected, or the
+//   first session issued any follow-up request, the live stream was rebound and
+//   closed mid-turn, surfacing host-side as "socket connection closed
+//   unexpectedly". Fix: stateful transports keyed by the SDK-minted session id,
+//   one dedicated Server per session, and channel emits fan out to EVERY connected
+//   session — so multiple windows each receive the push and none is orphaned.
 //
 // PORTABILITY / s11
 //   No absolute paths ($HOME only). No env-var/flag disables it. Single broker
@@ -32,12 +43,15 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
+import { randomUUID } from "node:crypto";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 
 const HOST = "127.0.0.1";
 const PORT = 7717;
+const VERSION = "0.1.2";
 const CHANNEL_METHOD = "notifications/claude/channel";
 
 const MSG_DIR = path.join(os.homedir(), ".sidecar", "walkie");
@@ -119,6 +133,20 @@ function drainNewLines(self) {
   return chunk.split("\n").map(renderLine).filter(Boolean);
 }
 
+// Collect a request body (POST) then hand the parsed JSON to cb. GET/DELETE carry
+// no body (cb(undefined)) — they are routed straight to the persistent transport.
+function collectBody(req, cb) {
+  if (req.method === "GET" || req.method === "DELETE") { cb(undefined); return; }
+  let body = "";
+  req.on("data", (c) => (body += c));
+  req.on("end", () => {
+    let parsed = undefined;
+    if (body) { try { parsed = JSON.parse(body); } catch {} }
+    cb(parsed);
+  });
+  req.on("error", () => cb(undefined));
+}
+
 async function main() {
   const self = readSelfHandle();
   if (!self) {
@@ -127,52 +155,97 @@ async function main() {
   }
   log(`starting broker for self=${self} on http://${HOST}:${PORT}/mcp`);
 
-  // declare the experimental claude/channel capability (REQUIRED — the host
-  // skips any server that does not declare it: "server did not declare
-  // claude/channel capability").
-  const server = new Server(
-    { name: "walkie-mcp", version: "0.1.1" },
-    { capabilities: { experimental: { "claude/channel": {} } } }
-  );
+  // One MCP session per connected channel client (each Claude Code window that
+  // selected this channel). Keyed by the SDK-minted session id. A SHARED single
+  // Server rebound on every request orphaned long-lived push streams (the phase-3
+  // crash); a per-session Server + persistent stateful transport keeps every
+  // client's push stream alive independently.
+  const sessions = new Map(); // sessionId -> { server, transport }
 
-  // emit a channel notification for one rendered inbound line.
+  function buildChannelServer() {
+    // declare the experimental claude/channel capability (REQUIRED — the host
+    // skips any server that does not declare it: "server did not declare
+    // claude/channel capability").
+    return new Server(
+      { name: "walkie-mcp", version: VERSION },
+      { capabilities: { experimental: { "claude/channel": {} } } }
+    );
+  }
+
+  // emit a channel notification for one rendered inbound line — fan out to EVERY
+  // connected channel client so multiple windows each receive the push.
   async function emitChannel({ content, meta }) {
-    try {
-      await server.notification({ method: CHANNEL_METHOD, params: { content, meta } });
-      log(`emit ${CHANNEL_METHOD}: ${content}`);
-    } catch (e) {
-      // before a client connects, the transport has no peer — notification is
-      // a no-op / throws "Not connected". That is expected; log and continue.
-      log(`emit-skip (no channel client yet): ${content} [${String(e)}]`);
+    if (sessions.size === 0) {
+      // before any client connects, the transport has no peer — expected; the
+      // line is still drained from the offset and remains available to the
+      // walkie-arm poll path. Log and continue.
+      log(`emit-skip (no channel client yet): ${content}`);
+      return;
+    }
+    for (const [sid, { server }] of sessions) {
+      try {
+        await server.notification({ method: CHANNEL_METHOD, params: { content, meta } });
+        log(`emit ${CHANNEL_METHOD} → ${sid}: ${content}`);
+      } catch (e) {
+        log(`emit-error → ${sid}: ${content} [${String(e)}]`);
+      }
     }
   }
 
-  // Streamable HTTP transport (stateless mode: a fresh transport per request is
-  // the SDK's documented stateless pattern; we keep one server bound to the most
-  // recent transport so notifications reach the connected channel client).
-  const httpServer = http.createServer(async (req, res) => {
+  // Streamable HTTP transport in STATEFUL mode: the SDK mints a session id on
+  // initialize; that session's transport persists across the standalone GET SSE
+  // stream (server push), follow-up POSTs, and DELETE teardown.
+  const httpServer = http.createServer((req, res) => {
     if (!req.url || !req.url.startsWith("/mcp")) {
       res.writeHead(404).end();
       return;
     }
-    try {
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined, // stateless
+
+    const sid = req.headers["mcp-session-id"];
+
+    // existing session → route to its persistent transport.
+    if (typeof sid === "string" && sessions.has(sid)) {
+      collectBody(req, (parsed) => {
+        sessions.get(sid).transport.handleRequest(req, res, parsed).catch((e) => {
+          log("handle-error", String(e));
+          if (!res.headersSent) res.writeHead(500).end();
+        });
       });
-      res.on("close", () => { transport.close(); });
-      await server.connect(transport);
-      // collect the request body for POSTs
-      let body = "";
-      req.on("data", (c) => (body += c));
-      req.on("end", async () => {
-        let parsed = undefined;
-        if (body) { try { parsed = JSON.parse(body); } catch {} }
-        await transport.handleRequest(req, res, parsed);
-      });
-    } catch (e) {
-      log("http-handler-error", String(e));
-      if (!res.headersSent) res.writeHead(500).end();
+      return;
     }
+
+    // no/unknown session → only a POST `initialize` may open a new one.
+    collectBody(req, async (parsed) => {
+      if (req.method !== "POST" || !isInitializeRequest(parsed)) {
+        res.writeHead(400, { "content-type": "application/json" }).end(
+          JSON.stringify({
+            jsonrpc: "2.0",
+            error: { code: -32000, message: "Bad Request: no valid session (initialize first)" },
+            id: null,
+          })
+        );
+        return;
+      }
+      try {
+        const server = buildChannelServer();
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (id) => {
+            sessions.set(id, { server, transport });
+            log(`session open ${id} (clients=${sessions.size})`);
+          },
+        });
+        transport.onclose = () => {
+          const id = transport.sessionId;
+          if (id && sessions.delete(id)) log(`session close ${id} (clients=${sessions.size})`);
+        };
+        await server.connect(transport);
+        await transport.handleRequest(req, res, parsed);
+      } catch (e) {
+        log("init-error", String(e));
+        if (!res.headersSent) res.writeHead(500).end();
+      }
+    });
   });
 
   httpServer.on("error", (e) => {

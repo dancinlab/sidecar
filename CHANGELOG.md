@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — commons 0.20.0: @D g47 worktree-머지 cwd 운영 규칙 보강 (commons @V 1.8→1.9)
+
+🧹 공유 워킹트리 repo에서 PR을 닫을 때 반복되던 `main is already used by worktree` 에러를 거버넌스로 봉인한다. 계기 = 2026-05-30 HEXA-TRAIN-FLOOR 도메인 사이클 — 격리 worktree에서 `gh pr create && gh pr merge --delete-branch`(pr-cycle 훅 자동 append)가 worktree cwd 안에서 실행되면, 그 worktree가 `main`을 점유 중이라 머지 단계가 매 PR마다 실패했다(PR 자체는 생성됨 → 부모가 canonical dir에서 수동 머지로 복구).
+
+- **@D g47 (PR ship discipline)** 에 learned `do` 한 줄 추가 — "run merge + `--delete-branch` from the canonical repo dir, not a worktree cwd (it holds 'main')". 100자 캡 준수.
+- **commons @V 1.8 → 1.9** · plugin/marketplace 0.19.0 → 0.20.0 lockstep (g22).
+- **분리된 source-fix**: git-guard가 `git worktree remove --force`의 `--force` 토큰을 force-push 패턴으로 오매칭해 차단하는 false-positive는 워크어라운드(commons에 "--force 쓰지 마라" 추가)로 막지 않고, git-guard 패턴 수정으로 별도 handoff 분리(g11/g59 — fix at source).
+
+---
+
 ## 2026-05-30 — 🔑 secret-guard 0.1.0 (신규 훅) + commons 0.19.0: "키 있는데 등록하라" 반복 봉인 (commons @D g77)
 
 🔑 agent 가 `secret` 스토어에 키가 **있는데도** "못 찾음 / 등록하라"를 반복하는 안티패턴을 봉인한다. 계기 = 2026-05-30 HF 토큰 사고: agent 가 `huggingface.token` 401 만 보고 유저에게 "등록하라"고 했는데, 실은 `hf.token` 에 유효한 토큰이 이미 있었다. 거버넌스 룰(commons @D g77)은 이미 land 됐고, 이 사이클은 그 **enforcement** 훅을 동반 출하한다(s7 — 룰+enforcement 한 사이클).

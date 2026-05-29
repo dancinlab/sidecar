@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.8"
+  version = "1.9"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -168,6 +168,7 @@
 
 @D g47 := "PR ship discipline — create → merge → clean, no unmerged stacks / dead worktrees" :: governance [required active]
   do   = "create one PR → merge (squash) → delete branch + remove its worktree → next · main-based"
+  do   = "run merge + `--delete-branch` from the canonical repo dir, not a worktree cwd (it holds 'main')"
   dont = "leave a PR unmerged · a merged branch · or a dead worktree behind at session end"
 
 @D g48 := "cross-project handoff ack — close-then-notify" :: governance [required active]

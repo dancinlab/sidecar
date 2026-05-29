@@ -1,0 +1,9 @@
+{
+  "name": "hexa",
+  "description": "/hexa <verb> [args...] — generic passthrough to the hexa CLI (`hexa $ARGUMENTS`). Covers the 80+ verbs not given a dedicated wrapper (run · build · test · parse · check · bench · qrng · sim-universe · qmirror · loop · tool · status · …). Dedicated wrappers (/kick /atlas /verify /cloud /hexa-help) take the hot paths; /hexa is the long-tail + future-verb fallback. Routed to pool by pool-route like any hexa call. NL trigger via skill.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "hexa", "passthrough", "cli"]
+}

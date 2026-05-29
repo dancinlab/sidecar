@@ -1,10 +1,17 @@
-// _cloud_guard.hexa — PreToolUse(Bash) hard block for DIRECT rented-GPU
-// provider CLI / API usage. ALL runpod / vast.ai access must route through
-// `hexa cloud` (commons @D g8), which now wraps the FULL pod lifecycle:
-//   rent (provision) · down (destroy) · list / status · exec · run · nohup ·
-//   poll · tail · copy-to / copy-from · preflight.
+// _cloud_guard.hexa — PreToolUse(Bash · Write · Edit · MultiEdit) hard block.
 //
-// Five orthogonal detectors run on every Bash command:
+// (1) Bash: DIRECT rented-GPU provider CLI / API usage. ALL runpod / vast.ai
+//     access must route through `hexa cloud` (commons @D g8), which wraps the
+//     FULL pod lifecycle: rent (provision) · down (destroy) · list / status ·
+//     exec · run · nohup · poll · tail · copy-to / copy-from · preflight.
+// (2) Bash + Write/Edit/MultiEdit: DIRECT writes to the M5 pod registry
+//     `~/.hx/cloud/active-pods.json` (detector (f) + the file-write branch).
+//     The registry is cost-bearing + race-corruptible; every write routes
+//     through `hexa cloud` (rent/adopt/down/watchdog → atomic temp+rename
+//     inside hexa, an internal subprocess invisible to PreToolUse).
+//
+// Six detectors run on a Bash command (a-f); the file-write branch runs on
+// Write/Edit/MultiEdit. The Bash detectors (a-e):
 //
 //   (a) pod-CLI + verb pair scan — anywhere in the command. A provider CLI
 //       (`runpodctl` · `vastai` · `vast`) followed by ANY recognized verb —
@@ -277,6 +284,56 @@ fn _has_pod_sdk_import(cmd: string) -> bool {
     return false
 }
 
+// (f) M5 pod-registry write-guard helpers — `~/.hx/cloud/active-pods.json`
+// must NEVER be hand-edited; every write routes through `hexa cloud`
+// (rent/adopt/down/watchdog → pod_registry._m5_write_atomic, an internal
+// subprocess invisible to PreToolUse → no false-positive on hexa's own write).
+//
+// A token "targets" the registry if it contains the basename substring.
+fn _targets_active_pods(t: string) -> bool {
+    if _str_contains(t, "active-pods.json") { return true }
+    return false
+}
+
+// Mutating binaries / operators. Reads (cat/jq/grep/head/tail/wc/less/...) are
+// intentionally absent so inspection still passes. `hexa` is absent so
+// `hexa cloud …` passes (the CLI is the sanctioned write path).
+fn _is_registry_write_op(t: string) -> bool {
+    if t == ">" { return true }
+    if t == ">>" { return true }
+    if t == "tee" { return true }
+    if t == "sed" { return true }
+    if t == "cp" { return true }
+    if t == "mv" { return true }
+    if t == "dd" { return true }
+    if t == "truncate" { return true }
+    if t == "rm" { return true }
+    if t == "install" { return true }
+    if t == "ln" { return true }
+    return false
+}
+
+// basename(path) == "active-pods.json" — for the Write/Edit/MultiEdit branch.
+fn _basename_is_active_pods(path: string) -> bool {
+    let n = len(path)
+    let mut start = 0
+    let mut i = 0
+    while i < n {
+        if path[i] == "/" { start = i + 1 }
+        i = i + 1
+    }
+    let base = path.substring(start, n)
+    if base == "active-pods.json" { return true }
+    return false
+}
+
+fn _deny_registry(what: string) {
+    let reason = "cloud-guard (commons @D g8 · project.tape @D s11): refusing `" + what + "` — direct write to the M5 pod registry `~/.hx/cloud/active-pods.json`.\n  NEVER hand-edit it (race-corruption hazard · cost-bearing). All registry writes are atomic and route ONLY through `hexa cloud`:\n    rent a pod    → `hexa cloud rent <runpod|vast> [--gpu T] [--image I]`\n    adopt orphan  → `hexa cloud adopt <id> --project P --purpose T`\n    destroy pod   → `hexa cloud down <id>`\n    reconcile     → `hexa cloud watchdog`\n  Reads (cat / jq / grep / head / tail / wc / less) are allowed.\n  No opt-out by design (project.tape @D s11)."
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
 fn _read_file_safe(path: string) -> string {
     let mut out = ""
     try { out = to_string(read_file(path)) } catch e { out = "" }
@@ -374,7 +431,24 @@ fn main() {
     if type_of(payload) != "map" { _allow() }
 
     if !has_key(payload, "tool_name") { _allow() }
-    if payload["tool_name"] != "Bash" { _allow() }
+    let tool_name = payload["tool_name"]
+
+    // (f-Write) file-write tool branch — Write/Edit/MultiEdit targeting the
+    // M5 registry by file_path basename is denied. Runs BEFORE the Bash gate.
+    if tool_name == "Write" || tool_name == "Edit" || tool_name == "MultiEdit" {
+        if !has_key(payload, "tool_input") { _allow() }
+        let wti = payload["tool_input"]
+        if type_of(wti) != "map" { _allow() }
+        if !has_key(wti, "file_path") { _allow() }
+        let fp = wti["file_path"]
+        if type_of(fp) != "string" { _allow() }
+        if _basename_is_active_pods(fp) {
+            _deny_registry(tool_name + " " + fp)
+        }
+        _allow()
+    }
+
+    if tool_name != "Bash" { _allow() }
     if !has_key(payload, "tool_input") { _allow() }
     let ti = payload["tool_input"]
     if type_of(ti) != "map" { _allow() }
@@ -451,6 +525,27 @@ fn main() {
             }
         }
         ri = ri + 1
+    }
+
+    // (f) M5 pod-registry direct-write scan — a token that targets
+    // `active-pods.json` AND a mutating operator/binary anywhere in the
+    // command (`>` `>>` tee sed cp mv dd truncate rm install ln) is denied.
+    // Reads (cat/jq/grep/head/tail/wc/less) carry no write-op → pass.
+    // `hexa cloud …` carries no write-op token (the path is built INSIDE
+    // hexa) → passes. `_normalize` preserves `>`/`>>` so redirects survive.
+    let mut targets_reg = false
+    let mut has_write_op = false
+    i = 0
+    while i < n {
+        if _targets_active_pods(toks[i]) { targets_reg = true }
+        if _is_registry_write_op(toks[i]) { has_write_op = true }
+        // glued redirect (e.g. `>active-pods.json` / `>>x`) — `_normalize`
+        // does not split `>` from an adjacent path, so scan as substring too.
+        if _str_contains(toks[i], ">") { has_write_op = true }
+        i = i + 1
+    }
+    if targets_reg && has_write_op {
+        _deny_registry(cmd)
     }
 
     _allow()

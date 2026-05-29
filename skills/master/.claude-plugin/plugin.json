@@ -1,0 +1,9 @@
+{
+  "name": "master",
+  "description": "/master — owner-only (creator) sidecar maintenance control-plane. Master-tier (gated by the ~/.sidecar/master marker). Verbs: bare/status (owner health dashboard — plugin count · marketplace↔plugin.json version drift · enabled profile + master marker · open PRs · uncommitted/unpushed · master-tier inventory) · update (CHECK external Opus/Claude-Code changelogs + internal drift/sync/version/PR → PLAN update candidates ranked by impact/effort/risk → DISPATCH the top candidate to `/sbs auto`, running to the `go` checkpoint so the owner only types `go`) · check (read-only update-availability dashboard — CHECK stage only) · audit (governance↔enforcement integrity per s7 — orphan @D rules with no guard, orphan guards with no rule) · lint (repo-wide plugin standards — tier tagging · SKILL.md minimal body s6 · portable paths s3 · concept separation s1) · sync (sidecar sync + enable propagation). NEVER edits governance SSOT or ships directly — all execution is delegated to /sbs. NL trigger via skill.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "master", "owner", "maintenance", "update"]
+}

@@ -131,12 +131,10 @@ case "$VERB" in
       exit 0
     fi
     HANDLE_Q="$TARGET"; SOCK=$(resolve_sock)
-    if [ -z "$SOCK" ]; then
-      echo "! unknown handle '$TARGET' (not in roster $ROSTER). known peers:"
-      roster_handles | sed 's/^/    /'
-      echo "  (peer must run /walkie on first to register)"
-      exit 1
-    fi
+    # roster-miss fallback: a peer that armed via `arm` (bind-only, unregistered)
+    # still has a socket at the default path convention. send_to_sock returns 2 if
+    # it isn't live, so a truly-offline peer still reports gracefully below.
+    [ -z "$SOCK" ] && SOCK="$WALKIE_DIR/$TARGET.sock"
     FROM_V="$SELF"; TEXT_V="$TEXT"; TS_V="$TS"; J=$(build_json)
     SOCK_PATH="$SOCK"; PAYLOAD="$J"
     if send_to_sock; then

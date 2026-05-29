@@ -1,0 +1,81 @@
+// _fireworks.hexa — a self-contained ~3s ANSI fireworks animation.
+//
+// This runs ONLY inside the SEPARATE Terminal window spawned by _celebrate.hexa
+// (macOS). It owns that window's stdout — it is a fresh process with no relation
+// to the Claude Code TUI, so the Ink-canvas constraint (@L6) does not apply here:
+// the Claude TUI is never the target of these ANSI sequences. It writes to its
+// own stdout, loops a handful of colored fireworks frames for ~3 seconds, then
+// restores the cursor and exits. No arguments, no input, no network.
+
+fn _esc() -> string { return chr(27) }
+
+// ANSI helpers (written to THIS window's stdout only).
+fn _clear() { print(_esc() + "[2J" + _esc() + "[H") }
+fn _home() { print(_esc() + "[H") }
+fn _hide_cursor() { print(_esc() + "[?25l") }
+fn _show_cursor() { print(_esc() + "[?25h") }
+fn _reset() { print(_esc() + "[0m") }
+
+// move cursor to (row, col), 1-based.
+fn _at(row: int, col: int) {
+    print(_esc() + "[" + to_string(row) + ";" + to_string(col) + "H")
+}
+
+// set a foreground color (31=red 32=green 33=yellow 34=blue 35=magenta 36=cyan).
+fn _color(code: int) {
+    print(_esc() + "[1;" + to_string(code) + "m")
+}
+
+// one fireworks burst at (cy, cx) with a given color + glyph, rendered as an
+// expanding star. `stage` 0..2 grows the burst.
+fn _burst(cy: int, cx: int, code: int, stage: int) {
+    _color(code)
+    if stage == 0 {
+        _at(cy, cx); print("*")
+    } else if stage == 1 {
+        _at(cy, cx); print("✦")
+        _at(cy - 1, cx); print("|")
+        _at(cy + 1, cx); print("|")
+        _at(cy, cx - 1); print("-")
+        _at(cy, cx + 1); print("-")
+    } else {
+        _at(cy, cx); print("🎆")
+        _at(cy - 1, cx - 2); print("\\")
+        _at(cy - 1, cx + 2); print("/")
+        _at(cy + 1, cx - 2); print("/")
+        _at(cy + 1, cx + 2); print("\\")
+        _at(cy - 2, cx); print("✦")
+        _at(cy + 2, cx); print("✦")
+        _at(cy, cx - 4); print("✦")
+        _at(cy, cx + 4); print("✦")
+    }
+}
+
+fn main() {
+    _hide_cursor()
+    _clear()
+
+    // three bursts at fixed positions, cycling colors as the stage grows.
+    let codes = [31, 33, 36, 35, 32, 34]
+    let mut frame = 0
+    // ~3s: 12 frames at ~250ms each.
+    while frame < 12 {
+        _clear()
+        _at(2, 18); _color(33); print("🎆  G O A L   1 0 0 %   🎆")
+        let stage = frame % 3
+        _burst(8, 14, codes[frame % 6], stage)
+        _burst(11, 40, codes[(frame + 2) % 6], (frame + 1) % 3)
+        _burst(6, 60, codes[(frame + 4) % 6], (frame + 2) % 3)
+        _burst(14, 26, codes[(frame + 1) % 6], (frame + 2) % 3)
+        _at(18, 22); _color(32); print("🎉  novel goal reached  🎉")
+        _reset()
+        // flush this window's stdout, then pause ~250ms.
+        let _s = exec_with_status("sleep 0.25")
+        frame = frame + 1
+    }
+
+    _at(20, 1)
+    _reset()
+    _show_cursor()
+    print("\n")
+}

@@ -1,0 +1,426 @@
+// _celebrate.hexa — Stop hook: fire a fireworks celebration when the ACTIVE
+// /domain's progress crosses to 100% (a "novel goal" reached).
+//
+// HARD CONSTRAINT (@L6): the Claude Code TUI canvas is owned by Ink — this hook
+// NEVER writes ANSI/animation to /dev/tty (that corrupts the screen). The only
+// channels it uses are (1) additionalContext into the chat (static ASCII text),
+// (2) the terminal bell, and (3) a SEPARATE Terminal window (macOS only) that
+// runs the ANSI animation in its own process — never touching the Claude TUI.
+//
+// Trigger (@L2): active DOMAIN.md milestone progress crosses prev<100 → now=100.
+// Last-seen percent per domain lives in $HOME/.sidecar/celebrate/<key>.seen.
+// Fire ONCE on the crossing, then record 100 (no re-fire while it stays at 100);
+// if it drops below 100 and re-reaches, celebrate again (natural).
+//
+// s11 (no opt-out, @L4): no env-var/flag/config disables this. The ONLY gates
+// are real preconditions — an active domain exists AND has ≥1 milestone AND
+// progress just crossed to 100. Otherwise silent exit 0.
+//
+// Active-domain + progress resolution mirrors the `domain` skill (skills/domain):
+//   root  = git toplevel (else cwd), active = $HOME/.claude/domain-active.tsv
+//           row for (root, session) else most-recent any-session row else the
+//           project basename; snapshot path via the repo's DOMAINS.tape roster.
+//   100%  = (total>0 && done==total) counting `- [x]`/`- [ ]` in the snapshot.
+//
+// Portable: $HOME / ${CLAUDE_PLUGIN_ROOT} only. stdin via exec("cat") (avoids
+// the hexa fake-FILE segfault). Path existence via shell `test -e`.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _basename(path: string) -> string {
+    let i = path.last_index_of("/")
+    if i < 0 { return path }
+    return path.substring(i + 1, len(path))
+}
+
+fn _dirname(p: string) -> string {
+    let i = p.last_index_of("/")
+    if i < 0 { return "." }
+    return p.substring(0, i)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _env(name: string) -> string {
+    let r = exec_with_status("printenv " + name)
+    if r[1] != 0 { return "" }
+    return _trim(to_string(r[0]))
+}
+
+// single-quote a string for safe embedding in a `sh -c` / shell command.
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+// path exists (file OR dir) via shell `test -e` (file_exists is regular-file-only;
+// path_exists builtin not present in this toolchain).
+fn _exists(path: string) -> bool {
+    let r = exec_with_status("test -e " + _shq(path))
+    return r[1] == 0
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+// ── active-domain resolution (mirrors skills/domain) ─────────────────────────
+
+fn _session_id() -> string {
+    let cid = _env("CLAUDE_CODE_SESSION_ID")
+    if cid != "" { return cid }
+    let r = exec_with_status("tty 2>/dev/null")
+    if r[1] == 0 {
+        let t = _trim(to_string(r[0]))
+        if t != "" { return t }
+    }
+    return "NOTTY"
+}
+
+fn _active_store() -> string {
+    let home = _env("HOME")
+    if home == "" { return ".domain-active.tsv" }
+    return home + "/.claude/domain-active.tsv"
+}
+
+// Resolve the active domain for `root`: exact (root, this-session) row wins, else
+// the most-recent any-session row for `root`, else "" (caller falls back to the
+// project basename). Legacy 2-field rows are ignored by the fallback.
+fn _get_active(root: string) -> string {
+    let body = _read_file_safe(_active_store())
+    let lines = body.split("\n")
+    let exact = root + "\t" + _session_id() + "\t"
+    let rootpfx = root + "\t"
+    let mut fallback = ""
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, exact) { return ln.substring(len(exact), len(ln)) }
+        if _starts_with(ln, rootpfx) {
+            let rest = ln.substring(len(rootpfx), len(ln))
+            let tab = rest.index_of("\t")
+            if tab >= 0 { fallback = rest.substring(tab + 1, len(rest)) }
+        }
+        i = i + 1
+    }
+    return fallback
+}
+
+// domain NAME from a basename — uppercase every ASCII lowercase letter (matches
+// skills/domain `_domain_name`, used as the fallback when no domain is selected).
+fn _domain_name(base: string) -> string {
+    let mut out = ""
+    let n = len(base)
+    let mut i = 0
+    while i < n {
+        let c = base[i]
+        let k = char_code(c, 0)
+        if k >= 97 && k <= 122 { out = out + chr(k - 32) }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out
+}
+
+// ── DOMAINS.tape roster (NAME → snapshot relpath) ────────────────────────────
+
+fn _abs(root: string, p: string) -> string {
+    if _starts_with(p, "/") { return p }
+    let mut q = p
+    if _starts_with(q, "./") { q = q.substring(2, len(q)) }
+    return root + "/" + q
+}
+
+// roster path (relpath) for `name`, or "" when not registered.
+fn _roster_lookup(root: string, name: string) -> string {
+    let body = _read_file_safe(root + "/DOMAINS.tape")
+    if body == "" { return "" }
+    let lines = body.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let ln = _trim(lines[i])
+        i = i + 1
+        if !_starts_with(ln, "@domain ") { continue }
+        let rest = _trim(ln.substring(8, len(ln)))
+        let sp = rest.index_of(" ")
+        let nm = if sp < 0 { rest } else { rest.substring(0, sp) }
+        if nm != name { continue }
+        let q1 = ln.index_of("\"")
+        if q1 < 0 { continue }
+        let after = ln.substring(q1 + 1, len(ln))
+        let q2 = after.index_of("\"")
+        if q2 < 0 { continue }
+        return after.substring(0, q2)
+    }
+    return ""
+}
+
+// snapshot path for `name`: roster entry (any path) else root/NAME/NAME.md else
+// root/NAME.md — the two legacy on-disk layouts the domain skill resolves.
+fn _snap_path(root: string, name: string) -> string {
+    let rp = _roster_lookup(root, name)
+    if rp != "" { return _abs(root, rp) }
+    let nested = root + "/" + name + "/" + name + ".md"
+    if _exists(nested) { return nested }
+    return root + "/" + name + ".md"
+}
+
+// [done, total] milestone counts in the SNAPSHOT (final-goal board).
+fn _counts(snap: string) -> array {
+    let body = _read_file_safe(snap)
+    let lines = body.split("\n")
+    let mut done = 0
+    let mut total = 0
+    let mut i = 0
+    while i < len(lines) {
+        let ln = lines[i]
+        if _starts_with(ln, "- [x] ") { done = done + 1; total = total + 1 }
+        else if _starts_with(ln, "- [ ] ") { total = total + 1 }
+        i = i + 1
+    }
+    return [done, total]
+}
+
+// ── celebrate state ($HOME/.sidecar/celebrate/<key>.seen) ────────────────────
+
+fn _celebrate_dir() -> string {
+    return _env("HOME") + "/.sidecar/celebrate"
+}
+
+// sanitize a domain name into a filename-safe key: keep [A-Za-z0-9.+-], map the
+// rest to `_`. Prefix with the repo basename so same-named domains in different
+// repos don't collide.
+fn _sanitize(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut out = ""
+    while i < n {
+        let c = s[i]
+        let k = char_code(c, 0)
+        let ok = (k >= 48 && k <= 57) || (k >= 65 && k <= 90) || (k >= 97 && k <= 122) || c == "." || c == "+" || c == "-"
+        if ok { out = out + c } else { out = out + "_" }
+        i = i + 1
+    }
+    return out
+}
+
+fn _seen_path(root: string, name: string) -> string {
+    return _celebrate_dir() + "/" + _sanitize(_basename(root)) + "__" + _sanitize(name) + ".seen"
+}
+
+fn _read_seen(path: string) -> int {
+    if !_exists(path) { return -1 }
+    let raw = _trim(_read_file_safe(path))
+    if raw == "" { return -1 }
+    let mut v = 0
+    try { v = to_int(raw) } catch e { return -1 }
+    return v
+}
+
+fn _write_seen(path: string, pct: int) {
+    let dir = _celebrate_dir()
+    let _mk = exec_with_status("mkdir -p " + _shq(dir))
+    try { write_file(path, to_string(pct) + "\n") } catch e { }
+}
+
+// ── effects ──────────────────────────────────────────────────────────────────
+
+// (1) ASCII fireworks burst additionalContext (static text — never animated; the
+//     Ink-owned TUI must not receive ANSI/cursor control).
+fn _burst_text(name: string) -> string {
+    let mut p = []
+    p.push("```")
+    p.push("        .  *  .  ✦   .  *   .  ✦  .  *  .")
+    p.push("     *   \\  |  /   .    ✦    .   \\  |  /   *")
+    p.push("   ✦  .  --✷--   *   .  🎆  .   *   --✷--  .  ✦")
+    p.push("     *   /  |  \\   .    ✦    .   /  |  \\   *")
+    p.push("   .  *  .  ✦   *   .  *  .  ✦   *   .  *  .  ✦")
+    p.push("        \\ | /        BOOM!        \\ | /")
+    p.push("       --- * ---   🎉🎆🎉   --- * ---")
+    p.push("        / | \\                  / | \\")
+    p.push("```")
+    p.push("")
+    p.push("🎆 **" + name + " @goal 100% 달성!** — 모든 milestone 완료. 새로운 정점에 도달했습니다. 🎉")
+    return p.join("\n")
+}
+
+// emit the Stop additionalContext payload.
+fn _emit(text: string) {
+    println("{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"additionalContext\":" + _json_escape(text) + "}}")
+}
+
+// (2) terminal bell — printf '\a' to the controlling terminal via the shell.
+//     This is the ASCII BEL character only (NOT ANSI / cursor control), so it
+//     does not corrupt the Ink canvas.
+fn _bell() {
+    let _r = exec_with_status("printf '\\a'")
+}
+
+// (3) macOS only: spawn a SEPARATE Terminal window running _fireworks.hexa (a
+//     ~3s ANSI loop) detached. The window is its own process — it NEVER touches
+//     the Claude TUI. Graceful no-op when osascript/Terminal is unavailable.
+fn _spawn_window(hexa: string, fireworks: string) {
+    // the command the new Terminal window runs: `<hexa> run <fireworks>`.
+    let inner = _shq(hexa) + " run " + _shq(fireworks)
+    // AppleScript string: double-quote the inner command, escaping " and \.
+    let mut osa = ""
+    let n = len(inner)
+    let mut i = 0
+    while i < n {
+        let c = inner[i]
+        if c == "\\" { osa = osa + "\\\\" }
+        else if c == "\"" { osa = osa + "\\\"" }
+        else { osa = osa + c }
+        i = i + 1
+    }
+    let script = "tell application \"Terminal\" to do script \"" + osa + "\""
+    // detach: setsid → nohup fallback (macOS has no setsid by default).
+    let launch =
+        "if command -v setsid >/dev/null 2>&1; then" +
+        " setsid osascript -e " + _shq(script) + " </dev/null >/dev/null 2>&1 &" +
+        " else" +
+        " nohup osascript -e " + _shq(script) + " </dev/null >/dev/null 2>&1 &" +
+        " fi"
+    try { let _r = exec_with_status(launch) } catch e { }
+}
+
+fn _is_macos() -> bool {
+    let r = exec_with_status("uname -s 2>/dev/null")
+    if r[1] != 0 { return false }
+    return _trim(to_string(r[0])) == "Darwin"
+}
+
+// resolve the hexa binary the same way hooks.json does, for the spawned window.
+fn _hexa_bin() -> string {
+    let h = _env("HEXA")
+    if h != "" && _exists(h) { return h }
+    let home = _env("HOME")
+    let dflt = home + "/.hx/bin/hexa"
+    if home != "" && _exists(dflt) { return dflt }
+    let r = exec_with_status("command -v hexa 2>/dev/null")
+    if r[1] == 0 {
+        let p = _trim(to_string(r[0]))
+        if p != "" { return p }
+    }
+    return "hexa"
+}
+
+fn main() {
+    // drain stdin (the host pipes the Stop event JSON) so the pipe never blocks.
+    let raw = _read_stdin()
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { exit(0) }
+
+    // resolve repo root: payload cwd → git toplevel → cwd.
+    let mut cwd = ""
+    if type_of(payload) == "map" && has_key(payload, "cwd") && type_of(payload["cwd"]) == "string" {
+        cwd = payload["cwd"]
+    }
+    let cdq = if cwd != "" { " -C " + _shq(cwd) } else { "" }
+    let mut root = ""
+    let rr = exec_with_status("git" + cdq + " rev-parse --show-toplevel 2>/dev/null")
+    if rr[1] == 0 { root = _trim(to_string(rr[0])) }
+    if root == "" {
+        if cwd != "" { root = cwd }
+        else { root = _trim(to_string(exec("pwd"))) }
+    }
+    if root == "" { exit(0) }
+
+    // active domain (precondition: there must be one).
+    let active = _get_active(root)
+    let name = if active != "" { active } else { _domain_name(_basename(root)) }
+    if name == "" { exit(0) }
+
+    let snap = _snap_path(root, name)
+    if !_exists(snap) { exit(0) }
+
+    // progress: precondition ≥1 milestone (total>0). 100% = done==total.
+    let c = _counts(snap)
+    let done = c[0]
+    let total = c[1]
+    if total == 0 { exit(0) }
+    let pct = (done * 100) / total
+
+    let seenf = _seen_path(root, name)
+    let prev = _read_seen(seenf)
+
+    // crossing detection: fire ONLY when prev < 100 (or unknown) AND now == 100.
+    let crossing = (pct == 100) && (prev < 100)
+
+    // record current percent regardless (so a later <100→100 re-fires naturally,
+    // and a steady 100 is remembered so it never re-fires).
+    if prev != pct { _write_seen(seenf, pct) }
+
+    if !crossing { exit(0) }
+
+    // ── CELEBRATE ──
+    // (1) ASCII burst into the chat (static text only — never the TUI canvas).
+    _emit(_burst_text(name))
+    // (2) terminal bell.
+    _bell()
+    // (3) macOS: separate Terminal window with the ~3s ANSI animation, detached.
+    if _is_macos() {
+        let proot = _env("CLAUDE_PLUGIN_ROOT")
+        if proot != "" {
+            let fw = proot + "/bin/_fireworks.hexa"
+            if _exists(fw) { _spawn_window(_hexa_bin(), fw) }
+        }
+    }
+    exit(0)
+}

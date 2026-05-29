@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🎆 celebrate 0.1.0 (신규 훅): 활성 도메인 100% 도달 시 ASCII+bell+macOS 별도창 폭죽 축포
+
+🎆 활성 `/domain` 의 진행도가 100% 로 교차(직전 <100 → 현재 =100)하는 순간 = novel goal 도달. 그 1회에만 Stop 훅이 ① 대화 스트림에 ASCII 폭죽 버스트 ② 터미널 bell ③ macOS 면 별도 Terminal 창에 ~3s ANSI 폭죽 애니메이션(detached) 을 터뜨린다. TUI 캔버스(Ink 소유)는 절대 건드리지 않는다.
+
+- **celebrate 0.1.0 (신규 Stop 훅)** — hexa-lang(`_celebrate.hexa` + `_fireworks.hexa`, `hexa run`). hooks.json 런처는 plan-guard/walkie-arm 와 동일한 `sh -c 'H="$HEXA";…exec "$H" run "$@"'` 패턴. Stop 이벤트(턴당 1회 — PostToolUse 보다 cheap).
+- **활성 도메인·진행도 산식 재사용(@L2)** — `skills/domain` 의 로직을 포팅: git toplevel = root → `$HOME/.claude/domain-active.tsv` 의 (root, session) 행 → 없으면 같은 root 의 most-recent any-session 행 → 없으면 프로젝트 basename. 스냅샷 경로는 repo `DOMAINS.tape` roster(없으면 `<root>/<NAME>/<NAME>.md` 또는 `<root>/<NAME>.md`). 진행도 = 스냅샷의 `- [x]`/`- [ ]` 개수(done/total) · 100% = total>0 && done==total.
+- **교차 1회 발사 + state(@L2)** — `$HOME/.sidecar/celebrate/<repo>__<NAME>.seen` 에 last-seen %. 직전 <100(또는 미기록) && 현재 =100 일 때만 발사 후 100 기록 → 같은 100% 재진입 시 재발사 안 함. <100 으로 떨어졌다가 재달성하면 자연스럽게 다시 축하.
+- **효과 3종(@L3)** — ① additionalContext 멀티라인 ASCII 폭죽 + "🎆 <DOMAIN> @goal 100% 달성!"(`{"hookSpecificOutput":{"hookEventName":"Stop","additionalContext":…}}` — walkie-arm/plan-guard emit 형식). ② `printf '\a'` 터미널 bell(ANSI 아님 — BEL 문자만). ③ `uname`=Darwin 면 별도 Terminal 창(`osascript … do script`)에서 `_fireworks.hexa` ~3s ANSI 루프 detached(setsid→nohup) spawn. 비-macOS → ③ skip, ①② 유지.
+- **TUI 불가침(@L6) · 무조건(@L4 · @D s11)** — /dev/tty 직접 ANSI 출력 0건(애니는 오직 별도 창 — 그 창은 별개 프로세스라 Claude TUI 무관). escape-hatch env/flag/config 없음 — 게이트 = real precondition 뿐(활성 도메인 존재 + milestone ≥1 + 100% 교차). 활성 도메인 없음/milestone 0/미교차 → silent exit 0.
+- **hexa 함정 회피(@L5)** — stdin 은 `exec("cat")` 로만(fake-FILE segfault 회피). 경로 존재는 shell `test -e`(설치된 toolchain 에 `path_exists` 빌트인 미탑재 — #2160 미반영 확인). `$HOME`/`${CLAUDE_PLUGIN_ROOT}` 포터블 경로만.
+- **알려진 한계** — Ink 가 TUI 캔버스를 소유해 in-place 오버레이 애니메이션은 불가. 대화 스트림 ASCII 버스트는 정적 텍스트이고, 움직이는 폭죽은 macOS 별도 창에서만 본다(비-macOS 는 정적 버스트 + bell).
+
 ## 2026-05-30 — 📇 TOOLKIT.jsonl 0.1.0 (신규 카탈로그): 루트 dev-capability SSOT 자동생성 + /master update 연동 + project.tape s17
 
 📇 sidecar 개발 시 끌어쓸 수 있는 모든 capability(hook·command·skill·marker·CLI)를 손으로 쓰지 않고 `.claude-plugin/marketplace.json`(91-plugin SSOT) + 각 plugin 의 `hooks.json` 에서 **자동 파생**해 루트 `TOOLKIT.jsonl`(대문자·JSONL·한 줄=한 capability)로 모은다. `/master update` 가 generator 를 호출해 새로 ship 한 plugin 이 자동 편입되도록 배선했다.

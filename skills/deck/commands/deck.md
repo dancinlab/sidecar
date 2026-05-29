@@ -113,7 +113,7 @@ $ARGUMENTS = "<domain> <slug> '<spec-json>'"
 ### Step 1 — domain routing (generic dispatch · d4)
 ```bash
 # 도메인 manifest lookup (no hardcoded if/elif on domain name)
-hexa run /Users/ghost/.hx/install/hexa-lang/stdlib/deck/gen.hexa \
+hexa run $HOME/.hx/install/hexa-lang/stdlib/deck/gen.hexa \
   --domain "<domain>" \
   --slug "<slug>" \
   --spec "<spec-json>" \

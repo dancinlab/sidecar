@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — lab 1.2.0 (PR3/3): `lab mirror` (거울방 → mirror-loop 위임) + planned 서브커맨드 doc
+
+🪞 lab 의 자기-진화 방 `lab mirror` 추가 + lab 라이프사이클 서브커맨드 세트 문서화.
+
+- **`lab mirror`** = 거울방 / mirror room — `mirror-loop` 스킬(mining→kick→atlas→mining ouroboros)에 **순수 위임** (Skill 도구로 invoke, trailing args verbatim forward). d4 single-generic-dispatch 재사용 — **재구현 아님**. mirror-loop 의 모든 계약(ACTIVE-DOMAIN g58 · HONEST g63 · IDEMPOTENT · ScheduleWakeup 1200s) 그대로 상속. no-duplication invariant: mirror-loop 변경 시 lab mirror 가 공짜로 상속. `pursue`(OPEN 실행 스레드 fan-out)의 knowledge-folding 짝 — `mirror`는 CLOSED 발견을 atlas 시드로 되접음.
+- **planned 서브커맨드 (스텁, 미구현)** — `notebook` (append-only lab 저널/결정 로그) · `bench <scope>` (마이크로-실험 sweep → `/micro-exp` 위임) · `review [<slug>]` (verdict-matrix 감사, g73/g5). SKILL.md `## planned subcommands` 테이블에 역할+의도 impl 문서화. 라이프사이클: plan(notebook)→experiment(bench)→track(status/progress)→evolve(mirror)→audit(review). Q4 대로 progress+mirror 만 생성, 나머지는 문서 스텁.
+- `allowed-tools` 에 `Skill` 추가 (mirror 위임이 Skill 도구 사용).
+- **버전 lockstep (g22)** — `plugin.json` · `marketplace.json` `lab` 엔트리 1.1.0→**1.2.0** (verb 리스트 + 1.2.0 노트 + 트리거 `lab mirror`·`거울방` 동기) · SKILL.md `@D` mirror do-line + frontmatter verb/triggers/allowed-tools + closure 트리거 줄 · CHANGELOG. README lab 행 부재 → CHANGELOG lockstep 표면.
+
 ## 2026-05-29 — lab 1.1.0 (PR2/3): `lab progress` — read-only 연구-프로그램 ARC 바
 
 📈 `status`(잡 단위 LIVE 대시보드)와 구별되는 새 read-only verb `lab progress` 추가 — 전체 연구 **프로그램**이 질문→닫힌-지식 arc 위에서 어디쯤 와 있는지 한 줄 10-cell 바로 집계. probe/fire/매니페스트-변형 일절 없음 (순수 read).

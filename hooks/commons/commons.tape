@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.6"
+  version = "1.8"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"

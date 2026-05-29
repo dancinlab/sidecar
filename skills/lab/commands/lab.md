@@ -210,8 +210,8 @@ For a terminal job (or all terminal jobs if no id):
 
 This is the **harvest→re-dispatch autonomy** — the reason `/lab` exists. For each harvested-terminal job:
 1. **atlas register** on a 🟢/🔵 verdict (g62) — `/atlas register --from-verify ...` (verified closed-form folds into the atlas).
-2. **fire the next candidate** from `queue` (highest priority). Resolve its status FIRST (see taxonomy below):
-   - `queued` (ready) → provision/reuse a surface, dispatch, arm watcher, flip → `fired`. State the incremental cost in ONE line, then fire — **no "shall I continue?" gate** (same autonomy as the initial cost-bearing fire).
+2. **fire the next candidate(s)** from `queue` (highest priority). **ALL-PARALLEL** (1.3.0 · `d_parallel_fire`): fire EVERY ready candidate across DEDICATED PARALLEL slots — one job → one slot, ranks ≤ physcores/pod, `OMP/MKL/OPENBLAS_NUM_THREADS=1` — never one-at-a-time bin-packed onto a single pod's sequential `onstart.sh` chain. Resolve each status FIRST (see taxonomy below):
+   - `queued` (ready) → provision/reuse a **dedicated** surface (its own pod/slot), dispatch IN PARALLEL with siblings, arm watcher, flip → `fired`. State the incremental cost in ONE line, then fire — **no "shall I continue?" gate** (same autonomy as the initial cost-bearing fire). If a single-pod sequential chain already exists (a flagship blocking the rest), **SPLIT its queued tail onto fresh parallel pods on sight** (d17 — capacity is rentable; don't wait for the chain to drain).
    - `blocked:<technical-input>` → **AUTO-RESOLVE the blocker, then fire** — do NOT park it. A missing structure coord → `/research:arxiv` or literature lookup; a missing input file → fetch/build it; a missing pseudo/dep → wget/install it. Resolving a technical input is agent work, NOT a user gate. Only after an HONEST resolution attempt fails (input genuinely unavailable, e.g. a coord that exists only as a figure) does it become a logged skip (d6 — never hallucinate the missing input).
 3. 🔴 FALSIFIED is a valid terminal → STILL advance to the next candidate (a closed-negative rules out an axis; the campaign continues).
 4. If `queue` is empty AND no open axis remains → report depletion (NOT a pause-for-approval).
@@ -227,6 +227,8 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 
 `auto` NEVER asks "fire next?" between candidates — that gate is exactly what `/lab` removes. The only halts are drain / budget / interrupt / a surface-transport failure it can't recover.
 
+**All-parallel dispatch** (1.3.0 · `d_parallel_fire`): when a watcher-terminal frees capacity and multiple candidates are ready, `auto` fires them across DEDICATED PARALLEL slots (one job→one slot, ranks≤physcores/pod, single-threaded BLAS), never bin-packed into one pod's sequential chain. A single-pod sequential `onstart.sh` queue (a flagship blocking the rest) is split onto parallel pods on sight — not left to drain serially.
+
 `auto` is ONE in-session pass. For a campaign whose jobs run for HOURS (DFT · training fleets), the loop must survive ACROSS turns — that is `drive`.
 
 ## drive [--budget $X] [--max-pods N] — AUTONOMOUS SELF-DRIVING (sticky, cross-turn)
@@ -240,7 +242,7 @@ Run continuously: `status` → `watch` (arm any unwatched) → on each watcher's
 **Each tick** (on watcher-event OR heartbeat wake), run in order:
 1. **status** sweep (liveness probe all running; exit-code-aware terminal taxonomy).
 2. **harvest** every terminal job → metric + g5 verdict VERBATIM → atlas register on 🟢 (g62) → ledger. (TIMEOUT-RESUMABLE → recover-resume instead of harvest; CRASHED → log + advance.)
-3. **next** — for freed capacity (≤ `max_pods`), fire `queued` / auto-resolve `blocked:<technical>` candidates. **Throttle-aware**: spawn ≤2 parallel agents; on a transient-throttle storm, BACK OFF (serialize, ≤1, jittered) — never thundering-herd. Re-dispatch cost stated in one line per fire.
+3. **next** — for freed capacity (≤ `max_pods`), fire `queued` / auto-resolve `blocked:<technical>` candidates. **ALL-PARALLEL** (`d_parallel_fire`): each fired candidate gets its OWN dedicated slot (one job→one slot, ranks≤physcores/pod, `OMP/MKL/OPENBLAS_NUM_THREADS=1`) — never bin-packed into one pod's sequential `onstart.sh` chain (which oversubscribes + lets a flagship block the rest); split any such stuck chain onto parallel pods on sight. **Throttle-aware**: the agent fan-out for dispatch is ≤2 parallel agents; on a transient-throttle storm, BACK OFF (serialize, ≤1, jittered) — never thundering-herd. (Parallelism is across POD SLOTS; the ≤2-3 cap is on dispatch AGENTS, not pod count.) Re-dispatch cost stated in one line per fire.
 4. **re-arm** watchers on all running jobs.
 5. **budget** check → halt on `spent ≥ cap` (g64).
 6. **depletion** check → halt on `queue empty AND all terminal AND no open axis`.
@@ -313,13 +315,15 @@ The queue is what `next`/`auto` draws the re-dispatch target from.
 
 | status | meaning | loop behavior |
 |---|---|---|
-| `queued` | ready (spec + inputs complete) | **auto-fires** on `next`/`auto` |
+| `queued` | ready (spec + inputs complete) | **auto-fires IN PARALLEL** on `next`/`auto` — own dedicated slot (one job→one slot, ranks≤physcores/pod, OMP/MKL=1); NEVER chained sequentially on one pod (`d_parallel_fire`) |
 | `blocked:<technical>` | missing a resolvable input (coord · data · pseudo · dep) | **auto-resolve** (research/fetch/build) then fire — NOT a wait |
 | `fired` | dispatched, watcher armed | in-flight; harvest on terminal |
 | `done` | harvested + verdict recorded | terminal |
 | `gated:<human-only>` | needs credential / irreversible-action OK / design decision | **the ONLY status that stops for a human** (rare) |
 
 There is deliberately NO "awaiting-approval" status for an ordinary candidate. If you catch yourself about to write "발사 대기 / waiting for user go" on a `queued` or `blocked:<technical>` item — that's the anti-pattern; fire or auto-resolve instead.
+
+**Queued candidates fire IN PARALLEL** (1.3.0 · `d_parallel_fire`, demiurge `project.tape`): the queue is fanned out across DEDICATED parallel pods — one job → one slot, ranks ≤ physcores/pod, `OMP/MKL/OPENBLAS_NUM_THREADS=1`. A **single-pod sequential chain** of queued candidates (e.g. an `onstart.sh` queue where a flagship blocks the rest) is an **anti-pattern to SPLIT onto parallel capacity on sight** — never a valid steady state. Live lesson: a 6-perovskite batch bin-packed into one vast pod's sequential chain → 270-thread / load-119 oversubscription thrash AND CaAuH3 blocked 6 other perovskites for days. Fire N across N slots; split a stuck chain immediately (d17 — fresh parallel capacity is rentable).
 
 ## upstream [<repo>] — report the upstream-reflex trail (g59)
 

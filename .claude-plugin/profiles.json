@@ -92,8 +92,8 @@
     "inject": "personal",
     "imagine": "personal",
     "lab": "personal",
-    "msg": "personal",
-    "msg-arm": "personal",
-    "msg-mcp": "personal"
+    "walkie": "personal",
+    "walkie-arm": "personal",
+    "walkie-mcp": "personal"
   }
 }

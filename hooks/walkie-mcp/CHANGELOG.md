@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1
+
+- 📻 family rename `msg-mcp` → `walkie-mcp` (walkie-talkie theme). Data dir
+  `~/.sidecar/msg/` → `~/.sidecar/walkie/`; server `msg-mcp-server.mjs` →
+  `walkie-mcp-server.mjs`; `mcpServers` key + `channels` displayName → `walkie`;
+  launcher `_msg_mcp_up.hexa` → `_walkie_mcp_up.hexa`. Pairs with `walkie` 0.3.0
+  + `walkie-arm` 0.1.1. send half is now `/walkie call`.
+
 ## 0.1.0
 
 - msg phase-3 idle-push: HTTP/SSE-transport MCP **channels** server.

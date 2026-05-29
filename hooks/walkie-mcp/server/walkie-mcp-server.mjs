@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// msg-mcp-server.mjs — msg phase-3 IDLE-PUSH broker.
+// walkie-mcp-server.mjs — walkie phase-3 IDLE-PUSH broker.
 //
 // sidecar's FIRST non-hexa (Node) executable. An HTTP/SSE-transport MCP
 // "channels" server (sidecar @D s15 1.8 — STDIO MCP forbidden, HTTP/SSE allowed).
@@ -9,24 +9,24 @@
 //   @modelcontextprotocol/sdk Streamable HTTP transport. It declares the
 //   experimental `claude/channel` capability the Claude Code host requires to
 //   treat a server as a message channel, and per new line in
-//   $HOME/.sidecar/msg/<self>.inbox.log (written by the msg-arm capture daemon)
+//   $HOME/.sidecar/walkie/<self>.inbox.log (written by the walkie-arm capture daemon)
 //   emits an MCP channel notification:
 //     method: "notifications/claude/channel"
-//     params: { content: "📨 from <nick>: <text>", meta: { from, ts } }
+//     params: { content: "📨 from <handle>: <text>", meta: { from, ts } }
 //   Claude Code then PUSHES that content into the live-but-idle session that
-//   has selected this channel (no turn needed) — closing msg phase-2's poll gap.
+//   has selected this channel (no turn needed) — closing walkie phase-2's poll gap.
 //
 //   IDLE-PUSH is gated by the host: it only delivers when Claude Code was
-//   launched with `--dangerously-load-development-channels msg-mcp` (or, once
-//   channels GA, `--channels msg-mcp`) AND on a first-party provider
+//   launched with `--dangerously-load-development-channels walkie-mcp` (or, once
+//   channels GA, `--channels walkie-mcp`) AND on a first-party provider
 //   (Bedrock/Vertex skip channels). Until a channel client connects, the server
 //   still tails the log and logs each emit attempt — so the read+emit path is
-//   observable even without a live client. receive-PUSH only; send stays /msg.
+//   observable even without a live client. receive-PUSH only; send stays /walkie.
 //
 // PORTABILITY / s11
 //   No absolute paths ($HOME only). No env-var/flag disables it. Single broker
 //   per machine: if the port is already bound (another session's broker), this
-//   instance exits 0 (idempotent reuse). Self nick from $HOME/.sidecar/msg/self.
+//   instance exits 0 (idempotent reuse). Self handle from $HOME/.sidecar/walkie/self.
 
 import http from "node:http";
 import fs from "node:fs";
@@ -40,14 +40,14 @@ const HOST = "127.0.0.1";
 const PORT = 7717;
 const CHANNEL_METHOD = "notifications/claude/channel";
 
-const MSG_DIR = path.join(os.homedir(), ".sidecar", "msg");
+const MSG_DIR = path.join(os.homedir(), ".sidecar", "walkie");
 
 function log(...a) {
-  // durable progress log; the launcher redirects stdout/stderr to msg-mcp.daemon.log
-  process.stdout.write(`[msg-mcp ${new Date().toISOString()}] ${a.join(" ")}\n`);
+  // durable progress log; the launcher redirects stdout/stderr to walkie-mcp.daemon.log
+  process.stdout.write(`[walkie-mcp ${new Date().toISOString()}] ${a.join(" ")}\n`);
 }
 
-function readSelfNick() {
+function readSelfHandle() {
   try {
     const s = fs.readFileSync(path.join(MSG_DIR, "self"), "utf8").trim();
     return s || null;
@@ -57,7 +57,7 @@ function readSelfNick() {
 }
 
 // Render one captured JSON line `{from,text,ts}` into the channel payload.
-// Falls back to the raw line when it is not parseable JSON (msg-arm format-compatible).
+// Falls back to the raw line when it is not parseable JSON (walkie-arm format-compatible).
 function renderLine(line) {
   const t = line.trim();
   if (!t) return null;
@@ -79,7 +79,7 @@ function renderLine(line) {
 }
 
 // Tail <self>.inbox.log from a dedicated <self>.mcp.offset (separate from
-// msg-arm's <self>.offset so the poll-drain and the push-emit never contend).
+// walkie-arm's <self>.offset so the poll-drain and the push-emit never contend).
 // Returns an array of { content, meta } for each new line, advancing the offset.
 function drainNewLines(self) {
   const logFile = path.join(MSG_DIR, `${self}.inbox.log`);
@@ -120,9 +120,9 @@ function drainNewLines(self) {
 }
 
 async function main() {
-  const self = readSelfNick();
+  const self = readSelfHandle();
   if (!self) {
-    log("no self nick ($HOME/.sidecar/msg/self) — graceful exit 0");
+    log("no self handle ($HOME/.sidecar/walkie/self) — graceful exit 0");
     process.exit(0);
   }
   log(`starting broker for self=${self} on http://${HOST}:${PORT}/mcp`);
@@ -131,7 +131,7 @@ async function main() {
   // skips any server that does not declare it: "server did not declare
   // claude/channel capability").
   const server = new Server(
-    { name: "msg-mcp", version: "0.1.0" },
+    { name: "walkie-mcp", version: "0.1.1" },
     { capabilities: { experimental: { "claude/channel": {} } } }
   );
 
@@ -190,7 +190,7 @@ async function main() {
   });
 
   // tail the inbox.log: emit any backlog now, then poll for new lines. Polling
-  // (1s) the LOCAL file is cheap and burns NO model tokens — the cost the msg
+  // (1s) the LOCAL file is cheap and burns NO model tokens — the cost the walkie
   // phase-2 poll gap had was per-TURN model context, not a file stat.
   const tick = async () => {
     const lines = drainNewLines(self);

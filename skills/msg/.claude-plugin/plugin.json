@@ -1,9 +1,0 @@
-{
-  "name": "msg",
-  "description": "/msg — session-to-session messaging over a UNIX domain socket, NO MCP (sidecar @D s15). Two Claude Code TUI sessions exchange one-line JSON messages: the SEND side is a CLI one-liner (`socat - UNIX-CONNECT:<peer>.sock`, fallback `nc -U <path>`); the RECEIVE side is the agent arming a persistent Monitor — on `socat UNIX-LISTEN:<self>.sock,fork -` (phase-1 standalone), OR, when the `msg-arm` hook plugin's capture daemon owns the socket and durably captures to `<self>.inbox.log`, on `tail -f <self>.inbox.log` (phase-2 coexistence; `listen` auto-retargets) — so each received line surfaces as a chat task-notification. Local mailbox + roster under `~/.sidecar/msg/` (roster.json maps nick → socket path + sid + ts) so pool-route keeps it LOCAL. Verbs — `send <nick> <text...>` (direct, one-line JSON `{from,text,ts}`) · `broadcast <text...>` (= `send all <text>`, every roster peer except self) · `listen` (upsert self into roster + print the exact Monitor command for the agent to run) · `who` (roster table, each socket marked alive via `test -S`, dead rows flagged not deleted) · `nick <name>` (store self nick in `~/.sidecar/msg/self`) · bare `/msg` (status: my nick · am I listening · roster peer count). NL triggers via the skill — '세션끼리 통신' · '옆 세션에 보내' · 'send to session' · 'socket message' · 'inter-session'.",
-  "version": "0.2.0",
-  "author": { "name": "dancinlab" },
-  "repository": "https://github.com/dancinlab/sidecar",
-  "license": "MIT",
-  "keywords": ["claude-code", "skill", "command", "msg", "socket", "ipc", "session", "unix-socket", "no-mcp"]
-}

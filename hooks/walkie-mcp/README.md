@@ -1,11 +1,11 @@
-# msg-mcp
+# walkie-mcp
 
-msg **phase-3 — idle-push** receive half. An HTTP/SSE-transport MCP **channels**
+📻 walkie **phase-3 — idle-push** receive half. An HTTP/SSE-transport MCP **channels**
 server that pushes inbound session-to-session messages into a live-but-idle
 Claude Code session, closing the poll gap left by phase-2.
 
-`msg` (0.2.0, socket send + receive) and `msg-arm` (0.1.0, capture daemon →
-`~/.sidecar/msg/<self>.inbox.log`) already capture every inbound line durably.
+`walkie` (0.3.0, socket call + receive) and `walkie-arm` (0.1.1, capture daemon →
+`~/.sidecar/walkie/<self>.inbox.log`) already capture every inbound line durably.
 But an **idle** session only drains that log on its *next turn* (a poll). This
 plugin runs a local Node broker that tails the same log and emits an MCP channel
 notification per new line, which the host delivers to the idle session with no
@@ -15,21 +15,21 @@ turn required.
 
 This is sidecar's **first non-hexa (Node) executable**. MCP's canonical SDK is
 TypeScript/Python; a hand-rolled hexa HTTP+JSON-RPC+SSE stack would be
-disproportionate. The launcher (`bin/_msg_mcp_up.hexa`) stays hexa; the server
-(`server/msg-mcp-server.mjs`) is Node + the official `@modelcontextprotocol/sdk`.
+disproportionate. The launcher (`bin/_walkie_mcp_up.hexa`) stays hexa; the server
+(`server/walkie-mcp-server.mjs`) is Node + the official `@modelcontextprotocol/sdk`.
 
 ## experimental — flag required
 
 Idle-PUSH is a **research-preview** Claude Code feature. The host only delivers
 channel notifications when **both** hold:
 
-- Claude Code is launched with **`--dangerously-load-development-channels msg-mcp`**
-  (or, once channels reach GA, `--channels msg-mcp`); AND
+- Claude Code is launched with **`--dangerously-load-development-channels walkie-mcp`**
+  (or, once channels reach GA, `--channels walkie-mcp`); AND
 - the session runs on a **first-party** Anthropic provider (Bedrock / Vertex /
   third-party providers skip channels).
 
 Without the flag the broker still tails the log and logs each emit attempt
-(`~/.sidecar/msg/msg-mcp.daemon.log`), but nothing is pushed into the session.
+(`~/.sidecar/walkie/walkie-mcp.daemon.log`), but nothing is pushed into the session.
 
 ## how it works
 
@@ -41,9 +41,9 @@ Without the flag the broker still tails the log and logs each emit attempt
   plus a `channels` entry binding it as a message channel; `hx install` / plugin
   load registers it.
 - **payload** — per new `{from,text,ts}` line: `notifications/claude/channel`
-  with `params.content = "📨 from <nick>: <text>"` (phase-1/2 format-consistent).
+  with `params.content = "📨 from <handle>: <text>"` (phase-1/2 format-consistent).
 - **offset** — tails from a dedicated `<self>.mcp.offset` (separate from
-  msg-arm's `<self>.offset`) so push-emit and poll-drain never contend.
+  walkie-arm's `<self>.offset`) so push-emit and poll-drain never contend.
 - **idempotent** — one broker per machine; pidfile + pgrep guard on SessionStart,
   and `EADDRINUSE` → exit 0 (reuse the running broker).
 - **dependencies** — `node_modules` is **never committed**; the SessionStart
@@ -56,10 +56,10 @@ clean `exit 0` (never blocks SessionStart):
 
 - **node absent** → skip (cannot run a Node server);
 - **npm absent on first run** → skip (cannot vend the SDK);
-- **no self nick** (`~/.sidecar/msg/self` unset) → skip (no inbox to tail);
+- **no self handle** (`~/.sidecar/walkie/self` unset) → skip (no inbox to tail);
 - **port already bound** → reuse the running broker.
 
 ## send
 
-receive-PUSH only. To send, use the existing `/msg send <nick> <text>` — its
+receive-PUSH only. To send, use the existing `/walkie call <handle> <text>` — its
 socket path is unchanged.

@@ -1,6 +1,6 @@
-// _msg_arm.hexa — msg phase-2 AUTO-RECEIVE hook (NO MCP, sidecar @D s15).
+// _walkie_arm.hexa — walkie phase-2 AUTO-RECEIVE hook (NO MCP, sidecar @D s15).
 //
-// A UNIX domain socket is a CONNECTION, not a queue: phase-1 `/msg listen`
+// A UNIX domain socket is a CONNECTION, not a queue: phase-1 `/walkie on`
 // drops every message that arrives while no one is bound. This hook closes
 // that gap by making a DETACHED capture daemon own the socket and append all
 // received lines to a durable log, which the hook then drains to the agent.
@@ -10,16 +10,16 @@
 //              idempotent capture daemon, (3) deliver undelivered lines.
 //   deliver  — UserPromptSubmit: deliver undelivered lines only (cheap path).
 //
-// Shared SSOT with the `msg` command plugin, all under $HOME/.sidecar/msg/:
-//   self              self nick (one line) — written by `/msg nick <name>`
-//   roster.json       { "<nick>": {"sock","sid","ts"}, ... }
+// Shared SSOT with the `walkie` command plugin, all under $HOME/.sidecar/walkie/:
+//   self              self handle (one line) — written by `/walkie handle <name>`
+//   roster.json       { "<handle>": {"sock","sid","ts"}, ... }
 //   <self>.sock       the capture daemon's LISTEN socket (daemon owns it)
 //   <self>.inbox.log  append-only capture log (daemon writes, hook reads)
 //   <self>.offset     byte offset already delivered to the agent
 //   <self>.daemon.pid pidfile for daemon idempotency
 //
 // s11 (no opt-out): no env-var/flag disables this. It gates ONLY on real
-// preconditions — self nick set + a socket binary (socat | nc) present.
+// preconditions — self handle set + a socket binary (socat | nc) present.
 // Missing either → graceful exit 0 (never blocks session start).
 // NO absolute paths ($HOME only). setsid → nohup fallback (macOS).
 
@@ -94,8 +94,8 @@ fn _event_of(payload: map) -> string {
     return ""
 }
 
-fn _msg_dir() -> string {
-    return env_var("HOME") + "/.sidecar/msg"
+fn _walkie_dir() -> string {
+    return env_var("HOME") + "/.sidecar/walkie"
 }
 
 // emit a SessionStart/UserPromptSubmit additionalContext payload + exit.
@@ -104,8 +104,8 @@ fn _emit(ev: string, text: string) {
     exit(0)
 }
 
-// read self nick from $HOME/.sidecar/msg/self; "" when unset/empty.
-fn _self_nick(dir: string) -> string {
+// read self handle from $HOME/.sidecar/walkie/self; "" when unset/empty.
+fn _self_handle(dir: string) -> string {
     let f = dir + "/self"
     if !file_exists(f) { return "" }
     return _trim(_read_file_safe(f))
@@ -185,7 +185,7 @@ fn _spawn_daemon(dir: string, self: string, transport: string) {
     try { let _r = exec_with_status(launch) } catch e { }
 }
 
-// drain $HOME/.sidecar/msg/<self>.inbox.log from <self>.offset, advancing it.
+// drain $HOME/.sidecar/walkie/<self>.inbox.log from <self>.offset, advancing it.
 // Returns the additionalContext body, or "" when there is nothing new.
 fn _drain(dir: string, self: string) -> string {
     let log = dir + "/" + self + ".inbox.log"
@@ -217,7 +217,7 @@ fn _drain(dir: string, self: string) -> string {
     return _format(chunk)
 }
 
-// read $HOME/.sidecar/msg/<self>.inbox.log from a 1-based byte position.
+// read $HOME/.sidecar/walkie/<self>.inbox.log from a 1-based byte position.
 fn _read_file_safe2(path: string, from1: int) -> string {
     let cmd = "tail -c +" + to_string(from1) + " " + _shq(path) + " 2>/dev/null"
     let mut out = ""
@@ -244,9 +244,9 @@ fn _format(chunk: string) -> string {
     if total > CAP { start = total - CAP; overflow = total - CAP }
 
     let mut parts = []
-    parts.push("# 📨 새 메시지 " + to_string(total) + "건 (msg auto-receive)")
+    parts.push("# 📨 새 메시지 " + to_string(total) + "건 (📻 walkie auto-receive)")
     if overflow > 0 {
-        parts.push("(오래된 " + to_string(overflow) + "건 생략 — 전체는 `/msg inbox`)")
+        parts.push("(오래된 " + to_string(overflow) + "건 생략 — 전체는 `/walkie scan`)")
     }
     let mut j = start
     while j < total {
@@ -292,14 +292,14 @@ fn main() {
         if verb == "arm" { ev = "SessionStart" } else { ev = "UserPromptSubmit" }
     }
 
-    let dir = _msg_dir()
-    let self = _self_nick(dir)
+    let dir = _walkie_dir()
+    let self = _self_handle(dir)
 
-    // precondition: no self nick → can't know the socket name. One-shot hint
+    // precondition: no self handle → can't know the socket name. One-shot hint
     // on SessionStart only (don't nag every UserPromptSubmit), else silent.
     if self == "" {
         if verb == "arm" {
-            _emit(ev, "📨 msg auto-receive 비활성 — `/msg nick <name>`을 실행하면 이 세션이 메시지를 자동 수신합니다.\n")
+            _emit(ev, "📻 walkie auto-receive 비활성 — `/walkie handle <name>`을 실행하면 이 세션이 메시지를 자동 수신합니다.\n")
         }
         exit(0)
     }

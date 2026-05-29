@@ -1,16 +1,16 @@
-// _msg_mcp_up.hexa — SessionStart launcher for the msg phase-3 idle-push broker.
+// _walkie_mcp_up.hexa — SessionStart launcher for the walkie phase-3 idle-push broker.
 //
 // Idempotently brings up ONE local Node MCP-channels broker per machine
-// (Streamable HTTP on 127.0.0.1:7717) that tails $HOME/.sidecar/msg/<self>.inbox.log
+// (Streamable HTTP on 127.0.0.1:7717) that tails $HOME/.sidecar/walkie/<self>.inbox.log
 // and emits an MCP channel notification per new inbound line. The broker is the
-// RECEIVE-PUSH half of `msg`; send stays the existing `/msg send` socket path.
+// RECEIVE-PUSH half of `walkie`; send stays the existing `/walkie call` socket path.
 //
 // s11 (no opt-out): no env-var/flag disables this. It gates ONLY on real
-// preconditions — node present + self nick set. Missing either → graceful
+// preconditions — node present + self handle set. Missing either → graceful
 // exit 0 (never blocks SessionStart). NO absolute paths ($HOME / $CLAUDE_PLUGIN_ROOT).
 //
-// Idempotency: pidfile ($HOME/.sidecar/msg/msg-mcp.daemon.pid) + pgrep guard,
-// exactly like the msg-arm capture daemon. On first run, if node_modules is
+// Idempotency: pidfile ($HOME/.sidecar/walkie/walkie-mcp.daemon.pid) + pgrep guard,
+// exactly like the walkie-arm capture daemon. On first run, if node_modules is
 // absent, `npm install --omit=dev` into the server/ dir (node_modules NEVER
 // committed); then self-launch the broker. node/npm absent → graceful exit 0.
 
@@ -67,14 +67,14 @@ fn main() {
 
     let root = env_var("CLAUDE_PLUGIN_ROOT")
     if root == "" { exit(0) }                       // not under a plugin host
-    let server = root + "/server/msg-mcp-server.mjs"
+    let server = root + "/server/walkie-mcp-server.mjs"
     if !file_exists(server) { exit(0) }
 
     let home = env_var("HOME")
-    let msgdir = home + "/.sidecar/msg"
+    let msgdir = home + "/.sidecar/walkie"
     let selff = msgdir + "/self"
 
-    // precondition: self nick set (shared SSOT with msg / msg-arm). No nick →
+    // precondition: self handle set (shared SSOT with walkie / walkie-arm). No handle →
     // the broker would not know which inbox.log to tail. Silent skip (s11).
     if !file_exists(selff) { exit(0) }
     if _trim(_read_file_safe(selff)) == "" { exit(0) }
@@ -83,14 +83,14 @@ fn main() {
     let node = _which("node")
     if node == "" { exit(0) }
 
-    let pidf = msgdir + "/msg-mcp.daemon.pid"
-    let log = msgdir + "/msg-mcp.daemon.log"
+    let pidf = msgdir + "/walkie-mcp.daemon.pid"
+    let log = msgdir + "/walkie-mcp.daemon.log"
 
     // already up? pidfile alive OR a server process matching our script path.
     let alive_cmd =
         "P=" + _shq(pidf) + ";" +
         " if [ -f \"$P\" ] && kill -0 \"$(cat \"$P\" 2>/dev/null)\" 2>/dev/null; then echo Y; exit 0; fi;" +
-        " if pgrep -f msg-mcp-server.mjs >/dev/null 2>&1; then echo Y; exit 0; fi; echo"
+        " if pgrep -f walkie-mcp-server.mjs >/dev/null 2>&1; then echo Y; exit 0; fi; echo"
     let mut alive = ""
     try { alive = to_string(exec(alive_cmd)) } catch e { alive = "" }
     if _trim(alive) == "Y" { exit(0) }

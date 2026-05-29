@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — 📻 `msg` 3-plugin 패밀리 → `walkie` 리네임 (walkie 0.3.0 · walkie-arm 0.1.1 · walkie-mcp 0.1.1)
+
+📻 세션간 통신 패밀리를 워키토키 테마로 리네임 + 무전(radio) 동사로 재테마. `msg`→`walkie`·`msg-arm`→`walkie-arm`·`msg-mcp`→`walkie-mcp` (`git mv`로 history 보존). 데이터 디렉토리 `~/.sidecar/msg/` → `~/.sidecar/walkie/` 전면 이전(command + 두 hexa hook + Node 서버). ephemeral runtime이라 마이그레이션 shim 없음.
+
+- **동사 재테마(USER)** — `listen→on` · `send→call` · `broadcast→all-call` · `who→scan` · `nick→handle` · bare `/walkie`=status. OLD 동사(send/listen/broadcast/who/nick)는 case문에 **silent alias**로 잔류(help-text 없이 dispatch만) — 머슬메모리 무손실.
+- **HARD 리네임** — 플러그인 NAME 자체는 walkie* 로 교체(`/msg` command alias 없음).
+- 파일 리네임 — `commands/msg.md`→`walkie.md` · `_msg_arm.hexa`→`_walkie_arm.hexa` · `_msg_mcp_up.hexa`→`_walkie_mcp_up.hexa` · `msg-mcp-server.mjs`→`walkie-mcp-server.mjs`. 내부 식별자/경로/주석/사용자메시지/`mcpServers`키·`channels` displayName 전부 walkie 정합.
+- 버전 lockstep(g22): plugin.json ↔ marketplace.json ↔ CHANGELOG — walkie 0.3.0 · walkie-arm 0.1.1 · walkie-mcp 0.1.1. profiles.json 키 `walkie*`→`personal`.
+
 ## 2026-05-29 — hexa-native 0.8.0: 차단셋에 `.inl`·`.ipp`·`.tcc`·`.S`·`.asm` 추가
 
 🚫 hexa-native 차단셋에 C++ 인라인/템플릿 헤더 `.inl`·`.ipp`·`.tcc` + 전처리 asm `.S`(대문자)·`.asm` 추가. 전체 차단셋 = `.py .sh .c .cc .cpp .cxx .h .hpp .hh .inl .ipp .tcc .s .S .asm .o` (16종) — hexa 외 C/C++/header/inline/asm/object 손작성 전면 차단.

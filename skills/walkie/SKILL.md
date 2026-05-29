@@ -1,0 +1,9 @@
+---
+name: walkie
+description: 📻 Session-to-session walkie-talkie over a UNIX domain socket, NO MCP. `/walkie call <handle> <text>` keys the mic — sends a one-line JSON message to another Claude Code session via `socat - UNIX-CONNECT:<peer>.sock` (fallback `nc -U`); `/walkie on` makes the AGENT arm a persistent Monitor on `socat UNIX-LISTEN:<self>.sock,fork -` so each received line becomes a chat notification; `/walkie all-call <text>` fans out to every roster peer; `/walkie scan` lists peers (alive marked via `test -S`); `/walkie handle <name>` sets self handle; bare `/walkie` shows status. OLD verbs (send/listen/broadcast/who/nick) still dispatch as silent aliases. Mailbox + roster live under `~/.sidecar/walkie/` (local — pool-route keeps it on this host). Triggers — "/walkie", "무전", "워키토키", "세션 메시지", "세션끼리 통신", "call session", "socket message", "옆 세션에 보내", "inter-session", "다른 세션에 알려", "steer sub-agent".
+allowed-tools: Bash, Monitor, Read
+---
+
+@D walkie := "session-to-session UNIX-socket walkie-talkie — call keys the mic (socat/nc one-liner), on arms a Monitor on the socket so received lines become chat notifications" :: skill
+  do   = "call/all-call via `socat - UNIX-CONNECT:<peer>.sock` (nc -U fallback) one-line JSON · `on` arms a persistent Monitor on `socat UNIX-LISTEN:$HOME/.sidecar/walkie/<self>.sock,fork -` so each line = a notification · roster + mailbox under $HOME/.sidecar/walkie/"
+  dont = "introduce an MCP server (s15) · hardcode an absolute socket path (use $HOME) · inject on every UserPromptSubmit (noise — on is explicit, agent-armed) · drop the OLD verb aliases (send/listen/broadcast/who/nick stay silent-dispatch for back-compat)"

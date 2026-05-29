@@ -4,19 +4,27 @@ Hard-deny `.py` / `.sh` writes inside any project rooted at a directory containi
 
 ## What it does
 
-`PreToolUse(Write | Edit | NotebookEdit)` — when the AI tries to write to a `.py` or `.sh` file whose path lies inside a project whose root contains `project.tape`, the tool call is **denied** with a fixed message redirecting the operator to `.hexa`.
+`PreToolUse(Write | Edit | NotebookEdit | Bash)` — when the AI tries to create a `.py` / `.sh` / `.c` / … source file whose path lies inside a project whose root contains `project.tape`, the tool call is **denied** with a fixed message redirecting the operator to `.hexa`.
 
 Non-hexa-native projects (no `project.tape` at any ancestor) are unaffected — write `.py` / `.sh` freely there.
 
+## Three write channels
+
+A file can be created through more than one surface, so the guard covers **three** channels (all hard-deny, no advisory mode):
+
+1. **Write / Edit / NotebookEdit** — the structured file tools (`file_path` / `notebook_path`).
+2. **Bash redirect** — `> X.py`, `>> X.sh`, heredoc-to-redirect (`cat > X.py << EOF`), `tee [-a] X.py`, `dd … of=X.py`, and `cp` / `mv` whose destination is a `.py` / `.sh`. Relative targets resolve against the payload `cwd`. `python X.py` / `cat X.py` / `chmod X.sh` (non-write commands) pass through.
+3. **python-write** — `python3 -c "open('x.py','w').write(…)"` and `python3 - <<EOF … open('y.sh','w') … EOF`. These write from **inside** the interpreter (not a shell redirect), so the whole command string is scanned for an `open(…, 'w' | 'a' [+ / b / …])` / `Path('x.py').write_text(…)` / `open(...).write(…)` whose path literal ends in `.py` / `.sh`. Read mode (`open('x.py')`, `open('x.py','r')`) and data writes (`.json` / `.txt` / `.csv` / `.md`) pass through.
+
 ## Scope
 
-The hook only fires when **all** are true:
+For channels 1–2 the hook fires when **all** are true:
 
-1. `tool_name ∈ {Write, Edit, NotebookEdit}`
-2. The target path ends in `.py` or `.sh`
+1. `tool_name ∈ {Write, Edit, NotebookEdit, Bash}`
+2. The target path ends in `.py` / `.sh` / `.c` / `.cc` / `.cpp` / `.cxx` / `.h` / `.hpp` / `.hh` / `.inl` / `.ipp` / `.tcc` / `.s` / `.S` / `.asm` / `.o`
 3. Walking up the target path's ancestors finds a `project.tape` file before reaching `/` or `$HOME`
 
-If any of these is false, the call passes through.
+For channel 3 (python-write) the extension gate is narrowed to **`.py` / `.sh` only** (the source languages a python script realistically emits), plus a write-mode requirement. If any condition is false, the call passes through.
 
 **Note**: `project.tape` is sidecar's canonical project identity marker (added by `sidecar init`). So the enforcement automatically applies to every sidecar-managed project — including sidecar itself and its sibling plugins / CLIs. If a sidecar-managed project legitimately needs to keep its existing `.py` / `.sh` tooling editable via AI, edit those files outside of Claude Code Write/Edit (shell tools), or uninstall this plugin.
 
@@ -40,9 +48,8 @@ hexa-native/
 ├── .claude-plugin/plugin.json
 ├── README.md
 ├── bin/
-│   ├── hexa-native.sh         # entry — exec's _hexa_native.py
-│   └── _hexa_native.py        # logic — reads PreToolUse JSON, denies if applicable
-└── hooks/hooks.json           # PreToolUse matcher: Write|Edit|NotebookEdit
+│   └── _hexa_native.hexa      # logic — reads PreToolUse JSON, denies if applicable (hexa-native)
+└── hooks/hooks.json           # PreToolUse matcher: Write|Edit|NotebookEdit|Bash
 ```
 
 ## Example block

@@ -299,9 +299,12 @@ fn _burst_text(name: string) -> string {
     return p.join("\n")
 }
 
-// emit the Stop additionalContext payload.
+// emit the Stop payload. Stop hooks do NOT support
+// hookSpecificOutput.additionalContext (that is UserPromptSubmit/PostToolUse
+// only); the schema-valid channel to surface chat text on Stop is the
+// top-level `systemMessage` field.
 fn _emit(text: string) {
-    println("{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"additionalContext\":" + _json_escape(text) + "}}")
+    println("{\"systemMessage\":" + _json_escape(text) + "}")
 }
 
 // (2) terminal bell — printf '\a' to the controlling terminal via the shell.

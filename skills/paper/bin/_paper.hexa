@@ -735,7 +735,7 @@ fn _usage() {
     println("  compile      : xelatex + bibtex (BasicTeX / TeX Live)")
     println("  bib add      : curl + (CrossRef DOI or arxiv API id)")
     println("  pr-roll      : gh CLI authenticated")
-    println("  verify-block : hexa binary (/Users/ghost/.hx/bin/hexa or PATH)")
+    println("  verify-block : hexa binary ($HOME/.hx/bin/hexa or PATH)")
 }
 
 // locate the sister imagine plugin's dispatcher (source or installed layout)

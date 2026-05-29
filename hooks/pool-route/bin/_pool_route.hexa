@@ -972,6 +972,21 @@ fn main() {
     // pool host fails because the cache lives only on the workstation. Trusted
     // surface (sidecar slash commands), so no sign gate.
     if cmd.contains("$CLAUDE_PLUGIN_ROOT") || cmd.contains("$CLAUDE_PLUGIN_DATA") { _allow_count("local_bound") }
+    // deck-gen pin (0.15.0 — structural LOCAL-EXECUTION exemption, sits BEFORE
+    // the abs-path/dotstate sign gate below so it gives a CLEAN local allow):
+    // the `/deck` command runs `hexa run $HOME/.hx/install/hexa-lang/stdlib/
+    // deck/gen.hexa …`. Pre-s3 it carried a literal `/Users/…` substring, so it
+    // matched the abs-path branch below — but as a HEAVY hexa interp on an
+    // absolute host path it would have hit that branch's sign gate (DENY without
+    // `! sidecar sign local`). The s3 portability fix rewrote it to `$HOME/.hx/…`
+    // which still matches the `$HOME/.` arm of that same branch → same sign-gate
+    // DENY. Either way the deck generator (sidecar's OWN trusted command surface,
+    // like the $CLAUDE_PLUGIN_ROOT pin above) must run LOCAL without a sign gate:
+    // it is a Mac-local hx install artifact (`~/.hx/install/...`) absent on every
+    // pool peer, so routing it → `source not found` and deck BREAKS. Pin any cmd
+    // referencing the deck generator to a clean local allow. Mirrors the cloud/
+    // atlas pins. Unconditional · no opt-out env (@D s11).
+    if cmd.contains("stdlib/deck/gen.hexa") { _allow_count("local_bound") }
     // home-dotstate pin (0.6.9): `~/.` and `$HOME/.` references point at
     // per-host HIDDEN state (`~/.zsh_history` · `~/.hexa-cache` · `~/.pool` ·
     // `~/.sidecar` · `~/.config` · …) that is NOT user-synced. Routing them to a

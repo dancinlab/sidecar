@@ -1,7 +1,7 @@
 {
   "name": "paper",
   "description": "/paper <args> — arxiv-style LaTeX paper scaffolder (v0.11 — 3 verb fixes). Verbs: list [--sync] · set <slug> · show [<slug>] · goal <text> · title <text> · ms <text> · done <match> · todo <text> · new <slug> · sample [<name>] [<dest>] · samples · monograph-init <slug> [N] · fill <letter> · fig <size> <prompt> <out.png> · compile [dir] · lint [dir] · companion {init|sync} · outline [dir] · pipeline ... · atoms <domain> · verify-block ... · bib add <id> · pr-roll <OWNER/REPO> <since> · arxiv-prep [<dir>] · help. v0.11 fixes (from demiurge ANTIMATTER paper rego, INBOX #112): (1) `pr-roll` — early reject for bare repo name without OWNER/ prefix + jq emits `\\\\#` so LaTeX `\\#` survives the JSON escape pass (was crashing with `Invalid escape \\#`); (2) `atoms` — LC_ALL=C around BSD awk (illegal-byte-sequence on UTF-8 input) + lowercase compare (BSD lacks GNU IGNORECASE) + matches `fn <name>(` dispatch signatures alongside `\"id\"` strings; (3) `arxiv-prep` — resolves dir to absolute path BEFORE `cd $TMP` subshell so the tar target is reachable (was always failing because `<dir>/out/...` became `$TMP/<dir>/out/...`). v0.10 PAPER.tape roster + per-paper PAPER.md/log.md unchanged. FOUR bundled samples: sample-nb-bcs-absorbed · sample-fusion-7gate · sample-cost-routing · sample-blue-max.",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

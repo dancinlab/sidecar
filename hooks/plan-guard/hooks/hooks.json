@@ -10,6 +10,17 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; exec \"$H\" run \"$@\"' _ ${CLAUDE_PLUGIN_ROOT}/bin/_plan_ship.hexa"
+          }
+        ]
+      }
     ]
   }
 }

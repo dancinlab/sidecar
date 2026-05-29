@@ -102,3 +102,41 @@ Engage the `cycle` skill. In ONE message run all five stages:
    (The per-round cap still throttles WIDTH so each round stays reviewable; the auto-continue marches DEPTH-wise through the whole declared backlog. The user can interrupt at any round.)
 
 Guardrails (per SKILL.md): self-enumerate only when next work is genuinely inferable (else ask); disjoint items only; no destructive fan-out; cap >8 with confirm; no nesting; **never silently drop a SKIP — always print the precheck reason**; auto-continue stops at true depletion (never schedule a wake-up once all three depletion conditions hold).
+
+## round-lint (@D round_lint) — every round self-audits before ending
+
+At each round's tail (before the ScheduleWakeup / depletion call) emit a one-line round-lint verdict auditing that the round honored: (1) resource-partition declared — disjoint concurrent · shared-exclusive serial (@D resource_contention) · (2) every spawned Agent carried the checkpoint-commit + throttle-resume clause (@D throttle_resilience) · (3) dup-race precheck A+B ran, SKIPs surfaced (@D dup_race_precheck) · (4) worktree leak-sweep ran (@D worktree_leak_cleanup) · (5) per-round Agent count ≤ cap (default 3 · g66) · (6) any cross-repo handoff recorded as debt (@D handoff_debt_ledger) · (7) any ≥2-throttle-death milestone was split, not re-fired whole (@D oversized_split) · (8) each landed item reported with an HONEST verify tier (🔵/🟢/🟡/🟠/🔴, no over-claim · g3/g5) + a progress bar (g56) · (9) SSOT freshness checked before any depletion call (@D ssot_freshness) · (10) a perpetual domain emitted NO terminal closure (@D perpetual_domain). Emit `🔍 round-lint: <N>/10 ✓` and flag any ✗ with its rule id. A failing check is surfaced + corrected, never silently passed — never rubber-stamp a check that did not actually happen.
+
+## oversized-milestone split (@D oversized_split)
+
+Track per-milestone throttle-death count across the loop; on the 2nd consecutive rate-limit death of the SAME milestone (agent dies with no PR after a long tool-use run), STOP re-firing it whole — split into the smallest independently-landable sub-slices (e.g. promote-only → wire → calibrate) and fan each as its own bounded Agent, flip the parent only when all slices land. Do NOT split after a SINGLE transient death (retry whole first — split is the 2nd-death escalation); each slice MUST commit + PR alone. Evidence: VERIFY-KIT V5 died twice fired whole; split into V5.1 promote + V5.2 wire + V5.3 calibrate, each landing alone.
+
+## handoff debt ledger (@D handoff_debt_ledger)
+
+When a fan-out files a cross-repo handoff (g60), call `sidecar handoff add <repo> <text>` — the entry lands in the host-local registry (`~/.sidecar/handoff/handoff.jsonl`), NOT the target repo's working tree, so there is nothing to commit and no shared-tree hazard. Surface the filed handoff id in the round report (`handoff filed: <repo> [<id>]`). Close via `sidecar handoff done <id>` on resolution (g48 ack). Do NOT write a handoff into a target repo's working tree / per-repo INBOX file (the registry replaced that), and never drop a filed handoff id silently.
+
+## /cycle-bg ↔ /micro-exp build-vs-fire decision (@D micro_exp_handoff · domain-agnostic)
+
+When a candidate matrix is in context, walk the tree before dispatching:
+
+```
+candidate matrix in context?
+├─ NO        → /kick                       (no candidates · discovery first)
+└─ YES → dispatch infra exists for all candidates?
+         ├─ NO       → /cycle-bg <domain>  (BUILD phase · each worktree agent writes its candidate's infra)
+         ├─ PARTIAL  → /cycle-bg <domain>  (build the missing N) then /micro-exp <scope> (FIRE all)
+         └─ YES      → /micro-exp <scope>  (FIRE phase only · pre-built infra assumed)
+```
+
+`/cycle-bg` = BUILD lane (build+fire integrated per worktree agent). `/micro-exp` = FIRE lane (Stage 1.5 auto-halts to the build phase on any missing prereq). Do NOT fan-out /cycle-bg as a fire phase when infra is already ready M/M (use /micro-exp directly), and do NOT fire /micro-exp on candidates with missing infra. Mirrored in skills/micro-exp/commands/micro-exp.md.
+
+## Family — all drain to depletion, differ only in entry shape
+
+All commands drain the active domain's `## deferred` backlog to DEPLETION (open milestones = 0 AND deferred empty AND no other signal). They share the per-round cap (WIDTH throttle), the full 5-stage structure, the plan table, the dup-race precheck, and the leak guardrails. They differ ONLY in how they enter and pace the loop:
+
+- **`/cycle`** — plain entry. Self-generates the next batch from open milestones (else auto-seeds from `deferred`), then auto-continues via ScheduleWakeup each round until depletion. No phase-0 brainstorm; no external `loop` skill.
+- **`/cycle-full`** — `/cycle` preceded by a one-time phase-0 depletion brainstorm (cap 8 rounds). After the first fan-out it auto-continues exactly like bare `/cycle`.
+- **`/cycle-fg-loop`** — `/cycle-fg` handed to the built-in `loop` skill for continuous FOREGROUND-SEQUENTIAL intent + dynamic ScheduleWakeup pacing (each round inline one-at-a-time, halt on failure).
+- **`/cycle-bg-loop`** — `/cycle-bg` handed to the `loop` skill for continuous BACKGROUND-PARALLEL intent + dynamic pacing (each round fans out one bg Agent per item, resource-serialized).
+- **`/cycle-full-loop`** — `/cycle-full` once (brainstorm + first fan-out), then the `loop` skill with plain `/cycle` as the recurring payload.
+- **`/cycle-all`** — "run everything": same 5 stages but NO per-round cap (enumerate the FULL open set + promote the ENTIRE `## deferred` in one round) and NO recommend/select gate — fan out EVERY PROCEED row. Keeps ALL safety guardrails including resource-contention serialization.

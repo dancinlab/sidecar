@@ -84,6 +84,7 @@
     "plist-guard": "personal",
     "ai-api-guard": "personal",
     "subagent-route": "personal",
+    "subagent-resilience": "personal",
     "sidecar-auto-sync": "personal",
     "easy": "personal",
     "easy-auto": "personal",

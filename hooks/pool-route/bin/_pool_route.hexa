@@ -1026,14 +1026,19 @@ fn main() {
     // routing them to a pool host returns the PEER's state, which is
     // incoherent for diagnostics (`ps -ax` of pool host != Mac's procs;
     // `uptime` of pool host != Mac load; `kill <pid>` targets a different
-    // process namespace; `df` shows pool disk; `lsof` shows pool sockets).
+    // process namespace; `df` shows pool disk; `lsof` shows pool sockets;
+    // `du`/`find` walk the pool host's filesystem tree, not the Mac's). The
+    // 0.9.0 launch excluded `find` to spare the workstation a heavy root-tree
+    // scan, but that conflated "heavy" with "portable" — a local-fs-bound
+    // command stays local regardless of cost (s10); routing it elsewhere just
+    // returns the wrong tree. `find` re-added 0.17.0.
     // Extends the dotstate principle (per-host hidden state stays local)
     // to host-introspection commands by semantic necessity, NOT convenience.
     // Sign-gated additions (extending this list) go via project.tape rule
     // edits (commons @D s13). Per user policy 0.9.0: "무조건 pool · 화이트
     // 리스트만 local 가능" — strict default-pool, semantic-coherent local
     // exceptions only.
-    let intro_list = ["ps", "top", "htop", "uptime", "w", "who", "users", "df", "du", "free", "vmstat", "iostat", "uname", "sysctl", "launchctl", "systemctl", "pgrep", "pkill", "kill", "killall", "stat", "lsof", "netstat", "ifconfig", "ip", "arp", "route", "dscl", "scutil", "sw_vers"]
+    let intro_list = ["ps", "top", "htop", "uptime", "w", "who", "users", "df", "du", "find", "free", "vmstat", "iostat", "uname", "sysctl", "launchctl", "systemctl", "pgrep", "pkill", "kill", "killall", "stat", "lsof", "netstat", "ifconfig", "ip", "arp", "route", "dscl", "scutil", "sw_vers"]
     if len(early_toks) >= 1 {
         let t0i = _basename(early_toks[0])
         let mut ii = 0

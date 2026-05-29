@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — cloud-guard 0.3.0 + commons 0.16.0: 직접 provider CLI/API 전면 deny + g8 명시 강화
+
+🛡️ rented-GPU 직접 접근(runpod `runpodctl` · vast `vastai`/`vast` · provider REST/GraphQL API · python/node SDK)을 전면 deny 하고 `hexa cloud` 로 유도. 거버넌스 룰(commons g8)과 그 enforcement(cloud-guard 훅)를 한 사이클에 동반(s7).
+
+- **cloud-guard 0.3.0** — 기존(0.2.2)은 remote-exec/transfer/API 만 막고 read·lifecycle 동사(`runpodctl pod list` · `vastai show` · `vast search` · `create`/`destroy` …)는 일부러 통과시켰다 (라우트로그가 `runpodctl pod list` 의 pool 누출을 증명). `hexa cloud` 가 이제 rent·down·list·exec 까지 full lifecycle 을 감싸므로(`hexa cloud --help` 확인) 그 예외를 닫는다.
+  - detector (a) full-CLI: provider CLI + ANY 인식 동사(read·lifecycle·remote-exec/transfer) deny. pair-scan 유지 → `which runpodctl`/`man vastai`(verb 없음)는 통과(FP 회피).
+  - detector (e) 신설: inline `python(3)?`/`node`/`deno`/`bun` `-c`/`-e` + runpod/vastai SDK import deny (ai-api-guard 인라인-SDK 패턴 미러). committed SDK 코드는 통과.
+  - detector (c): API host list 에 `api.vast.ai` 추가.
+  - deny 메시지: `hexa cloud {rent|down|list|run|nohup|copy-to|copy-from|preflight}` per-verb 매핑 노출.
+  - 기능검증 13/13 (8 deny incl. read/lifecycle/SDK/api.vast.ai/regression · 5 allow incl. FP·wrapper).
+- **commons 0.16.0** — `@D g8` 를 deny+API+full-lifecycle 로 명시 강화. title `… — no direct provider CLI/API` · do = `ALL runpod / vast.ai → hexa cloud {rent|down|list|run|nohup|copy-*|preflight} (full lifecycle)` · dont = `direct runpodctl/vastai/vast CLI (any verb) · raw ssh/scp/curl + REST/SDK to runpod·vast`. commons @V 1.5→1.6 (sign-gated · 유저 `! sidecar sign commons`).
+- **버전 lockstep (g22)** — cloud-guard `plugin.json`·`marketplace.json` 0.2.2→0.3.0 · commons `plugin.json`·`marketplace.json` 0.15.0→0.16.0 · commons.tape @V 1.5→1.6 · CHANGELOG.
+
 ## 2026-05-29 — lab 1.2.0 (PR3/3): `lab mirror` (거울방 → mirror-loop 위임) + planned 서브커맨드 doc
 
 🪞 lab 의 자기-진화 방 `lab mirror` 추가 + lab 라이프사이클 서브커맨드 세트 문서화.

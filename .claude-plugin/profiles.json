@@ -65,6 +65,7 @@
     "micro-exp": "hexa",
     "deck": "hexa",
     "hexa-loop": "hexa",
+    "hexa-goal": "hexa",
 
     "commons": "personal",
     "project-tape": "personal",

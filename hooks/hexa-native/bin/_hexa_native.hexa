@@ -1,7 +1,7 @@
 // _hexa_native.hexa — PreToolUse(Write|Edit|NotebookEdit|Bash) hard block.
 //
 // If the target file's enclosing project (any ancestor dir holding a
-// `project.tape` marker) exists AND the target ends in `.py` / `.sh`,
+// `project.tape` marker) exists AND the target ends in `.py` / `.sh` / `.c`,
 // deny the write with a fixed message redirecting to `.hexa`.
 //
 // Two write channels are covered:
@@ -128,7 +128,7 @@ fn _deny_for(root: string, target: string, channel: string) {
     let rel_hexa = _swap_ext_hexa(rel)
     let reason = "hexa-native: re-issue this write as `" + rel_hexa + "` — same logic, just `.hexa`.\n"
         + "  ✅ ACTION (do this NOW — do NOT punt): author `" + rel_hexa + "` with the identical content. hexa is project `" + proj + "`'s native source language and runs here exactly like a `." + ext + "` would elsewhere. This is a one-token fix (swap the extension), NOT a dead-end — do NOT fall back to writing a doc / runbook, and do NOT hand it back to the user.\n"
-        + "  WHY (a reroute, not a wall): `" + rel + "` (." + ext + ") was refused via " + channel + " only because the project root holds a `project.tape` marker. `.py` / `.sh` stay supported as ai-native English in OTHER projects; this one takes `.hexa` ONLY.\n"
+        + "  WHY (a reroute, not a wall): `" + rel + "` (." + ext + ") was refused via " + channel + " only because the project root holds a `project.tape` marker. `.py` / `.sh` / `.c` stay supported in OTHER projects; this one takes `.hexa` ONLY (C bootstrap → `hexa cc --regen`, never a hand-written `.c`).\n"
         + "  NO env-var / flag override — `.hexa` is the only path forward, so take it."
     _deny(reason)
 }
@@ -288,7 +288,7 @@ fn _handle_bash(payload: map, ti: map) {
     let mut k = 0
     while k < len(cands) {
         let tgt = cands[k]
-        if _ends_with(tgt, ".py") || _ends_with(tgt, ".sh") {
+        if _ends_with(tgt, ".py") || _ends_with(tgt, ".sh") || _ends_with(tgt, ".c") {
             let abs = _resolve(cwd, tgt)
             let root = _find_project_root(abs)
             if root != "" { _deny_for(root, abs, "a Bash write channel (>, >>, tee, dd of=, cp/mv)") }
@@ -321,7 +321,7 @@ fn main() {
     }
     if target == "" { _allow() }
 
-    if !_ends_with(target, ".py") && !_ends_with(target, ".sh") { _allow() }
+    if !_ends_with(target, ".py") && !_ends_with(target, ".sh") && !_ends_with(target, ".c") { _allow() }
 
     let root = _find_project_root(target)
     if root == "" { _allow() }

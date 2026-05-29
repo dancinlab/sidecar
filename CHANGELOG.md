@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🐛 celebrate 0.1.2: Stop hook 출력 스키마 fix — additionalContext → systemMessage
+
+🐛 celebrate Stop hook 이 매 turn-end 마다 `Hook JSON output validation failed — (root): Invalid input` 로 거부되던 버그 수정. 원인 = `_celebrate.hexa:304` 가 `{"hookSpecificOutput":{"hookEventName":"Stop","additionalContext":…}}` 를 emit 했는데, `hookSpecificOutput.additionalContext` 는 **UserPromptSubmit/PostToolUse 전용**이고 Stop 이벤트 스키마엔 없음 → 매번 validation 실패(축포가 한 번도 제대로 안 떴고 에러만 남음). Stop 에서 채팅에 텍스트를 띄우는 schema-valid 채널은 top-level `systemMessage`.
+
+- **fix**: `_emit()` 가 `{"systemMessage": <escaped>}` 를 emit (single-line, `_json_escape` 재사용). bell 무변경.
+- 3 surface lockstep (g22): `_celebrate.hexa` · plugin.json · marketplace.json `0.1.1 → 0.1.2`.
+- ⚠ 잔여(별개): marketplace.json celebrate desc 에 0.1.1 제거된 효과③(macOS 별도 창 애니) 잔재 = pre-existing drift, 이번 surface(additionalContext 문구)만 정정.
+
+---
+
 ## 2026-05-30 — 🎆 celebrate 0.1.1: 애니메이션(별도 창) 제거 — 이 세션 ASCII 폭죽 + bell 만 유지
 
 🎆 축포를 **인-세션 정적**으로만 한정. macOS 별도 Terminal 창 ANSI 애니메이션(효과 ③) 을 전면 제거하고, 효과는 ① 대화 스트림 ASCII 폭죽 버스트 + ② 터미널 bell **2종** 으로 단순화. 발사 조건·교차 1회·suppression·silent-skip 은 그대로.

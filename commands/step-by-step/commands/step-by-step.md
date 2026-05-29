@@ -167,7 +167,11 @@ On `go`, do the following IN ORDER and atomically (no pause between substeps):
      `⚠ drafts/ not in .gitignore — plan.md may commit accidentally`.
 
 3. **Write `drafts/<slug>-plan.md`** with this layout (Write tool, not
-   echo/heredoc):
+   echo/heredoc). ALWAYS stamp `status: active` in the frontmatter on write —
+   this is the flag plan-guard's active-plan resolver keys on (@L6: the active
+   plan = the `drafts/*-plan.md` whose frontmatter is `status: active`, else
+   the newest-mtime `*-plan.md` as a fallback). Exactly ONE plan should carry
+   `status: active` at a time:
    ```
    ---
    slug: <slug>
@@ -260,6 +264,13 @@ PASS/FAIL/SKIP — SKIP은 "해당 없음"(= PASS-equivalent, 통과로 간주).
 
 결과는 항상 `drafts/<slug>-plan.md`의 `## qa-results` (최신 위) + 필요 시
 `## qa-deferred` 섹션에 기록. user가 돌아오면 plan.md 읽어 후속 결정.
+
+**상태 flip (@L6 · plan-guard 활성추적)** — ship + auto-QA 가 끝나 plan 이
+종료되면 frontmatter `status: active` → `status: done` 로 flip (regression
+auto-revert 로 폐기된 경우 → `status: abandoned`). 이로써 plan-guard 의
+inject/ship hook 이 다음 세션의 다른 활성 plan 을 정확히 집어 stale plan 의
+@L 을 잘못 강제하지 않는다. flip 을 깜빡하면 fallback(최신 mtime)이 받쳐주지만,
+정확한 추적을 위해 closure 시 flip 을 권장.
 
 ## Step 0.9 — HANDOFF.md 9-section 자동 작성 (handoff agent · auto-QA 직후 · 보고 직전)
 

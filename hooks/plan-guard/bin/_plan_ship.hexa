@@ -124,10 +124,14 @@ fn _active_plan(root: string) -> string {
         if p != "" && _frontmatter_status(_read_file_safe(p)).to_lower() == "active" { return p }
         i = i + 1
     }
+    // fallback: newest non-closed plan (skip done/abandoned)
     let mut j = 0
     while j < len(cands) {
         let p = _trim(cands[j])
-        if p != "" { return p }
+        if p != "" {
+            let st = _frontmatter_status(_read_file_safe(p)).to_lower()
+            if st != "done" && st != "abandoned" { return p }
+        }
         j = j + 1
     }
     return ""

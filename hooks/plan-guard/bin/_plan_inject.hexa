@@ -142,11 +142,16 @@ fn _active_plan(root: string) -> string {
         }
         i = i + 1
     }
-    // pass 2: newest mtime (ls -t already sorted) — fallback
+    // pass 2: newest mtime (ls -t already sorted) that is NOT explicitly
+    // closed (done/abandoned) — fallback. Skips a stale closed plan so its
+    // @L is never enforced after closure.
     let mut j = 0
     while j < len(cands) {
         let p = _trim(cands[j])
-        if p != "" { return p }
+        if p != "" {
+            let st = _frontmatter_status(_read_file_safe(p)).to_lower()
+            if st != "done" && st != "abandoned" { return p }
+        }
         j = j + 1
     }
     return ""

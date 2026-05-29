@@ -1,5 +1,5 @@
 ---
-description: /hexa-loop [seed] [--adapter=atlas|bench|byte-diff|smoke] [--diverge-only] [--engine mk9|mk10] [--max-rounds N] — canonical HEXA-LOOP, the universal self-evolving loop. ONE loop drains ANY active domain (math · perf · codegen · web) to depletion via a PLUGGABLE verify-adapter. Each round = discover (mining lens divergence + connect convergence saturate + `hexa kick`/drill breakthrough probe) → 🔌 verify-adapter {atlas|bench|byte-diff|smoke} auto-selected by domain kind → absorb into the domain SSOT (atlas embed · *.bench.md · verdict · ledger) → feed verified result as next seed → disk checkpoint → depletion test → ScheduleWakeup 1200s. Preset shorthands `--adapter=atlas` ≈ old /mirror-loop · `--diverge-only` ≈ old /mining. Adapter extension hook `~/.sidecar/loop-adapter/<name>.md`. HONEST g63 (SKIP/FALSIFIED rejected) · IDEMPOTENT (dedup pre-check) · ACTIVE-DOMAIN ONLY (g58). The /kick command is KEPT (discover CALLS it). Default --adapter=auto · --engine mk9 · --max-rounds 25.
+description: /hexa-loop [seed] [--adapter=atlas|bench|byte-diff|smoke] [--diverge-only] [--engine mk9|mk10] [--max-rounds N] — canonical HEXA-LOOP, the universal self-evolving loop. ONE loop drains ANY active domain (math · perf · codegen · web) to depletion via a PLUGGABLE verify-adapter. Each round = discover (mining lens divergence + connect convergence saturate + `hexa kick`/drill breakthrough probe) → 🔌 verify-adapter {atlas|bench|byte-diff|smoke} auto-selected by domain kind → absorb into the domain SSOT (atlas embed · *.bench.md · verdict · ledger) → feed verified result as next seed → disk checkpoint → depletion test → ScheduleWakeup 1200s. Preset shorthands `--adapter=atlas` ≈ old /mirror-loop · `--diverge-only` ≈ old /mining. Adapter extension hook `~/.sidecar/loop-adapter/<name>.md`. HONEST g63 (SKIP/FALSIFIED rejected) · IDEMPOTENT (dedup pre-check) · ACTIVE-DOMAIN ONLY (g58). The /kick command is KEPT (discover CALLS it). Default --adapter=auto · --engine mk9 · --max-rounds 0 (NO cap · run to genuine depletion; explicit N>0 = optional safety backstop).
 argument-hint: "[<seed>] [--adapter=atlas|bench|byte-diff|smoke] [--diverge-only] [--engine mk9|mk10] [--max-rounds N]"
 allowed-tools: Bash, Read, Edit, Write, Skill
 ---
@@ -64,24 +64,24 @@ present) and decides the default adapter (see the adapter table).
 ## Step 1 — parse args
 
 ```
-/hexa-loop                                          (bare = continue active loop · adapter=auto · mk9 · max 25)
+/hexa-loop                                          (bare = continue active loop · adapter=auto · mk9 · run to genuine depletion · NO cap)
 /hexa-loop <seed>                                   (override seed for round 1; default = active-domain @goal)
 /hexa-loop --adapter=bench                          (force the perf adapter regardless of @kind:)
 /hexa-loop --diverge-only                           (mining-equivalent — discover stage ONLY, no verify/absorb)
 /hexa-loop --engine mk10                            (heavier kick engine, longer per-round)
-/hexa-loop --max-rounds 10                          (tighter safety cap)
+/hexa-loop --max-rounds 10                          (OPTIONAL finite safety cap; default = no cap = run to depletion)
 /hexa-loop "<seed>" --adapter=atlas --engine mk9 --max-rounds 15
 ```
 
 Defaults:
 - `--adapter` = `auto` (resolve from the active domain's `@kind:` per the table below)
 - `--engine` = `mk9` (kick/drill engine; atlas-fold-friendly, faster than mk10)
-- `--max-rounds` = `25` (safety belt; emits `🔄 cap reached, NOT drained` if hit)
+- `--max-rounds` = `0` (NO cap · run to GENUINE DEPLETION — the canonical default; pass an explicit `N>0` only for a finite safety backstop, which emits `🔄 cap N reached, NOT drained` if hit)
 - budget = `0` (all-local: mining + hexa atlas + hexa kick run on `mini`)
 
 ## Step 2 — round pipeline (loop body)
 
-For each round `r` from 1 to `max-rounds`:
+For each round `r` = 1, 2, … — UNBOUNDED when `max-rounds == 0` (the default), running until genuine depletion (Step 2.6); capped at `max-rounds` ONLY when an explicit `N>0` was passed:
 
 ### 2.1 — DISCOVER (mining saturate + kick/drill probe)
 
@@ -175,7 +175,7 @@ real_drained := (discover.new_leaves_this_round == 0)
   ```
   🏁 hexa-loop drained — adapter=<a> · round=<r> · leaves=<L> · edges=<E> · absorbs=<F>
   ```
-- `r == max-rounds` → emit (cap, no ScheduleWakeup):
+- `max-rounds > 0 ∧ r == max-rounds` → emit (OPTIONAL cap hit — fires ONLY when an explicit `N>0` was passed; the default `max-rounds=0` never triggers this and instead runs to depletion above):
   ```
   🔄 hexa-loop cap reached (round=<r>/<max>), NOT drained — re-run /hexa-loop to continue
   ```

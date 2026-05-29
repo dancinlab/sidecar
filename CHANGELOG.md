@@ -6,6 +6,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 📡 walkie-hexa 0.1.0 (신규 훅): hexa-lang HEAD 변경 감지 → 전 세션 walkie all-call 자동 송신
+
+📡 walkie 패밀리의 **EMIT/송신** 조각. 지금까지 walkie(`call`/`all-call` 수동 송신) · walkie-arm(수신 데몬) · walkie-mcp(idle-push 수신)는 모두 사람·수신 측이었다. walkie-hexa는 `$HOME/core/hexa-lang` git HEAD 가 새 커밋으로 전진하면 **자동으로** 전 세션에 한 줄 무전을 쏜다 — hexa-lang 릴리스가 곧바로 모든 라이브 세션에 전파된다.
+
+- **walkie-hexa 0.1.0 (신규 SessionStart + UserPromptSubmit 훅)** — hexa-lang(`_walkie_hexa.hexa tick`, `hexa run`). walkie-arm 구조·idiom(`_shq`/`_trim`/`_read_file_safe`/detached-shell)를 그대로 미러. 두 이벤트 모두 같은 `tick` 동사를 호출.
+- **변경 신호** — `git -C $HOME/core/hexa-lang rev-parse --short HEAD`. `~/.sidecar/walkie/hexa-lang.last-sha` 와 **다를 때만** 발화(같으면 매 턴 cheap no-change 경로로 exit 0).
+- **브로드캐스트** — `📡 hexa-lang <short-sha>: <commit subject>` 를 `/walkie all-call` 의 roster-loop 송신 경로 그대로 사용(roster.json 에서 각 핸들 sock 해소 → `{from,text,ts}` JSON 한 줄 → `socat - UNIX-CONNECT:<sock>` else `nc -U <sock>`, self 제외, offline 피어 skip). subject 는 개행/큰따옴표 제거로 한 줄 sanitize.
+- **per-sha mkdir 락** — `~/.sidecar/walkie/.hexa-lang-lock-<sha>` 원자적 생성으로 동시 tick 중 **정확히 한 세션만** 발화(나머지는 sha 만 기록). FIRST-SEEN(last-sha 파일 없음)은 현재 sha 를 **조용히** 기록(업데이트 아님).
+- **수신은 재구현 안 함** — walkie-arm(캡처 데몬) + walkie-mcp(idle-push)가 이미 처리. 이 플러그인은 **송신 전용**.
+- **전제조건만 게이트(@D s11)** — hexa-lang/.git 존재(`test -e`, hexa `file_exists` 가 디렉터리에 false 라 shell probe) + self 핸들 설정. 둘 중 하나라도 없거나 git 실패 → graceful exit 0. opt-out env/flag 없음. stdin 미독(hexa fake-stdin 함정 — env+파일+exec 만).
+- **버전 lockstep(g22)** — plugin.json + marketplace.json + profiles.json(personal tier) 0.1.0 등록.
+
+---
+
 ## 2026-05-30 — commons 0.20.0: @D g47 worktree-머지 cwd 운영 규칙 보강 (commons @V 1.8→1.9)
 
 🧹 공유 워킹트리 repo에서 PR을 닫을 때 반복되던 `main is already used by worktree` 에러를 거버넌스로 봉인한다. 계기 = 2026-05-30 HEXA-TRAIN-FLOOR 도메인 사이클 — 격리 worktree에서 `gh pr create && gh pr merge --delete-branch`(pr-cycle 훅 자동 append)가 worktree cwd 안에서 실행되면, 그 worktree가 `main`을 점유 중이라 머지 단계가 매 PR마다 실패했다(PR 자체는 생성됨 → 부모가 canonical dir에서 수동 머지로 복구).

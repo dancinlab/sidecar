@@ -1,7 +1,7 @@
 {
   "name": "stdlib",
   "description": "hexa-lang stdlib SSOT helper skill (commons @D g61 — stdlib is the single source of truth for shared code, primitives AND domain engines). `/stdlib check` (bare) scans the cwd repo for g61 violations: abs-path cross-repo `.hexa` imports (anima-locked) + local fn names that duplicate a hexa-lang stdlib `pub fn`. `/stdlib promote <file>` prints the move-to-stdlib + thin-shim runbook (engine⊥adapter; the phi_native / IIT4 #1051 flow). Pairs with the stdlib-ssot-guard hook (in-the-moment advisory). Read-only scan; promote prints a runbook (no auto-write). Triggers: /stdlib · stdlib check · stdlib 승격 · promote to stdlib.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

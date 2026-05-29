@@ -4,15 +4,6 @@ description: /lab — research-lab control-tower (domain-agnostic) with a code-l
 allowed-tools: Bash, Read, Write, Edit, Skill
 ---
 
-> **0.9.x→1.0.0 RENAME — `system` → `lab`.** The skill is now `/lab` (research-lab
-> metaphor). The previous `/system` invocation + every prior trigger
-> (`관제탑` · `mission control` · `control tower` · `campaign status`) stay live as
-> **DEPRECATED aliases** — they resolve to this exact skill, lossless, so existing
-> muscle memory / scripts never break. New work should use `/lab`. The rename is
-> purely additive: all 11 verbs (status · tick · watch · harvest · next · auto ·
-> drive · pursue · stop · cost · queue · upstream) are preserved verbatim, and
-> `bin/system_harness.hexa` (the decision harness) is unchanged.
-
 @D lab := "research-lab control-tower — unified dashboard + event-driven watch + harvest→verdict + autonomous re-dispatch loop · domain-agnostic (was `system` ≤0.9.x · `/system` kept as deprecated alias)" :: skill [active]
   do   = "single mission-control over ALL in-flight jobs across surfaces (pod/pool/local) — read cwd `./pods.json` manifest SSOT (cloud dispatch) + a `queue` backlog + a `budget` cap; never reinvent the manifest"
   do   = "0.7.0 CODE HARNESS — `${CLAUDE_PLUGIN_ROOT}/bin/system_harness.hexa` is the deterministic core (probe→classify→decide) shelled out to via `hexa run`. `tick [--apply]` runs one pass that partitions decisions into `auto` (harness handles itself — wait/resume/retry) and `escalate` (LLM acts — harvest/triage/requeue/restart). drive's per-tick step IS `tick --apply` (compresses prose drive steps 1-2 into one binary call). `--selftest` asserts the 8-case taxonomy (incl. bare-marker trap). pure functions classify+decide = the load-bearing logic; NO autonomy decision is made in prose anywhere — the table is in code"

@@ -11,6 +11,7 @@ PreToolUse(Bash) auto-lint that fires on `git commit` inside any Claude Code mar
 | marketplace.json plugin entry vs each plugin's `plugin.json` — version drift only | commons `@D g22` (lockstep version surfaces) |
 | `hooks/*/bin/*.sh` missing user-exec bit | hook fires die with Permission denied otherwise |
 | unexpected top-level dir — ALLOWLIST (`hooks`·`commands`·`skills`·`agents`·`bin`·`.github`·`.claude-plugin`), tracked only | project.tape `@D s16` (co-locate by owner/domain; rename-proof — `docs`→`documentation` still flags; advisory directs moving contents under the owning domain/plugin) |
+| `skills/*/SKILL.md` body (after frontmatter) holds >1 `@D` block · prose/heading/table/code-fence beyond do/dont · a `@D` key other than do/dont · a per-skill `README.md` | project.tape `@D s6` (SKILL.md body = ONE `@D <name> :: skill` do/dont block; no prose/tables/examples/extra-keys; no per-skill README) |
 
 Description drift between `marketplace.json` and `plugin.json` is intentionally NOT checked — descriptions get rewritten often enough that drift-checking them adds noise without catching a real bug class.
 

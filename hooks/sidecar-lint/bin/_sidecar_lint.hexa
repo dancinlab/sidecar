@@ -17,6 +17,9 @@
 //      (project.tape @D s15: no MCP-server plugins; hook · command · skill only)
 //   8. unexpected top-level dir — ALLOWLIST (concept dir·plugin·.github·.claude-plugin);
 //      tracked only · rename-proof (project.tape @D s16: co-locate by owner/domain)
+//   9. skills/*/SKILL.md body violates s6 — >1 @D block · prose/heading/table/code
+//      fence beyond do/dont · a @D key other than do/dont · a per-skill README.md
+//      (project.tape @D s6: SKILL.md body = ONE @D do/dont block; no prose/tables/examples)
 //
 // Self-excludes hooks/sidecar-lint/ and CHANGELOG.md in the staged checks.
 // NO opt-out by design — no env var, no config file, no exception
@@ -319,6 +322,145 @@ fn _is_git_commit(cmd: string) -> bool {
     return false
 }
 
+// (9) skills/*/SKILL.md body s6 conformance (project.tape @D s6 — a SKILL.md
+// body is exactly ONE `@D <name> :: skill` block of do/dont lines; no prose
+// paragraphs / markdown headings / tables / code-fence examples; no @D key
+// other than do/dont; and no per-skill README.md). The frontmatter (between
+// the first two `---` lines) is skipped — only the body is judged.
+//
+// Returns an array of finding strings ("  <rel>: <reason>").
+fn _skill_s6_findings(root: string) -> array {
+    let mut out = []
+
+    // enumerate skill dirs (tracked or not — the SKILL.md is the unit).
+    let lr = exec_with_status("ls -1 '" + root + "/skills' 2>/dev/null")
+    if lr[1] != 0 { return out }
+    let dirs = to_string(lr[0]).split("\n")
+    let dn = len(dirs)
+    let mut di = 0
+    while di < dn {
+        let name = _trim(dirs[di])
+        di = di + 1
+        if name == "" { continue }
+        let skdir = root + "/skills/" + name
+
+        // a per-skill README.md is forbidden outright (s6 dont).
+        if file_exists(skdir + "/README.md") && len(out) < 30 {
+            out.push("  skills/" + name + "/README.md: per-skill README.md forbidden (s6 — SKILL.md is the only doc surface)")
+        }
+
+        let skpath = skdir + "/SKILL.md"
+        if !file_exists(skpath) { continue }
+        let raw = _read_file_safe(skpath)
+        if raw == "" { continue }
+
+        // strip frontmatter: skip everything up to and including the SECOND
+        // line that is exactly "---" (the first one opens it).
+        let lines = raw.split("\n")
+        let ln = len(lines)
+        let mut li = 0
+        let mut dashes = 0
+        if ln > 0 && _trim(lines[0]) == "---" {
+            li = 1
+            while li < ln {
+                if _trim(lines[li]) == "---" { li = li + 1; break }
+                li = li + 1
+            }
+        }
+
+        // scan the body.
+        let mut at_blocks = 0
+        let mut in_fence = false
+        let mut sawProse = false
+        let mut sawTable = false
+        let mut sawHeading = false
+        let mut sawFence = false
+        let mut sawBadKey = false
+        let mut badKeys = ""
+        while li < ln {
+            let line = lines[li]
+            li = li + 1
+            let t = _trim(line)
+
+            if _starts_with(t, "```") {
+                in_fence = !in_fence
+                sawFence = true
+                continue
+            }
+            if in_fence { continue }
+            if t == "" { continue }
+
+            if _starts_with(t, "@D ") {
+                at_blocks = at_blocks + 1
+                continue
+            }
+            if _starts_with(t, "## ") || _starts_with(t, "# ") || _starts_with(t, "### ") {
+                sawHeading = true
+                continue
+            }
+            if _starts_with(t, "|") {
+                sawTable = true
+                continue
+            }
+
+            // indented `key =` inside a @D body: only do / dont allowed.
+            let ls = _lstrip(line)
+            let eq = ls.index_of("=")
+            if eq > 0 && (line[0] == " " || line[0] == "\t") {
+                let key = _trim(ls.substring(0, eq))
+                if key == "do" || key == "dont" {
+                    continue
+                }
+                // a bare lowercase identifier before '=' that isn't do/dont
+                // is an extra @D key (e.g. why/tool/note/ref/ex).
+                let mut isident = len(key) > 0
+                let mut ki = 0
+                while ki < len(key) {
+                    let c = key[ki]
+                    if !_is_alnum_lower(c) && c != "_" { isident = false; break }
+                    ki = ki + 1
+                }
+                if isident {
+                    sawBadKey = true
+                    if !_contains(badKeys, key) {
+                        if badKeys == "" { badKeys = key } else { badKeys = badKeys + " " + key }
+                    }
+                    continue
+                }
+            }
+
+            // anything else that isn't a do/dont continuation is prose.
+            // (do/dont values can wrap across lines; a wrapped value line is
+            // indented and has no leading marker — treat a top-level,
+            // non-indented, non-@D line as prose.)
+            if line[0] != " " && line[0] != "\t" {
+                sawProse = true
+            }
+        }
+
+        let rel = "skills/" + name + "/SKILL.md"
+        if at_blocks > 1 && len(out) < 30 {
+            out.push("  " + rel + ": " + to_string(at_blocks) + " @D blocks (s6 — body = exactly ONE @D do/dont block)")
+        }
+        if sawHeading && len(out) < 30 {
+            out.push("  " + rel + ": markdown heading(s) in body (s6 — no prose/tables/examples; do/dont only)")
+        }
+        if sawTable && len(out) < 30 {
+            out.push("  " + rel + ": markdown table(s) in body (s6 — no prose/tables/examples; do/dont only)")
+        }
+        if sawFence && len(out) < 30 {
+            out.push("  " + rel + ": code-fence example(s) in body (s6 — no prose/tables/examples; do/dont only)")
+        }
+        if sawProse && len(out) < 30 {
+            out.push("  " + rel + ": prose paragraph(s) in body (s6 — do/dont lines only)")
+        }
+        if sawBadKey && len(out) < 30 {
+            out.push("  " + rel + ": @D key(s) other than do/dont (" + badKeys + ") (s6 — do/dont only)")
+        }
+    }
+    return out
+}
+
 fn main() {
 
     let raw = _read_stdin()
@@ -516,6 +658,16 @@ fn main() {
         }
     }
 
+    // (9) skills/*/SKILL.md s6 conformance (project.tape @D s6 — minimal
+    // tape-style do/dont body; no prose/tables/examples/extra keys; no
+    // per-skill README.md). Whole-tree scan (not staged-diff) so an existing
+    // violation surfaces on the next commit, matching the marketplace/profiles
+    // checks above.
+    // (file_exists is regular-file-only in hexa — it returns false for a
+    // directory; the function itself fail-opens when `ls skills` errors, so no
+    // dir-existence guard is needed here.)
+    let skills6 = _skill_s6_findings(root)
+
     let mut sections = []
     if nochangelog {
         sections.push("no CHANGELOG.md at repo root (commons @D g29 — create + maintain CHANGELOG.md as the chronological history surface)")
@@ -543,6 +695,9 @@ fn main() {
     }
     if len(kindfolders) > 0 {
         sections.push("예상 밖 top-level 디렉터리 (project.tape @D s16 — 소속 도메인/플러그인 밑으로 co-locate; 허용 = concept dir(hook·command·skill)·plugin·루트 reference doc. 폴더명만 바꿔도 걸리는 allowlist 방식):\n" + kindfolders.join("\n"))
+    }
+    if len(skills6) > 0 {
+        sections.push("SKILL.md s6 위반 (project.tape @D s6 — SKILL.md body = ONE `@D <name> :: skill` block · do/dont only; no prose/tables/examples/extra-keys; no per-skill README.md):\n" + skills6.join("\n"))
     }
 
     if len(sections) == 0 { _allow() }

@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — lab 1.3.0: 캠페인 디스패치 = ALL-PARALLEL 원칙 (single-pod 순차 큐 금지)
+
+⚡ lab(캠페인 관제탑)에 **all-parallel 디스패치 원칙**을 명문화 — 데모이 `project.tape` `d_parallel_fire` 와 짝. 이번 세션 라이브 교훈: 6-perovskite 후보 배치를 한 vast pod 의 순차 `onstart.sh` 체인으로 bin-pack → **270-thread / load-119 oversubscription thrash** + flagship(CaAuH3)이 나머지 6개 perovskite 를 며칠간 블록. 표준 규칙으로 못박음.
+
+- **원칙** — queue 의 ready 후보를 발사할 때 **DEDICATED PARALLEL 용량으로 fan-out**(one job→one slot · ranks ≤ physcores/pod · `OMP/MKL/OPENBLAS_NUM_THREADS=1`). 단일 pod 순차 `onstart.sh` 체인으로 bin-pack 금지. 막힌 단일-pod 순차 체인(flagship 이 나머지 블록)은 **즉시 병렬 pod 로 SPLIT**(d17 — 신규 병렬 용량은 rentable).
+- **SKILL.md** — `@D` 에 do 2줄(all-parallel fire + next/auto 병렬) · do(queue 계약 병렬) · do(pursue 병렬 wave) + dont 1줄 추가, 그리고 새 본문 섹션 `## dispatch principle — all-parallel (no single-pod queue)`(why 라이브 교훈 · d_parallel_fire 거버넌스 짝 · oversubscription-safe launch 지식 cross-ref).
+- **verb threading (commands/lab.md)** — `next`(step 2 병렬 발사 + 체인 split) · `auto`(all-parallel 노트) · `drive`(tick step 3 one job→one slot · agent cap≤2-3 ≠ pod 수 구분) · `queue` taxonomy(`queued` 행 = 병렬 발사 · single-pod 순차 체인 = split anti-pattern).
+- **버전 lockstep (g22)** — `plugin.json` · `marketplace.json` `lab` 엔트리 1.2.1→**1.3.0**(1.3.0 description 노트 동기) · SKILL.md + commands/lab.md · CHANGELOG. README lab 행 부재 → CHANGELOG lockstep 표면.
+
 ## 2026-05-29 — all-fg-go 0.1.0: `all bg go`의 foreground 순차 짝 신설
 
 🚦 `all-bg-go`(prior-turn 브랜치 병렬 백그라운드 fan-out)의 **foreground 순차** 짝 `all-fg-go` 신설. cycle-bg ↔ cycle-fg 관계와 동일한 패턴 — 같은 prior-turn 브랜치를 한 번에 하나씩 foreground 에서 실행(`run_in_background:false` await), `▶ i/N → ✅/⚠/❌` 가시 진행, 실패 시 halt(실패 브랜치 + verbatim 에러 + 미실행 tail 보고). 병렬·백그라운드 없음 — 각 브랜치를 순서대로 지켜봐야 할 때(신중 리뷰 · 단일 공유 자원 · 단계별 디버깅) 사용.

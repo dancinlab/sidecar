@@ -1,0 +1,9 @@
+{
+  "name": "walkie-hexa",
+  "description": "📡 SessionStart + UserPromptSubmit hook — the EMIT/sender side of the walkie family for hexa-lang releases. Watches `$HOME/core/hexa-lang` git HEAD: on every SessionStart and UserPromptSubmit it reads `git -C $HOME/core/hexa-lang rev-parse --short HEAD` and, when the sha differs from the last-broadcast one recorded in `~/.sidecar/walkie/hexa-lang.last-sha`, auto-broadcasts a one-line `📡 hexa-lang <short-sha>: <commit subject>` to EVERY live peer via the walkie all-call roster loop (resolve each handle's sock from `~/.sidecar/walkie/roster.json`, build a `{from,text,ts}` JSON line, send via `socat - UNIX-CONNECT:<sock>` else `nc -U <sock>`, skip self, skip offline peers). Receiving is already handled by walkie-arm (capture daemon) + walkie-mcp (idle-push) — this plugin ONLY emits. Per-sha atomic `mkdir ~/.sidecar/walkie/.hexa-lang-lock-<sha>` lock means exactly ONE session fires per new sha even under concurrent ticks; the loser just records the sha. FIRST-SEEN (no last-sha file) records the current sha SILENTLY (not an update). Missing repo / unset self handle (`~/.sidecar/walkie/self`) / git failure → graceful exit 0. Never reads stdin (hexa fake-stdin trap — uses env + files + exec only). NO opt-out switch (sidecar @D s11) — gates only on real preconditions (hexa-lang/.git present + self handle set), else silent exit 0. hexa-lang (`_walkie_hexa.hexa tick`, via `hexa run`). NO absolute paths ($HOME / $CLAUDE_PLUGIN_ROOT only).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "user-prompt-submit", "walkie", "walkie-talkie", "radio", "broadcast", "all-call", "hexa-lang", "git", "head", "release-notify", "socket", "unix-socket", "no-mcp", "hexa"]
+}

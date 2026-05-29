@@ -1,0 +1,223 @@
+// _walkie_hexa.hexa — walkie EMIT/sender hook for hexa-lang releases (NO MCP, sidecar @D s15).
+//
+// Detects when $HOME/core/hexa-lang git HEAD advances to a new commit and
+// auto-broadcasts a one-line `📡 hexa-lang <short-sha>: <subject>` to every
+// live walkie peer via the all-call roster loop. Receiving is ALREADY handled
+// by walkie-arm (capture daemon) + walkie-mcp (idle-push) — this is the SEND
+// half only; it never re-implements receive.
+//
+// Verb (dispatched from hooks.json for BOTH SessionStart + UserPromptSubmit):
+//   tick — read hexa-lang HEAD short-sha; fire ONLY when it differs from the
+//          last-broadcast sha; dedup concurrent ticks via a per-sha mkdir lock.
+//
+// State, all under $HOME/.sidecar/walkie/ (co-located with the walkie family):
+//   self                     this session's walkie handle (one line) — set by `/walkie handle`
+//   roster.json              { "<handle>": {"sock","sid","ts"}, ... } — peer roster
+//   hexa-lang.last-sha       last broadcast-processed hexa-lang HEAD short-sha
+//   .hexa-lang-lock-<sha>/   per-sha mkdir lock dir (only one session fires per new sha)
+//
+// hexa trap: hexa stdin is a fake FILE* → libc stdio segfaults. This hook MUST
+// NOT read stdin — it ignores the hook payload entirely and works off env +
+// files + exec only (walkie-arm operates under the same constraint). No
+// self-path re-spawn.
+//
+// s11 (no opt-out): no env-var/flag disables this. It gates ONLY on real
+// preconditions — hexa-lang/.git present + a self handle set. Missing either,
+// or any git failure → graceful exit 0. No hook output on a fire (the firing
+// session already knows; peers receive via their own receive path).
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+// single-quote a string for safe embedding in a `sh -c` command.
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _walkie_dir() -> string {
+    return env_var("HOME") + "/.sidecar/walkie"
+}
+
+fn _hexa_lang_dir() -> string {
+    return env_var("HOME") + "/core/hexa-lang"
+}
+
+// hexa's file_exists() is false for DIRECTORIES (and a worktree `.git` may be a
+// gitfile, not a dir), so probe `<repo>/.git` via the shell `test -e` — true
+// for a normal repo's `.git/` dir AND a linked-worktree `.git` gitfile.
+fn _repo_present(repo: string) -> bool {
+    let cmd = "test -e " + _shq(repo + "/.git") + " && echo Y || echo"
+    let mut out = ""
+    try { out = to_string(exec(cmd)) } catch e { return false }
+    return _trim(out) == "Y"
+}
+
+// read self handle from $HOME/.sidecar/walkie/self; "" when unset/empty.
+fn _self_handle(dir: string) -> string {
+    let f = dir + "/self"
+    if !file_exists(f) { return "" }
+    return _trim(_read_file_safe(f))
+}
+
+// collapse a string to a single line: strip CR/LF, drop double-quotes. The
+// downstream `build_json` re-escapes for JSON; this keeps the message one line.
+fn _sanitize(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    while i < n {
+        let c = s[i]
+        if c == "\n" || c == "\r" { parts.push(" ") }
+        else if c == "\"" { parts.push("") }
+        else { parts.push(c) }
+        i = i + 1
+    }
+    return _trim(parts.join(""))
+}
+
+// read hexa-lang HEAD short-sha; "" on any git failure / missing repo.
+fn _head_sha(repo: string) -> string {
+    let cmd = "git -C " + _shq(repo) + " rev-parse --short HEAD 2>/dev/null"
+    let mut out = ""
+    try { out = to_string(exec(cmd)) } catch e { return "" }
+    return _trim(out)
+}
+
+// read hexa-lang HEAD commit subject (first line of %s); "" on failure.
+fn _head_subject(repo: string) -> string {
+    let cmd = "git -C " + _shq(repo) + " log -1 --format=%s 2>/dev/null"
+    let mut out = ""
+    try { out = to_string(exec(cmd)) } catch e { return "" }
+    return _sanitize(out)
+}
+
+// acquire a per-sha atomic lock: `mkdir <dir>/.hexa-lang-lock-<sha>`. Returns
+// true only when WE created it (so exactly one session fires per new sha).
+fn _acquire_lock(dir: string, sha: string) -> bool {
+    let lockdir = dir + "/.hexa-lang-lock-" + sha
+    let cmd = "mkdir " + _shq(lockdir) + " 2>/dev/null && echo Y || echo"
+    let mut out = ""
+    try { out = to_string(exec(cmd)) } catch e { return false }
+    return _trim(out) == "Y"
+}
+
+// broadcast `msg` to every live peer via the walkie all-call roster loop —
+// the verbatim send path from skills/walkie/commands/walkie.md: resolve each
+// handle's sock from roster.json, build a {from,text,ts} JSON one-liner, send
+// via `socat - UNIX-CONNECT:<sock>` else `nc -U <sock>`, skip self, skip
+// offline peers. Self handle + message embedded as single-quoted shell vars.
+fn _broadcast(dir: string, self: string, msg: string) {
+    let roster = dir + "/roster.json"
+    let body =
+        "WALKIE_DIR=" + _shq(dir) + "; ROSTER=" + _shq(roster) +
+        "; SELF=" + _shq(self) + "; TEXT=" + _shq(msg) + "; TS=$(date +%s);" +
+        " HAVE_SOCAT=0; HAVE_NC=0; HAVE_JQ=0;" +
+        " command -v socat >/dev/null 2>&1 && HAVE_SOCAT=1;" +
+        " command -v nc >/dev/null 2>&1 && HAVE_NC=1;" +
+        " command -v jq >/dev/null 2>&1 && HAVE_JQ=1;" +
+        " [ \"$HAVE_SOCAT\" = 0 ] && [ \"$HAVE_NC\" = 0 ] && exit 0;" +
+        " [ -s \"$ROSTER\" ] || exit 0;" +
+        " [ \"$HAVE_JQ\" = 1 ] || exit 0;" +
+        " jq -r 'keys[]' \"$ROSTER\" 2>/dev/null | while read -r RN; do" +
+        "   [ \"$RN\" = \"$SELF\" ] && continue;" +
+        "   RP=$(jq -r --arg n \"$RN\" '.[$n].sock // empty' \"$ROSTER\" 2>/dev/null);" +
+        "   [ -z \"$RP\" ] && continue;" +
+        "   [ -S \"$RP\" ] || continue;" +
+        "   J=$(jq -cn --arg f \"$SELF\" --arg t \"$TEXT\" --argjson ts \"$TS\" '{from:$f,text:$t,ts:$ts}');" +
+        "   if [ \"$HAVE_SOCAT\" = 1 ]; then" +
+        "     printf '%s\\n' \"$J\" | socat - \"UNIX-CONNECT:$RP\" 2>/dev/null;" +
+        "   else" +
+        "     printf '%s\\n' \"$J\" | nc -U \"$RP\" 2>/dev/null;" +
+        "   fi;" +
+        " done"
+    try { let _r = exec_with_status(body) } catch e { }
+}
+
+fn _write_last(dir: string, sha: string) {
+    let f = dir + "/hexa-lang.last-sha"
+    try { write_file(f, sha + "\n") } catch e { }
+}
+
+fn main() {
+    let args = argv()
+    let mut verb = "tick"
+    if len(args) > 1 { verb = args[1] }
+    // only `tick` is defined; anything else is a no-op silent exit.
+    if verb != "tick" { exit(0) }
+
+    // (1) precondition: hexa-lang repo present.
+    let repo = _hexa_lang_dir()
+    if !_repo_present(repo) { exit(0) }
+
+    let dir = _walkie_dir()
+
+    // (2) precondition: self handle set (sender identity). No identity → silent.
+    let self = _self_handle(dir)
+    if self == "" { exit(0) }
+
+    // (3) current hexa-lang HEAD short-sha; git failure → silent.
+    let cur = _head_sha(repo)
+    if cur == "" { exit(0) }
+
+    // (4) last broadcast-processed sha (or "").
+    let lastf = dir + "/hexa-lang.last-sha"
+    let mut last = ""
+    if file_exists(lastf) { last = _trim(_read_file_safe(lastf)) }
+
+    // (5) FIRST-SEEN: no last-sha → record current SILENTLY (not an update).
+    if last == "" {
+        _write_last(dir, cur)
+        exit(0)
+    }
+
+    // (6) cheap no-change path (every turn): nothing advanced.
+    if cur == last { exit(0) }
+
+    // (7) change detected.
+    // (a) per-sha atomic lock — if another session already fired for this sha,
+    //     just record it and exit (no double broadcast).
+    if !_acquire_lock(dir, cur) {
+        _write_last(dir, cur)
+        exit(0)
+    }
+    // (b) lock acquired: build the broadcast message.
+    let subj = _head_subject(repo)
+    // (c) `📡 hexa-lang <cur>: <subj>` — sanitized to a single line.
+    let msg = _sanitize("📡 hexa-lang " + cur + ": " + subj)
+    // (d) broadcast to every live peer (self excluded, offline skipped).
+    _broadcast(dir, self, msg)
+    // (e) record the new sha.
+    _write_last(dir, cur)
+    // (f) no hook output — the firing session already knows.
+    exit(0)
+}

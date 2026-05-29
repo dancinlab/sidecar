@@ -45,6 +45,21 @@ hexa run hooks/plan-guard/bin/_plan_lint.hexa <plan.md> [--diff <file> …]
 - `--diff` 모드에서 `grep` 은 그 파일셋만 보고, `file`/`verdict` 는 존재
   검사라 repo 를 본다.
 
+## hook — PreToolUse(Task|Agent) verbatim 주입 (0.2.0)
+
+sub-agent 가 spawn 될 때 `_plan_inject.hexa` 가:
+
+1. **활성 plan 해결** — `drafts/*-plan.md` 중 frontmatter `status: active` 인
+   것, 없으면 최신 mtime fallback.
+2. **`@L` contract 추출** — `## locked decisions` 의 `@L … assert:` 불릿.
+3. **verbatim 주입** — 그 라인들을 그대로 `additionalContext` 로 첨부해
+   오케스트레이터가 spawn 프롬프트에 모순 escape 를 써넣어도 plan 의 @L 이
+   우선임을 sub-agent 에게 명시 (근본원인 #1 = T2/d1 ".kosmos 필수"→"SKIP OK").
+4. **escape scan** — spawn 프롬프트가 locked term(또는 human-label 토큰) 근처에
+   skip/ignore/생략/… 부정 키워드를 담으면 advisory 경고 append.
+
+advisory only — deny 없음, 항상 exit 0.
+
 ## 양방향 sibling
 
 - sibling: [`step-by-step`](../../commands/step-by-step/) — plan.md `@L`+assert

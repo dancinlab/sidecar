@@ -1,0 +1,313 @@
+// _plan_inject.hexa — plan-guard PreToolUse(Task|Agent) hook.
+//
+// When a sub-agent is spawned, find the ACTIVE step-by-step plan and inject
+// its locked-decision contract (`@L<n> … assert:`) VERBATIM into the agent's
+// context as additionalContext, so the orchestrator can't silently write an
+// escape into the spawn prompt that contradicts a locked decision (root cause
+// #1 — the T2/d1 ".kosmos 필수" → "SKIP OK" incident).
+//
+// Also scans the spawn prompt for escape language that contradicts a lock
+// (skip / negation keywords aimed at a locked term) and warns — advisory.
+//
+// Active plan resolution (mirrors PR-5 / @L6):
+//   1. drafts/*-plan.md whose frontmatter has `status: active`
+//   2. else the newest-mtime drafts/*-plan.md (fallback)
+//   3. none → silent exit 0
+//
+// Advisory ONLY (@L5): never deny, only additionalContext. Always exits 0.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    if needle == "" { return true }
+    return hay.index_of(needle) >= 0
+}
+
+fn _lower(s: string) -> string {
+    return s.to_lower()
+}
+
+fn _str_field(m: map, k: string) -> string {
+    if !has_key(m, k) { return "" }
+    let v = m[k]
+    if type_of(v) != "string" { return "" }
+    return v
+}
+
+// ── active plan resolution ──────────────────────────────────────────────────
+
+fn _repo_root() -> string {
+    let mut r = ""
+    try {
+        let res = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+        if res[1] == 0 { r = _trim(res[0]) }
+    } catch e { r = "" }
+    if r == "" { r = _trim(to_string(exec("pwd"))) }
+    return r
+}
+
+// frontmatter `status:` value (between the first two `---` fences), "" if none.
+fn _frontmatter_status(plan_text: string) -> string {
+    let lines = plan_text.split("\n")
+    let n = len(lines)
+    if n == 0 || _trim(lines[0]) != "---" { return "" }
+    let mut i = 1
+    while i < n {
+        let t = _trim(lines[i])
+        if t == "---" { break }
+        if _starts_with(t, "status:") {
+            return _trim(t.substring(7, len(t)))
+        }
+        i = i + 1
+    }
+    return ""
+}
+
+// Return the active plan path under <root>/drafts, or "".
+fn _active_plan(root: string) -> string {
+    let dir = root + "/drafts"
+    // list *-plan.md (newest first via ls -t)
+    let mut listing = ""
+    try {
+        let res = exec_with_status("ls -t " + dir + "/*-plan.md 2>/dev/null")
+        if res[1] == 0 { listing = res[0] }
+    } catch e { listing = "" }
+    if _trim(listing) == "" { return "" }
+    let cands = listing.split("\n")
+    // pass 1: first with status: active
+    let mut i = 0
+    while i < len(cands) {
+        let p = _trim(cands[i])
+        if p != "" {
+            let st = _frontmatter_status(_read_file_safe(p))
+            if _lower(st) == "active" { return p }
+        }
+        i = i + 1
+    }
+    // pass 2: newest mtime (ls -t already sorted) — fallback
+    let mut j = 0
+    while j < len(cands) {
+        let p = _trim(cands[j])
+        if p != "" { return p }
+        j = j + 1
+    }
+    return ""
+}
+
+// ── @L extraction (verbatim lines + parsed term for escape scan) ────────────
+
+// Returns array of maps { line (verbatim), id, term } for each `@L…assert:`
+// bullet in the `## locked decisions` section.
+fn _locked_lines(plan_text: string) -> array {
+    let lines = plan_text.split("\n")
+    let n = len(lines)
+    let mut in_locked = false
+    let mut out = []
+    let mut i = 0
+    while i < n {
+        let raw = lines[i]
+        let t = _trim(raw)
+        if _starts_with(t, "## ") {
+            in_locked = _contains(t, "locked decisions")
+        } else if in_locked && t != "" {
+            // a bullet that mentions @L and assert:
+            if _contains(t, "@L") && _contains(t, "assert:") {
+                // id = @L<digits>
+                let p = t.index_of("@L")
+                let mut k = p + 2
+                while k < len(t) {
+                    let c = t[k]
+                    if c < "0" || c > "9" { break }
+                    k = k + 1
+                }
+                let id = t.substring(p, k)
+                // term = assert arg's bare token (after kind), strip leading !
+                let ap = t.index_of("assert:")
+                let clause = _trim(t.substring(ap + 7, len(t)))
+                let sp = clause.index_of(" ")
+                let mut term = ""
+                if sp >= 0 { term = _trim(clause.substring(sp + 1, len(clause))) }
+                if _starts_with(term, "!") { term = _trim(term.substring(1, len(term))) }
+                // human label = between id and " · assert:" (for escape scan
+                // against the conceptual decision, e.g. ".kosmos 필수")
+                let mut human = ""
+                let dotp = t.index_of(" · assert:")
+                if dotp >= 0 { human = _trim(t.substring(t.index_of(id) + len(id), dotp)) }
+                // drop a leading "(axis):" prefix from the human label
+                let cp = human.index_of("):")
+                if cp >= 0 { human = _trim(human.substring(cp + 2, len(human))) }
+                out.push(#{ "line": _trim(raw), "id": id, "term": term, "human": human })
+            }
+        }
+        i = i + 1
+    }
+    return out
+}
+
+// Escape scan: for each lock term, if the spawn prompt mentions the term AND a
+// skip/negation keyword near it, flag a possible escape. Cheap heuristic.
+fn _escape_hits(prompt: string, locks: array) -> array {
+    let lp = _lower(prompt)
+    let mut neg = ["skip", "ignore", "without", "no need", "don't", "do not", "instead", "건너", "무시", "생략", "안 해", "필요 없", "대신"]
+    let mut hits = []
+    let mut i = 0
+    while i < len(locks) {
+        let l = locks[i]
+        // candidate match terms: the assert term + each salient (len>=4)
+        // token of the human label
+        let mut terms = []
+        let term = _lower(_str_field(l, "term"))
+        if term != "" { terms.push(term) }
+        let human = _lower(_str_field(l, "human"))
+        if human != "" {
+            let toks = human.split(" ")
+            let mut ti = 0
+            while ti < len(toks) {
+                let tk = _trim(toks[ti])
+                if len(tk) >= 4 { terms.push(tk) }
+                ti = ti + 1
+            }
+        }
+        // does the prompt mention any candidate term?
+        let mut matched = ""
+        let mut m = 0
+        while m < len(terms) {
+            if _contains(lp, terms[m]) { matched = terms[m]; break }
+            m = m + 1
+        }
+        if matched != "" {
+            let mut j = 0
+            while j < len(neg) {
+                if _contains(lp, neg[j]) {
+                    hits.push(_str_field(l, "id") + " (mentions '" + matched + "' near escape word '" + neg[j] + "')")
+                    break
+                }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+    return hits
+}
+
+fn _emit(text: string) {
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_str(text) + "}}"
+    println(out)
+    exit(0)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    if raw == "" { _allow() }
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    let tn = payload["tool_name"]
+    if type_of(tn) != "string" { _allow() }
+    if tn != "Task" && tn != "Agent" { _allow() }
+
+    let root = _repo_root()
+    let plan_path = _active_plan(root)
+    if plan_path == "" { _allow() }
+
+    let plan_text = _read_file_safe(plan_path)
+    if plan_text == "" { _allow() }
+
+    let locks = _locked_lines(plan_text)
+    if len(locks) == 0 { _allow() }   // no @L contract → nothing to inject
+
+    // build verbatim contract block
+    let mut bl = []
+    bl.push("# plan-guard — ACTIVE plan locked contract (verbatim, non-negotiable)")
+    bl.push("source: " + plan_path)
+    bl.push("이 sub-agent 는 아래 @L locked decision 을 그대로 따라야 한다. spawn 프롬프트가")
+    bl.push("이와 모순되는 escape(skip/부정)를 담고 있으면 plan 의 @L 이 우선한다.")
+    bl.push("")
+    let mut i = 0
+    while i < len(locks) {
+        bl.push("  " + _str_field(locks[i], "line"))
+        i = i + 1
+    }
+
+    // escape scan against the spawn prompt
+    let mut prompt = ""
+    if has_key(payload, "tool_input") {
+        let ti = payload["tool_input"]
+        if type_of(ti) == "map" { prompt = _str_field(ti, "prompt") }
+    }
+    if prompt != "" {
+        let hits = _escape_hits(prompt, locks)
+        if len(hits) > 0 {
+            bl.push("")
+            bl.push("⚠ plan-guard: spawn 프롬프트가 locked decision 과 모순될 수 있음 (advisory):")
+            let mut h = 0
+            while h < len(hits) {
+                bl.push("  - " + hits[h])
+                h = h + 1
+            }
+            bl.push("  → 위 @L contract 가 우선. escape 무시하고 lock 준수.")
+        }
+    }
+
+    _emit(bl.join("\n"))
+}

@@ -420,6 +420,18 @@ End every verb with one status line — LEAD with the g56 progress bar + %:
 ```
 The leading `▓▓▓▓▓▓░░░░ NN%` (10-cell bar + %) is mandatory on EVERY verb's closure (g56 — multi-step work always shows a % bar), not just status/drive.
 
+## dispatch principle — all-parallel (no single-pod queue)
+
+**Campaign dispatch is ALL-PARALLEL, never a single-pod sequential queue.** When `next`/`auto`/`pursue`/`drive` fire the queue's ready candidates, fan them out across DEDICATED PARALLEL capacity — **one job → one slot**, ranks ≤ physical-cores/pod, with `OMP_NUM_THREADS=MKL_NUM_THREADS=OPENBLAS_NUM_THREADS=1`. Do NOT bin-pack multiple candidates into a single pod's sequential `onstart.sh` chain.
+
+A stuck single-pod **sequential chain** — e.g. an `onstart.sh` queue where a flagship job blocks every candidate behind it — is an anti-pattern to **SPLIT onto parallel pods ON SIGHT**. Don't wait for the chain to drain; redistribute the queued tail across fresh dedicated capacity immediately (d17 — fresh capacity is rentable).
+
+- **Why** (live lesson): a 6-perovskite candidate batch was bin-packed into one vast pod's sequential `onstart.sh` chain → 270-thread / load-119 **oversubscription thrash** AND the flagship (CaAuH3) **blocked 6 other perovskites for days**. The fix is this standing rule.
+- **Governance pairing** — matches `project.tape` directive **`d_parallel_fire`** (demiurge repo, same principle): fire N candidates across dedicated parallel pods · split a stuck single-pod sequential chain on sight · never chain candidates sequentially on one pod · never queue behind another when parallel capacity is rentable.
+- **Cross-reference** — the per-pod rank/thread caps are the same oversubscription-safe launch knowledge (ranks = physical cores, no `--oversubscribe`, single-threaded BLAS, walltime cap). All-parallel fan-out is bounded by the throttle-aware agent cap (≤2-3, g24·g55) — parallelism is across POD SLOTS, not unbounded agents on one host.
+
+The `queue` taxonomy reflects this: a **`queued`** candidate fires **IN PARALLEL** across a dedicated slot the moment capacity exists; a single-pod sequential chain of `queued` candidates is never a valid steady state — split it.
+
 Triggers — `/lab`, `랩`, `연구실`, `research lab`, `lab status`, `lab progress`, `연구 진척도`, `lab mirror`, `거울방`,
 `/system` (deprecated alias), `관제탑` (deprecated), `캠페인 현황`, `전체 잡 현황`, `mission control` (deprecated), `campaign status` (deprecated),
 `upstream fix in this session`, `hexa upstream fix`, `upstream trail`, `handoff 올린 거`, `상류 기여`,

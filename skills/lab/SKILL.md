@@ -25,15 +25,3 @@ allowed-tools: Bash, Read, Write, Edit, Skill
   dont = "pause for user approval after each verdict · halt the loop on a single result · treat a depleted wave as terminal while the queue holds candidates or open axes remain · model-side tail -f / sleep-poll (use the detached watcher)"
   dont = "LLM-judge correctness (g5 — paste the verify verdict verbatim) · fabricate a fire/harvest that did not happen (g63 honesty) · arm a watcher on a job whose surface is unreachable (report the transport failure instead)"
   dont = "bin-pack N candidates into one pod's sequential `onstart.sh` chain (oversubscription thrash + a flagship blocks the rest) · queue a candidate behind another when fresh parallel capacity is rentable (d17) · leave a stuck single-pod sequential chain running when it can be split onto parallel pods"
-
-## dispatch principle — all-parallel (no single-pod queue)
-
-**Campaign dispatch is ALL-PARALLEL, never a single-pod sequential queue.** When `next`/`auto`/`pursue`/`drive` fire the queue's ready candidates, fan them out across DEDICATED PARALLEL capacity — **one job → one slot**, ranks ≤ physical-cores/pod, with `OMP_NUM_THREADS=MKL_NUM_THREADS=OPENBLAS_NUM_THREADS=1`. Do NOT bin-pack multiple candidates into a single pod's sequential `onstart.sh` chain.
-
-A stuck single-pod **sequential chain** — e.g. an `onstart.sh` queue where a flagship job blocks every candidate behind it — is an anti-pattern to **SPLIT onto parallel pods ON SIGHT**. Don't wait for the chain to drain; redistribute the queued tail across fresh dedicated capacity immediately (d17 — fresh capacity is rentable).
-
-- **Why** (live lesson, this campaign): a 6-perovskite candidate batch was bin-packed into one vast pod's sequential `onstart.sh` chain → 270-thread / load-119 **oversubscription thrash** AND the flagship (CaAuH3) **blocked 6 other perovskites for days**. The fix is this standing rule.
-- **Governance pairing** — matches `project.tape` directive **`d_parallel_fire`** (demiurge repo, same principle). The plugin and the governance SSOT stay consistent: fire N candidates across dedicated parallel pods · split a stuck single-pod sequential chain on sight · never chain candidates sequentially on one pod · never queue behind another when parallel capacity is rentable.
-- **Cross-reference** — the per-pod rank/thread caps are the same oversubscription-safe launch knowledge already encoded for the watcher/dispatch surface (ranks = physical cores, no `--oversubscribe`, single-threaded BLAS, walltime cap). All-parallel fan-out is bounded by the throttle-aware agent cap (≤2-3, g24·g55) — parallelism is across POD SLOTS, not unbounded agents on one host.
-
-The `queue` taxonomy reflects this: a **`queued`** candidate fires **IN PARALLEL** across a dedicated slot the moment capacity exists; a single-pod sequential chain of `queued` candidates is never a valid steady state — split it.

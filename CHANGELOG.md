@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — hexa-native 0.4.0: 차단셋에 `.c` 추가
+
+🚫 hexa-native 가 막는 확장자에 `.c` 추가 (기존 `.py`/`.sh` 옆). project.tape 마커가 있는 프로젝트에서 손으로 `.c`를 쓰면 deny → `.hexa` 유도. C 부트스트랩은 `hexa cc --regen`이 (훅에 안 걸리는 CLI 내부 경로로) 재생성하므로 무관 · 손 편집은 commons @D g61이 이미 금지 → 정합.
+
+- Write/Edit gate + Bash 쓰기채널(`> X.c`·heredoc·tee·dd·cp/mv) 둘 다 `.c` 커버 (`.py`/`.sh`와 동일 경로).
+- `.c`는 **literal `.c` 접미사만** 매칭 — `.cc`/`.cpp`/`.cxx`/`.h`는 비대상 (오탐 회피).
+- 비쓰기(`gcc X.c`·`cat X.c`)는 통과. project.tape 없는 프로젝트는 무영향.
+- 버전 lockstep(g22): plugin.json·marketplace.json 0.3.2→**0.4.0** + description · CHANGELOG.
+
 ## 2026-05-29 — deck-guard 0.1.0: `.in` 입력덱 직접 작성 차단 → `/deck` 강제 (whitelist 예외)
 
 🍞 QE/DFT 입력덱(`.in`)을 손으로 쓰는 걸 막고 `/deck` 생성기(canonical `stdlib/deck/gen.hexa` SSOT)로 유도하는 새 가드. cloud-guard(직접 provider CLI 차단)·hexa-native(.py/.sh 차단)와 같은 deny+redirect 패턴.

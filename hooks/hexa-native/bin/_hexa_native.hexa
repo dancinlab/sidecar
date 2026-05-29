@@ -2,8 +2,9 @@
 //
 // If the target file's enclosing project (any ancestor dir holding a
 // `project.tape` marker) exists AND the target ends in `.py` / `.sh` / `.c` /
-// `.cc` / `.cpp` / `.cxx` / `.h` / `.hpp` / `.hh` / `.s` / `.o`, deny the write
-// with a fixed message redirecting to `.hexa`.
+// `.cc` / `.cpp` / `.cxx` / `.h` / `.hpp` / `.hh` / `.inl` / `.ipp` / `.tcc` /
+// `.s` / `.S` / `.asm` / `.o`, deny the write with a fixed message redirecting
+// to `.hexa`.
 //
 // Two write channels are covered:
 //   1. Structured file tools — Write / Edit / NotebookEdit (file_path).
@@ -129,7 +130,7 @@ fn _deny_for(root: string, target: string, channel: string) {
     let rel_hexa = _swap_ext_hexa(rel)
     let reason = "hexa-native: re-issue this write as `" + rel_hexa + "` — same logic, just `.hexa`.\n"
         + "  ✅ ACTION (do this NOW — do NOT punt): author `" + rel_hexa + "` with the identical content. hexa is project `" + proj + "`'s native source language and runs here exactly like a `." + ext + "` would elsewhere. This is a one-token fix (swap the extension), NOT a dead-end — do NOT fall back to writing a doc / runbook, and do NOT hand it back to the user.\n"
-        + "  WHY (a reroute, not a wall): `" + rel + "` (." + ext + ") was refused via " + channel + " only because the project root holds a `project.tape` marker. `.py` / `.sh` / `.c` / `.cc` / `.cpp` / `.cxx` / `.h` / `.hpp` / `.hh` / `.s` / `.o` stay supported in OTHER projects; this one takes `.hexa` ONLY (C / C++ / header / asm / object are compiler outputs here — `hexa cc --regen`, never hand-written).\n"
+        + "  WHY (a reroute, not a wall): `" + rel + "` (." + ext + ") was refused via " + channel + " only because the project root holds a `project.tape` marker. `.py` / `.sh` / `.c` / `.cc` / `.cpp` / `.cxx` / `.h` / `.hpp` / `.hh` / `.inl` / `.ipp` / `.tcc` / `.s` / `.S` / `.asm` / `.o` stay supported in OTHER projects; this one takes `.hexa` ONLY (C / C++ / header / inline / asm / object are compiler outputs here — `hexa cc --regen`, never hand-written).\n"
         + "  NO env-var / flag override — `.hexa` is the only path forward, so take it."
     _deny(reason)
 }
@@ -289,7 +290,7 @@ fn _handle_bash(payload: map, ti: map) {
     let mut k = 0
     while k < len(cands) {
         let tgt = cands[k]
-        if _ends_with(tgt, ".py") || _ends_with(tgt, ".sh") || _ends_with(tgt, ".c") || _ends_with(tgt, ".cc") || _ends_with(tgt, ".cpp") || _ends_with(tgt, ".cxx") || _ends_with(tgt, ".h") || _ends_with(tgt, ".hpp") || _ends_with(tgt, ".hh") || _ends_with(tgt, ".s") || _ends_with(tgt, ".o") {
+        if _ends_with(tgt, ".py") || _ends_with(tgt, ".sh") || _ends_with(tgt, ".c") || _ends_with(tgt, ".cc") || _ends_with(tgt, ".cpp") || _ends_with(tgt, ".cxx") || _ends_with(tgt, ".h") || _ends_with(tgt, ".hpp") || _ends_with(tgt, ".hh") || _ends_with(tgt, ".inl") || _ends_with(tgt, ".ipp") || _ends_with(tgt, ".tcc") || _ends_with(tgt, ".s") || _ends_with(tgt, ".S") || _ends_with(tgt, ".asm") || _ends_with(tgt, ".o") {
             let abs = _resolve(cwd, tgt)
             let root = _find_project_root(abs)
             if root != "" { _deny_for(root, abs, "a Bash write channel (>, >>, tee, dd of=, cp/mv)") }
@@ -322,7 +323,7 @@ fn main() {
     }
     if target == "" { _allow() }
 
-    if !_ends_with(target, ".py") && !_ends_with(target, ".sh") && !_ends_with(target, ".c") && !_ends_with(target, ".cc") && !_ends_with(target, ".cpp") && !_ends_with(target, ".cxx") && !_ends_with(target, ".h") && !_ends_with(target, ".hpp") && !_ends_with(target, ".hh") && !_ends_with(target, ".s") && !_ends_with(target, ".o") { _allow() }
+    if !_ends_with(target, ".py") && !_ends_with(target, ".sh") && !_ends_with(target, ".c") && !_ends_with(target, ".cc") && !_ends_with(target, ".cpp") && !_ends_with(target, ".cxx") && !_ends_with(target, ".h") && !_ends_with(target, ".hpp") && !_ends_with(target, ".hh") && !_ends_with(target, ".inl") && !_ends_with(target, ".ipp") && !_ends_with(target, ".tcc") && !_ends_with(target, ".s") && !_ends_with(target, ".S") && !_ends_with(target, ".asm") && !_ends_with(target, ".o") { _allow() }
 
     let root = _find_project_root(target)
     if root == "" { _allow() }

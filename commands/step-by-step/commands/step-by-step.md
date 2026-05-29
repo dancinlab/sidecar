@@ -172,6 +172,7 @@ On `go`, do the following IN ORDER and atomically (no pause between substeps):
    ---
    slug: <slug>
    mode: <manual|auto>
+   status: active                                              # active | done | abandoned (plan-guard tracks `active`)
    auto-weights: complete=<n>, simple=<n>, safe=<n>, std=<n>   # AUTO only; omit in MANUAL
    created: <ISO date>
    ---
@@ -182,8 +183,8 @@ On `go`, do the following IN ORDER and atomically (no pause between substeps):
    <one paragraph restating the task as understood>
 
    ## locked decisions
-   - Q1 (<axis>): <chosen option>
-   - Q2 (<axis>): <chosen option>
+   - @L1 (<axis>): <chosen option> · assert:<grep:|file:|verdict:> <arg>
+   - @L2 (<axis>): <chosen option> · assert:<grep:|file:|verdict:> <arg>
    - …
 
    ## next-action checklist
@@ -195,6 +196,34 @@ On `go`, do the following IN ORDER and atomically (no pause between substeps):
    ## completion criteria
    <how the agent knows it is done — files touched, gates passed, ship landed>
    ```
+
+   ### `@L<n> … assert:` — locked-decision machine-readable contract
+
+   Each `## locked decisions` bullet MAY carry a machine-checkable assertion so
+   the plan becomes a contract the `plan-guard` plugin can enforce (verbatim
+   hook injection + ship-time `plan-lint`), not just prose a sub-agent can
+   silently drift past. Form:
+
+   ```
+   - @L<n> (<axis>): <human-readable chosen option> · assert:<kind> <arg>
+   ```
+
+   - `@L<n>` — stable id (`@L1`, `@L2`, …), monotone, never reused within a plan.
+   - `assert:<kind> <arg>` — the falsifier. THREE kinds:
+     - `assert:grep <pattern>` — the locked term MUST appear somewhere in the
+       checked surface (repo files, or the `--diff` file set). e.g.
+       `assert:grep akida_backend_resolve` to lock an AKIDA-first decision.
+       Prefix `!` to invert (`assert:grep !GPU` = the term must be ABSENT).
+     - `assert:file <path>` — the path MUST exist (relative to repo root). e.g.
+       `assert:file HEXAD/CHAT/coffeshop_akida.hexa`.
+     - `assert:verdict <slug>/<id>` — a terminal verdict file
+       `.verdicts/<slug>/<id>.txt` MUST exist and be non-empty (closure gate).
+   - The human option text and the `assert:` clause are separated by ` · `.
+   - One assert per `@L` line; add more `@L` lines for more locks.
+
+   **Backward compatible** — a plan.md with NO `@L` lines (legacy `Q1`/`Q2`
+   bullets) is simply skipped by `plan-lint` (no asserts → nothing to check →
+   exit 0). Adding `@L` is opt-in; existing plans never break.
 
 4. **Launch a background Agent** (general-purpose Agent, `run_in_background=true`).
    Prompt = self-contained: the full plan.md contents, ship instructions

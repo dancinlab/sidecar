@@ -52,10 +52,17 @@ answer to each round.
      Step 2 if ambiguous).
    - Ensure `drafts/` exists + is in `.gitignore` (add if missing; warn if
      blocked).
-   - Write `drafts/<slug>-plan.md` (frontmatter: slug · mode · auto-weights
-     if AUTO · created date · then `## task brief` · `## locked decisions` ·
-     `## next-action checklist` (ending with a `[ ] ship …` line) ·
-     `## completion criteria`).
+   - Write `drafts/<slug>-plan.md` (frontmatter: slug · mode · `status: active`
+     · auto-weights if AUTO · created date · then `## task brief` ·
+     `## locked decisions` · `## next-action checklist` (ending with a
+     `[ ] ship …` line) · `## completion criteria`).
+   - `## locked decisions` bullets MAY carry a machine-readable contract:
+     `- @L<n> (<axis>): <option> · assert:<kind> <arg>` where `<kind>` ∈
+     `grep <pat>` (term present · `!pat` = absent) · `file <path>` (exists) ·
+     `verdict <slug>/<id>` (`.verdicts/<slug>/<id>.txt` non-empty). The
+     `plan-guard` plugin injects these verbatim into sub-agent prompts and
+     runs `plan-lint` at ship. Plans with no `@L` lines are skipped
+     (backward-compatible).
    - Launch a general-purpose **background Agent** (run_in_background=true)
      with a self-contained prompt: the plan.md contents + ship instructions
      (explicit paths · no force-push · Korean commit msg · `sidecar sync`

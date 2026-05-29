@@ -60,6 +60,21 @@ sub-agent 가 spawn 될 때 `_plan_inject.hexa` 가:
 
 advisory only — deny 없음, 항상 exit 0.
 
+## hook — PostToolUse(Bash) ship-lint (0.3.0)
+
+ship 명령(`git commit` / `gh pr …`) 직후 `_plan_ship.hexa` 가:
+
+1. 활성 plan 해결 (위와 동일).
+2. ship diff 파일셋 계산 (`git diff origin/main...HEAD`, 없으면 staged/HEAD,
+   없으면 repo-wide).
+3. PR-2 의 `_plan_lint.hexa` 엔진을 subprocess 로 호출(SSOT 1개)해 `--diff`
+   범위로 검증.
+4. 미충족 `@L` 을 verbatim advisory 경고로 surface — 원계획 drift(근본원인 #2,
+   예 "AKIDA-first → GPU")를 ship 시점에 포착. sbs Auto-QA 의 soft conformance
+   self-check(근본원인 #3)가 놓친 지점.
+
+non-block — ship 은 이미 일어났고 경고는 다음 turn 에 탄다. 항상 exit 0.
+
 ## 양방향 sibling
 
 - sibling: [`step-by-step`](../../commands/step-by-step/) — plan.md `@L`+assert

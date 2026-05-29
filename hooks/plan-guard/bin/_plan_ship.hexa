@@ -1,0 +1,240 @@
+// _plan_ship.hexa — plan-guard PostToolUse(Bash) ship-time lint hook.
+//
+// Fires after a Bash command that ships (`git commit` or `gh pr …`). When an
+// ACTIVE step-by-step plan exists, runs the plan-lint engine against the
+// shipped diff and emits any UNMET `@L` asserts as an additionalContext
+// warning — so a mid-design drift off the locked plan (root cause #2, e.g.
+// "AKIDA-first → GPU") is surfaced at ship time, where sbs Auto-QA's soft
+// conformance self-check (root cause #3) missed it.
+//
+// Reuses the PR-2 `_plan_lint.hexa` engine as a subprocess (single source of
+// truth for assert evaluation), scoped to the diff via `--diff <files…>`.
+//
+// Advisory ONLY (@L5): never blocks the ship, only additionalContext. Always
+// exits 0. A plan with no `@L` lines produces no warning (engine skips it).
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+fn _contains(hay: string, needle: string) -> bool {
+    if needle == "" { return true }
+    return hay.index_of(needle) >= 0
+}
+
+fn _str_field(m: map, k: string) -> string {
+    if !has_key(m, k) { return "" }
+    let v = m[k]
+    if type_of(v) != "string" { return "" }
+    return v
+}
+
+fn _repo_root() -> string {
+    let mut r = ""
+    try {
+        let res = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+        if res[1] == 0 { r = _trim(res[0]) }
+    } catch e { r = "" }
+    if r == "" { r = _trim(to_string(exec("pwd"))) }
+    return r
+}
+
+fn _frontmatter_status(plan_text: string) -> string {
+    let lines = plan_text.split("\n")
+    let n = len(lines)
+    if n == 0 || _trim(lines[0]) != "---" { return "" }
+    let mut i = 1
+    while i < n {
+        let t = _trim(lines[i])
+        if t == "---" { break }
+        if _starts_with(t, "status:") { return _trim(t.substring(7, len(t))) }
+        i = i + 1
+    }
+    return ""
+}
+
+fn _active_plan(root: string) -> string {
+    let dir = root + "/drafts"
+    let mut listing = ""
+    try {
+        let res = exec_with_status("ls -t " + dir + "/*-plan.md 2>/dev/null")
+        if res[1] == 0 { listing = res[0] }
+    } catch e { listing = "" }
+    if _trim(listing) == "" { return "" }
+    let cands = listing.split("\n")
+    let mut i = 0
+    while i < len(cands) {
+        let p = _trim(cands[i])
+        if p != "" && _frontmatter_status(_read_file_safe(p)).to_lower() == "active" { return p }
+        i = i + 1
+    }
+    let mut j = 0
+    while j < len(cands) {
+        let p = _trim(cands[j])
+        if p != "" { return p }
+        j = j + 1
+    }
+    return ""
+}
+
+// shipped-diff file list — committed range vs origin/main, else staged/HEAD.
+fn _diff_files(root: string) -> array {
+    let mut raw = ""
+    let cmds = [
+        "cd " + root + " && git diff --name-only origin/main...HEAD 2>/dev/null",
+        "cd " + root + " && git diff --name-only HEAD~1 2>/dev/null",
+        "cd " + root + " && git diff --name-only --cached 2>/dev/null"
+    ]
+    let mut ci = 0
+    while ci < len(cmds) {
+        try {
+            let res = exec_with_status(cmds[ci])
+            if res[1] == 0 && _trim(res[0]) != "" { raw = res[0]; break }
+        } catch e { }
+        ci = ci + 1
+    }
+    let mut out = []
+    if _trim(raw) == "" { return out }
+    let lines = raw.split("\n")
+    let mut i = 0
+    while i < len(lines) {
+        let f = _trim(lines[i])
+        if f != "" { out.push(root + "/" + f) }
+        i = i + 1
+    }
+    return out
+}
+
+// locate the plan-lint engine. argv()[0] is the COMPILED cache path (not the
+// source), so resolve via CLAUDE_PLUGIN_ROOT (set when run as a hook).
+fn _engine_path() -> string {
+    let root = env("CLAUDE_PLUGIN_ROOT")
+    if root != "" {
+        let p = root + "/bin/_plan_lint.hexa"
+        if file_exists(p) { return p }
+    }
+    return ""
+}
+
+fn _hexa_bin() -> string {
+    let h = env("HEXA")
+    if h != "" && file_exists(h) { return h }
+    let home = env("HOME")
+    let cand = home + "/.hx/bin/hexa"
+    if file_exists(cand) { return cand }
+    return "hexa"
+}
+
+fn _emit(text: string) {
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":" + _json_str(text) + "}}"
+    println(out)
+    exit(0)
+}
+
+fn main() {
+    let raw = _read_stdin()
+    if raw == "" { _allow() }
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    let tn = payload["tool_name"]
+    if type_of(tn) != "string" || tn != "Bash" { _allow() }
+
+    // fire only on a ship command
+    let mut cmd = ""
+    if has_key(payload, "tool_input") {
+        let ti = payload["tool_input"]
+        if type_of(ti) == "map" { cmd = _str_field(ti, "command") }
+    }
+    if cmd == "" { _allow() }
+    if !_contains(cmd, "git commit") && !_contains(cmd, "gh pr") { _allow() }
+
+    let root = _repo_root()
+    let plan_path = _active_plan(root)
+    if plan_path == "" { _allow() }
+    if !_contains(_read_file_safe(plan_path), "assert:") { _allow() }  // no @L contract
+
+    let engine = _engine_path()
+    if engine == "" || !file_exists(engine) { _allow() }
+
+    // build: hexa run <engine> <plan> --diff <files…>   (repo-wide if no diff)
+    let diff = _diff_files(root)
+    let mut argline = _hexa_bin() + " run " + engine + " " + plan_path
+    if len(diff) > 0 {
+        argline = argline + " --diff"
+        let mut i = 0
+        while i < len(diff) { argline = argline + " " + diff[i]; i = i + 1 }
+    }
+
+    let mut res = ["", 0]
+    try { res = exec_with_status("cd " + root + " && " + argline + " 2>&1") } catch e { _allow() }
+    let out = res[0]
+    let code = res[1]
+    if code == 0 { _allow() }   // PASS / skipped → no warning
+
+    // FAIL → surface the unmet asserts as advisory
+    let note = "⚠ plan-guard ship-lint (advisory · non-blocking): active plan "
+        + plan_path + " 의 @L locked contract 중 일부가 ship diff 에서 미충족.\n"
+        + "원계획 drift 가능 (근본원인 #2). plan-lint verbatim:\n"
+        + out
+        + "\n→ 의도된 변경이면 plan.md 의 해당 @L 을 갱신, 아니면 lock 준수하도록 수정."
+    _emit(note)
+}

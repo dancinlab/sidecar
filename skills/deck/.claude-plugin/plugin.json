@@ -1,0 +1,9 @@
+{
+  "name": "deck",
+  "description": "/deck <domain> <slug> '<spec-json>' — 🍞 도메인 input deck 빵틀 generator. Thin wrapper around `hexa-lang stdlib/deck/gen.hexa`. RTSC QE el-ph first impl (4 files emit: vc-relax.in · scf.in · ph.in · run.sh; PSL 1.0.0 pseudo auto-download branch on `soc` flag; spec keys = anchor · press · q_grid · sscha? · soc?). Output dir = exports/<domain>/decks/<slug>/. chem/chip/bio/nuclear/material domains stub (TODO) — generic dispatch (d4) routes by domain manifest, no per-domain hardcoding. Preflight estimate (`hexa cloud preflight --kind dft-phonon --atoms N --nq M`) reported after emit; d16 pool ubu-1 free dry-run hint before cost-bearing rent. Demonstrated by demiurge RTSC 2026-05-29 campaign — CaAuH3_SOC + 9 anchor sweep (h3o/h3f/h3p/h3cl/AcBeH8/YH10×3 press) decks emit. Triggers — '/deck', '빵틀', 'deck-gen', 'input deck 생성', 'bake deck', '빵 굽기', 'deck 만들어', 'cooking deck'.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "command", "skill", "deck", "input-deck", "qe", "dft", "el-ph", "rtsc", "빵틀", "generator"]
+}

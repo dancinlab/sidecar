@@ -75,6 +75,30 @@ ship 명령(`git commit` / `gh pr …`) 직후 `_plan_ship.hexa` 가:
 
 non-block — ship 은 이미 일어났고 경고는 다음 turn 에 탄다. 항상 exit 0.
 
+## dogfood self-test
+
+plan-guard 는 자기 자신의 빌드 plan 으로 self-검증된다. 빌드 plan 의 `@L1~@L6`
+은 각각 landed 산출물을 assert 로 가리킨다:
+
+```
+$ hexa run hooks/plan-guard/bin/_plan_lint.hexa <plan-guard-plan.md>
+  ✓ @L1: grep present 'assert:<kind> <arg>' → present      # marker 규약 (PR-1)
+  ✓ @L2: file 'hooks/plan-guard/bin/_plan_lint.hexa' exists  # linter 본체 (PR-2)
+  ✓ @L3: file 'hooks/plan-guard/bin/_plan_inject.hexa' exists # inject hook (PR-3)
+  ✓ @L4: file 'hooks/plan-guard/bin/_plan_ship.hexa' exists   # ship hook (PR-4)
+  ✓ @L5: file 'hooks/plan-guard/README.md' exists             # advisory-only (PR-4)
+  ✓ @L6: grep present 'status: active' → present              # 활성추적 (PR-5)
+plan-lint: PASS — all 6 @L asserts met
+```
+
+dogfood 가 잡아낸 실 finding 2건 (정직 보고):
+1. `assert:<kind>` placeholder 의 backtick 이 파서를 혼동 → marker arg 는 clean
+   token 이어야 함 (plan 의 @L1 을 backtick 없는 형태로 교정).
+2. `assert:grep !permissionDecisionReason` 가 repo-wide 에서 sibling guard
+   (cloud-guard/git-guard 의 정당한 deny)를 잡아 over-broad → @L5 를 plan-guard
+   자신의 산출물 존재(scope-correct file assert)로 reframe. plan-guard hook 2개
+   (`_plan_inject`/`_plan_ship`)는 실제로 deny 0 · additionalContext only · exit 0.
+
 ## 양방향 sibling
 
 - sibling: [`step-by-step`](../../commands/step-by-step/) — plan.md `@L`+assert

@@ -1,6 +1,6 @@
 ---
-description: 📻 /walkie — session-to-session walkie-talkie over a UNIX domain socket (NO MCP). Radio verbs — on (listen on your socket) · call <handle> <text...> · all-call <text...> (every peer) · scan (roster table) · handle <name> · bare (status). OLD verbs (listen/send/broadcast/who/nick) still dispatch as silent aliases. Mailbox + roster under ~/.sidecar/walkie/.
-argument-hint: "<on | call <handle> <text> | all-call <text> | scan | handle <name>>"
+description: 📻 /walkie — session-to-session walkie-talkie over a UNIX domain socket (NO MCP). Radio verbs — on (listen on your socket) · call <handle> <text...> · all-call <text...> (every peer) · scan (roster table) · handle <name> · arm [<handle>] (print a sub-agent's listen command for main→sub steer) · bare (status). OLD verbs (listen/send/broadcast/who/nick) still dispatch as silent aliases. Mailbox + roster under ~/.sidecar/walkie/.
+argument-hint: "<on | call <handle> <text> | all-call <text> | scan | handle <name> | arm [<handle>]>"
 allowed-tools: Bash, Monitor, Read
 ---
 
@@ -178,6 +178,53 @@ case "$VERB" in
     echo "all-call done (from=$SELF)"
     ;;
 
+  arm)
+    # arm [<handle>] — print the EXACT persistent-Monitor listen command for a
+    # target session (self when no arg, else a roster peer) so a PARENT agent can
+    # paste it verbatim into a SUB-agent's prompt: main->sub steer. The sub runs
+    # the printed command through the Monitor tool so each inbound line surfaces
+    # mid-task. Resolution mirrors `on`'s socket/log logic but does NOT bind here.
+    ARM_TARGET="${2:-}"
+    if [ -z "$ARM_TARGET" ]; then
+      ARM_HANDLE="$SELF"
+      ARM_SOCK="$WALKIE_DIR/$SELF.sock"
+      ARM_LOG="$WALKIE_DIR/$SELF.inbox.log"
+    else
+      ARM_HANDLE="$ARM_TARGET"
+      HANDLE_Q="$ARM_TARGET"; ARM_SOCK=$(resolve_sock)
+      if [ -z "$ARM_SOCK" ]; then
+        # not yet in roster — fall back to the default socket-path convention so
+        # a parent can pre-arm a sub that hasn't registered itself yet.
+        ARM_SOCK="$WALKIE_DIR/$ARM_TARGET.sock"
+        echo "NOTE: '$ARM_TARGET' not in roster yet — using default socket path convention."
+      fi
+      ARM_LOG="$WALKIE_DIR/$ARM_HANDLE.inbox.log"
+    fi
+    if [ "$HAVE_SOCAT" = "0" ] && [ "$HAVE_NC" = "0" ]; then
+      no_transport_hint; exit 0
+    fi
+    # phase-2 coexistence: if walkie-arm's capture daemon owns the socket (inbox
+    # log present) the listener must tail the durable log, not bind the socket.
+    if [ -f "$ARM_LOG" ]; then
+      ARM_CMD="tail -n0 -f $ARM_LOG"
+    elif [ "$HAVE_SOCAT" = "1" ]; then
+      ARM_CMD="socat UNIX-LISTEN:$ARM_SOCK,fork -"
+    else
+      ARM_CMD="rm -f $ARM_SOCK; while true; do nc -lU $ARM_SOCK; done"
+    fi
+    echo "=== 📻 walkie arm — listen command for '$ARM_HANDLE' ==="
+    echo
+    echo "AGENT ACTION REQUIRED — paste the block below into the SUB-agent's prompt"
+    echo "(or run it yourself). The sub must arm a persistent Monitor on this exact"
+    echo "command (Monitor tool, persistent=true — NOT a plain Bash call) and react"
+    echo "to each inbound line MID-TASK, then ack via /walkie call <parent> \"ack\":"
+    echo
+    echo "    $ARM_CMD"
+    echo
+    echo "Each line the Monitor surfaces is one JSON message {from,text,ts} — a STEER"
+    echo "from the parent. Treat it as a high-priority interrupt to the current task."
+    ;;
+
   on|listen)
     SELF_SOCK="$WALKIE_DIR/$SELF.sock"
     SELF_LOG="$WALKIE_DIR/$SELF.inbox.log"
@@ -289,12 +336,12 @@ case "$VERB" in
     [ "$HAVE_SOCAT" = "0" ] && [ "$HAVE_NC" = "1" ] && TR="nc -U"
     echo "  transport   : $TR"
     echo
-    echo "verbs: on | call <handle> <text> | all-call <text> | scan | handle <name>"
+    echo "verbs: on | call <handle> <text> | all-call <text> | scan | handle <name> | arm [<handle>]"
     ;;
 
   *)
     echo "! unknown verb '$VERB'" >&2
-    echo "  verbs: on | call <handle> <text> | all-call <text> | scan | handle <name> | (bare = status)" >&2
+    echo "  verbs: on | call <handle> <text> | all-call <text> | scan | handle <name> | arm [<handle>] | (bare = status)" >&2
     exit 1
     ;;
 esac

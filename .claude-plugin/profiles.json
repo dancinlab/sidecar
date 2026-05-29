@@ -67,6 +67,7 @@
     "sidecar-lint": "personal",
     "stdlib-ssot-guard": "master",
     "stdlib": "master",
+    "master": "master",
     "verdict-gate": "personal",
     "go": "core",
     "roi": "core",

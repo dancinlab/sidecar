@@ -73,4 +73,4 @@
   do   = "reference docs at root (`*_POLICY.md`·`LIMIT.md` style) — not a `docs/` bucket"
   do   = "runtime/ephemeral state OUTSIDE the repo — `$CLAUDE_PLUGIN_DATA`·`$HOME/.sidecar/`·hx (s3)"
   dont = "add a top-level by-KIND source bucket (`docs/`·`state/`·`drafts/`·`audit/`) — domain not type"
-  dont = "top-level shape beyond 3 concept dirs (hook·command·skill) + root reference docs"
+  dont = "top-level shape beyond hook·command·skill + `bin/` (marketplace CLI) + root docs"

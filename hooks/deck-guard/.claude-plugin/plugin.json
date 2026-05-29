@@ -1,0 +1,9 @@
+{
+  "name": "deck-guard",
+  "description": "PreToolUse(Write|Edit|NotebookEdit|Bash) hard block for hand-authoring a `.in` input deck — forces the `/deck` generator (canonical `stdlib/deck/gen.hexa` SSOT). ALL writes whose target basename ends in `.in` / `.in.head` / `.in.tail` are denied and redirected to `/deck`, EXCEPT a WHITELIST of build-system templates that legitimately use `.in`: basename Makefile.in / makefile.in / GNUmakefile.in / configure.in / config*.in (autoconf incl. config.h.in) · *.pc.in (pkg-config) · *.spec.in (rpm) · Doxyfile.in · *.pro.in (qmake), PLUS (Write/Edit only) any content carrying an autoconf substitution marker `@VAR@` (≥1 `@WORD@` — a generic autoconf template, not a QE/DFT deck). Two write channels (mirrors hexa-native): structured tools (file_path) + the Bash channel (`>`/`>>` redirect · heredoc · `tee` · `dd of=` · `cp`/`mv` dest; Bash sees the PATH only so the @VAR@ content-whitelist applies to Write/Edit, Bash uses the basename whitelist). Implemented in hexa-lang (`_deck_guard.hexa`, invoked via `hexa run`). The whitelist is a SCOPE precondition (build templates are not decks), not a disable switch — NO opt-out by design (project.tape @D s11).",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "guard", "deck", "quantum-espresso", "dft", "hexa"]
+}

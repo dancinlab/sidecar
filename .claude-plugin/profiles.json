@@ -66,6 +66,8 @@
     "deck": "hexa",
     "hexa-loop": "hexa",
     "hexa-goal": "hexa",
+    "dojo": "hexa",
+    "hf": "hexa",
 
     "commons": "personal",
     "project-tape": "personal",
@@ -83,6 +85,7 @@
     "lsp-rebuild": "personal",
     "plist-guard": "personal",
     "ai-api-guard": "personal",
+    "plan-guard": "personal",
     "subagent-route": "personal",
     "subagent-resilience": "personal",
     "sidecar-auto-sync": "personal",

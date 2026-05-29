@@ -1,31 +1,37 @@
-// _cloud_guard.hexa — PreToolUse(Bash) hard block for raw rented-GPU pod
-// dispatch (runpodctl / vastai / vast CLI, raw ssh/scp/rsync/sftp to pod
-// hosts, raw curl/wget against pod REST/GraphQL APIs).
+// _cloud_guard.hexa — PreToolUse(Bash) hard block for DIRECT rented-GPU
+// provider CLI / API usage. ALL runpod / vast.ai access must route through
+// `hexa cloud` (commons @D g8), which now wraps the FULL pod lifecycle:
+//   rent (provision) · down (destroy) · list / status · exec · run · nohup ·
+//   poll · tail · copy-to / copy-from · preflight.
 //
-// commons @D g8: rented-GPU pod dispatch goes through
-//   `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`.
-// Three orthogonal detectors run on every Bash command:
+// Five orthogonal detectors run on every Bash command:
 //
-//   (a) pod-CLI + remote-verb pair scan — anywhere in the command, not
-//       just the first token. Catches `cd /x && runpodctl ssh …`,
-//       `KEY=x vastai exec …`, `bash -c '… runpodctl send-file …'`.
-//   (b) ssh/scp/rsync/sftp + pod-host scan — any of those binaries
-//       followed by a token containing `.runpod.io`,
-//       `proxy.runpod.net`, or `.vast.ai`.
-//   (c) curl/wget/http(ie)/xh + pod-API URL scan — any of those binaries
-//       followed by a token containing `api.runpod.io`,
-//       `api.runpod.ai`, `rest.runpod.io`, `runpod.io/graphql`,
-//       `console.vast.ai`, or `vast.ai/api`.
-//
-// Pod-lifecycle subcommands (runpodctl create / get / start / stop /
-// remove / config / project / version · vast(ai) create / show / search
-// / launch / destroy) pass through — those are legitimate provisioning
-// verbs that `hexa cloud` does not wrap.
+//   (a) pod-CLI + verb pair scan — anywhere in the command. A provider CLI
+//       (`runpodctl` · `vastai` · `vast`) followed by ANY recognized verb —
+//       read (list / get / show / search / status), lifecycle (create /
+//       start / stop / remove / destroy / launch), or remote-exec / transfer
+//       (ssh / exec / send / scp / copy / port) — is denied. The
+//       following-verb requirement keeps `which runpodctl` / `man vastai` /
+//       `echo vast` (no verb) passing — only real invocations bite.
+//   (b) ssh / scp / rsync / sftp + pod-host scan — any of those binaries
+//       followed by a token containing `.runpod.io` / `proxy.runpod.net` /
+//       `.vast.ai`.
+//   (c) curl / wget / http(ie) / xh + pod-API URL scan — any of those
+//       binaries followed by a token containing a runpod / vast REST or
+//       GraphQL API host.
+//   (d) dispatcher-script content scan — when the command invokes
+//       `bash <path>` / `sh <path>` / `zsh <path>` / `dash <path>`, the
+//       script body is read and detectors (a)/(b)/(c) re-run on it, closing
+//       the workaround of pre-writing a dispatch.sh and calling it.
+//   (e) inline-runtime provider-SDK probe — `python(3)?` / `node` / `deno` /
+//       `bun` with `-c` / `-e` whose body imports the runpod / vastai SDK
+//       (raw API use). Committed SDK code (no inline `-c`/`-e`) passes
+//       through — mirrors ai-api-guard's inline-SDK detector.
 //
 // Normalization splits on whitespace AND treats shell separators
 // (; & | ( ) ` " ' \) as whitespace before tokenizing, so subshells /
-// quoted bash -c bodies / env-prefixes are seen through. No regex
-// (hexa has no regex stdlib); plain substring scan.
+// quoted bash -c bodies / env-prefixes are seen through. No regex (hexa has
+// no regex stdlib); plain substring scan.
 //
 // No opt-out by design — no env var, no config file, no exception list.
 
@@ -61,7 +67,7 @@ fn _json_escape(s: string) -> string {
 }
 
 fn _deny(category: string, what: string) {
-    let reason = "cloud-guard (commons @D g8): refusing `" + what + "` — " + category + ".\n  Use `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}` instead (wraps runpod + vast.ai across cycles A transport · B file/dir transfer · C preflight).\n  Lifecycle verbs (create / get / start / stop / remove / show / search / launch / destroy) are NOT blocked — only remote exec / transfer / API calls.\n  No opt-out by design."
+    let reason = "cloud-guard (commons @D g8): refusing `" + what + "` — " + category + ".\n  Route ALL runpod / vast.ai access through `hexa cloud` (it wraps the full pod lifecycle):\n    rent pod      → `hexa cloud rent <runpod|vast> [--gpu T] [--image I]`\n    list / status → `hexa cloud list`\n    run / exec    → `hexa cloud run <host> -- <argv>` · `hexa cloud nohup …` (background)\n    copy files    → `hexa cloud copy-to` / `hexa cloud copy-from`\n    destroy pod   → `hexa cloud down <id>`\n    OOM precheck  → `hexa cloud preflight`\n  No opt-out by design (project.tape @D s11)."
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
     println(payload)
     exit(0)
@@ -138,7 +144,28 @@ fn _is_pod_cli(t: string) -> bool {
     return false
 }
 
-fn _is_remote_verb_runpod(t: string) -> bool {
+// runpodctl verbs — read · lifecycle / config · remote-exec / transfer.
+fn _is_runpod_verb(t: string) -> bool {
+    // read
+    if t == "get" { return true }
+    if t == "list" { return true }
+    if t == "ls" { return true }
+    if t == "show" { return true }
+    if t == "status" { return true }
+    // lifecycle / config
+    if t == "create" { return true }
+    if t == "start" { return true }
+    if t == "stop" { return true }
+    if t == "remove" { return true }
+    if t == "rm" { return true }
+    if t == "config" { return true }
+    if t == "project" { return true }
+    if t == "projects" { return true }
+    if t == "version" { return true }
+    if t == "pod" { return true }
+    if t == "pods" { return true }
+    if t == "logs" { return true }
+    // remote-exec / transfer
     if t == "exec" { return true }
     if t == "ssh" { return true }
     if t == "send" { return true }
@@ -151,19 +178,40 @@ fn _is_remote_verb_runpod(t: string) -> bool {
     return false
 }
 
-fn _is_remote_verb_vast(t: string) -> bool {
+// vast(ai) verbs — read · lifecycle · remote-exec / transfer.
+fn _is_vast_verb(t: string) -> bool {
+    // read
+    if t == "show" { return true }
+    if t == "search" { return true }
+    if t == "list" { return true }
+    if t == "instances" { return true }
+    if t == "instance" { return true }
+    // lifecycle
+    if t == "create" { return true }
+    if t == "launch" { return true }
+    if t == "destroy" { return true }
+    if t == "start" { return true }
+    if t == "stop" { return true }
+    if t == "reboot" { return true }
+    if t == "recycle" { return true }
+    if t == "label" { return true }
+    if t == "set" { return true }
+    if t == "cancel" { return true }
+    if t == "change-bid" { return true }
+    if t == "logs" { return true }
+    // remote-exec / transfer
     if t == "exec" { return true }
+    if t == "execute" { return true }
     if t == "ssh" { return true }
     if t == "scp" { return true }
     if t == "copy" { return true }
     if t == "attach-ssh" { return true }
-    if t == "execute" { return true }
     return false
 }
 
-fn _is_remote_verb(cli: string, verb: string) -> bool {
-    if cli == "runpodctl" { return _is_remote_verb_runpod(verb) }
-    return _is_remote_verb_vast(verb)
+fn _is_pod_verb(cli: string, verb: string) -> bool {
+    if cli == "runpodctl" { return _is_runpod_verb(verb) }
+    return _is_vast_verb(verb)   // vastai · vast
 }
 
 fn _is_ssh_like(t: string) -> bool {
@@ -196,7 +244,36 @@ fn _is_pod_api(t: string) -> bool {
     if _str_contains(t, "rest.runpod.io") { return true }
     if _str_contains(t, "runpod.io/graphql") { return true }
     if _str_contains(t, "console.vast.ai") { return true }
+    if _str_contains(t, "api.vast.ai") { return true }
     if _str_contains(t, "vast.ai/api") { return true }
+    return false
+}
+
+// (e) inline-runtime provider-SDK probe helpers.
+fn _is_inline_runtime(t: string) -> bool {
+    if t == "python" { return true }
+    if t == "python3" { return true }
+    if t == "node" { return true }
+    if t == "deno" { return true }
+    if t == "bun" { return true }
+    return false
+}
+
+fn _has_inline_flag(cmd: string) -> bool {
+    if _str_contains(cmd, " -c ") { return true }
+    if _str_contains(cmd, " -e ") { return true }
+    return false
+}
+
+fn _has_pod_sdk_import(cmd: string) -> bool {
+    if _str_contains(cmd, "import runpod") { return true }
+    if _str_contains(cmd, "from runpod") { return true }
+    if _str_contains(cmd, "require(\"runpod\"") { return true }
+    if _str_contains(cmd, "require('runpod'") { return true }
+    if _str_contains(cmd, "import vastai") { return true }
+    if _str_contains(cmd, "from vastai") { return true }
+    if _str_contains(cmd, "require(\"vastai\"") { return true }
+    if _str_contains(cmd, "require('vastai'") { return true }
     return false
 }
 
@@ -218,8 +295,7 @@ fn _is_sh_runner(t: string) -> bool {
 // `bash <path>` / `sh <path>` / `zsh <path>` / `dash <path>`, read the
 // script and re-run detectors (a)/(b)/(c) on its body. Catches the common
 // g8 workaround: pre-write a dispatch.sh that contains `runpodctl ssh …`
-// and then call `bash dispatch.sh` from the Bash tool (which the main
-// command-line detectors don't see through).
+// and then call `bash dispatch.sh` from the Bash tool.
 //
 // Conservative scope: only triggers on an explicit shell runner with a
 // positional path argument (skips `-c`/`-lc` because the body is then
@@ -251,8 +327,8 @@ fn _scan_dispatch_scripts(toks: array) -> string {
                     let mut k = 0
                     while k + 1 < in_n {
                         if _is_pod_cli(inner[k]) {
-                            if _is_remote_verb(inner[k], inner[k+1]) {
-                                return "dispatcher script `" + path + "`: " + inner[k] + " " + inner[k+1] + " (raw rented-GPU pod CLI)"
+                            if _is_pod_verb(inner[k], inner[k+1]) {
+                                return "dispatcher script `" + path + "`: " + inner[k] + " " + inner[k+1] + " (direct rented-GPU provider CLI)"
                             }
                         }
                         k = k + 1
@@ -311,14 +387,15 @@ fn main() {
     let toks = _tokens(_normalize(cmd))
     let n = len(toks)
 
-    // (a) pod-CLI + remote-verb pair scan — anywhere
+    // (a) pod-CLI + verb pair scan — anywhere. ANY recognized verb (read /
+    // lifecycle / remote-exec / transfer) after a provider CLI is denied.
     let mut i = 0
     while i + 1 < n {
         let cli = toks[i]
         let verb = toks[i+1]
         if _is_pod_cli(cli) {
-            if _is_remote_verb(cli, verb) {
-                _deny("raw rented-GPU pod CLI remote-exec/transfer", cli + " " + verb)
+            if _is_pod_verb(cli, verb) {
+                _deny("direct rented-GPU provider CLI", cli + " " + verb)
             }
         }
         i = i + 1
@@ -355,10 +432,25 @@ fn main() {
     }
 
     // (d) dispatcher-script content scan — `bash/sh foo.sh` whose body
-    // contains a raw pod CLI / ssh / API call
+    // contains a direct provider CLI / ssh / API call
     let reason_d = _scan_dispatch_scripts(toks)
     if reason_d != "" {
-        _deny("raw rented-GPU pod dispatch inside a dispatcher script", reason_d)
+        _deny("direct rented-GPU pod dispatch inside a dispatcher script", reason_d)
+    }
+
+    // (e) inline-runtime provider-SDK probe — `python/node -c/-e` whose body
+    // imports the runpod / vastai SDK (raw API use). Scans the RAW command
+    // (unnormalized) so the `-c`/`-e` flag + import substrings survive.
+    let raw_toks = _tokens(cmd)
+    let rn = len(raw_toks)
+    let mut ri = 0
+    while ri < rn {
+        if _is_inline_runtime(raw_toks[ri]) {
+            if _has_inline_flag(cmd) && _has_pod_sdk_import(cmd) {
+                _deny("inline provider-SDK API probe", raw_toks[ri] + " -c/-e '… import runpod/vastai …'")
+            }
+        }
+        ri = ri + 1
     }
 
     _allow()

@@ -1,0 +1,9 @@
+{
+  "name": "all-fg-go",
+  "description": "Foreground-sequential fan-out trigger — user says \"all fg go\" (or equivalent) → print a plan table (branch · subagent_type · iso · goal) then run the prior turn's branches ONE AT A TIME in the foreground, awaiting each (run_in_background:false) with visible `▶ i/N → ✅/⚠/❌` progress, HALTING on the first failure (report + un-run tail). REACTIVE single fan-out of what the PRIOR turn offered — the foreground-sequential sibling of `all-bg-go` (parallel background). NO parallelism, NO background Agent fan-out — use when each branch must be watched in order (careful review · single-threaded shared resource · debugging). For a self-generating repeatable foreground loop, use `/cycle-fg` instead. Ships `/all-fg-go` + `/afg` 3-char alias.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "sequential", "fan-out", "foreground", "agents"]
+}

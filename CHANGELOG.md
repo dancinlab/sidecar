@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — all-fg-go 0.1.0: `all bg go`의 foreground 순차 짝 신설
+
+🚦 `all-bg-go`(prior-turn 브랜치 병렬 백그라운드 fan-out)의 **foreground 순차** 짝 `all-fg-go` 신설. cycle-bg ↔ cycle-fg 관계와 동일한 패턴 — 같은 prior-turn 브랜치를 한 번에 하나씩 foreground 에서 실행(`run_in_background:false` await), `▶ i/N → ✅/⚠/❌` 가시 진행, 실패 시 halt(실패 브랜치 + verbatim 에러 + 미실행 tail 보고). 병렬·백그라운드 없음 — 각 브랜치를 순서대로 지켜봐야 할 때(신중 리뷰 · 단일 공유 자원 · 단계별 디버깅) 사용.
+
+- **새 스킬 플러그인** `skills/all-fg-go/` — SKILL.md(@D do/dont · s6) + `/all-fg-go` 커맨드 + `/afg` 3자 별칭(`abg` 대칭). allowed-tools = Agent · Bash · Read (foreground Agent 한 번에 하나씩).
+- REACTIVE only — prior-turn 이 제안한 것만 실행. 자기생성 반복 foreground 루프는 `/cycle-fg` 로 안내. cap >8 confirm · no nesting · no destructive (SKILL.md 가드, all-bg-go 미러).
+- 등록: marketplace.json all-fg-go 엔트리(all-bg-go 옆) · profiles.json `all-fg-go: core` (s7 — 미태깅 lint 회피).
+
 ## 2026-05-29 — pool-route 0.16.0: deck 로컬 핀 식별 기반 확장 (자원 우회 봉합)
 
 🔌 `hexa cloud`·`deck` 같은 Mac-local 전용 도구가 pool 자원(호스트)으로 라우팅돼 우회·파손되지 않도록 pool-route 로컬 핀을 강건화. cloud-guard 0.3.0 (직접 provider CLI deny)의 짝 — 정문(`hexa cloud`)이 엉뚱한 창고로 안 가게 고정.

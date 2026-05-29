@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — lab 1.0.0 (PR1/3): `system` 스킬 → `lab` 리네임 + `/system` 무손실 deprecated alias
+
+🔬 캠페인 관제탑 스킬을 연구실(research-lab) 메타포로 리네임. `skills/system` → `skills/lab` (디렉터리 · `plugin.json` name · command 파일 `system.md`→`lab.md` · SKILL.md title). 리네임은 **순수 additive** — 11개 verb (status · tick · watch · harvest · next · auto · drive · pursue · stop · cost · queue · upstream) 전부 verbatim 보존, 결정 하네스 `bin/system_harness.hexa` 는 파일명/로직 **무변경**(SKILL.md 의 `${CLAUDE_PLUGIN_ROOT}/bin/` 호출 경로는 부모 스킬명과 무관하게 해소되므로 가장 저비용·저위험 선택, plan Q2).
+
+- **무손실 deprecated alias** — `/system` 호출 + 기존 트리거(`관제탑` · `mission control` · `control tower` · `campaign status`)를 새 스킬에 그대로 splice. 근육 기억 안 깨짐. 새 트리거 `/lab` · `랩` · `연구실` · `research lab` 추가. (plan Q1)
+- **버전 lockstep (g22)** — `skills/lab/.claude-plugin/plugin.json` 0.9.1→**1.0.0** · `.claude-plugin/marketplace.json` `lab` 엔트리(name·source·description) 0.9.1→**1.0.0** · `.claude-plugin/profiles.json` 키 `system`→`lab` (티어 `personal` 유지). README 스킬 테이블엔 system 행이 없어 CHANGELOG 이 lockstep audit 표면.
+- 3개 stacked PR 중 1번 (rename+alias). PR2 = `lab progress`, PR3 = `lab mirror` + planned-subcommand doc.
+
 ## 2026-05-29 — INBOX domain 폐기 → `sidecar handoff` 레지스트리 (commons 0.14.0 + CLI verb + 참조 갱신)
 
 🔀 cross-repo 핸드오프 표면을 per-repo `INBOX.md`/`INBOX.log.md` domain 에서 sidecar CLI 가 보유하는 단일 레지스트리(`~/.sidecar/handoff/handoff.jsonl`, JSONL — structured carrier per s2)로 일원화. 거버넌스 룰 + 그 메커니즘 + 잔재 정리를 한 PR 로 동반(s7).

@@ -6,6 +6,15 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — lab 1.1.0 (PR2/3): `lab progress` — read-only 연구-프로그램 ARC 바
+
+📈 `status`(잡 단위 LIVE 대시보드)와 구별되는 새 read-only verb `lab progress` 추가 — 전체 연구 **프로그램**이 질문→닫힌-지식 arc 위에서 어디쯤 와 있는지 한 줄 10-cell 바로 집계. probe/fire/매니페스트-변형 일절 없음 (순수 read).
+
+- **4개 ARC 소스** (각 0–100% sub-axis, mean) — verdicts(`exports/*/ledger.json` + repo-root `.verdicts/<slug>/*.txt`; 🟢/🔵/🔴 closed, 🟠/PENDING open, g63 — 🔴도 closure) · papers(repo-root `PAPER.tape` roster + `PAPER.md` milestone 바) · atlas(`hexa atlas stats` atom 수 vs baseline) · milestones(`DOMAINS.tape` → 각 도메인 `- [ ]`/`- [x]`).
+- **graceful degrade** — 소스 부재 시 `✗ / — n/a` 표기 + mean 에서 제외 (0% 로 패널티 주지 않음), `<k>/4 sources live` 표기로 바를 정직하게 audit. 소스 0개면 가짜 0% 대신 "no ARC sources in cwd" 안내.
+- **status vs progress** — `status`/`drive` = 운영(operational) % `(terminal+done_queue)/(total+Q)` (이 wave 의 compute 얼마나 끝났나). `progress` = epistemic arc (프로그램이 얼마나 닫혔나/출판됐나/접혔나/milestone 됐나). wave 가 100% operational 이어도 ARC 는 초기일 수 있음.
+- **버전 lockstep (g22)** — `plugin.json` · `marketplace.json` `lab` 엔트리 1.0.0→**1.1.0** (verb 리스트 + 1.1.0 노트 + 트리거 `lab progress`·`연구 진척도` 동기) · SKILL.md `@D` progress do-line + frontmatter verb. profiles.json 변화 없음(스킬 1개). README 스킬 테이블엔 lab 행 부재 → CHANGELOG 가 lockstep 표면.
+
 ## 2026-05-29 — lab 1.0.0 (PR1/3): `system` 스킬 → `lab` 리네임 + `/system` 무손실 deprecated alias
 
 🔬 캠페인 관제탑 스킬을 연구실(research-lab) 메타포로 리네임. `skills/system` → `skills/lab` (디렉터리 · `plugin.json` name · command 파일 `system.md`→`lab.md` · SKILL.md title). 리네임은 **순수 additive** — 11개 verb (status · tick · watch · harvest · next · auto · drive · pursue · stop · cost · queue · upstream) 전부 verbatim 보존, 결정 하네스 `bin/system_harness.hexa` 는 파일명/로직 **무변경**(SKILL.md 의 `${CLAUDE_PLUGIN_ROOT}/bin/` 호출 경로는 부모 스킬명과 무관하게 해소되므로 가장 저비용·저위험 선택, plan Q2).

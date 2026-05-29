@@ -45,7 +45,8 @@ Read cwd `./pods.json` (or the active domain's dir per `DOMAINS.tape`). If absen
 
 | token | verb | does |
 |---|---|---|
-| (empty) | **status** | unified control-tower dashboard |
+| (empty) | **status** | unified control-tower dashboard — LIVE per-job state (how far each running job is) |
+| `progress` | **progress** | **(1.1.0 read-only campaign-ARC bar)** where the whole research PROGRAM stands — aggregates verdicts-closed + papers-shipped + atlas-atom-growth + domain-milestones into one 10-cell bar. DISTINCT from `status` (per-job live dashboard); degrades gracefully when a source is absent |
 | `tick [--apply]` | **tick** | **(0.7.0 code harness)** deterministic probe→classify→decide pass; partitions auto vs escalate; --apply executes resume |
 | `watch` | **watch** | arm one event-driven watcher per active job |
 | `harvest [<id>]` | **harvest** | terminal job → parse metric + g5 verdict + ledger |
@@ -85,6 +86,53 @@ Render (lead with the **campaign progress block** per commons g56 — a 10-cell 
 **Budget sub-bar** — `▓▓░░ $<spent>/$<cap> (<b%>)` 10-cell on the budget axis (g56 applies to the cost axis too).
 
 Read-only. NEVER infer a verdict here (status ≠ harvest) — the per-job bar is PROGRESS (how far), not VERDICT (pass/fail).
+
+## progress — research-program ARC bar (1.1.0 · read-only)
+
+Where `status` answers *"how far is each running JOB?"*, `progress` answers
+*"how far is the whole research PROGRAM?"* — the campaign **arc** from open
+question to closed knowledge. It is a single read-only 10-cell bar that
+aggregates four independent SSOT sources, each weighted as one axis. Pure read —
+no probe, no fire, no manifest mutation.
+
+**The four ARC sources** (each contributes a 0–100% sub-axis; degrade gracefully
+— a missing source is shown `— n/a` and DROPPED from the mean, never counted as
+0%, so a repo without papers/atlas isn't penalised):
+
+| axis | source (cwd-relative) | how to read it |
+|---|---|---|
+| **verdicts** | `exports/*/ledger.json` (`jobs[].verdict` / aggregate) + repo-root `.verdicts/<slug>/*.txt` | closed = any 🟢 GATE_CLOSED · 🔵 formal · 🔴 CLOSED-negative (g63 — a 🔴 IS closure). open = 🟠 INCONCLUSIVE · PENDING. `closed/(closed+open)` |
+| **papers** | repo-root `PAPER.tape` roster (+ per-paper `PAPER.md` milestone bar) | shipped = papers whose milestones are all flipped (`/paper` ▓▓▓ 100%). `shipped/total` |
+| **atlas** | `hexa atlas stats` (atom count) vs a baseline (prior count in `pods.json` `atlas_baseline`, else first-seen this session) | growth = `(now − baseline)/target` if a target set, else a coarse 3-state (grew · flat · n/a). atom growth = knowledge folded |
+| **milestones** | repo-root `DOMAINS.tape` roster → each domain's `<NAME>.md` `- [ ]`/`- [x]` | `done/(done+open)` milestones across the active (or all) domains |
+
+**Render** (lead with the aggregate 10-cell bar per g56; sub-axes below it):
+```
+🔬 lab progress — <campaign/active-domain> · research ARC (<ISO>)
+═══════════════════════════════════════
+📈 ARC      ▓▓▓▓▓▓░░░░ NN%   (mean of present axes · <k>/4 sources live)
+   verdicts  ▓▓▓▓▓░░░░░ NN%   🟢n 🔵n 🔴n closed · 🟠n open
+   papers    ▓▓▓░░░░░░░ NN%   <shipped>/<total> shipped
+   atlas     ▓▓▓▓▓▓▓░░░ NN%   <now> atoms (+<Δ> vs baseline <b>)
+   domains   ▓▓▓▓░░░░░░ NN%   <done>/<total> milestones · <d> domains
+─── sources: verdicts ✓ · papers ✓ · atlas ✓ · domains ✓  (✗ = absent → dropped from mean) ───
+```
+
+**Aggregate %** = arithmetic mean of the PRESENT sub-axes (each 0–100), rendered
+as a 10-cell `▓`×round(pct/10) bar. If a source is absent (`PAPER.tape` missing ·
+no `exports/` · `hexa atlas stats` unavailable · no `DOMAINS.tape`), mark it
+`✗`/`— n/a`, exclude it from the mean, and note `<k>/4 sources live` so the bar
+is honestly auditable. With ZERO sources present, emit
+`🔬 lab progress — no ARC sources in cwd (no exports/ · PAPER.tape · atlas · DOMAINS.tape)`
+rather than a fake 0%.
+
+**Distinct from `status`**: `status`/`drive` show the *operational* campaign %
+(`(terminal_jobs+done_queue)/(total+Q)` — how much of THIS wave's compute is
+done). `progress` shows the *epistemic* arc — how much of the research PROGRAM is
+closed (verdicts) + published (papers) + folded (atlas) + milestoned (domains).
+A wave can be 100% operational (`status`) while the ARC (`progress`) is still
+early (one closed verdict, no paper yet). Both are read-only; neither infers nor
+fires.
 
 ## tick [--apply] — code-backed deterministic decision pass (0.7.0)
 

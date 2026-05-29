@@ -11,6 +11,7 @@
     "prefs": "core",
     "prefs-hook": "core",
     "git-guard": "core",
+    "secret-guard": "core",
     "workdir-guard": "core",
     "worktree-guard": "core",
     "worktree-gc": "core",

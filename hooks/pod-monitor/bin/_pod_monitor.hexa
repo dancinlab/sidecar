@@ -10,7 +10,7 @@
 //      (a too-short walltime = pod auto-killed mid-run = result LOST)
 //
 // All three close the R8a-LOST class — pod terminated mid-run before
-// result.json reached the operator. No opt-out (commons g30).
+// result.json reached the operator. No opt-out (project.tape s11).
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))

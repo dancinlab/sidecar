@@ -308,3 +308,9 @@
   do   = "leaving the active goal for any side-task → `/trail push <return-target>` first"
   do   = "side-task closes → `/trail pop` and resume the parent flow it names"
   dont = "dive into any deviation without `/trail push` · leave the trail unpopped after returning"
+
+@D g76 := "residue cleanup = positive full-replace — no-elephant rule" :: governance [required active]
+  do   = "clearing stale residue → state the new reality in positive present tense; describe what now IS"
+  do   = "rewrite a stale passage wholesale into the new fact — the replacement is self-contained"
+  dont = "re-evoke the removed thing via negation/contrast — 'was X now not'·'no longer X'·past-vs-now"
+  dont = "leave SUPERSEDED/FALSIFIED pointers in cleaned docs — the mention itself is the elephant"

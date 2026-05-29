@@ -22,7 +22,19 @@
 //
 // General SDK usage in committed code files (no -c/-e) passes through.
 //
-// No opt-out by design.
+// (3) s14 capacity-relief detector (project.tape @D s14):
+//     flag when a Bash command OR Write/Edit content SETS / EXPORTS /
+//     WRITES an Anthropic API key as a Claude rate-limit / capacity
+//     workaround — `ANTHROPIC_API_KEY=`, `export ANTHROPIC_API_KEY`,
+//     `--api-key` wired for an anthropic invocation, or an
+//     `ANTHROPIC_API_KEY` assignment written into a config / env file.
+//     This is an ADVISORY (non-blocking additionalContext), NOT a deny:
+//     setting ANTHROPIC_API_KEY can be legitimate outside a capacity
+//     context, and repo philosophy is advisory > deny (only force-push
+//     hard-denies). The advisory points to the SANCTIONED CLI routes —
+//     account swap via /quota, CLI routers, Bedrock/Vertex backends.
+//
+// No opt-out by design (project.tape @D s11).
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -57,6 +69,13 @@ fn _json_escape(s: string) -> string {
 
 fn _deny(reason: string) {
     let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":" + _json_escape(reason) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// _advise — non-blocking additionalContext (does NOT deny the tool call).
+fn _advise(body: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(body) + "}}"
     println(payload)
     exit(0)
 }
@@ -149,6 +168,35 @@ fn _has_ai_sdk_import(cmd: string) -> bool {
     return false
 }
 
+// s14 (project.tape): detect an Anthropic API key being SET / EXPORTED /
+// WRITTEN as a Claude capacity / rate-limit workaround. Operates on the
+// whitespace-normalized text (Bash command OR Write/Edit content). Matches:
+//   - `ANTHROPIC_API_KEY=` assignment / inline env-prefix
+//   - `export ANTHROPIC_API_KEY`
+//   - any other mention of `ANTHROPIC_API_KEY` (config / .env writes,
+//     `setenv`, JSON key, etc.)
+//   - `--api-key` wired alongside an anthropic invocation
+// Pure-substring (static) scan — env-indirection / base64 is out of scope.
+fn _is_s14_apikey(cmd: string) -> bool {
+    if cmd.contains("ANTHROPIC_API_KEY") { return true }
+    // `--api-key` flag wired for an anthropic call (claude CLI / SDK / host)
+    if cmd.contains("--api-key") && cmd.contains("anthropic") { return true }
+    return false
+}
+
+// _s14_advisory — the SANCTIONED capacity-relief routes (never API keys).
+fn _s14_advisory() -> string {
+    return "ai-api-guard (project.tape @D s14): wiring an `ANTHROPIC_API_KEY` (set / export / write to a config or env file) as a Claude rate-limit / capacity workaround is forbidden — API keys are pay-per-token and bypass the subscription.\n  Relieve capacity via the SANCTIONED CLI routes instead:\n    quota / account swap → `/quota:quota switch <account>` (5h/7d limits + live credential swap)\n    CLI routers         → route through a CLI-level Claude router\n    managed backends     → Bedrock / Vertex Claude backends (subscription-cap relief, CLI-routed)\n  This is an advisory, not a block — but s14 is `required active`. No opt-out by design (project.tape @D s11)."
+}
+
+// _ti_string — pull a string field out of tool_input, "" if absent / wrong type.
+fn _ti_string(ti: map, key: string) -> string {
+    if !has_key(ti, key) { return "" }
+    let v = ti[key]
+    if type_of(v) != "string" { return "" }
+    return v
+}
+
 fn main() {
     let raw = _read_stdin()
     let mut payload = json_parse("{}")
@@ -156,13 +204,25 @@ fn main() {
     if type_of(payload) != "map" { _allow() }
 
     if !has_key(payload, "tool_name") { _allow() }
-    if payload["tool_name"] != "Bash" { _allow() }
+    let tool = payload["tool_name"]
     if !has_key(payload, "tool_input") { _allow() }
     let ti = payload["tool_input"]
     if type_of(ti) != "map" { _allow() }
-    if !has_key(ti, "command") { _allow() }
-    let cmd0 = ti["command"]
-    if type_of(cmd0) != "string" { _allow() }
+
+    // ---- Write / Edit path: s14 advisory only (content-string scan) ----
+    if tool == "Write" || tool == "Edit" {
+        // Write → content ; Edit → new_string ; MultiEdit / fallback → both.
+        let body = _ti_string(ti, "content") + " " + _ti_string(ti, "new_string")
+        let body_norm = _norm(body)
+        if _is_s14_apikey(body_norm) {
+            _advise(_s14_advisory())
+        }
+        _allow()
+    }
+
+    // ---- Bash path ----
+    if tool != "Bash" { _allow() }
+    let cmd0 = _ti_string(ti, "command")
     let cmd = cmd0.trim()
     if cmd == "" { _allow() }
 
@@ -181,6 +241,11 @@ fn main() {
     if _is_inline_runtime(first) && _has_inline_flag(cmd_norm) && _has_ai_sdk_import(cmd_norm) {
         let reason = "ai-api-guard (commons @D g50): inline `" + first + " -c/-e '… import <AI SDK> …'` is a raw AI-SDK probe — refused.\n  Use the sidecar CLI wrapper instead (/imagine · /research · /verify · …). Raw SDK is allowed only when no wrapper exists, and only when committed to a code file (no inline `-c`/`-e`). No opt-out by design."
         _deny(reason)
+    }
+
+    // (3) s14 capacity-relief — ANTHROPIC_API_KEY set/export/wired (ADVISORY)
+    if _is_s14_apikey(cmd_norm) {
+        _advise(_s14_advisory())
     }
 
     _allow()

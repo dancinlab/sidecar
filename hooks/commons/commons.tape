@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.5"
+  version = "1.6"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -34,9 +34,9 @@
 @D g7 := "consult hexa --help for unfamiliar verbs" :: governance [active]
   do   = "consult `hexa --help` for unfamiliar hexa CLI verbs"
 
-@D g8 := "rented-GPU pod dispatch via hexa cloud" :: governance [required active]
-  do   = "runpod / vast.ai → `hexa cloud {run|nohup|poll|copy-to|copy-from|copy-dir-*|preflight}`"
-  dont = "raw `ssh` / `scp` / `runpodctl` / `vastai` CLI · fall back to separate hexa-cloud binary (g11)"
+@D g8 := "rented-GPU pod dispatch via hexa cloud — no direct provider CLI/API" :: governance [required active]
+  do   = "ALL runpod / vast.ai → `hexa cloud {rent|down|list|run|nohup|copy-*|preflight}` (full lifecycle)"
+  dont = "direct `runpodctl`/`vastai`/`vast` CLI (any verb) · raw ssh/scp/curl + REST/SDK to runpod·vast"
 
 @D g9 := "sidekick-pool dispatch via pool" :: governance [required active]
   do   = "sidekick roster → `pool on <host> <cmd>` — macOS-only (swift/xcode) · GPU · heavy build"

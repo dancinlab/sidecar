@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — deck-guard 0.1.0: `.in` 입력덱 직접 작성 차단 → `/deck` 강제 (whitelist 예외)
+
+🍞 QE/DFT 입력덱(`.in`)을 손으로 쓰는 걸 막고 `/deck` 생성기(canonical `stdlib/deck/gen.hexa` SSOT)로 유도하는 새 가드. cloud-guard(직접 provider CLI 차단)·hexa-native(.py/.sh 차단)와 같은 deny+redirect 패턴.
+
+- **대상** — target basename 이 `.in` / `.in.head` / `.in.tail` 로 끝나는 모든 쓰기 deny → `/deck <domain> <slug> '<spec-json>'` 유도.
+- **WHITELIST (통과)** — 빌드시스템 템플릿: `Makefile.in`·`makefile.in`·`GNUmakefile.in`·`configure.in`·`config*.in`(autoconf 포함 config.h.in)·`*.pc.in`(pkg-config)·`*.spec.in`(rpm)·`Doxyfile.in`·`*.pro.in`(qmake) + (Write/Edit 한정) 내용에 autoconf `@VAR@` 치환 마커가 있으면 통과. → `Makefile.in`·`configure.in` 등 오탐 0.
+- **2 채널** (hexa-native 미러) — 구조화 도구(file_path) + Bash 쓰기채널(`>`/`>>`·heredoc·tee·dd of=·cp/mv dest). Bash 는 PATH 만 보이므로 basename 화이트리스트, `@VAR@` 콘텐츠 화이트리스트는 Write/Edit 에 적용.
+- whitelist 는 범위 전제(빌드 템플릿 ≠ 덱)이지 disable 스위치가 아님 — no opt-out (s11). hexa-lang `_deck_guard.hexa`.
+- **등록** — marketplace.json deck-guard 엔트리(cloud-guard 옆) · profiles.json `deck-guard: hexa` (s7 미태깅 lint 회피).
+
 ## 2026-05-29 — lab 1.3.0: 캠페인 디스패치 = ALL-PARALLEL 원칙 (single-pod 순차 큐 금지)
 
 ⚡ lab(캠페인 관제탑)에 **all-parallel 디스패치 원칙**을 명문화 — 데모이 `project.tape` `d_parallel_fire` 와 짝. 이번 세션 라이브 교훈: 6-perovskite 후보 배치를 한 vast pod 의 순차 `onstart.sh` 체인으로 bin-pack → **270-thread / load-119 oversubscription thrash** + flagship(CaAuH3)이 나머지 6개 perovskite 를 며칠간 블록. 표준 규칙으로 못박음.

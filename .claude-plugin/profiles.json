@@ -51,6 +51,7 @@
     "hexa-native": "hexa",
     "verify-guard": "hexa",
     "cloud-guard": "hexa",
+    "deck-guard": "hexa",
     "pod-monitor": "hexa",
     "pods-route": "hexa",
     "atlas": "hexa",

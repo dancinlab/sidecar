@@ -1,0 +1,301 @@
+// _gen_toolkit.hexa — generate the root TOOLKIT.jsonl dev-capability catalog.
+//
+// SSOT-derived: reads `.claude-plugin/marketplace.json` (the plugin roster) and
+// classifies every plugin by its `source` path prefix into a capability record:
+//   ./hooks/   → kind "hook"   (best-effort parse <src>/hooks/hooks.json events)
+//   ./commands/→ kind "command"
+//   ./skills/  → kind "skill"
+// `use` = the plugin's marketplace description, trimmed to one line. `version`
+// from the marketplace entry. `src` = the source path. For hooks, `events` is the
+// list of bound hook events (e.g. "PreToolUse:Task|Agent", "SessionStart").
+//
+// ALSO emits a curated constant block of non-plugin dev conventions that are not
+// in marketplace.json (markers + CLIs) — see _curated().
+//
+// Output: ROOT TOOLKIT.jsonl, one JSON record per line. DETERMINISTIC (@L7):
+//   plugins in marketplace order, then curated records in fixed order, and each
+//   hook's events sorted into a fixed canonical event order. Re-running produces
+//   a byte-identical file (idempotent).
+//
+// Record schema (@L3): {"id","kind","events"?,"use","version"?,"src"?,"ref"?}
+//   kind ∈ {hook, command, skill, marker, cli}
+//
+// Portable (@L1/s3): repo root resolved via `git rev-parse`; no absolute paths.
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _trim(s: string) -> string {
+    let n = len(s)
+    let mut a = 0
+    while a < n {
+        let c = s[a]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        a = a + 1
+    }
+    let mut b = n
+    while b > a {
+        let c = s[b - 1]
+        if c != " " && c != "\t" && c != "\r" && c != "\n" { break }
+        b = b - 1
+    }
+    return s.substring(a, b)
+}
+
+fn _starts_with(s: string, prefix: string) -> bool {
+    if len(prefix) > len(s) { return false }
+    return s.substring(0, len(prefix)) == prefix
+}
+
+// JSON-encode a string into a quoted literal (mirrors plan-guard's _json_str).
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _str_field(m: map, k: string) -> string {
+    if !has_key(m, k) { return "" }
+    let v = m[k]
+    if type_of(v) != "string" { return "" }
+    return v
+}
+
+// Collapse a multi-line description into a single trimmed line (first sentence-ish:
+// take everything but fold newlines to spaces and squeeze).
+fn _one_line(s: string) -> string {
+    let mut parts = []
+    let toks = s.split("\n")
+    let mut i = 0
+    while i < len(toks) {
+        parts.push(_trim(toks[i]))
+        i = i + 1
+    }
+    let joined = _trim(parts.join(" "))
+    // squeeze runs of spaces
+    let mut out = []
+    let n = len(joined)
+    let mut j = 0
+    let mut prev_sp = false
+    while j < n {
+        let c = joined[j]
+        if c == " " {
+            if !prev_sp { out.push(" ") }
+            prev_sp = true
+        } else {
+            out.push(c)
+            prev_sp = false
+        }
+        j = j + 1
+    }
+    return out.join("")
+}
+
+fn _repo_root() -> string {
+    let mut r = ""
+    try {
+        let res = exec_with_status("git rev-parse --show-toplevel 2>/dev/null")
+        if res[1] == 0 { r = _trim(res[0]) }
+    } catch e { r = "" }
+    if r == "" { r = _trim(to_string(exec("pwd"))) }
+    return r
+}
+
+// classify a marketplace source path → kind. "./hooks/x"→hook, "./commands/x"
+// →command, "./skills/x"→skill, else "" (unknown).
+fn _kind_of_source(src: string) -> string {
+    if _starts_with(src, "./hooks/") { return "hook" }
+    if _starts_with(src, "./commands/") { return "command" }
+    if _starts_with(src, "./skills/") { return "skill" }
+    return ""
+}
+
+// canonical hook-event order (@L7 determinism). Events not listed sort last,
+// preserving their relative discovery order, so output is stable.
+fn _event_rank(ev: string) -> int {
+    if ev == "SessionStart" { return 0 }
+    if ev == "UserPromptSubmit" { return 1 }
+    if ev == "PreToolUse" { return 2 }
+    if ev == "PostToolUse" { return 3 }
+    if ev == "Stop" { return 4 }
+    if ev == "PreCompact" { return 5 }
+    if ev == "PostCompact" { return 6 }
+    return 99
+}
+
+// best-effort: parse <root>/<src-no-dot>/hooks/hooks.json and return an array of
+// event tokens "Event" or "Event:matcher", sorted into canonical order.
+fn _hook_events(root: string, src: string) -> array {
+    // src is like "./hooks/plan-guard" → relpath "hooks/plan-guard"
+    let rel = src
+    if _starts_with(rel, "./") { rel = rel.substring(2, len(rel)) }
+    let path = root + "/" + rel + "/hooks/hooks.json"
+    let txt = _read_file_safe(path)
+    if txt == "" { return [] }
+    let mut doc = json_parse("{}")
+    try { doc = json_parse(txt) } catch e { return [] }
+    if type_of(doc) != "map" { return [] }
+    if !has_key(doc, "hooks") { return [] }
+    let hooks = doc["hooks"]
+    if type_of(hooks) != "map" { return [] }
+    let evnames = keys(hooks)
+    // collect {ev token, rank} then sort
+    let mut raw = []
+    let mut ei = 0
+    while ei < len(evnames) {
+        let ev = evnames[ei]
+        let arr = hooks[ev]
+        if type_of(arr) == "array" {
+            let mut ai = 0
+            while ai < len(arr) {
+                let entry = arr[ai]
+                let mut tok = ev
+                if type_of(entry) == "map" {
+                    let mm = _str_field(entry, "matcher")
+                    if mm != "" { tok = ev + ":" + mm }
+                }
+                // de-dup tok
+                let mut seen = false
+                let mut si = 0
+                while si < len(raw) { if raw[si] == tok { seen = true; break } si = si + 1 }
+                if !seen { raw.push(tok) }
+                ai = ai + 1
+            }
+        }
+        ei = ei + 1
+    }
+    // selection sort by (event-rank, then lexical) for determinism
+    let n = len(raw)
+    let mut sorted = []
+    let mut used = []
+    let mut z = 0
+    while z < n { used.push(false); z = z + 1 }
+    let mut picked = 0
+    while picked < n {
+        let mut best = -1
+        let mut bi = 0
+        while bi < n {
+            if !used[bi] {
+                if best < 0 { best = bi }
+                else {
+                    // compare raw[bi] vs raw[best]
+                    let eb = raw[bi].split(":")[0]
+                    let ee = raw[best].split(":")[0]
+                    let rb = _event_rank(eb)
+                    let re = _event_rank(ee)
+                    if rb < re { best = bi }
+                    else if rb == re && raw[bi] < raw[best] { best = bi }
+                }
+            }
+            bi = bi + 1
+        }
+        sorted.push(raw[best])
+        used[best] = true
+        picked = picked + 1
+    }
+    return sorted
+}
+
+// emit one JSONL record line from ordered key/value pairs. `events` is an array
+// (emitted as a JSON array) only when non-empty. version/src/ref omitted when "".
+fn _record(id: string, kind: string, events: array, use_str: string, version: string, src: string, ref: string) -> string {
+    let mut parts = []
+    parts.push("\"id\":" + _json_str(id))
+    parts.push("\"kind\":" + _json_str(kind))
+    if len(events) > 0 {
+        let mut ev = []
+        let mut i = 0
+        while i < len(events) { ev.push(_json_str(events[i])); i = i + 1 }
+        parts.push("\"events\":[" + ev.join(",") + "]")
+    }
+    parts.push("\"use\":" + _json_str(use_str))
+    if version != "" { parts.push("\"version\":" + _json_str(version)) }
+    if src != "" { parts.push("\"src\":" + _json_str(src)) }
+    if ref != "" { parts.push("\"ref\":" + _json_str(ref)) }
+    return "{" + parts.join(",") + "}"
+}
+
+// curated non-plugin conventions (@L5) — markers + CLIs not in marketplace.json.
+// FIXED order for determinism.
+fn _curated() -> array {
+    let mut out = []
+    // markers
+    out.push(_record("@L-assert", "marker", [], "plan.md `## locked decisions` machine-readable contract — `@L<n> … assert:` bullets injected verbatim into spawned sub-agents by plan-guard", "", "", "hooks/plan-guard"))
+    out.push(_record("plan.md status:active", "marker", [], "step-by-step active plan — frontmatter `status: active` marks the live drafts/<slug>-plan.md the sub-agent ships", "", "", "skills/step-by-step"))
+    out.push(_record("SKILL.md @D", "marker", [], "skill body convention — one `@D <name> :: skill` block, do/dont only (s6); lint standard for every SKILL.md", "", "", ""))
+    out.push(_record("DOMAINS.tape", "marker", [], "repo-root domain roster — NAME→path rows authoritative; progress/@goal stay derived from <DOMAIN>.md", "", "", "skills/domain"))
+    out.push(_record("MATRIX.tape", "marker", [], "cwd-local axis cross-product coverage tracker — explicit cells toggled like domain milestones", "", "", "skills/matrix"))
+    out.push(_record("PAPER.tape", "marker", [], "repo-root paper roster — slug→dir rows; title/progress read live from per-paper PAPER.md", "", "", "skills/paper"))
+    out.push(_record("sign token", "marker", [], "sign-gate — `sidecar sign <key>` mints a 5-min user token unlocking agent edits to a sign-gated SSOT (commons.tape · project.tape)", "", "", "hooks/sign-guard"))
+    out.push(_record("~/.sidecar/*", "marker", [], "runtime/ephemeral state outside the repo — profile · master marker · handoff · local-paths · sign tokens (s16)", "", "", ""))
+    // CLIs
+    out.push(_record("sidecar", "cli", [], "sidecar marketplace CLI — init · sync · mirror · shadow · sign · profile · enable · disable · paths · handoff", "", "", "bin/sidecar"))
+    out.push(_record("pool", "cli", [], "host roster + remote exec — list · add · on <host> <cmd> · status; general-heavy work routes to the Linux pool", "", "", ""))
+    out.push(_record("hexa", "cli", [], "hexa-lang toolchain — run · verify · atlas · cloud · hf; the native language for all sidecar plugin scripts (s3)", "", "", ""))
+    out.push(_record("secret", "cli", [], "credential store — `secret get <key>` resolves API keys at runtime so no token is ever hardcoded or in argv", "", "", ""))
+    return out
+}
+
+fn main() {
+    let root = _repo_root()
+    let mp_path = root + "/.claude-plugin/marketplace.json"
+    let txt = _read_file_safe(mp_path)
+    if txt == "" {
+        eprintln("gen-toolkit: cannot read " + mp_path)
+        exit(1)
+    }
+    let mut doc = json_parse("{}")
+    try { doc = json_parse(txt) } catch e { eprintln("gen-toolkit: marketplace.json parse error"); exit(1) }
+    if type_of(doc) != "map" || !has_key(doc, "plugins") { eprintln("gen-toolkit: no plugins array"); exit(1) }
+    let plugins = doc["plugins"]
+    if type_of(plugins) != "array" { eprintln("gen-toolkit: plugins not an array"); exit(1) }
+
+    let mut lines = []
+    // plugins — marketplace order (deterministic by construction)
+    let mut i = 0
+    while i < len(plugins) {
+        let p = plugins[i]
+        if type_of(p) == "map" {
+            let name = _str_field(p, "name")
+            let src = _str_field(p, "source")
+            let ver = _str_field(p, "version")
+            let desc = _one_line(_str_field(p, "description"))
+            let kind = _kind_of_source(src)
+            if name != "" && kind != "" {
+                let mut events = []
+                if kind == "hook" { events = _hook_events(root, src) }
+                lines.push(_record(name, kind, events, desc, ver, src, ""))
+            }
+        }
+        i = i + 1
+    }
+    // curated markers/CLIs — fixed order
+    let cur = _curated()
+    let mut c = 0
+    while c < len(cur) { lines.push(cur[c]); c = c + 1 }
+
+    let out_path = root + "/TOOLKIT.jsonl"
+    write_file(out_path, lines.join("\n") + "\n")
+    println("gen-toolkit: wrote " + out_path + " — " + to_string(len(lines)) + " records (" + to_string(len(plugins)) + " plugins + " + to_string(len(cur)) + " curated)")
+}

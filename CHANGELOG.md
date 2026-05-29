@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 📇 TOOLKIT.jsonl 0.1.0 (신규 카탈로그): 루트 dev-capability SSOT 자동생성 + /master update 연동 + project.tape s17
+
+📇 sidecar 개발 시 끌어쓸 수 있는 모든 capability(hook·command·skill·marker·CLI)를 손으로 쓰지 않고 `.claude-plugin/marketplace.json`(91-plugin SSOT) + 각 plugin 의 `hooks.json` 에서 **자동 파생**해 루트 `TOOLKIT.jsonl`(대문자·JSONL·한 줄=한 capability)로 모은다. `/master update` 가 generator 를 호출해 새로 ship 한 plugin 이 자동 편입되도록 배선했다.
+
+- **`bin/_gen_toolkit.hexa` (신규 generator · hexa-native @D s3)** — `.py`/`.sh` 는 hexa-native hook 이 deny 하므로 순수 hexa. plan-guard `_plan_inject.hexa` 의 JSON idiom(`json_parse` · `_json_str` 이스케이프 · `has_key`/`keys()` · 방어적 reader)을 미러. marketplace.json `source` 경로 prefix 로 분류 — `./hooks/`→hook · `./commands/`→command · `./skills/`→skill. hook 은 `<src>/hooks/hooks.json` 을 best-effort 파싱해 bound events 추출(`PreToolUse:Task|Agent` 처럼 event+matcher). 포터블 경로(`git rev-parse` 루트)만, 절대경로 없음.
+- **루트 `TOOLKIT.jsonl` (신규 committed 파생 아티팩트 @D s16/@L2)** — gitignore 아님(checked-in lockfile 류). 103 레코드 = 91 plugin(46 hook · 40 skill · 5 command) + 12 curated(8 marker · 4 CLI). 스키마 `{"id","kind","events"?,"use","version"?,"src"?,"ref"?}` · kind ∈ {hook,command,skill,marker,cli}.
+- **curated marker/CLI 상수 블록(@L5)** — marketplace 에 없는 규약: `@L-assert`(plan-guard 계약) · `plan.md status:active` · `SKILL.md @D` · `DOMAINS.tape`/`MATRIX.tape`/`PAPER.tape` roster · `sign token` · `~/.sidecar/*` state · CLI(`sidecar`·`pool`·`hexa`·`secret`). generator 내 하드코딩(고정 순서).
+- **멱등(@L7)** — plugin 은 marketplace 순서, event 는 고정 canonical 순서(SessionStart→UserPromptSubmit→PreToolUse→PostToolUse→Stop→PreCompact→PostCompact)로 정렬. 2회 실행 → byte-identical(diff 0). 검증 완료.
+- **`/master update` 연동(master 0.1.0→0.2.0 · @L6)** — `update` 의 ① CHECK 단계에 generator 호출 추가 → `TOOLKIT.jsonl` 재생성 후 diff 가 있으면 dispatch 되는 ship 에 함께 실림. SKILL.md `@D` do 라인 + command 본문 + marketplace 설명 lockstep 범프.
+- **project.tape `@D s17` (@V 1.8→1.9 · 유저 sign-gated 선편집)** — "dev capability catalog — generated root SSOT `TOOLKIT.jsonl`" : `/master update` 에서 regen · marketplace+hooks.json 자동파생 · 손편집/drift 금지.
+- **알려진 한계** — curated marker/CLI 블록은 자동발견이 아니라 generator 내 큐레이션 상수다. marketplace plugin 만 자동 편입되고, 새 marker/CLI 규약은 generator 를 손봐야 한다.
+
 ## 2026-05-30 — 🪂 subagent-resilience 0.1.0 (신규 훅): 모든 서브에이전트 발사에 백오프+resume 생존 계약 무조건 주입
 
 🪂 throttle storm(429 / overloaded)·세션 조기사에도 서브에이전트가 (a) 죽지 않고 백오프 재시도하고, (b) commit-early 체크포인트 → 마지막 pushed commit 부터 resume 하도록, PreToolUse(Task|Agent) 훅이 "백오프+resume" 생존 계약을 `additionalContext`로 **무조건** 끼워넣는다. 모델 self-discipline 이 아니라 훅의 기계적 주입이라 끌 수 없다(@D s11/s7).

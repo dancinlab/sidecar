@@ -31,10 +31,17 @@ Three stages, end at the `/sbs` agreement screen.
      versions sidecar currently references. Also note hexa: `hexa --version`.
    - internal: marketplace↔plugin.json drift (from `status`) · `~/.sidecar/profile`
      + sync freshness · open PRs · a light `audit`/`lint` pass for fresh gaps.
+   - capability catalog regen (s17): run the toolkit generator so newly-shipped
+     plugins auto-appear in the root catalog —
+     `hexa run "$(git rev-parse --show-toplevel)/bin/_gen_toolkit.hexa"`. It
+     rewrites the root `TOOLKIT.jsonl` from `.claude-plugin/marketplace.json` +
+     each plugin's hooks.json (deterministic · idempotent). Report `git status -s
+     TOOLKIT.jsonl`; if it changed, that diff rides along in the dispatched ship.
 ② PLAN
    - derive concrete sidecar UPDATE CANDIDATES from ① (e.g. model-id refs to bump ·
      a new Claude/CC feature to wire into a hook/skill · a drifted plugin to
-     reconcile · a doc/changelog to refresh). Rank by impact/effort, risk=low first.
+     reconcile · a doc/changelog to refresh · a non-zero `TOOLKIT.jsonl` regen
+     diff to commit). Rank by impact/effort, risk=low first.
      Render a candidate table: `| # | candidate | source(①) | impact | effort | risk |`.
    - pick the TOP candidate (or a tightly-related consolidated set).
 ③ DISPATCH

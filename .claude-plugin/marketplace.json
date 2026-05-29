@@ -239,8 +239,8 @@
     {
       "name": "master",
       "source": "./skills/master",
-      "description": "/master — owner-only (creator) sidecar maintenance control-plane (master-tier · ~/.sidecar/master marker). Verbs: bare/status (health dashboard) · update (CHECK external Opus/Claude-Code changelogs + internal drift/sync/PR → PLAN ranked update candidates → DISPATCH top candidate to `/sbs auto`, running to the `go` checkpoint) · check (read-only availability) · audit (governance↔enforcement integrity · s7) · lint (plugin standards · s1/s3/s6/tier) · sync. Never edits governance SSOT or ships directly — delegates to /sbs. NL trigger via skill.",
-      "version": "0.1.0"
+      "description": "/master — owner-only (creator) sidecar maintenance control-plane (master-tier · ~/.sidecar/master marker). Verbs: bare/status (health dashboard) · update (CHECK external Opus/Claude-Code changelogs + internal drift/sync/PR + regenerate the root TOOLKIT.jsonl capability catalog via bin/_gen_toolkit.hexa per s17 → PLAN ranked update candidates → DISPATCH top candidate to `/sbs auto`, running to the `go` checkpoint) · check (read-only availability) · audit (governance↔enforcement integrity · s7) · lint (plugin standards · s1/s3/s6/tier) · sync. Never edits governance SSOT or ships directly — delegates to /sbs. NL trigger via skill.",
+      "version": "0.2.0"
     },
     {
       "name": "draft",

@@ -1,0 +1,85 @@
+// _resilience_inject.hexa — subagent-resilience PreToolUse(Task|Agent) hook.
+//
+// On EVERY sub-agent dispatch, UNCONDITIONALLY inject a backoff+resume survival
+// contract into the agent's context as additionalContext, so a throttle storm
+// (429 / overloaded) or an early session death can't make a sub-agent abort or
+// restart from scratch. This is the mechanical enforcement of the cross-session
+// resilience rule — the model can't forget it because the hook always injects.
+//
+// The ONLY gate is `tool_name ∈ {Task, Agent}`. Unlike plan-guard there is NO
+// plan-file / marker / env-var / flag / config gating (commons @D s11 — no
+// escape hatch; @D s7 — the hook IS the enforcement, no prose rule).
+//
+// Contract text is INLINE hardcoded (immutable constant · @L5). additionalContext
+// only — NO updatedInput, NO permissionDecision — so it stacks safely alongside
+// plan-guard + subagent-route at the same surface. Always exits 0.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _allow() {
+    exit(0)
+}
+
+fn _json_str(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _emit(text: string) {
+    let out = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_str(text) + "}}"
+    println(out)
+    exit(0)
+}
+
+// The verbatim, immutable survival contract (@L3 · @L5 — inline hardcoded).
+fn _contract() -> string {
+    let mut bl = []
+    bl.push("# subagent-resilience — survival contract (verbatim, non-negotiable)")
+    bl.push("You are a dispatched sub-agent. Follow these unconditionally:")
+    bl.push("1. BACKOFF: on rate-limit / 429 / \"overloaded\" / throttle errors, do NOT abort —")
+    bl.push("   wait and retry with exponential backoff (e.g. 30s, 60s, 120s; cap a few tries)")
+    bl.push("   before treating it as fatal.")
+    bl.push("2. CHECKPOINT: commit your work in small logical units AS YOU GO (commit-early),")
+    bl.push("   so progress is durable. Push when a unit is complete.")
+    bl.push("3. RESUME: if you were restarted / re-dispatched, do NOT start over — inspect the")
+    bl.push("   last pushed commit and continue from there.")
+    bl.push("4. REPORT-ON-HALT: if you must stop before completion, report the last-good")
+    bl.push("   checkpoint (commit sha + what remains) so the parent can re-dispatch you.")
+    return bl.join("\n")
+}
+
+fn main() {
+    let raw = _read_stdin()
+    if raw == "" { _allow() }
+    let mut payload = json_parse("{}")
+    try { payload = json_parse(raw) } catch e { _allow() }
+    if type_of(payload) != "map" { _allow() }
+
+    if !has_key(payload, "tool_name") { _allow() }
+    let tn = payload["tool_name"]
+    if type_of(tn) != "string" { _allow() }
+    if tn != "Task" && tn != "Agent" { _allow() }
+
+    // tool_name ∈ {Task, Agent} → inject the contract UNCONDITIONALLY (@L4).
+    _emit(_contract())
+}

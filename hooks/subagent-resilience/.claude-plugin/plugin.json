@@ -1,0 +1,19 @@
+{
+  "name": "subagent-resilience",
+  "description": "🪂 PreToolUse(Task|Agent) hook that UNCONDITIONALLY injects a backoff+resume survival contract into every sub-agent dispatch via additionalContext — the mechanical enforcement of the cross-session resilience rule so future dispatches can't forget it. Implemented in hexa-lang (`_resilience_inject.hexa`, invoked via `hexa run`). On every Task/Agent spawn it emits a 4-clause verbatim contract: (1) BACKOFF — on rate-limit / 429 / 'overloaded' / throttle errors, do NOT abort, wait + retry with exponential backoff before treating as fatal; (2) CHECKPOINT — commit work in small logical units AS YOU GO (commit-early) so progress is durable, push when a unit completes; (3) RESUME — if restarted / re-dispatched, do NOT start over, inspect the last pushed commit and continue from there; (4) REPORT-ON-HALT — if you must stop before completion, report the last-good checkpoint (commit sha + what remains) so the parent can re-dispatch. The ONLY gate is `tool_name ∈ {Task, Agent}` — unlike plan-guard there is NO plan-file / marker / env-var / flag / config gating, the contract is injected on EVERY dispatch (commons @D s11 — no escape hatch; @D s7 — the hook IS the enforcement, no prose rule). Contract text is INLINE hardcoded (immutable constant), reads stdin via `exec(\"cat\")` (hexa native, avoids fake-FILE segfault), portable `$HOME`/`${CLAUDE_PLUGIN_ROOT}` paths only. additionalContext only — NO updatedInput, NO permissionDecision — so it stacks safely alongside plan-guard + subagent-route at the same PreToolUse(Task|Agent) surface. Always exits 0. Mirrors the plan-guard inject-hook pattern (defensive readers · JSON-escaped additionalContext · no network). Known limit: additionalContext is advisory prompt steering, not a transport-layer retry — it shapes sub-agent behavior, it does not patch the API client.",
+  "version": "0.1.0",
+  "author": {
+    "name": "dancinlab"
+  },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "subagent",
+    "resilience",
+    "backoff",
+    "resume",
+    "hexa"
+  ]
+}

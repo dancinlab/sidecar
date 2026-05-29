@@ -6,6 +6,20 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🪂 subagent-resilience 0.1.0 (신규 훅): 모든 서브에이전트 발사에 백오프+resume 생존 계약 무조건 주입
+
+🪂 throttle storm(429 / overloaded)·세션 조기사에도 서브에이전트가 (a) 죽지 않고 백오프 재시도하고, (b) commit-early 체크포인트 → 마지막 pushed commit 부터 resume 하도록, PreToolUse(Task|Agent) 훅이 "백오프+resume" 생존 계약을 `additionalContext`로 **무조건** 끼워넣는다. 모델 self-discipline 이 아니라 훅의 기계적 주입이라 끌 수 없다(@D s11/s7).
+
+- **subagent-resilience 0.1.0 (신규 PreToolUse(Task|Agent) 훅)** — hexa-lang(`_resilience_inject.hexa`, `hexa run`). plan-guard inject 훅의 구조·idiom(`_read_stdin`=`to_string(exec("cat"))` · `json_parse` · `tool_name` 게이트 · `_emit` shape)을 그대로 미러, plan 해소/locked-line 스캔/escape-scan/PostToolUse(Bash) 줄은 **제거**(단순화).
+- **4-clause 계약(inline 하드코딩·불변 상수 @L5)** — ① BACKOFF: 429/overloaded/throttle → 지수 백오프 후 재시도(즉시 포기 금지) ② CHECKPOINT: 작은 단위로 commit-early(진행 영속화) ③ RESUME: 재시작/재발사 시 처음부터 금지, 마지막 pushed commit 부터 이어감 ④ REPORT-ON-HALT: 치명 중단 시 last-good 체크포인트(commit sha + 남은 작업) 보고 → 부모가 재발사.
+- **무조건 주입(@L4 / @D s11)** — 게이트 = `tool_name ∈ {Task, Agent}` **뿐**. plan-guard 와 달리 plan 파일/마커/env-var/flag/config escape-hatch **없음** — 모든 발사에 적용되는 공통 생존 계약.
+- **충돌 없음** — `additionalContext` 만 emit(updatedInput/permissionDecision 없음). plan-guard(작업별 @L 계약) + subagent-route(관찰/로그)와 같은 PreToolUse(Task|Agent) 지점에서 append-stack 으로 안전 공존. 셋 다 무손상.
+- **방어적 reader** — 빈 stdin / 비-JSON / 비-map / tool_name ∉ {Task,Agent} → silent exit 0. stdin 은 `exec("cat")` 로만(hexa fake-FILE segfault 회피). 포터블 경로(`$HOME`/`${CLAUDE_PLUGIN_ROOT}`)만.
+- **알려진 한계** — `additionalContext` 는 advisory 프롬프트 steering 이지 transport-layer 재시도가 아님. 서브에이전트 행동을 유도할 뿐 API 클라이언트를 패치하지 않는다.
+- **버전 lockstep(g22)** — plugin.json + marketplace.json + profiles.json(personal tier · subagent-route 옆) 0.1.0 등록. README 표 SKIP(hook 류 미수록 관례).
+
+---
+
 ## 2026-05-30 — 📡 walkie-hexa 0.1.0 (신규 훅): hexa-lang HEAD 변경 감지 → 전 세션 walkie all-call 자동 송신
 
 📡 walkie 패밀리의 **EMIT/송신** 조각. 지금까지 walkie(`call`/`all-call` 수동 송신) · walkie-arm(수신 데몬) · walkie-mcp(idle-push 수신)는 모두 사람·수신 측이었다. walkie-hexa는 `$HOME/core/hexa-lang` git HEAD 가 새 커밋으로 전진하면 **자동으로** 전 세션에 한 줄 무전을 쏜다 — hexa-lang 릴리스가 곧바로 모든 라이브 세션에 전파된다.

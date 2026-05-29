@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-29 — hexa-native 0.7.0: 차단셋에 `.hpp` · `.hh` 추가 (C++ 헤더 변형)
+
+🚫 hexa-native 차단셋에 `.hpp` · `.hh`(C++ 헤더 변형) 추가. 전체 차단셋 = `.py .sh .c .cc .cpp .cxx .h .hpp .hh .s .o` (11종). C/C++/header/asm/object 손작성 전면 차단 → `.hexa` 유도.
+
+- Write/Edit gate + Bash 쓰기채널 둘 다 `.hpp`/`.hh` 커버.
+- **literal 매칭** — `.hh`≠`.hexa` · `.hpp`≠`.h`. `.inl`/`.ipp`/`.tcc`는 비대상(미요청).
+- 버전 lockstep(g22): plugin.json·marketplace.json 0.6.0→**0.7.0** · CHANGELOG.
+
 ## 2026-05-29 — hexa-native 0.6.0: 차단셋에 `.cpp` · `.cxx` · `.h` 추가 (C/C++ 패밀리 완성)
 
 🚫 hexa-native 차단셋에 `.cpp` · `.cxx` · `.h` 추가 (0.5.0 `.cc`/`.s`/`.o` · 0.4.0 `.c` 위에). 전체 차단셋 = `.py .sh .c .cc .cpp .cxx .h .s .o`. C/C++ 패밀리 + asm + object 손작성 전면 차단 → `.hexa` 유도.

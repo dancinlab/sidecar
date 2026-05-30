@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 🔓 profiles: `stdlib` · `stdlib-ssot-guard` tier 교정 master → personal
+
+`stdlib`(hexa stdlib 디스패처 스킬) 과 `stdlib-ssot-guard`(stdlib SSOT 강제 훅) 가 `master` tier(창작자 전용 · `~/.sidecar/master` 마커 게이트)로 분류돼 있어, 마커 없는 박스에서는 `full` 프로필이어도 강제 비활성이었다. 둘 다 일상 사용 도구(창작자 전용 실험물 아님)라 `personal` tier 가 옳은 분류 — `full` 프로필에서 켜지고 공개 `minimal`/`hexa` 프로필에선 숨는다.
+
+- `.claude-plugin/profiles.json` `tiers`: `stdlib` · `stdlib-ssot-guard` → `personal`
+- `master` orchestrator 플러그인은 `master` tier 그대로 (진짜 creator-only 유지)
+- 반영: ship → `sidecar sync` 가 active 프로필(`full`)대로 settings.json `enabledPlugins` 재기록 → 두 플러그인 enable
+
 ## 2026-05-31 — 🧶 step-by-step 0.9.0: chat-form 7-요소 라운드 scaffold 를 `hexa easy` 빌트인에 래핑
 
 `/sbs`(=`/step-by-step`) 의 disambiguation 라운드는 이미 easy-mode 7-요소 scaffold(아이콘·이름·별칭·하는 일·비유·ASCII·비교 표·추천)를 썼지만 **손으로 짜고** 있었다. 골격과 점수는 결정적이므로 `easy-doc`·`easy-paper` 가 쓰는 `hexa easy` 빌트인 backbone 에 동일하게 배선했다.

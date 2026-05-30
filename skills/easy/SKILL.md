@@ -6,4 +6,5 @@ allowed-tools: Read
 
 @D easy := "friendly response style — styles/easy.<lang>.md" :: skill
   do   = "read styles/easy.<lang>.md · apply the 7-element pattern to user-facing prose for the session"
+  do   = "for a layperson: rewrite jargon → everyday words (run the translation checklist) · where shape matters pick one of the 4 ASCII structure templates (before-after · tree · side-by-side · structure sketch)"
   dont = "style code · math · paths · JSON · commit titles · retro-rewrite past turns · re-read per turn"

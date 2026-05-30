@@ -401,8 +401,8 @@
     {
       "name": "easy",
       "source": "./skills/easy",
-      "description": "Easy (friendly) response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare). Skill (natural-language trigger) + /easy command. 5 language samples: en · ko · ja · zh · ru. /easy command body now points at $CLAUDE_PLUGIN_ROOT with a cache-resolved fallback (0.1.2) so the bare-invocable user-level mirror works.",
-      "version": "0.1.2"
+      "description": "Easy (friendly) response style — 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare). Skill (natural-language trigger) + /easy command. 5 language samples: en · ko · ja · zh · ru. /easy command body now points at $CLAUDE_PLUGIN_ROOT with a cache-resolved fallback (0.1.2) so the bare-invocable user-level mirror works. 0.1.3 — layperson+ASCII 강화 (easy-auto 0.3.0 미러): 5개 언어 styles 에 ASCII 구조 4종 템플릿 + 일반인 gold(전문용어→생활어) + 번역 체크리스트 + 측정 축 ascii-structure-template-usage 행 (두 styles/ 트리 byte-identical 미러 · additive).",
+      "version": "0.1.3"
     },
     {
       "name": "easy-auto",

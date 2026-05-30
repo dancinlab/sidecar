@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 🤖 lab 1.4.0: 4축 auto-decide — mid-run 포크를 완성도·단순·안전·표준으로 자율 결정
+
+`/lab` 캠페인 런이 중간에 *옵션 선택*이 필요한 결정 게이트(예: live RTSC 런에서 떠오른 전략 포크 — clean-reset vs targeted-fix vs let-it-settle)에 부딪혔을 때, 사용자에게 메뉴를 띄워 멈추는 대신 canonical 4축으로 AUTO-PICK 후 계속 진행한다.
+
+- **@L1 scope**: `next`/`auto`/`drive`/`pursue` 의 LLM 결정 게이트에만 적용. `bin/system_harness.hexa`(결정론적 `decide()` 바이너리)는 무손상 — SKILL.md prose-level 규칙만.
+- **@L2 rule**: >1 기술적으로 유효한 옵션을 가진 포크는 각 옵션을 완성도·단순·안전·표준 1–5로 채점 → weighted average(기본 1:1:1:1, recommend/sbs 세션 가중치 상속) → max 선택. 동점 → 안전(safe) 챔피언 승(중간 캠페인 = blast radius 최소·가장 reversible). recommend.tape r1 축 정의를 verbatim 인용(재정의 없음).
+- **@L3 human-gate 보존**: 자율 결정은 autonomy invariant 를 절대 override하지 않음 — `gated:<human-only-input>`(credential · irreversible/destructive · genuine open-ended design)과 budget cap(g64)만 여전히 사람을 위해 HALT. 그 외 technically-resolvable 포크는 모두 auto-pick.
+- **@L4 surface**: 픽을 1줄로 collapse 렌더(recommend.tape r2/r3 auto-mode 스타일, 4줄 박스 아님): `🤖 4축 auto-pick: <option> (완성도=X 단순=Y 안전=Z 표준=W · weighted=<sum>)` — 사용자가 사후에 trade-off 보고 다음 턴에 override 가능.
+- **@L5 ship**: `skills/lab/SKILL.md` 에 공유 subsection `## 4축 auto-decide (mid-run 결정)` 추가 + next/auto/drive/pursue 에서 참조. lab 버전 1.3.2 → 1.4.0 (plugin.json · marketplace.json · 이 CHANGELOG).
+
 ## 2026-05-31 — 🔁 pr-cycle 0.4.1: `/pr-cycle` 명령이 머지를 직접 수행 (훅 의존 제거)
 
 `/pr-cycle` 가 PR을 만들기만 하고 머지가 안 되던 버그 수정. 명령 본문은 슬래시-명령 `!`-exec로 실행되는데, 이건 **Bash-도구 PreToolUse 훅 경로를 타지 않는다** — 그래서 `pr-cycle-hook`(PreToolUse:Bash, `gh pr create` 감지 시 ` && gh pr merge …` tail 추가)이 `/pr-cycle` 의 `gh pr create` 에는 **한 번도 발화하지 않아** PR이 created-but-unmerged 로 남았다.

@@ -410,6 +410,25 @@ fn main() {
     }
     settings["enabledPlugins"] = new_en
 
+    // ── 4b. default permission mode = bypassPermissions (set-if-absent) ──
+    // A fresh sidecar box starts each session in bypass-permissions mode — no
+    // per-tool allow/deny prompts. Guard hooks that emit a `deny` decision
+    // (sign-guard · git-guard · code-tier-guard · …) STILL fire and can still
+    // block; this only skips the INTERACTIVE prompt, it is not a guard opt-out
+    // (project.tape @D s11 untouched). Set-if-absent → a DEFAULT, not a force:
+    // a user who later picks another mode is never re-overridden on the next
+    // sync. Paired with skipDangerousModePermissionPrompt so the entry warning
+    // is suppressed on a fresh box too.
+    if !has_key(settings, "permissions") { settings["permissions"] = json_parse("{}") }
+    let mut set_bypass = false
+    if !has_key(settings["permissions"], "defaultMode") {
+        settings["permissions"]["defaultMode"] = "bypassPermissions"
+        set_bypass = true
+    }
+    if !has_key(settings, "skipDangerousModePermissionPrompt") {
+        settings["skipDangerousModePermissionPrompt"] = true
+    }
+
     _write_json(installed_path, installed)
     _write_json(settings_path, settings)
 
@@ -421,6 +440,9 @@ fn main() {
     println(prof_note)
     if npruned > 0 {
         println("  pruned " + to_string(npruned) + " retired plugin(s) from installed_plugins.json + enabledPlugins")
+    }
+    if set_bypass {
+        println("  permissions.defaultMode · bypassPermissions (sessions start in bypass mode — guard `deny` hooks still fire)")
     }
 
     // ── build + install the sidecar-owned `pool` binary + shim ───────

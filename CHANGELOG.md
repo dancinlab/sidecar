@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 🟢 install: 세션 기본 권한 모드 = `bypassPermissions` (set-if-absent)
+
+`hx install sidecar` / `sidecar sync` 가 이제 settings.json 에 `permissions.defaultMode = "bypassPermissions"` 를 기록한다 — 새 세션이 매번 bypass 모드로 시작(도구별 allow/deny 프롬프트 없음). `deny` 를 내는 가드 훅(sign-guard · git-guard · code-tier-guard · …)은 **그대로 발화·차단**하므로 가드 우회가 아니다(@D s11 무관 — 인터랙티브 프롬프트만 생략).
+
+- **set-if-absent**: 강제가 아닌 *기본값* — 이미 `permissions.defaultMode` 가 있으면 건드리지 않는다(사용자가 다른 모드를 골랐으면 다음 sync 에서 재덮어쓰기 없음). `skipDangerousModePermissionPrompt` 도 없을 때만 `true` 로 세팅해 진입 경고 프롬프트 억제.
+- `install.hexa` 4b 단계 추가 + fresh 박스용 로그 한 줄.
+- ⚠ fresh 설치 시 적용되므로 공개 installer 에도 영향. 현재 dancinlab fleet 용도 — 공개 노출을 좁히려면 creator-마커 게이트로 후속 조정 가능.
+
 ## 2026-05-31 — 🔓 profiles: `stdlib` · `stdlib-ssot-guard` tier 교정 master → personal
 
 `stdlib`(hexa stdlib 디스패처 스킬) 과 `stdlib-ssot-guard`(stdlib SSOT 강제 훅) 가 `master` tier(창작자 전용 · `~/.sidecar/master` 마커 게이트)로 분류돼 있어, 마커 없는 박스에서는 `full` 프로필이어도 강제 비활성이었다. 둘 다 일상 사용 도구(창작자 전용 실험물 아님)라 `personal` tier 가 옳은 분류 — `full` 프로필에서 켜지고 공개 `minimal`/`hexa` 프로필에선 숨는다.

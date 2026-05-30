@@ -1,7 +1,7 @@
 {
   "name": "inject",
   "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject (and `/ij` short alias) runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn. Use after a sidecar ship when you want the new rules to take effect now without restarting Claude Code.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

@@ -6,6 +6,10 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🩹 inject 0.2.1: `/ij` 명령 한-줄-뭉개짐 버그 수정
+
+`/inject`·`/ij`의 `!`-실행 명령이 줄바꿈으로 구분돼 있었는데, 하네스가 이를 한 줄로 평탄화하면 `set -e` 가 뒤 토큰을 전부 삼켜(`set -e sidecar sync echo …`) 명령이 깨졌다. 원인이었던 `set -e` 를 제거하고 `;`/`&&` 구분 단일 라인으로 재작성 — 평탄화돼도 정상 동작한다. inject `0.2.0→0.2.1`.
+
 ## 2026-05-30 — 🪟 sidecar `mount`: 범용 code-tier sshfs 런처
 
 원격 호스트에 사는 repo를 이 워크스테이션에서 sshfs로 편집하고, 빌드·측정은 원격의 로컬 FS에서 돌리는 "code-tier"를 sidecar 1급 verb로 구현했다. 특정 프로젝트(hexa-lang)에 묶이지 않은 범용 기능 — 임의 `host:repo`에 적용된다.

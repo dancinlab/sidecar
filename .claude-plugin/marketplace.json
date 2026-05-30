@@ -377,8 +377,8 @@
     {
       "name": "inject",
       "source": "./skills/inject",
-      "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject (and `/ij` short alias) runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn.",
-      "version": "0.2.0"
+      "description": "Immediately inject the latest sidecar commons.tape + project.tape into the CURRENT session and sync the local install for the next session. /inject (and `/ij` short alias) runs `sidecar sync` (marketplace pull + cache copy + installed_plugins.json patch) AND prints the current commons.tape + (cwd's) project.tape so the model picks them up this turn. 0.2.1 (2026-05-30) fixes a command-flattening bug — the `!`-command was newline-separated, but when the harness flattens it to one line `set -e` swallowed the rest (`set -e sidecar sync echo …`), breaking the run; rewritten as a single `;`/`&&`-separated line that works flattened, dropping `set -e`.",
+      "version": "0.2.1"
     },
     {
       "name": "ship",

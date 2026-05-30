@@ -82,6 +82,119 @@ ASCII:
 
 ---
 
+## 4 ASCII structure templates (copy-paste skeletons)
+
+When you draw the ASCII diagram (element 6 of 7), don't start from scratch — pick the one of these 4 whose shape fits, copy it, and fill it in.
+
+### When it looks like this → use this template (one-line guide)
+
+```
+What do you want to show?                → which template
+───────────────────────────────────────────────────────────
+a change · an improvement · "was X, now Y" → 1. before/after
+top→down · branching · a list of parts     → 2. tree
+hold option A and B against each other     → 3. side-by-side
+how parts connect / flow into each other   → 4. structure sketch
+```
+
+### Template 1 — before/after
+
+For showing a change or improvement. The arrow `→` splits "before → after".
+
+```
+before                 after
+───────────           ───────────
+ ▢ slow step     →      ▢ fast step
+ ▢ manual         →      ▢ automatic
+```
+
+### Template 2 — tree
+
+For showing hierarchy or decomposition. Branch with `├─` and `└─` (only the last branch uses `└─`).
+
+```
+root (whole)
+├─ branch A
+│  ├─ leaf A1
+│  └─ leaf A2
+└─ branch B
+   └─ leaf B1
+```
+
+### Template 3 — side-by-side
+
+For comparing two options head-to-head. The `│` splits the middle.
+
+```
+   option A          │      option B
+ ─────────────      │    ─────────────
+  + pro 1            │     + pro 1
+  − con 1            │     − con 1
+```
+
+### Template 4 — structure sketch
+
+For showing how parts connect and flow. Connect boxes `[ ]` with arrows `──▶`.
+
+```
+[ input ] ──▶ [ process ] ──▶ [ output ]
+               │
+               └──▶ [ side branch ]
+```
+
+---
+
+## Layperson gold examples (jargon → everyday words)
+
+A jargon-heavy sentence rewritten so a layperson gets it — same spirit as the HEXA-WEAVE/NANOBOT golds.
+
+### Example 1 — API / cache
+
+```
+🗂️ Cache — "keep what you use a lot within arm's reach"
+
+❌ BEFORE (jargon):
+   "The API gateway bypasses origin on a cache hit, lowering p99 latency."
+
+✅ AFTER (everyday):
+   "We jot down the answers we look up most and keep them close,
+    so we don't have to fetch them from far away every time —
+    almost always a fast reply."
+```
+
+Analogy: putting the salt you use daily next to the stove, not deep in a drawer.
+
+### Example 2 — math symbols / statistics
+
+```
+📊 Variance — "how spread out the numbers are"
+
+❌ BEFORE (math symbols):
+   "A larger σ² = E[(X−μ)²] means greater dispersion of the sample."
+
+✅ AFTER (everyday):
+   "One number for how far the measurements sit from the average.
+    Bigger = all over the place; smaller = tightly grouped."
+```
+
+Analogy: arrows packed tight on the bullseye (small) vs scattered all over (big).
+
+---
+
+## Layperson-translation checklist
+
+A quick 5-step pass before you write an explanation:
+
+```
+[ ] 1. Detect jargon — any acronyms (API·CPU) · math symbols (σ·∑·∂) · code/product names?
+[ ] 2. Swap for everyday words — replaced each term with a plain word or analogy? (if you can't, expand it on first use)
+[ ] 3. Apply the 7 elements — does every non-trivial concept carry all 7 (icon…compare)?
+[ ] 4. ASCII ≥1 — where shape matters, added a diagram using one of the 4 templates above?
+[ ] 5. Re-read — would someone seeing this field for the first time get it in one pass?
+```
+
+---
+
 ## Measurement axes
 
 | Axis | Target | Method |
@@ -93,6 +206,7 @@ ASCII:
 | canonical-5-element-pattern-adoption | ≥ 0.50 | 5-element presence on non-trivial explanations (legacy axis) |
 | canonical-7-element-pattern-adoption | ≥ 0.50 | 7-element presence (5 + ASCII + compare) on non-trivial explanations |
 | ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII diagram per non-trivial explanation |
+| ascii-structure-template-usage | ≥ 0.50 | Layperson explanations where shape matters use one of the 4 templates (before-after/tree/side-by-side/structure) |
 
 ---
 

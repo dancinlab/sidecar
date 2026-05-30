@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🎓 easy-auto 0.3.0: 일반인(layperson) + ASCII 구조 강화 (auto-inject styles 트리, 5개 언어)
+
+🎓 auto-inject 되는 `easy` 스타일 레퍼런스(`hooks/easy-auto/styles/easy.<lang>.md`, 5개 언어)를 일반인 친화 + ASCII-rich exemplar 로 강화. 기존 7-요소 패턴 · HEXA-WEAVE/NANOBOT gold · 측정 축 · 반례는 전부 보존(additive only), 훅 로직(`_easy_auto.hexa`·`hooks.json`)은 무변경 — 순수 콘텐츠 + 버전 범프.
+
+- **ASCII 구조 4종 템플릿** — 복붙용 뼈대 4개(① 전후 before/after · ② 트리 tree · ③ 나란히 side-by-side · ④ 구조 스케치 structure sketch) + "이 모양일 때 → 이 템플릿" 1줄 가이드.
+- **일반인 gold 예시** — 전문용어→생활어 BEFORE/AFTER 2종(API/캐시 · 분산/통계), HEXA gold 와 같은 정신.
+- **일반인-번역 체크리스트** — 5단계(전문용어 탐지 → 생활어 치환 → 7요소 → ASCII ≥1 → 다시 읽기).
+- **측정 축** — `ascii-structure-template-usage` 행 추가(모양이 중요한 일반인 설명이 4종 템플릿 중 하나 사용, 목표 ≥ 0.50).
+- **5개 언어 동기화** — ko/en 본문 완전 작성, ja/zh/ru 는 구조 미러(ASCII 도식은 언어중립, prose 헤더/라벨만 번역).
+- **버전 lockstep (g22)** — easy-auto `plugin.json`·`marketplace.json` 0.2.0→**0.3.0**. (자매 `easy` 스킬 트리는 미러 PR 에서 동일 강화 + 0.1.2→0.1.3.)
+
 ## 2026-05-30 — 🐛 pool-route 0.18.0: routed `hexa <verb>` source-root fix — HEXA_LANG/HEXA_MODULE_LOADER → hexa-lang checkout (`$PWD` 오염 봉합)
 
 라우팅된 `hexa <verb>` 의 source root 가 동기화된 sidecar workdir (`$PWD`) 로 잘못 가리키던 버그 수정. `_pool_route.hexa` 의 0.5.5 env passthrough 가 `HEXA_LANG`/`HEXA_MODULE_LOADER` 를 `$PWD` 로 default 했고, 0.6.x `hexa_subverb` whitelist 는 `kick`/`drill`/`loop`/`cc` 만 checkout 으로 redirect. 나머지 verb (`atlas`·`verify`·`run <stdlib script>`·…) 은 `compiler/`/stdlib root 가 없는 동기화 workdir 를 source root 로 잡아 `absorbed verb '...' script not found` 유발 (`$PWD/build/hexa_module_loader` 는 거기 없고, `$HOME/core/hexa-lang/build/hexa_module_loader` 는 모든 호스트에 존재).

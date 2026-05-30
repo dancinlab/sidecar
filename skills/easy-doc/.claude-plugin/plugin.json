@@ -1,7 +1,7 @@
 {
   "name": "easy-doc",
-  "description": "Easy-doc authoring — turn a technical file (or a topic) into a layperson-friendly sibling `<name>.easy.md`. Applies the canonical easy reference (hooks/easy-auto/styles/easy.<lang>.md): the 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare), the 4 ASCII structure templates (before-after · tree · side-by-side · structure sketch), and the jargon→everyday translation checklist. Skill (natural-language trigger) + /easy-doc command. Ships one worked sample. 0.1.0 — initial: reads input → applies the easy contract per document shape → writes the sibling `.easy.md`. Authoring-only (markdown output); points at easy-auto/styles as the source-of-truth (no reference duplication).",
-  "version": "0.1.0",
+  "description": "Easy-doc authoring — turn a technical file (or a topic) into a layperson-friendly sibling `<name>.easy.md`. Applies the canonical easy reference (hooks/easy-auto/styles/easy.<lang>.md): the 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare), the 4 ASCII structure templates (before-after · tree · side-by-side · structure sketch), and the jargon→everyday translation checklist. Skill (natural-language trigger) + /easy-doc command. Ships one worked sample. 0.2.0 — wraps the `hexa easy` builtin: `hexa easy scaffold` emits the deterministic skeleton, the LLM fills the creative slots, `hexa easy lint` is the final deterministic quality gate (graceful manual fallback when the toolchain is unsynced). 0.1.0 — initial: reads input → applies the easy contract per document shape → writes the sibling `.easy.md`. Authoring-only (markdown output); points at easy-auto/styles as the source-of-truth (no reference duplication).",
+  "version": "0.2.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

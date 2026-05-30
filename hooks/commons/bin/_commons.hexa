@@ -99,7 +99,7 @@ fn _roster_snapshot() -> string {
         i = i + 1
     }
     if len(parts) == 0 { return "" }
-    return "# pool (~/.pool/pool.json · `pool on <host> <cmd>` · g9): " + parts.join(" · ") + "\n\n"
+    return "# pool (~/.pool/pool.json · `sidecar pool on <host> <cmd>` · g9): " + parts.join(" · ") + "\n\n"
 }
 
 // Append a live cwd `./pods.json` snapshot to the injected context — one

@@ -6,6 +6,18 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🏊 pool 0.3.0: 독립 `pool` CLI 은퇴 → sidecar 소유 (Route A · faithful relocate)
+
+독립 repo(`~/core/pool`)의 `pool` CLI(호스트 로스터 + 원격 실행)를 sidecar 소유로 이관했다. 1404줄 `pool.hexa`(13개 verb)를 sh로 재작성하지 않고 **그대로** 플러그인 안으로 옮기고(`skills/pool/bin/pool.hexa`), install.hexa가 네이티브 바이너리로 빌드·설치하게 배선했다. 로스터 SSOT `~/.pool/pool.json` 은 그대로 — `pool-route` 훅은 **무수정**.
+
+- 소스 relocate: `~/core/pool/bin/pool.hexa`(HEAD 0.8.10, 13 verb: list·add·on·status·health·route·bg·refresh·init·rm·clean·desc·help) → `skills/pool/bin/pool.hexa` (faithful, 무재작성)
+- 빌드 배선 (@L7 WIRED): `install.hexa` 에 `_build_pool()` 추가 — 마켓플레이스 클론의 `skills/pool/bin/pool.hexa` 를 `~/.hx/bin/pool.bin`(네이티브 arm64/x86)으로 빌드 + `~/.hx/bin/pool` 쉼 설치. best-effort(toolchain 부재/빌드실패 시 기존 바이너리 유지, sync 중단 안 함)
+- 정규 엔트리: `bin/sidecar` 에 `pool)` verb 추가 — `sidecar pool <args>` 가 canonical. 바이너리(`pool.bin`) 우선 exec, 없으면 소스 build-from-source 폴백
+- deprecation shim: bare `pool`(PATH)은 계속 동작 — stderr 한 줄 안내(`use 'sidecar pool'`) 후 동일 바이너리로 forward. 7개 caller 무중단
+- caller migrate(@L6, 실제 호출만): `skills/lab/bin/system_harness.hexa` 2곳 `pool on` → `sidecar pool on`. `_commons.hexa` 컨텍스트 힌트도 canonical 로. 나머지는 prose라 유지(shim 이 커버)
+- profiles 티어 `core`(보편 인프라) — 기존 분류 유지
+- `~/core/pool` = ARCHIVE only(README 안내 + 설치 중단). 하드 삭제 없음
+
 ## 2026-05-30 — 🔒 code-tier-guard 0.1.0: g78 강제 (로컬 clone 편집 차단)
 
 commons @D g78(code-tier)를 **권유 → 강제**로 올린 PreToolUse 훅. `~/.sidecar/codetier.conf`에 4번째 필드 `localpath`를 선언한 tier에 대해, 그 로컬 clone 하위로 향하는 Write/Edit/NotebookEdit·Bash write를 **거부하고 마운트 경로로 리다이렉트**한다. 안전레일: `.git/`·마운트경로·미등록 repo·localpath 미설정 tier는 통과(설정 전엔 inert).

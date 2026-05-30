@@ -293,8 +293,8 @@
     {
       "name": "pool",
       "source": "./skills/pool",
-      "description": "/pool <args> — wraps the `pool` CLI (host roster + remote exec — minimal, zero deps). Verbs: list · add <host> · on <host> <cmd> · status · install tailscale · rm <host>. NL trigger via skill. Pairs with commons g9 + sidecar's pool-route hook.",
-      "version": "0.2.2"
+      "description": "/pool <args> — sidecar-OWNED `pool` CLI (host roster + remote exec). Source relocated into the plugin (bin/pool.hexa); install.hexa builds ~/.hx/bin/pool.bin + installs the shim. Canonical entry `sidecar pool <args>`; bare `pool` is a kept-working deprecation shim. Verbs: list · add <host> · on <host> <cmd> · status · health · route · bg · refresh · init · rm · clean · desc. Roster SSOT ~/.pool/pool.json (pool-route hook untouched). NL trigger via skill. Pairs with commons g9.",
+      "version": "0.3.0"
     },
     {
       "name": "cloud",

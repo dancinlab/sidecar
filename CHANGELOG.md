@@ -6,6 +6,19 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🔄 sign-guard 0.2.0 + git-guard 0.8.0: SILENT ff-only stale-base auto-sync (proactive + reactive)
+
+🔄 stale-base 사고를 **조용히 자동 해소**한다. 동기(2026-05-30): 로컬 repo가 origin/main보다 28커밋 뒤처진 상태에서 에이전트가 STALE `project.tape`를 편집 — 그대로 랜딩했으면 origin governance 작업을 **되돌릴 뻔**했다. 기존 git-guard layer-5는 "로컬 main가 origin보다 N커밋 뒤처짐"이라고 *경고만* 했고, 사람/에이전트가 직접 `git pull --ff-only`를 기억해야 했는데 — 바로 그게 빠졌다. 그래서 이제 **조용히 자동 fast-forward** 한다(하드 블록 아님).
+
+공통 헬퍼 `safe_ff_sync(repo[, path])` 두 곳에 배선:
+- **PROACTIVE (git-guard SessionStart, 0.8.0)** — 세션 시작 시 워킹트리가 깨끗하고 origin/<default>보다 엄격히 뒤처졌으면 `git fetch && git merge --ff-only`로 **백그라운드 정렬**. 성공 시 **아무것도 출력 안 함**(기존 경고 제거). 진짜 분기(로컬 커밋 ahead AND behind)일 때만 **딱 한 줄** 경고 + 진행(NEVER deny).
+- **REACTIVE (sign-guard PreToolUse, 0.2.0)** — gated SSOT 파일(commons.tape · project.tape) 편집을 **허용하기 직전**, 그 파일만 origin으로 투명하게 ff(`git checkout origin/<default> -- <file>`) → 에이전트는 FRESH base 위에서 편집. synced/skipped는 **무음**, dirty/diverged 경로는 **딱 한 줄** 경고 + 그래도 편집 허용(하드 블록 아님).
+
+**SAFETY RAILS** (양쪽 공통): ff-only(머지 커밋/rebase/`--force` **절대 안 함**) · clean-only(트리/경로가 깨끗할 때만) · **skip-on-doubt**(origin 없음 · detached HEAD · mid-rebase/merge(`.git/rebase-*`·`MERGE_HEAD`) · untracked · 분기 → 전부 SKIP) · FETCH_HEAD가 ~5분보다 오래됐을 때만 fetch(fetch-storm 방지). 잘못된 sync로 로컬 작업을 잃는 것보다 놓친 sync가 훨씬 싸다 — 애매하면 SKIP. happy path는 **zero-surface**.
+
+- **테스트** — disposable git repo 9-시나리오 PASS: clean+behind 무음 ff · diverged 한 줄+무force · dirty 트리 skip · no-origin skip · signed-stale-clean 파일 ff · signed-dirty 한 줄+로컬보존+no-deny · signed-no-origin skip · unsigned 여전히 DENY · detached skip.
+- **버전 lockstep (g22)** — git-guard `plugin.json`·`marketplace.json` 0.7.0→**0.8.0**; sign-guard 0.1.7→**0.2.0**.
+
 ## 2026-05-30 — 🎓 easy-auto 0.3.0: 일반인(layperson) + ASCII 구조 강화 (auto-inject styles 트리, 5개 언어)
 
 🎓 auto-inject 되는 `easy` 스타일 레퍼런스(`hooks/easy-auto/styles/easy.<lang>.md`, 5개 언어)를 일반인 친화 + ASCII-rich exemplar 로 강화. 기존 7-요소 패턴 · HEXA-WEAVE/NANOBOT gold · 측정 축 · 반례는 전부 보존(additive only), 훅 로직(`_easy_auto.hexa`·`hooks.json`)은 무변경 — 순수 콘텐츠 + 버전 범프.

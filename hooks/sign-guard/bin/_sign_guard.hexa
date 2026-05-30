@@ -34,6 +34,20 @@
 //  hook-parser-evading obfuscation.)
 //
 // To gate another file: add one `["key", "/suffix"]` row to GATED and reship.
+//
+// 0.2.0 — REACTIVE ff-only stale-base auto-sync. Motivation (2026-05-30): a
+// local repo sat 28 commits behind origin/main; an agent edited a STALE
+// `project.tape` whose blind landing would have REVERTED origin governance
+// work. So before ALLOWING any (signed) edit to a gated SSOT file, the hook
+// now TRANSPARENTLY fast-forwards JUST THAT FILE to origin: `_safe_ff_sync(
+// <file>)` runs `git checkout origin/<default> -- <file>` when the path is
+// clean & origin differs (FETCH_HEAD-gated `git fetch` first). The agent
+// then edits the FRESH base instead of a stale one — SILENTLY on the happy
+// path. It NEVER blocks the edit: on a dirty/diverged path it prints exactly
+// ONE warning line (the base diverged → re-check) and STILL allows the edit.
+// SAFETY RAILS (shared with git-guard's proactive layer): ff-only · no merge
+// commit / rebase / force · clean-path-only · skip-on-doubt (no origin ·
+// detached · mid-rebase/merge · untracked) · fetch only if FETCH_HEAD >5min.
 
 let TTL = 300   // s — sign-off window (keep in lockstep with `bin/sidecar` sign)
 
@@ -53,6 +67,95 @@ fn _read_stdin() -> string {
 
 fn _allow() {
     exit(0)
+}
+
+// ── safe_ff_sync (REACTIVE single-file) — ff-only · clean-only · no-force ──
+//
+// Transparently fast-forward JUST <abs> to origin/<default> before the agent
+// edits it, so a gated SSOT edit never lands on a stale base. One shell
+// round-trip, rooted at the file's own directory (`git -C <dir>`); encodes
+// every safety rail; prints exactly one token:
+//   synced   — `git checkout origin/<def> -- <file>` refreshed the clean file
+//   skipped  — nothing to do OR unsafe (skip-on-doubt): no origin · detached
+//              · mid-rebase/merge · already-identical · file-not-tracked
+//   conflict — the path is DIRTY (local edits) AND origin differs → don't
+//              clobber; caller still ALLOWS the edit + prints one warning
+// NEVER force, NEVER a merge commit, NEVER touch any other path. FETCH_HEAD-
+// gated fetch (>5 min) avoids a fetch-storm. Returns the LAST stdout token.
+fn _safe_ff_sync_file(abs: string) -> string {
+    // shell-quote the path (single-quote, escaping embedded quotes).
+    let q = _shq(abs)
+    let body = "set -u; FSM=5; f=" + q + "; "
+        + "d=$(dirname \"$f\"); "
+        + "git -C \"$d\" rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo skipped; exit 0; }; "
+        + "top=$(git -C \"$d\" rev-parse --show-toplevel 2>/dev/null) || { echo skipped; exit 0; }; "
+        + "gd=$(git -C \"$top\" rev-parse --git-dir 2>/dev/null) || { echo skipped; exit 0; }; "
+        + "case \"$gd\" in /*) :;; *) gd=\"$top/$gd\";; esac; "
+        + "git -C \"$top\" remote get-url origin >/dev/null 2>&1 || { echo skipped; exit 0; }; "
+        + "br=$(git -C \"$top\" symbolic-ref -q --short HEAD 2>/dev/null) || { echo skipped; exit 0; }; "
+        + "[ -n \"$br\" ] || { echo skipped; exit 0; }; "
+        + "[ -e \"$gd/MERGE_HEAD\" ] && { echo skipped; exit 0; }; "
+        + "[ -e \"$gd/rebase-merge\" ] && { echo skipped; exit 0; }; "
+        + "[ -e \"$gd/rebase-apply\" ] && { echo skipped; exit 0; }; "
+        + "rel=$(git -C \"$top\" ls-files --full-name -- \"$f\" 2>/dev/null | head -n1); "
+        + "[ -n \"$rel\" ] || { echo skipped; exit 0; }; "
+        + "def=$(git -C \"$top\" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##'); "
+        + "[ -n \"$def\" ] || def=main; ref=\"origin/$def\"; "
+        + "if [ ! -f \"$gd/FETCH_HEAD\" ] || [ -n \"$(find \"$gd/FETCH_HEAD\" -mmin +$FSM 2>/dev/null)\" ]; then git -C \"$top\" fetch origin \"$def\" >/dev/null 2>&1 || true; fi; "
+        + "git -C \"$top\" rev-parse --verify -q \"$ref\" >/dev/null 2>&1 || { echo skipped; exit 0; }; "
+        + "cur=$(git -C \"$top\" rev-parse -q --verify \"HEAD:$rel\" 2>/dev/null || echo -); "
+        + "rem=$(git -C \"$top\" rev-parse -q --verify \"$ref:$rel\" 2>/dev/null || echo -); "
+        + "[ \"$cur\" = \"$rem\" ] && { echo skipped; exit 0; }; "
+        + "if [ -n \"$(git -C \"$top\" status --porcelain -- \"$rel\" 2>/dev/null)\" ]; then echo conflict; exit 0; fi; "
+        + "git -C \"$top\" checkout \"$ref\" -- \"$rel\" >/dev/null 2>&1 && { echo synced; exit 0; }; "
+        + "echo conflict"
+    let mut out = ""
+    try { out = to_string(exec(body)) } catch e { return "skipped" }
+    let lines = out.split("\n")
+    let mut i = len(lines) - 1
+    while i >= 0 {
+        let t = lines[i].trim()
+        if t == "synced" || t == "skipped" || t == "conflict" { return t }
+        i = i - 1
+    }
+    return "skipped"
+}
+
+// single-quote a string for safe shell embedding: ' → '\''
+fn _shq(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("'")
+    while i < n {
+        let c = s[i]
+        if c == "'" { parts.push("'\\''") } else { parts.push(c) }
+        i = i + 1
+    }
+    parts.push("'")
+    return parts.join("")
+}
+
+// PreToolUse non-blocking advisory (allow-with-context) — used ONLY on the
+// reactive-sync conflict path: the gated file's base diverged so we couldn't
+// silently ff it; we still ALLOW the edit but surface one line so the agent
+// re-checks the base. NO permissionDecision → the edit proceeds.
+fn _warn_allow(text: string) {
+    let payload = "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":" + _json_escape(text) + "}}"
+    println(payload)
+    exit(0)
+}
+
+// Run the reactive ff-sync for a gated target, then hand control back to the
+// caller's allow path. synced/skipped → silent allow; conflict → one-line
+// advisory + allow. NEVER denies (the sign-token gate already passed).
+fn _ff_then_allow(abs: string) {
+    let r = _safe_ff_sync_file(abs)
+    if r == "conflict" {
+        let base = _basename(abs)
+        _warn_allow("⚠ sign-guard: `" + base + "`의 베이스가 origin과 분기(diverged) — 로컬 변경이 있어 자동 ff 동기화를 건너뜀. 편집은 그대로 진행하되, stale/diverged base 위 작업일 수 있으니 origin 기준으로 재확인하세요(`git fetch origin && git checkout origin/<branch> -- " + base + "` 또는 정렬). (non-blocking · 자동 머지/force 안 함)")
+    }
+    _allow()
 }
 
 fn _json_escape(s: string) -> string {
@@ -389,14 +492,24 @@ fn _handle_bash(payload: map, ti: map) {
     while e < len(cps) { cands.push(cps[e]); e = e + 1 }
 
     let mut k = 0
+    let mut signed_gated = ""   // a signed gated dest to ff-sync before allowing
     while k < len(cands) {
         let abs = _resolve(cwd, cands[k])
         // self-mint channel b: forging the token file via a write redirect.
         if _under_signs(abs) { _deny_forge(abs) }
         let key = _gated_key(abs)
-        if key != "" && !_signed(key) { _deny_for(abs, key) }
+        if key != "" {
+            if !_signed(key) { _deny_for(abs, key) }
+            // signed: remember it so we transparently ff its base below.
+            if signed_gated == "" { signed_gated = abs }
+        }
         k = k + 1
     }
+    // REACTIVE auto-sync: before allowing a signed write to a gated SSOT file
+    // (cp/mv/tee/redirect channel), transparently ff just that file to origin
+    // so the write lands on a fresh base. synced/skipped → silent; conflict →
+    // one advisory line + still allow. NEVER denies here (token already ok).
+    if signed_gated != "" { _ff_then_allow(signed_gated) }
     _allow()
 }
 
@@ -428,6 +541,10 @@ fn main() {
 
     let key = _gated_key(target)
     if key == "" { _allow() }
-    if _signed(key) { _allow() }
+    // REACTIVE auto-sync: token present → transparently ff just this file to
+    // origin/<default> so the Edit/Write lands on a FRESH base (the stale-base
+    // accident of 2026-05-30 can't start). synced/skipped → silent allow;
+    // conflict (dirty/diverged path) → one advisory line + still allow.
+    if _signed(key) { _ff_then_allow(target) }
     _deny_for(target, key)
 }

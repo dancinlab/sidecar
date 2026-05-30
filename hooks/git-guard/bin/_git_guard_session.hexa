@@ -1,22 +1,29 @@
-// _git_guard_session.hexa — SessionStart advisory (layer 5, UPSTREAM).
+// _git_guard_session.hexa — SessionStart PROACTIVE ff-only auto-sync (layer 5).
 //
-// Complements git-guard's PreToolUse layers (1-4): at session start, in a
-// git repo with an `origin` remote, cheaply probe — against ALREADY-fetched
-// refs, NO network — whether the local default branch trails origin's. If
-// local <default> is >= 1 commit BEHIND origin/<default>, emit a one-shot
-// advisory to realign while the tree is quiet (the shared-working-tree
-// fingerprint: a concurrent agent merged a PR to origin without this tree
-// pulling). ALSO, if `.git/FETCH_HEAD` mtime is older than FETCH_STALE_MIN
-// minutes, append a `git fetch origin` nudge (the local origin/* refs are
-// themselves likely stale, so the behind-count may understate the drift).
+// 0.8.0 — UPGRADED from advisory to SILENT auto-resolve. Motivation
+// (2026-05-30): a local repo sat 28 commits behind origin/main; an agent
+// edited a STALE `project.tape` whose blind landing would have REVERTED
+// origin governance work. The old layer-5 only *warned* ("로컬 main가
+// origin/main보다 N커밋 뒤처짐") and left the human/agent to remember to
+// `git pull --ff-only` — which is exactly what got skipped. So at session
+// start we now TRANSPARENTLY fast-forward: `safe_ff_sync()` (shared shape
+// with sign-guard's reactive guard) runs `git fetch && git merge --ff-only
+// origin/<default>` when the working tree is CLEAN and a strict ff is
+// possible. On success it is COMPLETELY SILENT (the happy path emits
+// nothing — the old warning is dropped). It surfaces EXACTLY ONE line only
+// when auto-resolve can't proceed safely (true non-ff divergence / dirty
+// conflict) so the agent re-checks before working on a stale base.
 //
-// Silent when: not a git repo · no origin remote · up-to-date · probe fails.
-// Advisory-only (additionalContext) — NEVER denies. NO network fetch in the
-// hook (s11 precondition discipline) — FETCH_HEAD mtime is the freshness
-// proxy. Sister of the PreToolUse creation advisory; mirrors the advisory
-// shape of inbox-log-lint.
-
-let FETCH_STALE_MIN = 30
+// SAFETY RAILS (safe_ff_sync, mirrored in sign-guard):
+//   • ff-only — NEVER a merge commit / rebase / `--force`.
+//   • clean-only — skip unless the whole working tree is clean.
+//   • skip-on-doubt — no origin · detached HEAD · mid-rebase/mid-merge
+//     (.git/rebase-* · .git/MERGE_HEAD) · diverged (local commits) → SKIP.
+//   • fetch only if FETCH_HEAD is older than ~5 min (no fetch-storm).
+// A missed sync is far cheaper than a bad sync that loses local work.
+//
+// Returns one of: synced (silent) · skipped (silent) · conflict (one line).
+// Advisory-only on the conflict path (additionalContext) — NEVER denies.
 
 fn _read_stdin() -> string {
     return to_string(exec("cat"))
@@ -56,32 +63,48 @@ fn _emit(text: string) {
     exit(0)
 }
 
-// whitespace-split into tokens (shared shape with _git_guard.hexa).
-fn _tokens(s: string) -> array {
-    let mut out = []
-    let n = len(s)
-    let mut i = 0
-    let mut cur = ""
-    while i < n {
-        let c = s[i]
-        if c == " " || c == "\t" || c == "\n" || c == "\r" {
-            if len(cur) > 0 { out.push(cur); cur = "" }
-        } else {
-            cur = cur + c
-        }
-        i = i + 1
-    }
-    if len(cur) > 0 { out.push(cur) }
-    return out
-}
-
-// True when FETCH_HEAD exists and is older than FETCH_STALE_MIN minutes
-// (portable macOS + Linux via `find -mmin`). NO network.
-fn _fetch_head_stale() -> bool {
-    let probe = "g=$(git rev-parse --git-dir 2>/dev/null) || exit 0; [ -f \"$g/FETCH_HEAD\" ] || exit 0; find \"$g/FETCH_HEAD\" -mmin +" + to_string(FETCH_STALE_MIN) + " 2>/dev/null"
+// ── safe_ff_sync — ff-only · clean-only · no-force stale-base auto-sync ──
+//
+// PROACTIVE whole-tree form (no path): `git merge --ff-only origin/<def>`.
+// One shell round-trip encodes every safety rail; prints exactly one token:
+//   synced   — fast-forwarded the clean tree to origin/<def>
+//   skipped  — nothing to do OR unsafe (skip-on-doubt): no origin · detached
+//              · mid-rebase/merge · dirty tree · not-behind · diverged-but…
+//   conflict — strictly diverged (local commits + behind) → cannot ff
+// NEVER force, NEVER a merge commit, NEVER rebase. FETCH_HEAD-gated fetch
+// (>5 min) avoids a fetch-storm. Output is the LAST stdout line (defensive
+// against any stray fetch chatter, though fetch is silenced).
+fn _safe_ff_sync() -> string {
+    let body = "set -u; FSM=5; "
+        + "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || { echo skipped; exit 0; }; "
+        + "gd=$(git rev-parse --git-dir 2>/dev/null) || { echo skipped; exit 0; }; "
+        + "git remote get-url origin >/dev/null 2>&1 || { echo skipped; exit 0; }; "
+        + "br=$(git symbolic-ref -q --short HEAD 2>/dev/null) || { echo skipped; exit 0; }; "
+        + "[ -n \"$br\" ] || { echo skipped; exit 0; }; "
+        + "[ -e \"$gd/MERGE_HEAD\" ] && { echo skipped; exit 0; }; "
+        + "[ -e \"$gd/rebase-merge\" ] && { echo skipped; exit 0; }; "
+        + "[ -e \"$gd/rebase-apply\" ] && { echo skipped; exit 0; }; "
+        + "def=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##'); "
+        + "[ -n \"$def\" ] || def=main; ref=\"origin/$def\"; "
+        + "if [ ! -f \"$gd/FETCH_HEAD\" ] || [ -n \"$(find \"$gd/FETCH_HEAD\" -mmin +$FSM 2>/dev/null)\" ]; then git fetch origin \"$def\" >/dev/null 2>&1 || true; fi; "
+        + "git rev-parse --verify -q \"$ref\" >/dev/null 2>&1 || { echo skipped; exit 0; }; "
+        + "[ -z \"$(git status --porcelain 2>/dev/null)\" ] || { echo skipped; exit 0; }; "
+        + "set -- $(git rev-list --left-right --count \"$ref\"...HEAD 2>/dev/null); "
+        + "behind=${1:-0}; ahead=${2:-0}; "
+        + "[ \"$behind\" = 0 ] && { echo skipped; exit 0; }; "
+        + "[ \"$ahead\" != 0 ] && { echo conflict; exit 0; }; "
+        + "git merge --ff-only \"$ref\" >/dev/null 2>&1 && { echo synced; exit 0; }; "
+        + "echo conflict"
     let mut out = ""
-    try { out = to_string(exec(probe)) } catch e { return false }
-    return out.trim() != ""
+    try { out = to_string(exec(body)) } catch e { return "skipped" }
+    let lines = out.split("\n")
+    let mut i = len(lines) - 1
+    while i >= 0 {
+        let t = lines[i].trim()
+        if t == "synced" || t == "skipped" || t == "conflict" { return t }
+        i = i - 1
+    }
+    return "skipped"
 }
 
 fn main() {
@@ -89,45 +112,25 @@ fn main() {
     // pipes JSON in; consume it so the hook doesn't block on the pipe.
     let _raw = _read_stdin()
 
-    // Single read-only round-trip: confirm origin exists, resolve the
-    // remote default short name, and count local-default behind/ahead vs
-    // origin/<default> using ALREADY-fetched refs. No network.
-    //   line0: has-origin marker ("Y" / "")
-    //   line1: default short name (e.g. "main")
-    //   line2: "<behind>\t<ahead>"  (origin/<default> ... <default>)
-    let body = "{ git remote get-url origin >/dev/null 2>&1 && echo Y || echo; d=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##'); [ -n \"$d\" ] || d=main; echo \"$d\"; git rev-list --left-right --count \"origin/$d\"...\"$d\" 2>/dev/null; }"
+    // PROACTIVE auto-sync (0.8.0): try a SILENT ff-only realign first. On a
+    // clean tree strictly behind origin/<default>, this fast-forwards in the
+    // background — the stale-base accident never gets a chance to start. On
+    // success → emit nothing (happy path is zero-surface). On skip (safe
+    // no-op / skip-on-doubt) → also silent. Only a true non-ff divergence
+    // surfaces, below.
+    let r = _safe_ff_sync()
+    if r == "synced" { _allow() }     // silently fast-forwarded — done
+    if r == "skipped" { _allow() }    // nothing to do / unsafe-skip — silent
 
-    let mut out = ""
-    try { out = to_string(exec(body)) } catch e { _allow() }
-    let lines = out.split("\n")
-    if len(lines) < 3 { _allow() }
+    // r == "conflict": clean refs but a true divergence (local commits ahead
+    // AND behind) — ff is impossible and a merge/rebase would NOT be safe to
+    // do silently. Surface EXACTLY ONE line so the agent realigns by hand
+    // before working on a diverged base. NEVER auto-merge / rebase / force.
+    let def_body = "d=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's#^origin/##'); [ -n \"$d\" ] || d=main; echo \"$d\""
+    let mut def = "main"
+    try { def = to_string(exec(def_body)).trim() } catch e { def = "main" }
+    if def == "" { def = "main" }
 
-    let has_origin = lines[0].trim()
-    let def = lines[1].trim()
-    let counts = lines[2].trim()
-    if has_origin != "Y" { _allow() }      // no origin remote — silent
-    if def == "" { _allow() }
-    if counts == "" { _allow() }            // rev-list failed (no such ref) — silent
-
-    let parts = _tokens(counts)
-    if len(parts) < 2 { _allow() }
-    let mut behind = 0
-    try { behind = to_int(parts[0]) } catch e { _allow() }
-
-    let stale_age = _fetch_head_stale()
-
-    // Up-to-date AND fresh refs — nothing to surface.
-    if behind < 1 && !stale_age { _allow() }
-
-    let mut msg = ""
-    if behind >= 1 {
-        msg = "⚠ 로컬 " + def + "가 origin/" + def + "보다 " + to_string(behind) + "커밋 뒤처짐 — 공유 워킹트리에서 다른 에이전트가 origin에 머지한 정황. 트리가 조용할 때 `git fetch origin && git pull --ff-only`로 정렬한 뒤 작업/브랜치 생성을 origin/" + def + " 기준으로 하세요. "
-    }
-    if stale_age {
-        let mut lead = "⚠ "
-        if behind >= 1 { lead = "또한 " }
-        msg = msg + lead + ".git/FETCH_HEAD가 " + to_string(FETCH_STALE_MIN) + "분 이상 경과 — 로컬 origin/* 참조가 stale일 수 있으니 `git fetch origin`을 먼저 실행하세요. "
-    }
-    msg = msg + "(non-blocking · 자동 fetch 안 함)"
+    let msg = "⚠ 로컬 " + def + "가 origin/" + def + "와 분기(diverged) — 로컬 커밋이 있어 자동 fast-forward 불가. ff-only 자동동기화가 안전하게 진행되지 못했으니, 직접 `git fetch origin && git rebase origin/" + def + "` (또는 머지)로 정렬한 뒤 stale base 위에서 작업/브랜치 생성을 피하세요. (non-blocking · 자동 머지/rebase/force 안 함)"
     _emit(msg)
 }

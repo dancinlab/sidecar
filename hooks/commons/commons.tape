@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "2.0"
+  version = "2.1"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -325,5 +325,6 @@
 
 @D g78 := "code-tier — edit a remote repo over sshfs, build on its LOCAL fs" :: governance [required active]
   do   = "remote repo: edit via `sidecar mount` (sshfs) · build/measure via `sidecar mount build` (ssh)"
+  do   = "code-tier mount root = `~/mnt/<name>` · `sidecar mount add <name> <host>:<repo>`"
   do   = "make the launcher generic (any host:repo) · let the remote's local fs own the build"
   dont = "build/measure through the sshfs mountpoint (slow) · keep a local copy when a code-tier owns it"

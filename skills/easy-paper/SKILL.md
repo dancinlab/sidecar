@@ -7,7 +7,8 @@ allowed-tools: Read, Bash
 @D easy-paper := "layperson `.easy.paper.md` author — paper → friendly explainer (easy 7-element pattern)" :: skill
   do   = "`/easy-paper <slug-or-paper.md>` — read a PAPER/<slug>/ dir (PAPER.tape roster) or a paper .md, then write `<slug>.easy.paper.md` (4 sections: 평이-초록 · ASCII figure sketches · 비유 섹션 · 이 논문이 한 일)"
   do   = "apply the canonical easy reference (easy-auto/styles/easy.<lang>.md) — 7-element pattern + 4 ASCII templates + jargon→everyday translation checklist"
-  dont = "modify the source paper · duplicate the whole easy reference (point + summarize) · invent results the paper didn't measure · publish a `.easy.paper.md` that contradicts the §finding"
+  do   = "gate the finished `<slug>.easy.paper.md` through the deterministic `hexa easy lint` builtin (측정 축: jargon-ratio · ascii-presence · acronym-expansion · analogy-presence · 7-element) — report per-axis + PASS/FAIL, iterate on FAIL; manual self-check fallback when the toolchain is unsynced"
+  dont = "modify the source paper · duplicate the whole easy reference (point + summarize) · invent results the paper didn't measure · publish a `.easy.paper.md` that contradicts the §finding · self-judge the 측정 축 when `hexa easy lint` is available"
 
 # ── what it is ──────────────────────────────────────────────────────────────
 
@@ -120,3 +121,28 @@ on every paragraph first):
 ```
 
 See `samples/` for a worked example.
+
+# ── deterministic lint gate: `hexa easy lint` ────────────────────────────────
+
+The friendly *rewrite* needs an LLM, but the *scoring* is deterministic — it
+belongs to the `hexa easy` builtin (`stdlib/easy/cli.hexa`), not LLM
+self-judgement. After writing `<slug>.easy.paper.md`, run it as the final gate:
+
+```
+[ write <slug>.easy.paper.md ] ──▶ [ hexa easy lint <slug>.easy.paper.md ] ──▶ PASS │ FAIL→revise
+        LLM (creative)                  deterministic 측정 축 score
+```
+
+- `hexa easy lint <slug>.easy.paper.md` — per-axis score (jargon-ratio ·
+  ascii-presence · acronym-expansion · analogy-presence · 7-element) + PASS/FAIL
+  vs the targets. On FAIL, revisit the failing section and re-lint.
+- `hexa easy axes` — print the axes + targets.
+- **Graceful fallback** — if `hexa easy` is unavailable (toolchain not synced),
+  self-check against the translation checklist instead; the gate is advisory, so
+  this never blocks emitting the companion.
+- `hexa easy lint` is **read-only** (it scores, never mutates) — the source
+  paper and the companion are both untouched by the gate.
+
+(`hexa easy scaffold` is NOT used here — it emits the generic 7-slot skeleton,
+whereas this skill's output has four paper-specific sections. Only the `lint`
+half of the builtin applies.)

@@ -6,6 +6,22 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 🔁 pr-cycle 0.4.1: `/pr-cycle` 명령이 머지를 직접 수행 (훅 의존 제거)
+
+`/pr-cycle` 가 PR을 만들기만 하고 머지가 안 되던 버그 수정. 명령 본문은 슬래시-명령 `!`-exec로 실행되는데, 이건 **Bash-도구 PreToolUse 훅 경로를 타지 않는다** — 그래서 `pr-cycle-hook`(PreToolUse:Bash, `gh pr create` 감지 시 ` && gh pr merge …` tail 추가)이 `/pr-cycle` 의 `gh pr create` 에는 **한 번도 발화하지 않아** PR이 created-but-unmerged 로 남았다.
+
+```
+전 (0.4.0)                                  후 (0.4.1)
+─────────────────────                       ─────────────────────
+ /pr-cycle → gh pr create (!-exec)     →     /pr-cycle → gh pr create && gh pr merge
+   ▢ 훅이 merge tail 붙이길 기대        →       ▢ 명령이 직접 머지 (훅 무관)
+   ▢ !-exec는 훅 미경유 → 머지 누락 ❌   →       ▢ idempotent: 훅은 `gh pr merge` 있으면 skip
+```
+
+- `commands/pr-cycle/commands/pr-cycle.md` — `!` 블록이 `gh pr create --fill $ARGUMENTS && gh pr merge --squash --admin --delete-branch` 로 self-merge.
+- `pr-cycle-hook` 은 그대로 유지 — **에이전트가 Bash 도구로** 직접 치는 `gh pr create`(훅 경유 O)와 cross-repo/worktree cleanup 을 계속 담당. 명령 self-merge 와 충돌 없음(훅은 `gh pr merge` 포함 명령을 skip).
+- plugin.json / marketplace.json 0.4.0 → 0.4.1.
+
 ## 2026-05-31 — 🟢 install: 세션 기본 권한 모드 = `bypassPermissions` (set-if-absent)
 
 `hx install sidecar` / `sidecar sync` 가 이제 settings.json 에 `permissions.defaultMode = "bypassPermissions"` 를 기록한다 — 새 세션이 매번 bypass 모드로 시작(도구별 allow/deny 프롬프트 없음). `deny` 를 내는 가드 훅(sign-guard · git-guard · code-tier-guard · …)은 **그대로 발화·차단**하므로 가드 우회가 아니다(@D s11 무관 — 인터랙티브 프롬프트만 생략).

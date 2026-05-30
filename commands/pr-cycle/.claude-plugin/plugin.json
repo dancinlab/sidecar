@@ -1,7 +1,7 @@
 {
   "name": "pr-cycle",
-  "description": "/pr-cycle — one-shot PR cycle command. Pushes the current branch (`git push -u origin HEAD`) then `gh pr create --fill`; the `pr-cycle-hook` plugin's PreToolUse hook then auto-appends ` && gh pr merge --squash --admin --delete-branch` (+ worktree/branch cleanup when run from a linked worktree) — so one command does create → merge → clean. Refuses on main/master. Pass extra gh flags as args (e.g. --title \"...\" --body \"...\"). Command half of the pr-cycle split (the routing PreToolUse hook is the `pr-cycle-hook` plugin).",
-  "version": "0.4.0",
+  "description": "/pr-cycle — one-shot PR cycle command. Pushes the current branch (`git push -u origin HEAD`), `gh pr create --fill`, then SELF-MERGES with ` && gh pr merge --squash --admin --delete-branch` in the SAME command block — one command does create → merge. Refuses on main/master. Pass extra gh flags as args (e.g. --title \"...\" --body \"...\"). 0.4.1 — the command now appends the merge ITSELF instead of relying on the `pr-cycle-hook` PreToolUse hook: the command body executes via slash-command `!`-exec, which does NOT route through the Bash-tool PreToolUse hook, so the hook never fired for /pr-cycle and PRs were left created-but-unmerged. Self-merging fixes it and is idempotent with the hook (the hook skips any command already containing `gh pr merge`); the hook still serves agent-issued `gh pr create` Bash-tool calls + cross-repo/worktree cleanup. Command half of the pr-cycle split.",
+  "version": "0.4.1",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

@@ -1,5 +1,5 @@
 ---
-description: /pr-cycle — one-shot PR cycle. Pushes the current branch (git push -u origin HEAD) then runs gh pr create --fill; the pr-cycle PreToolUse hook auto-appends ` && gh pr merge --squash --delete-branch` (+ worktree/branch cleanup when fired from a linked worktree). Refuses on main/master. Pass extra gh flags as args (e.g. --title "..." --body "...").
+description: /pr-cycle — one-shot PR cycle. Pushes the current branch (git push -u origin HEAD), runs gh pr create --fill, then SELF-MERGES with ` && gh pr merge --squash --admin --delete-branch` IN THE SAME command block. 0.4.1 — the merge is appended by the command itself (not left to the pr-cycle PreToolUse hook): the command body runs via slash-command `!`-exec, which does NOT route through the Bash-tool PreToolUse hook, so relying on the hook left PRs created-but-unmerged; self-merging fixes that and stays idempotent (the hook skips any command already containing `gh pr merge`). Refuses on main/master. Pass extra gh flags as args (e.g. --title "..." --body "...").
 argument-hint: "[gh pr create flags, e.g. --title \"...\" --body \"...\"]"
 allowed-tools: Bash
 ---
@@ -12,6 +12,6 @@ if [ "$BR" = "main" ] || [ "$BR" = "master" ]; then
   echo "  (git switch -c feat/<slug>)"
   exit 0
 fi
-echo "▸ /pr-cycle on '$BR' — push + create (hook appends merge + cleanup)"
+echo "▸ /pr-cycle on '$BR' — push + create + self-merge"
 git push -u origin HEAD 2>&1 | tail -2
-gh pr create --fill $ARGUMENTS`
+gh pr create --fill $ARGUMENTS && gh pr merge --squash --admin --delete-branch`

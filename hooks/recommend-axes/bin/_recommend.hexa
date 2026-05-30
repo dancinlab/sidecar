@@ -1,0 +1,113 @@
+// _recommend.hexa — inject the 4-axis recommendation rubric as additionalContext.
+// Reads ${CLAUDE_PLUGIN_ROOT}/recommend.tape (the SSOT carrier) and emits its
+// body verbatim; if the read returns "" it falls back to a hardcoded body so it
+// never emits empty. Templated VERBATIM from hooks/prefs-hook/bin/_prefs.hexa
+// (same stdin-parse → event-echo → additionalContext-emit skeleton).
+//
+// Verbs:
+//   inject   hook handler — emit additionalContext (the only verb)
+//   (show)   print the rubric body to stdout (debug)
+//
+// `inject` reads the firing event from the payload's `hook_event_name` field
+// and echoes it back verbatim — the harness rejects a mismatch.
+
+fn _read_stdin() -> string {
+    return to_string(exec("cat"))
+}
+
+fn _read_file_safe(path: string) -> string {
+    let mut out = ""
+    try { out = to_string(read_file(path)) }
+    catch e { out = "" }
+    return out
+}
+
+fn _json_escape(s: string) -> string {
+    let n = len(s)
+    let mut i = 0
+    let mut parts = []
+    parts.push("\"")
+    while i < n {
+        let c = s[i]
+        if c == "\"" { parts.push("\\\"") }
+        else if c == "\\" { parts.push("\\\\") }
+        else if c == "\n" { parts.push("\\n") }
+        else if c == "\r" { parts.push("\\r") }
+        else if c == "\t" { parts.push("\\t") }
+        else {
+            let k = char_code(c, 0)
+            if k < 32 { parts.push(" ") }
+            else { parts.push(c) }
+        }
+        i = i + 1
+    }
+    parts.push("\"")
+    return parts.join("")
+}
+
+fn _shq(s: string) -> string {
+    let mut out = "'"
+    let n = len(s)
+    let mut i = 0
+    while i < n {
+        let c = s[i]
+        if c == "'" { out = out + "'\\''" }
+        else { out = out + c }
+        i = i + 1
+    }
+    return out + "'"
+}
+
+fn _event_of(payload: map) -> string {
+    if has_key(payload, "hook_event_name") { return payload["hook_event_name"] }
+    if has_key(payload, "hookEventName") { return payload["hookEventName"] }
+    return ""
+}
+
+// Hardcoded fallback body — emitted ONLY when recommend.tape cannot be read, so
+// the hook never injects an empty additionalContext. Names all four axes + the
+// "4 champions not 1 winner" rule + the box + the 전축 합의 collapse.
+fn _fallback_body() -> string {
+    return "# recommend-axes (MUST FOLLOW — hard rule, not a hint)\nWhenever you make ANY recommendation to the user, present FOUR parallel champion options — one per axis — NOT a single weighted-sum winner:\n  ① 완성도(complete) — most robust · handles edge-cases · fewest unhandled failure modes\n  ② 단순(simple)   — Occam · fewest moving parts · least new surface\n  ③ 안전(safe)     — minimal blast radius · reversible · least collateral\n  ④ 표준(std)      — fits the established pattern · least surprise to a future reader\nRender as:\n┌─ 추천 (4축) ─────────────────────────────\n│ ① 완성도 : <안> — <한 줄 근거>\n│ ② 단순   : <안> — <한 줄 근거>\n│ ③ 안전   : <안> — <한 줄 근거>\n│ ④ 표준   : <안> — <한 줄 근거>\n└──────────────────────────────────────────\nWhen all four axes converge on the SAME option, collapse to one line: `전축 합의: <안> — <한 줄 근거>`.\n"
+}
+
+fn _body() -> string {
+    let root = env_var("CLAUDE_PLUGIN_ROOT")
+    let mut tape = ""
+    if root != "" {
+        tape = _read_file_safe(root + "/recommend.tape")
+    }
+    if tape == "" {
+        // fall back to a sibling-relative read for the bare/debug path, then hardcoded.
+        tape = _read_file_safe("recommend.tape")
+    }
+    if tape == "" { return _fallback_body() }
+    return "# recommend-axes (MUST FOLLOW — hard rule, not a hint) · SSOT recommend.tape\n" + tape
+}
+
+fn main() {
+    let args = argv()
+    let mut verb = "show"
+    if len(args) > 1 { verb = args[1] }
+
+    if verb == "inject" {
+        let raw = _read_stdin()
+        let mut payload = json_parse("{}")
+        try { payload = json_parse(raw) } catch e { exit(0) }
+        let mut ev = ""
+        if type_of(payload) == "map" { ev = _event_of(payload) }
+        if ev == "" { exit(0) }
+        let body = _body()
+        println("{\"hookSpecificOutput\":{\"hookEventName\":" + _json_escape(ev) + ",\"additionalContext\":" + _json_escape(body) + "}}")
+        return
+    }
+
+    if verb == "show" {
+        print(_body())
+        return
+    }
+
+    eprintln("recommend: unknown verb '" + verb + "'")
+    eprintln("  valid: inject | show")
+    exit(1)
+}

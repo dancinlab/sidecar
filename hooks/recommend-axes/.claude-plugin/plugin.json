@@ -1,0 +1,9 @@
+{
+  "name": "recommend-axes",
+  "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects the 4-axis recommendation rubric (완성도 complete · 단순 simple · 안전 safe · 표준 std) as additionalContext from the SSOT carrier `recommend.tape` shipped in the plugin dir; re-injects every turn so the rubric never fades from context. The rule it carries: whenever the model makes ANY recommendation to the user, it must present FOUR parallel champion options — one champion per axis (① 완성도 robustness/edge-cases · ② 단순 Occam/fewest-parts · ③ 안전 minimal blast radius/reversible · ④ 표준 fits the established pattern) each with a one-line rationale, NOT a single weighted-sum winner; when all four axes converge on the same option, collapse to one '전축 합의: <안>' line. Generalizes the 4-axis lens that `/sbs auto` uses for disambiguation to EVERY recommendation the model surfaces. Implemented in hexa-lang (`_recommend.hexa inject`, via `hexa run`). NO opt-out by design.",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "hook", "session-start", "recommend", "axes", "hexa"]
+}

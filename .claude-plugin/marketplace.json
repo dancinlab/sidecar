@@ -33,6 +33,12 @@
       "version": "0.1.0"
     },
     {
+      "name": "recommend-axes",
+      "source": "./hooks/recommend-axes",
+      "description": "UserPromptSubmit + SessionStart + PreCompact + PostCompact hook — injects the 4-axis recommendation rubric (완성도 complete · 단순 simple · 안전 safe · 표준 std) as additionalContext from the SSOT carrier `recommend.tape` shipped in the plugin dir; re-injects every turn so the rubric never fades. The rule: whenever the model makes ANY recommendation, it presents FOUR parallel champion options — one per axis (① 완성도 robustness/edge-cases · ② 단순 Occam/fewest-parts · ③ 안전 minimal blast radius/reversible · ④ 표준 fits the established pattern), each with a one-line rationale, NOT a single weighted-sum winner; when all four axes converge it collapses to one '전축 합의: <안>' line. Generalizes the 4-axis lens `/sbs auto` uses for disambiguation to EVERY recommendation surfaced. hexa-lang (`_recommend.hexa inject`, via `hexa run`). NO opt-out by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "hexa-lsp",
       "source": "./hooks/hexa-lsp",
       "description": "Wire the hexa-lang LSP server (`hexa lsp`) for `.hexa` files. LSP config in plugin-root `.lsp.json` (canonical Claude Code filename, dot-prefixed). Spawns via `sh -c` so cwd = `$HOME/.hx/packages/hexa-lang` before `exec hexa lsp` (upstream resolves `self/lsp.hexa` relative to cwd — fixes /doctor 'source file not found' crash trail). Minimal: only `.hexa` claimed.",

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; exec \"$H\" run \"$@\"' _ ${CLAUDE_PLUGIN_ROOT}/bin/_recommend.hexa inject" } ] }
+    ],
+    "SessionStart": [
+      { "hooks": [ { "type": "command", "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; exec \"$H\" run \"$@\"' _ ${CLAUDE_PLUGIN_ROOT}/bin/_recommend.hexa inject" } ] }
+    ],
+    "PreCompact": [
+      { "hooks": [ { "type": "command", "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; exec \"$H\" run \"$@\"' _ ${CLAUDE_PLUGIN_ROOT}/bin/_recommend.hexa inject" } ] }
+    ],
+    "PostCompact": [
+      { "hooks": [ { "type": "command", "command": "sh -c 'H=\"$HEXA\"; [ -x \"$H\" ] || H=\"$HOME/.hx/bin/hexa\"; [ -x \"$H\" ] || H=$(command -v hexa) || exit 0; exec \"$H\" run \"$@\"' _ ${CLAUDE_PLUGIN_ROOT}/bin/_recommend.hexa inject" } ] }
+    ]
+  }
+}

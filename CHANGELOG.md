@@ -15,6 +15,7 @@ For the full audit trail, see `git log`.
 - `mount up` 은 유령(half-dead) 마운트를 자동 정리(`umount -f` → `diskutil unmount force`) 후 sshfs 재마운트
 - `mount build` 는 `ssh <host> "cd ~/<dir> && <cmd>"` — 마운트 경유 빌드(느림)를 피하는 측정 가드
 - 이전 임시 헬퍼 `~/bin/mini-hexa` 는 thin wrapper로 강등
+- 운영원칙을 commons에 등록 — **@D g78** (code-tier: 원격 repo sshfs 편집 + 로컬 FS 빌드). commons `0.20.0→0.21.0` · @V `1.9→2.0`
 
 ## 2026-05-30 — 🔌 easy-paper 0.2.0: `hexa easy lint` 결정적 품질 게이트 wrap
 

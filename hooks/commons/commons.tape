@@ -1,5 +1,5 @@
 @V := "tape" :: spec [active]
-  version = "1.9"
+  version = "2.0"
 
 @D g0 := "Occam's razor — simplest sufficient path" :: governance [required active]
   do   = "prefer the simplest explanation / solution that fits — fewest assumptions · fewest moving parts"
@@ -322,3 +322,8 @@
   do   = "a 401 on a present key → align/rotate the existing key · do not ask the user to re-mint"
   dont = "tell the user to register/login a credential that already exists in `secret list`"
   dont = "trust one key name without checking aliases · re-mint when a valid key already exists"
+
+@D g78 := "code-tier — edit a remote repo over sshfs, build on its LOCAL fs" :: governance [required active]
+  do   = "remote repo: edit via `sidecar mount` (sshfs) · build/measure via `sidecar mount build` (ssh)"
+  do   = "make the launcher generic (any host:repo) · let the remote's local fs own the build"
+  dont = "build/measure through the sshfs mountpoint (slow) · keep a local copy when a code-tier owns it"

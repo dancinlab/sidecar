@@ -1,0 +1,9 @@
+{
+  "name": "easy-paper",
+  "description": "/easy-paper <slug-or-paper.md> — authors a layperson `.easy.paper.md` companion of a paper. Reads a PAPER/<slug>/ dir (per PAPER.tape roster) or a given paper .md, then produces `<slug>.easy.paper.md` with FOUR paper-specific sections: (1) 평이-초록 plain-language abstract, (2) ASCII figure sketches (the easy 4-template set), (3) 비유 섹션 analogy-driven explanation of the method/finding, (4) \"이 논문이 한 일\" one-paragraph what-it-did summary — all under the easy 7-element pattern. Source-of-truth = easy-auto/styles/easy.<lang>.md (point + summarize, not duplicated). Sidecar to the `paper` + `easy` plugins; reads only, never modifies the source paper. Triggers — \"/easy-paper\", \"쉬운 논문 만들어\", \"논문 쉽게\", \"easy paper\", \"논문 일반인용\".",
+  "version": "0.1.0",
+  "author": { "name": "dancinlab" },
+  "repository": "https://github.com/dancinlab/sidecar",
+  "license": "MIT",
+  "keywords": ["claude-code", "skill", "command", "paper", "easy", "layperson", "explainer"]
+}

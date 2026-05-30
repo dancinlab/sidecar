@@ -15,12 +15,13 @@
 #   sidecar paths       Show / add / remove path prefixes in the LOCAL-EXECUTION WHITELIST (~/.sidecar/local-paths). pool-route forces any Bash cmd whose argv contains a `/`-prefix matching a registered prefix to run LOCAL (skip pool routing). Sub-forms: `paths` = list · `paths add` = register cwd · `paths add <dir>` = register an absolute-resolved dir · `paths rm <prefix>` = remove. add/rm are SIGN-GATED (key `paths`: `! sidecar sign paths` first) since the list overrides pool-route. Seeded on first use with sidecar's own cache + repo paths.
 #   sidecar reap        Reap stale `hexa-lsp` servers (idle > 2h) — fork-storm hygiene. Dry-run by default; `reap --kill` terminates them. Never touches claude (@D s9) or active hexa runs.
 #   sidecar handoff     Cross-project handoff registry (~/.sidecar/handoff/handoff.jsonl) — the single SSOT for cross-repo gap/patch/bug/RFC handoffs (commons g11·g36·g48·g59·g60; retires the per-repo INBOX domain). Sub-forms: `handoff add <repo> <text...>` = append an open entry · `handoff ls [<repo>]` = table (filter by repo) · `handoff done <id>` = flip status → done · `handoff` = counts summary. JSONL store, repo-external, portable via $HOME.
+#   sidecar mount       Code-tier sshfs manager — edit a remote repo locally, build on the remote's LOCAL fs. Config ~/.sidecar/codetier.conf. Sub-forms: `mount` = list+status · `mount add <name> <host>:<dir> [<mnt>]` · `mount rm <name>` · `mount up [name]` · `mount down [name]` (alias `sidecar unmount`) · `mount build <name> <cmd...>` = run on remote via ssh (mount-path build = slow). Generic: any host:repo, not project-bound.
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,18p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,19p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Mirror plugin commands to ~/.claude/commands/ so they're bare-invocable
@@ -160,6 +161,109 @@ TAPE
       fi
     fi
     echo "sidecar: edit project.tape to fill in @I and @D blocks"
+    ;;
+  mount|unmount|umount)
+    # CODE-TIER mount manager — edit a remote repo over sshfs on THIS
+    # workstation while builds/measurements run on the remote's LOCAL fs
+    # (mount-path build = slow, so `mount build` routes over ssh). Generic:
+    # any host:repo, not tied to one project. Config = ~/.sidecar/codetier.conf
+    # (line-based `name|host:remote_dir|mountpoint`; `#`/blank tolerated).
+    CT_CONF="$HOME/.sidecar/codetier.conf"
+    mkdir -p "$HOME/.sidecar"
+    [ -e "$CT_CONF" ] || : > "$CT_CONF"
+    CT_OPTS="reconnect,defer_permissions,noappledouble,ServerAliveInterval=15,ServerAliveCountMax=3"
+    ct_lookup() { # $1=name → echoes "host:remote_dir|mountpoint"
+      while IFS= read -r line || [ -n "$line" ]; do
+        case "$line" in ""|\#*) continue ;; esac
+        n=${line%%|*}; rest=${line#*|}
+        [ "$n" = "$1" ] && { printf '%s\n' "$rest"; return 0; }
+      done < "$CT_CONF"
+      return 1
+    }
+    ct_is_mounted() { mount | grep -q " on $1 (macfuse"; }  # $1=mountpoint
+    ct_up() { # $1=name $2=src(host:dir) $3=mnt
+      if ct_is_mounted "$3"; then echo "✅ $1: already mounted ($3)"; return 0; fi
+      mkdir -p "$3"
+      umount -f "$3" 2>/dev/null || true
+      diskutil unmount force "$3" 2>/dev/null || true   # clear ghost mount
+      sshfs "$2" "$3" -o "$CT_OPTS,volname=$1" || { echo "❌ $1: sshfs failed" >&2; return 1; }
+      sleep 1
+      ct_is_mounted "$3" && echo "✅ $1: mounted → $3" || { echo "❌ $1: not mounted after sshfs" >&2; return 1; }
+    }
+    ct_down() { # $1=mnt
+      umount "$1" 2>/dev/null || diskutil unmount force "$1" 2>/dev/null || umount -f "$1" 2>/dev/null || true
+      ct_is_mounted "$1" && { echo "❌ still mounted: $1" >&2; return 1; } || echo "✅ unmounted: $1"
+    }
+    # `unmount`/`umount` are shorthand for `mount down`
+    if [ "$VERB" != "mount" ]; then set -- down "$@"; fi
+    SUB="${1:-list}"; [ $# -gt 0 ] && shift
+    case "$SUB" in
+      ""|list|status)
+        n=0
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in ""|\#*) continue ;; esac
+          name=${line%%|*}; rest=${line#*|}; src=${rest%%|*}; mnt=${rest#*|}
+          if ct_is_mounted "$mnt"; then st="✅ mounted"; else st="·  down"; fi
+          printf '%-14s %-28s %-22s %s\n' "$name" "$src" "$mnt" "$st"
+          n=$((n+1))
+        done < "$CT_CONF"
+        if [ "$n" -eq 0 ]; then
+          echo "sidecar mount: no code-tiers configured — add one:"
+          echo "  sidecar mount add <name> <host>:<remote_dir> [<mountpoint>]"
+        fi
+        ;;
+      add)
+        NAME="${1:-}"; SRC="${2:-}"; MNT="${3:-$HOME/mnt/$NAME}"
+        [ -n "$NAME" ] && [ -n "$SRC" ] || { echo "usage: sidecar mount add <name> <host>:<remote_dir> [<mountpoint>]" >&2; exit 2; }
+        case "$SRC" in *:*) : ;; *) echo "sidecar mount: <src> must be host:remote_dir" >&2; exit 2 ;; esac
+        if ct_lookup "$NAME" >/dev/null; then echo "sidecar mount: '$NAME' already configured (rm first)" >&2; exit 1; fi
+        printf '%s|%s|%s\n' "$NAME" "$SRC" "$MNT" >> "$CT_CONF"
+        echo "sidecar mount: added '$NAME' → $SRC at $MNT"
+        echo "  bring up:  sidecar mount up $NAME"
+        ;;
+      rm|remove)
+        NAME="${1:-}"; [ -n "$NAME" ] || { echo "usage: sidecar mount rm <name>" >&2; exit 2; }
+        tmp="${CT_CONF}.tmp.$$"; : > "$tmp"
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in ""|\#*) printf '%s\n' "$line" >> "$tmp"; continue ;; esac
+          [ "${line%%|*}" = "$NAME" ] || printf '%s\n' "$line" >> "$tmp"
+        done < "$CT_CONF"
+        mv -f "$tmp" "$CT_CONF"; echo "sidecar mount: removed '$NAME' (mountpoint left as-is)"
+        ;;
+      up)
+        TARGET="${1:-}"; rc=0
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in ""|\#*) continue ;; esac
+          name=${line%%|*}; rest=${line#*|}; src=${rest%%|*}; mnt=${rest#*|}
+          [ -n "$TARGET" ] && [ "$TARGET" != "$name" ] && continue
+          ct_up "$name" "$src" "$mnt" || rc=1
+        done < "$CT_CONF"
+        exit $rc
+        ;;
+      down)
+        TARGET="${1:-}"; rc=0
+        while IFS= read -r line || [ -n "$line" ]; do
+          case "$line" in ""|\#*) continue ;; esac
+          name=${line%%|*}; rest=${line#*|}; mnt=${rest#*|}
+          [ -n "$TARGET" ] && [ "$TARGET" != "$name" ] && continue
+          ct_down "$mnt" || rc=1
+        done < "$CT_CONF"
+        exit $rc
+        ;;
+      build)
+        NAME="${1:-}"; [ -n "$NAME" ] || { echo "usage: sidecar mount build <name> <cmd...>" >&2; exit 2; }
+        shift
+        REST=$(ct_lookup "$NAME") || { echo "sidecar mount: unknown tier '$NAME'" >&2; exit 1; }
+        SRC=${REST%%|*}; HOST=${SRC%%:*}; RDIR=${SRC#*:}
+        [ $# -gt 0 ] || { echo "usage: sidecar mount build <name> <cmd...>" >&2; exit 2; }
+        exec ssh "$HOST" "cd ~/$RDIR && $*"
+        ;;
+      *)
+        echo "sidecar mount: unknown subcommand '$SUB'" >&2
+        echo "  verbs: list | add <name> <host>:<dir> [<mnt>] | rm <name> | up [name] | down [name] | build <name> <cmd...>" >&2
+        exit 2
+        ;;
+    esac
     ;;
   sync)
     # Delegate to install.hexa — the single source of truth for local-install

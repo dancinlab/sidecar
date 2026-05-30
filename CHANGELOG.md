@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🪟 sidecar `mount`: 범용 code-tier sshfs 런처
+
+원격 호스트에 사는 repo를 이 워크스테이션에서 sshfs로 편집하고, 빌드·측정은 원격의 로컬 FS에서 돌리는 "code-tier"를 sidecar 1급 verb로 구현했다. 특정 프로젝트(hexa-lang)에 묶이지 않은 범용 기능 — 임의 `host:repo`에 적용된다.
+
+- `sidecar mount` (= list+status) · `mount add <name> <host>:<dir> [<mnt>]` · `mount rm <name>` · `mount up [name]` · `mount down [name]` (= `sidecar unmount`) · `mount build <name> <cmd...>`
+- 설정 = `~/.sidecar/codetier.conf` (`name|host:dir|mountpoint`)
+- `mount up` 은 유령(half-dead) 마운트를 자동 정리(`umount -f` → `diskutil unmount force`) 후 sshfs 재마운트
+- `mount build` 는 `ssh <host> "cd ~/<dir> && <cmd>"` — 마운트 경유 빌드(느림)를 피하는 측정 가드
+- 이전 임시 헬퍼 `~/bin/mini-hexa` 는 thin wrapper로 강등
+- 운영원칙을 commons에 등록 — **@D g78** (code-tier: 원격 repo sshfs 편집 + 로컬 FS 빌드). commons `0.20.0→0.21.0` · @V `1.9→2.0`
+
 ## 2026-05-30 — 🔌 easy-paper 0.2.0: `hexa easy lint` 결정적 품질 게이트 wrap
 
 🔌 `easy-paper` 도 완성된 `<slug>.easy.paper.md` 의 측정 축을 LLM이 자가채점하고 있었다. 이 버전이 채점을 `hexa easy lint` 빌트인(결정적)에 위임한다.

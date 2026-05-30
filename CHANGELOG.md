@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🔒 code-tier-guard 0.1.0: g78 강제 (로컬 clone 편집 차단)
+
+commons @D g78(code-tier)를 **권유 → 강제**로 올린 PreToolUse 훅. `~/.sidecar/codetier.conf`에 4번째 필드 `localpath`를 선언한 tier에 대해, 그 로컬 clone 하위로 향하는 Write/Edit/NotebookEdit·Bash write를 **거부하고 마운트 경로로 리다이렉트**한다. 안전레일: `.git/`·마운트경로·미등록 repo·localpath 미설정 tier는 통과(설정 전엔 inert).
+
+- `sidecar mount add` 에 `[<localpath>]` 4번째 인자 추가 — 설정 시 `list`에 `🔒enforced` 표시
+- 5-케이스 직접 검증 통과 (local source DENY · mount/미등록/.git ALLOW · Bash redirect DENY)
+- profiles 티어 `personal`. commons g78 + `sidecar mount` 와 lockstep (s7: 규칙+집행 동시)
+
 ## 2026-05-30 — 🩹 inject 0.2.1: `/ij` 명령 한-줄-뭉개짐 버그 수정
 
 `/inject`·`/ij`의 `!`-실행 명령이 줄바꿈으로 구분돼 있었는데, 하네스가 이를 한 줄로 평탄화하면 `set -e` 가 뒤 토큰을 전부 삼켜(`set -e sidecar sync echo …`) 명령이 깨졌다. 원인이었던 `set -e` 를 제거하고 `;`/`&&` 구분 단일 라인으로 재작성 — 평탄화돼도 정상 동작한다. inject `0.2.0→0.2.1`.

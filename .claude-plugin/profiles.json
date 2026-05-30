@@ -84,6 +84,7 @@
     "askq-text": "personal",
     "lsp-rebuild": "personal",
     "plist-guard": "personal",
+    "code-tier-guard": "personal",
     "ai-api-guard": "personal",
     "plan-guard": "personal",
     "subagent-route": "personal",

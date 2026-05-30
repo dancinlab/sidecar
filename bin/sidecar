@@ -202,23 +202,25 @@ TAPE
         n=0
         while IFS= read -r line || [ -n "$line" ]; do
           case "$line" in ""|\#*) continue ;; esac
-          name=${line%%|*}; rest=${line#*|}; src=${rest%%|*}; mnt=${rest#*|}
+          name=${line%%|*}; r=${line#*|}; src=${r%%|*}; r2=${r#*|}; mnt=${r2%%|*}; local=${r2#*|}; [ "$local" = "$mnt" ] && local=""
           if ct_is_mounted "$mnt"; then st="✅ mounted"; else st="·  down"; fi
+          [ -n "$local" ] && st="$st 🔒enforced"
           printf '%-14s %-28s %-22s %s\n' "$name" "$src" "$mnt" "$st"
           n=$((n+1))
         done < "$CT_CONF"
         if [ "$n" -eq 0 ]; then
           echo "sidecar mount: no code-tiers configured — add one:"
-          echo "  sidecar mount add <name> <host>:<remote_dir> [<mountpoint>]"
+          echo "  sidecar mount add <name> <host>:<remote_dir> [<mountpoint>] [<localpath>]"
         fi
         ;;
       add)
-        NAME="${1:-}"; SRC="${2:-}"; MNT="${3:-$HOME/mnt/$NAME}"
-        [ -n "$NAME" ] && [ -n "$SRC" ] || { echo "usage: sidecar mount add <name> <host>:<remote_dir> [<mountpoint>]" >&2; exit 2; }
+        NAME="${1:-}"; SRC="${2:-}"; MNT="${3:-$HOME/mnt/$NAME}"; LOCAL="${4:-}"
+        [ -n "$NAME" ] && [ -n "$SRC" ] || { echo "usage: sidecar mount add <name> <host>:<remote_dir> [<mountpoint>] [<localpath>]" >&2; exit 2; }
         case "$SRC" in *:*) : ;; *) echo "sidecar mount: <src> must be host:remote_dir" >&2; exit 2 ;; esac
         if ct_lookup "$NAME" >/dev/null; then echo "sidecar mount: '$NAME' already configured (rm first)" >&2; exit 1; fi
-        printf '%s|%s|%s\n' "$NAME" "$SRC" "$MNT" >> "$CT_CONF"
+        printf '%s|%s|%s|%s\n' "$NAME" "$SRC" "$MNT" "$LOCAL" >> "$CT_CONF"
         echo "sidecar mount: added '$NAME' → $SRC at $MNT"
+        [ -n "$LOCAL" ] && echo "  🔒 enforced: writes under $LOCAL are blocked → redirected to $MNT (code-tier-guard)"
         echo "  bring up:  sidecar mount up $NAME"
         ;;
       rm|remove)
@@ -234,7 +236,7 @@ TAPE
         TARGET="${1:-}"; rc=0
         while IFS= read -r line || [ -n "$line" ]; do
           case "$line" in ""|\#*) continue ;; esac
-          name=${line%%|*}; rest=${line#*|}; src=${rest%%|*}; mnt=${rest#*|}
+          name=${line%%|*}; r=${line#*|}; src=${r%%|*}; r2=${r#*|}; mnt=${r2%%|*}
           [ -n "$TARGET" ] && [ "$TARGET" != "$name" ] && continue
           ct_up "$name" "$src" "$mnt" || rc=1
         done < "$CT_CONF"
@@ -244,7 +246,7 @@ TAPE
         TARGET="${1:-}"; rc=0
         while IFS= read -r line || [ -n "$line" ]; do
           case "$line" in ""|\#*) continue ;; esac
-          name=${line%%|*}; rest=${line#*|}; mnt=${rest#*|}
+          name=${line%%|*}; r=${line#*|}; r2=${r#*|}; mnt=${r2%%|*}
           [ -n "$TARGET" ] && [ "$TARGET" != "$name" ] && continue
           ct_down "$mnt" || rc=1
         done < "$CT_CONF"
@@ -260,7 +262,7 @@ TAPE
         ;;
       *)
         echo "sidecar mount: unknown subcommand '$SUB'" >&2
-        echo "  verbs: list | add <name> <host>:<dir> [<mnt>] | rm <name> | up [name] | down [name] | build <name> <cmd...>" >&2
+        echo "  verbs: list | add <name> <host>:<dir> [<mnt>] [<localpath>] | rm <name> | up [name] | down [name] | build <name> <cmd...>" >&2
         exit 2
         ;;
     esac

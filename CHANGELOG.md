@@ -6,6 +6,23 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🔌 easy-doc 0.2.0: `hexa easy` 빌트인 wrap (scaffold → LLM 슬롯채움 → lint 게이트)
+
+🔌 `hexa easy` 빌트인(hexa-lang `stdlib/easy/cli.hexa`, PR #2205·#2206·#2209)이 생긴 뒤에도 `easy-doc` 스킬은 골격을 LLM이 직접 그리고 측정 축도 LLM이 자가채점하고 있었다 — **결정적으로 빼낸 부분을 도로 LLM으로 손계산**하는 중복. 이 버전이 둘을 연결한다.
+
+분업(빌트인 자체 honest-scope와 일치):
+
+```
+[ /easy-doc ] ─▶ ① hexa easy scaffold ─▶ ② LLM 슬롯채움(창작) ─▶ ③ hexa easy lint ─▶ .easy.md
+                    골격(결정) 7슬롯+4ASCII    ← 유일한 LLM 영역        품질게이트(결정) per-axis+PASS/FAIL
+```
+
+- **scaffold-first** — authoring 절차 step4가 `hexa easy scaffold "<topic>" --out <name>.easy.md` 로 빈 7요소 슬롯 + 4종 ASCII 템플릿 + 체크리스트를 emit. LLM은 step6에서 슬롯만 채운다.
+- **lint-gate** — step8이 `hexa easy lint <name>.easy.md` 로 측정 축(jargon-ratio·ascii-presence·acronym-expansion·analogy-presence·7요소)을 결정적 채점, per-axis + PASS/FAIL 리포트. FAIL이면 step6 재방문.
+- **graceful fallback** — `hexa easy` 미동기화(stale toolchain)면 템플릿으로 수동 골격 + 체크리스트 자가검사. 출력은 동일, 결정성 보장만 잃는다.
+- **안전** — `allowed-tools` 에 `Bash` 추가(빌트인 호출용). `hexa easy` 는 read-only(scaffold=emit·lint=score)로 원본 미터치. 창작 rewrite는 여전히 LLM. 기존 `easy`·`easy-auto`·`hooks` 무변경.
+- **버전** — plugin.json·marketplace.json **0.1.0 → 0.2.0**.
+
 ## 2026-05-30 — 🎓 easy-paper 0.1.0 신설: 논문 → 일반인용 `.easy.paper.md` author 스킬
 
 🎓 논문을 일반인이 알아듣게 다시 쓴 companion `<slug>.easy.paper.md` 를 생성하는 새 사이드카 스킬 `easy-paper` 추가. `paper`(arxiv LaTeX 스캐폴더 + `PAPER.tape` roster)와 `easy`(친근 prose 스타일 SSOT)의 형제로, 원본 논문은 read-only — 추가 companion 만 만든다.

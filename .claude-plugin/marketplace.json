@@ -407,8 +407,8 @@
     {
       "name": "easy-doc",
       "source": "./skills/easy-doc",
-      "description": "Easy-doc authoring — turn a technical file (or a topic) into a layperson-friendly sibling `<name>.easy.md`. Applies the canonical easy reference (hooks/easy-auto/styles/easy.<lang>.md, source-of-truth — not duplicated): the 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare), the 4 ASCII structure templates (before-after · tree · side-by-side · structure-sketch), and the jargon→everyday translation checklist. Skill (natural-language trigger) + /easy-doc command. Ships one worked sample (samples/cache.easy.md). Authoring-only (markdown output, no executable hook logic); reads the input → applies the easy contract per document shape → writes the sibling `.easy.md`. Pairs with the `easy` skill (response style) — easy-doc is the FILE-output sibling. 0.1.0 — initial.",
-      "version": "0.1.0"
+      "description": "Easy-doc authoring — turn a technical file (or a topic) into a layperson-friendly sibling `<name>.easy.md`. Applies the canonical easy reference (hooks/easy-auto/styles/easy.<lang>.md, source-of-truth — not duplicated): the 7-element pattern (icon · name · alias · plain-line · analogy · ASCII · compare), the 4 ASCII structure templates (before-after · tree · side-by-side · structure-sketch), and the jargon→everyday translation checklist. Skill (natural-language trigger) + /easy-doc command. Ships one worked sample (samples/cache.easy.md). Authoring-only (markdown output, no executable hook logic); reads the input → applies the easy contract per document shape → writes the sibling `.easy.md`. Pairs with the `easy` skill (response style) — easy-doc is the FILE-output sibling. 0.2.0 — wraps the `hexa easy` builtin (scaffold → LLM slot-fill → lint gate; manual fallback when unsynced). 0.1.0 — initial.",
+      "version": "0.2.0"
     },
     {
       "name": "easy-auto",

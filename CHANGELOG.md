@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🔌 easy-paper 0.2.0: `hexa easy lint` 결정적 품질 게이트 wrap
+
+🔌 `easy-paper` 도 완성된 `<slug>.easy.paper.md` 의 측정 축을 LLM이 자가채점하고 있었다. 이 버전이 채점을 `hexa easy lint` 빌트인(결정적)에 위임한다.
+
+```
+[ <slug>.easy.paper.md 작성 ] ──▶ [ hexa easy lint <slug>.easy.paper.md ] ──▶ PASS │ FAIL→수정
+        LLM (창작 rewrite)              결정적 측정 축 채점(read-only)
+```
+
+- **lint-gate** — companion 작성 후 `hexa easy lint <slug>.easy.paper.md` 로 per-axis(jargon-ratio·ascii-presence·acronym-expansion·analogy-presence·7요소) + PASS/FAIL 채점. FAIL이면 해당 섹션 재방문 후 재-lint.
+- **scaffold는 미사용** — easy-paper 출력은 4개 논문전용 섹션(평이초록·ASCII그림·비유·이논문이한일)이라 generic 7-슬롯 scaffold 골격이 안 맞는다. 빌트인의 `lint` 절반만 적용(정직).
+- **graceful fallback** — `hexa easy` 미동기화면 번역 체크리스트 자가검사. 게이트는 advisory라 companion emit을 막지 않는다.
+- **안전** — `hexa easy lint` 는 read-only(채점만)로 원본 논문·companion 둘 다 미터치. negative-result 보존·숫자날조 금지 불변. `allowed-tools` 는 이미 `Bash` 포함(무변경). 창작 rewrite는 여전히 LLM.
+- **버전** — plugin.json·marketplace.json **0.1.0 → 0.2.0**.
+
 ## 2026-05-30 — 🔌 easy-doc 0.2.0: `hexa easy` 빌트인 wrap (scaffold → LLM 슬롯채움 → lint 게이트)
 
 🔌 `hexa easy` 빌트인(hexa-lang `stdlib/easy/cli.hexa`, PR #2205·#2206·#2209)이 생긴 뒤에도 `easy-doc` 스킬은 골격을 LLM이 직접 그리고 측정 축도 LLM이 자가채점하고 있었다 — **결정적으로 빼낸 부분을 도로 LLM으로 손계산**하는 중복. 이 버전이 둘을 연결한다.

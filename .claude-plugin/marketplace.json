@@ -15,6 +15,12 @@
       "version": "0.21.0"
     },
     {
+      "name": "code-tier-guard",
+      "source": "./hooks/code-tier-guard",
+      "description": "PreToolUse(Write|Edit|NotebookEdit|Bash) hard block enforcing commons @D g78 (code-tier — edit a remote repo over its sshfs mount, never a local clone), implemented in hexa-lang (`_code_tier_guard.hexa`, invoked via `hexa run`). Reads ~/.sidecar/codetier.conf (`name|host:remote_dir|mountpoint|localpath`); for any tier that declares a 4th `localpath`, a Write/Edit/NotebookEdit or Bash write channel (`>`, `>>`, tee, dd of=, cp/mv dest; relative resolved against payload cwd) whose target resolves UNDER that local clone is denied with an action-first redirect to the same relative path under the tier's MOUNT. SAFETY RAILS (skip-on-doubt): `.git/` under the local clone is exempt (local git stays usable) · the mountpoint itself + anything under it is exempt (correct edit path) · a target not under any registered localpath passes · a tier whose localpath equals its mountpoint is ignored · absent config or no localpath fields → inert (allows everything). Gate is a real precondition (registered localpath + target under it), not an opt-out switch (project.tape @D s11); enforcement is the hard deny (s13). Pairs with the `sidecar mount` launcher (registers tiers + the localpath field). 0.1.0 (2026-05-30) initial — lands in lockstep with commons g78 + `sidecar mount` (s7: rule + enforcement together). NO env-var / flag override by design.",
+      "version": "0.1.0"
+    },
+    {
       "name": "prefs",
       "source": "./commands/prefs",
       "description": "/prefs — view or set language preferences (3 axes: code authoring · doc authoring · response language to user). /prefs show · /prefs code <lang> · /prefs docs <lang> · /prefs response <lang>. Writes the FIXED SSOT ~/.claude/plugins/data/prefs-sidecar/prefs.json (defaults code=english · docs=english · response=korean) via `_prefs.hexa` (shipped in `prefs-hook`). The `prefs-hook` plugin reads the same SSOT and auto-injects current values every turn. Command half of the prefs split.",

@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🪞 sidecar 0.8.1: `mirror` 가 고아(orphaned) 플러그인을 건너뛴다 — `system`→`lab` 중복 surface 차단
+
+`system → lab` 스킬 리네임 마무리. `sidecar mirror`(매 `/ij` 마다 실행)가 `~/.claude/plugins/cache/sidecar/*` 를 열거할 때 **버전별 `.orphaned_at` 마커를 무시**하고 가장 높은 버전을 골라 `commands/*.md` 를 복사했다. `system` 은 모든 캐시 버전(0.2.0~0.9.1)이 orphaned 인데도 0.9.1 의 `system.md` 가 매번 `~/.claude/commands/system.md` 로 재생성 → TUI 에 구버전 설명의 `/system` 가 후속 `lab` 과 **이중 노출**되었다.
+
+- **ROOT**: marketplace.json 에는 `system` 엔트리가 이미 없다(lab 만 존재). 잔존 source 는 orphaned 캐시 트리뿐 — 이걸 `do_mirror` 가 열거. 진짜 source 결함은 mirror 의 버전 선택 로직.
+- **FIX (방어 가드, 일반화)**: `do_mirror` 가 이제 **orphaned 가 아닌 최고 버전**을 고른다. 한 플러그인의 모든 캐시 버전이 `.orphaned_at` 를 달면(=완전 deprecated) command-mirror 대상에서 제외. 플러그인 이름 하드코딩 없음 → 향후 어떤 리네임에도 재발 방지. 스킵 카운트를 mirror 출력에 노출.
+- **제거**: 이미 생성된 `~/.claude/commands/system.md` 1회 삭제(캐시 트리는 @L2 따라 보존 — history 무손실).
+- **lab 무손상**: lab 의 SKILL.md `/system`(+관제탑·mission control·control tower·campaign status) DEPRECATED ALIAS 그대로 — `/system` 타이핑은 여전히 lab 으로 라우팅(lossless).
+- 검증: `sidecar mirror` 후 `system.md` ABSENT · `lab.md` PRESENT · 재실행에도 `system.md` 재생성 안 됨(idempotent · 8 orphaned plugin skipped).
+
 ## 2026-05-30 — 🏊 pool 0.3.0: 독립 `pool` CLI 은퇴 → sidecar 소유 (Route A · faithful relocate)
 
 독립 repo(`~/core/pool`)의 `pool` CLI(호스트 로스터 + 원격 실행)를 sidecar 소유로 이관했다. 1404줄 `pool.hexa`(13개 verb)를 sh로 재작성하지 않고 **그대로** 플러그인 안으로 옮기고(`skills/pool/bin/pool.hexa`), install.hexa가 네이티브 바이너리로 빌드·설치하게 배선했다. 로스터 SSOT `~/.pool/pool.json` 은 그대로 — `pool-route` 훅은 **무수정**.

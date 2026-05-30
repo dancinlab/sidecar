@@ -23,7 +23,7 @@ These run local unconditionally; they're version-control / local-fs / trusted-pl
 
 ## Worktree → canonical-root fallback (0.6.10)
 
-A heavy command launched from a **git linked worktree** outside `$HOME` (e.g. `/tmp/wt-x` — the standard isolation pattern for stdlib / SSCHA agents) used to be **denied** with `cwd outside $HOME`, because the worktree path can't be mirrored to a pool host. The router now resolves the worktree's **main checkout** via `git worktree list --porcelain` (the main worktree is listed first) and, when that root is under `$HOME` (a synced `~/core/…` workdir the pool already routes), mirrors that root instead. The remote runs against the canonical checkout — for `hexa kick`/`drill`/`loop`/`cc` (which already get `HEXA_LANG=$HOME/core/hexa-lang`) that is the intended target; the route-log `why` records `worktree→canonical-root`. This runs **only** in the branch that previously denied, so it can never regress a routing command — it strictly rescues worktree dispatch.
+A heavy command launched from a **git linked worktree** outside `$HOME` (e.g. `/tmp/wt-x` — the standard isolation pattern for stdlib / SSCHA agents) used to be **denied** with `cwd outside $HOME`, because the worktree path can't be mirrored to a pool host. The router now resolves the worktree's **main checkout** via `git worktree list --porcelain` (the main worktree is listed first) and, when that root is under `$HOME` (a synced `~/core/…` workdir the pool already routes), mirrors that root instead. The remote runs against the canonical checkout — for a routed `hexa <verb>` (which gets `HEXA_LANG=$HOME/core/hexa-lang`, see below) that is the intended target; the route-log `why` records `worktree→canonical-root`. This runs **only** in the branch that previously denied, so it can never regress a routing command — it strictly rescues worktree dispatch.
 
 ## Local-bound sign gate (0.6.4)
 
@@ -101,6 +101,22 @@ A failing host is skipped and the round-robin moves to the next eligible host; i
 5. **Rewrite** — the command becomes `ssh <host> 'cd <workdir> && <cmd>'` — `tailscale ssh` when a local tailscale daemon is up.
 
 A command that is already routed (carries the `__SIDECAR_POOL__` marker), a heredoc, a background command, or an explicit `ssh …` passes through untouched.
+
+## hexa source-root pin (0.18.0)
+
+When the routed command invokes `hexa`, the remote command string is prefixed with:
+
+```
+export PATH="$HOME/.hx/bin:$HOME/bin:$PATH" \
+       HEXA_MODULE_LOADER="$HOME/core/hexa-lang/build/hexa_module_loader" \
+       HEXA_LANG="$HOME/core/hexa-lang" && …
+```
+
+`HEXA_LANG` (stdlib + verb source root) and `HEXA_MODULE_LOADER` are pinned at the **hexa-lang checkout** `$HOME/core/hexa-lang` for **every** hexa verb. The `cd <workdir>` target (the synced `~/core/…` workdir the route mirrors) is unchanged — only the source-root pointer is fixed.
+
+Before 0.18.0 these defaulted to `$PWD` (the synced workdir, e.g. `~/core/sidecar`) and only `kick`/`drill`/`loop`/`cc` were redirected to the checkout. Any other routed verb (`atlas`, `verify`, `run <stdlib script>`, …) mis-pointed its source root at the synced workdir — which has no `compiler/`/stdlib root and where `$PWD/build/hexa_module_loader` does not exist — producing `absorbed verb '...' script not found`.
+
+This env is set **only** on the routed remote command. sidecar's own `hexa-native` / `pool-route` guard hooks invoke `hexa run "$@"` directly via the host `hexa` binary and never read these vars, so the fix does not touch them.
 
 ## No opt-out
 

@@ -6,6 +6,14 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🐛 pool-route 0.18.0: routed `hexa <verb>` source-root fix — HEXA_LANG/HEXA_MODULE_LOADER → hexa-lang checkout (`$PWD` 오염 봉합)
+
+라우팅된 `hexa <verb>` 의 source root 가 동기화된 sidecar workdir (`$PWD`) 로 잘못 가리키던 버그 수정. `_pool_route.hexa` 의 0.5.5 env passthrough 가 `HEXA_LANG`/`HEXA_MODULE_LOADER` 를 `$PWD` 로 default 했고, 0.6.x `hexa_subverb` whitelist 는 `kick`/`drill`/`loop`/`cc` 만 checkout 으로 redirect. 나머지 verb (`atlas`·`verify`·`run <stdlib script>`·…) 은 `compiler/`/stdlib root 가 없는 동기화 workdir 를 source root 로 잡아 `absorbed verb '...' script not found` 유발 (`$PWD/build/hexa_module_loader` 는 거기 없고, `$HOME/core/hexa-lang/build/hexa_module_loader` 는 모든 호스트에 존재).
+
+- **fix** — `_pool_route.hexa`: 라우팅 hexa 호출의 `HEXA_LANG` + `HEXA_MODULE_LOADER` 를 모든 verb 에 대해 `$HOME/core/hexa-lang` (+ `/build/hexa_module_loader`) 로 통일 pin. `cd <workdir>` 타깃은 그대로 (상대경로는 여전히 동기화 workdir 에 착지) — source-root 포인터만 교정. `hexa_subverb` per-verb split 제거.
+- **guard 무영향 검증** — sidecar 자체 `hexa-native`·`pool-route` 가드 훅은 `hexa run "$@"` 를 호스트 `hexa` 바이너리로 직접 호출하며 이 env 를 읽지 않음. fix 후 `hexa-native` 가 `.py` write 를 여전히 deny 함을 실제 payload 로 확인.
+- **버전 lockstep (g22)** — pool-route `plugin.json`·`marketplace.json` 0.17.0→**0.18.0** + 0.18.0 description 노트 · README `hexa source-root pin (0.18.0)` 섹션 · CHANGELOG.
+
 ## 2026-05-30 — 🐛 celebrate 0.1.2: Stop hook 출력 스키마 fix — additionalContext → systemMessage
 
 🐛 celebrate Stop hook 이 매 turn-end 마다 `Hook JSON output validation failed — (root): Invalid input` 로 거부되던 버그 수정. 원인 = `_celebrate.hexa:304` 가 `{"hookSpecificOutput":{"hookEventName":"Stop","additionalContext":…}}` 를 emit 했는데, `hookSpecificOutput.additionalContext` 는 **UserPromptSubmit/PostToolUse 전용**이고 Stop 이벤트 스키마엔 없음 → 매번 validation 실패(축포가 한 번도 제대로 안 떴고 에러만 남음). Stop 에서 채팅에 텍스트를 띄우는 schema-valid 채널은 top-level `systemMessage`.

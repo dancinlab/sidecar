@@ -1433,11 +1433,11 @@ fn main() {
     // (existence `command -v` + interp `test -x` + a cheap real invocation
     // `<tool> --help`, all in one ssh); a host that fails it is SKIPPED so the
     // round-robin moves on, and if ALL fail the deny trailer names the gap.
-    // hexa_subverb is still tracked separately — it drives HEXA_LANG below.
     // Known limit (@D d6): a binary that passes `--help` but segfaults at
     // RUNTIME is not caught (would need a full exec probe — heavier, deferred).
+    // 0.18.0 — the per-verb HEXA_LANG split (`hexa_subverb`) is GONE: all routed
+    // hexa verbs now pin HEXA_LANG=~/core/hexa-lang uniformly (see env block below).
     let toks_pre = _tokens(cmd)
-    let mut hexa_subverb = ""
     let mut tool_probe = ""
     let mut tool_label = ""
     if len(toks_pre) >= 1 {
@@ -1445,7 +1445,6 @@ fn main() {
         if t0b == "hexa" {
             let mut hverb = ""
             if len(toks_pre) >= 2 { hverb = toks_pre[1] }
-            if hverb == "kick" || hverb == "drill" || hverb == "loop" || hverb == "cc" { hexa_subverb = hverb }
             let mut help_cmd = "hexa --help"
             if hverb != "" && hverb.substring(0, 1) != "-" { help_cmd = "hexa " + hverb + " --help" }
             // 0.9.1 — ROLLED BACK 0.8.3 canon injection. Each host's hexa
@@ -1500,9 +1499,28 @@ fn main() {
             // host's hexa binary find its own self/native/hexat via its own
             // search paths. Stale stdlib on a host is the host owner's
             // responsibility (anima for its consciousness/atlas WIP on ubu-2).
-            let mut hexa_lang = "$PWD"
-            if hexa_subverb != "" { hexa_lang = "$HOME/core/hexa-lang" }
-            hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_MODULE_LOADER=\"$PWD/build/hexa_module_loader\" HEXA_LANG=\"" + hexa_lang + "\" && "
+            //
+            // 0.18.0 — source-root FIX. The 0.5.5 env passthrough defaulted
+            // HEXA_LANG (and HEXA_MODULE_LOADER) to `$PWD` — the SYNCED workdir
+            // the route lands in (e.g. ~/core/sidecar or ~/core/anima). That is
+            // WRONG for cross-repo verb dispatch: a routed `hexa <verb>` resolves
+            // its stdlib / verb sources from the hexa-lang checkout (compiler/ +
+            // stdlib/), which lives at ~/core/hexa-lang — NOT in the synced
+            // workdir (sidecar has no compiler/, and `$PWD/build/hexa_module_loader`
+            // does not even exist there, while `~/core/hexa-lang/build/hexa_module_loader`
+            // does on every host). The 0.6.x `hexa_subverb` whitelist only
+            // redirected kick/drill/loop/cc to ~/core/hexa-lang; every OTHER verb
+            // (atlas · verify · run <stdlib script> · …) still mis-pointed at the
+            // workdir, producing `absorbed verb '...' script not found`. Pin BOTH
+            // env vars at the hexa-lang checkout for ALL routed hexa invocations —
+            // deck/cloud/atlas LOCAL pins above already keep workdir-bound hexa
+            // off the pool, so anything reaching here is a heavy verb needing the
+            // hexa-lang stdlib root. This sets env only on the routed remote
+            // command string; sidecar's OWN hexa-native / pool-route guard hooks
+            // invoke `hexa run "$@"` directly and never read these vars, so the
+            // change cannot affect them.
+            let hexa_root = "$HOME/core/hexa-lang"
+            hexa_env = "export PATH=\"$HOME/.hx/bin:$HOME/bin:$PATH\" HEXA_MODULE_LOADER=\"" + hexa_root + "/build/hexa_module_loader\" HEXA_LANG=\"" + hexa_root + "\" && "
         }
         let remote = "cd " + wd_sh + " && " + hexa_env + rcmd
 

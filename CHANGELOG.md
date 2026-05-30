@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 💓 lab 1.7.0: heartbeat를 lab 기본기능으로 — drive가 ScheduleWakeup self-pace tick을 default-arm (no-idle · watcher와 페어)
+
+사용자 지시("heartbeat 도 lab 기본기능으로 장착")대로, ScheduleWakeup **heartbeat**를 `/lab` 자율 drive의 first-class BUILT-IN으로. 1.6.0 watcher(event-driven·fast path)와 PAIR — heartbeat는 timer 위에서 도는 **liveness floor**라 watcher event가 없어도 loop가 절대 idle로 안 빠짐. (#325 lab 1.6.0 위에 스택.)
+
+- **@H1 default-arm**: `drive`(및 sticky cross-turn으로 도는 `auto`)가 ScheduleWakeup heartbeat를 BY DEFAULT arm — watcher event가 안 떠도 drive loop를 재진입시키는 self-pacing tick. watcher=event-driven(fast reaction), heartbeat=liveness floor(no-idle 보장). 둘은 페어.
+- **@H2 interval**: default **~1800s(30min)** (ScheduleWakeup cache-window 가이드 — DFT relax은 시간 단위라 30min tick으로 충분 + cache 비용 sane). `drive --heartbeat <s>` override (**clamp 60–3600**).
+- **@H3 re-entry payload**: wakeup이 기존 drive body를 그대로 재발사 — probe → `tick --apply` → harvest terminal → resume/triage → re-dispatch queued(parallel) → cost check → reschedule. drive loop REUSE, 평행 loop 안 만듦.
+- **@H4 termination**: heartbeat은 🏁 DRAINED(all jobs terminal AND queue empty) · 🛑 budget cap(g64) · ⏸ gated:human-only/user interrupt에서 reschedule STOP — `auto`와 동일 halt. 빈 캠페인으로는 절대 tick 안 함(no idle-spin).
+- **@H5 ship**: `skills/lab/SKILL.md` 편집(`drive` verb + `## heartbeat (self-pace · no-idle)` subsection @H1–H5). lab 1.6.0 → 1.7.0 (plugin.json · marketplace.json · 이 CHANGELOG). `bin/system_harness.hexa` 무손상.
+
 ## 2026-05-31 — 👁 lab 1.6.0: 모니터링 기본값을 폴링 → event-driven watcher로, 폴링은 명시적 fallback으로 강등
 
 사용자 지시("lab 모니터링 방식을 폴링보다 watcher 를 기본 값으로")대로, `/lab`의 CONTINUOUS 모니터링을 폴링(tick/sweep liveness probe) 주도에서 **event-driven watcher 기본값**으로 전환. 폴링은 삭제하지 않고 **명시적 FALLBACK**으로 강등. (#324 lab 1.5.0 위에 스택.)

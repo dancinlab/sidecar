@@ -10,6 +10,7 @@
   "tiers": {
     "prefs": "core",
     "prefs-hook": "core",
+    "easy": "core",
     "git-guard": "core",
     "secret-guard": "core",
     "workdir-guard": "core",
@@ -90,7 +91,6 @@
     "subagent-route": "personal",
     "subagent-resilience": "personal",
     "sidecar-auto-sync": "personal",
-    "easy": "personal",
     "easy-auto": "personal",
     "pr-cycle": "personal",
     "pr-cycle-hook": "personal",

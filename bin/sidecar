@@ -38,10 +38,26 @@ do_mirror() {
   fi
   mkdir -p "$DST"
   n=0
+  skipped=0
   for d in "$SRC"/*/; do
     [ -d "$d" ] || continue
-    V=$(ls -1 "$d" 2>/dev/null | sort -V | tail -1)
-    [ -z "$V" ] && continue
+    # Pick the highest-versioned cache dir that is NOT orphaned. A fully
+    # superseded plugin (every version carries `.orphaned_at`, dropped from
+    # the active set on a rename/deprecation) must NEVER be command-mirrored —
+    # else its stale command resurfaces as a duplicate TUI entry alongside its
+    # successor (e.g. the `system`→`lab` rename: orphaned `system` kept double-
+    # surfacing /system from cache). Generic: no plugin name is hard-coded.
+    V=""
+    for vd in $(ls -1 "$d" 2>/dev/null | sort -V); do
+      [ -d "$d$vd" ] || continue
+      [ -f "$d$vd/.orphaned_at" ] && continue   # skip orphaned/superseded version
+      V="$vd"
+    done
+    if [ -z "$V" ]; then
+      # Every cached version is orphaned → plugin is fully deprecated; do not mirror.
+      if ls -1 "$d" 2>/dev/null | grep -q .; then skipped=$((skipped+1)); fi
+      continue
+    fi
     cdir="$d$V/commands"
     [ -d "$cdir" ] || continue
     for cmd in "$cdir"/*.md; do
@@ -50,7 +66,11 @@ do_mirror() {
       n=$((n+1))
     done
   done
-  echo "sidecar mirror: $n command(s) → $DST"
+  if [ "$skipped" -gt 0 ]; then
+    echo "sidecar mirror: $n command(s) → $DST ($skipped orphaned plugin(s) skipped)"
+  else
+    echo "sidecar mirror: $n command(s) → $DST"
+  fi
 }
 
 # Sign-off token store: `sidecar sign <key>` mints ~/.sidecar/signs/<key>.sign

@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 👁 lab 1.6.0: 모니터링 기본값을 폴링 → event-driven watcher로, 폴링은 명시적 fallback으로 강등
+
+사용자 지시("lab 모니터링 방식을 폴링보다 watcher 를 기본 값으로")대로, `/lab`의 CONTINUOUS 모니터링을 폴링(tick/sweep liveness probe) 주도에서 **event-driven watcher 기본값**으로 전환. 폴링은 삭제하지 않고 **명시적 FALLBACK**으로 강등. (#324 lab 1.5.0 위에 스택.)
+
+- **@W1 scope**: CONTINUOUS-monitoring verb(`auto`/`drive` + keep-watching 흐름)이 event-driven watcher arming을 DEFAULT로. `status`는 EXEMPT — 1회성 read-only SNAPSHOT 유지(연속 폴링 아님, 그대로).
+- **@W2 mechanism**: 기본값 = 기존 `watch` verb의 event-driven watcher — `hexa cloud tail <host> <log> --until ''` 위의 Monitor/background loop + failure-first 3-tier exit(0=DONE·3=TIMEOUT-RESUMABLE·4=CRASHED·255=transport-drop). `watch` 머신을 REUSE, 평행 watcher 재발명 안 함.
+- **@W3 polling 강등(삭제 아님)**: `tick`/poll sweep은 FALLBACK으로 RETAIN — watcher가 attach 못 할 때만(`hexa cloud tail --until` 없음 · durable remote log 없는 local-only job · transport 불가).
+- **@W4 surface**: `auto`/`drive` prose가 "monitoring default = event-driven watcher (poll = fallback)" 명시 · `watch` verb는 continuous 모니터링의 default arm 명시 · `tick`/`status` 섹션은 폴링=fallback / on-demand snapshot 명시. 공유 subsection `## monitoring default — watcher (poll = fallback)` 추가.
+- **@W5 ship**: `skills/lab/SKILL.md` 편집. lab 1.5.0 → 1.6.0 (plugin.json · marketplace.json · 이 CHANGELOG). `bin/system_harness.hexa` 무손상.
+
 ## 2026-05-31 — 🔧 lab 1.5.0: upstream fix 무조건 자동 dispatch — g59 reflex가 핸드오프 노트만 남기지 않고 fix를 바로 ship
 
 `/lab` 캠페인 런이 **upstream-fixable gap**(hexa cloud/deck/CLI 한계 · CLI가 분류했어야 할 false-terminal · transport 모호성 · 빠진 preflight/OOM 축 · rent-guard가 막았어야 할 cost-leak · "툴을 손으로 우회한" 모든 순간)을 감지하면, 이제 핸드오프 노트만 남기고 넘어가지 않고 **백그라운드 fix 에이전트를 무조건·같은-턴·확인 없이 AUTO-DISPATCH해서 fix-at-source + PR까지 ship한다.** (#323 lab 1.4.0 위에 스택.)

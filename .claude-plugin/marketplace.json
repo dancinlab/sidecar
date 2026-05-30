@@ -411,6 +411,12 @@
       "version": "0.3.0"
     },
     {
+      "name": "easy-paper",
+      "source": "./skills/easy-paper",
+      "description": "/easy-paper <slug-or-paper.md> — authors a layperson `.easy.paper.md` companion of a paper. Reads a PAPER/<slug>/ dir (per PAPER.tape roster) or a given paper .md, then emits `<slug>.easy.paper.md` with FOUR paper-specific sections: (1) 평이-초록 plain-language abstract, (2) ASCII figure sketches (the easy 4-template set: before-after · tree · side-by-side · structure), (3) 비유 섹션 analogy-driven method/finding, (4) \"이 논문이 한 일\" one-paragraph what-it-did summary — all under the easy 7-element pattern. Source-of-truth = easy-auto/styles/easy.<lang>.md (point + summarize, NOT duplicated). Sidecar to `paper` + `easy`; READ-ONLY on the source paper (never edits main.tex / PAPER.md / PAPER.tape / verdicts; a negative-result paper stays a negative result — no invented numbers). One worked sample bundled (sample-cost-routing.easy.paper.md). 0.1.0 — initial.",
+      "version": "0.1.0"
+    },
+    {
       "name": "research",
       "source": "./skills/research",
       "description": "Research-fetch tools — `/research:arxiv <query|id>` searches the official arXiv API or fetches by id (title · authors · abstract · pdf); `/research:yt <url-or-id>` extracts YouTube caption transcript via the InnerTube ANDROID client. Implemented in hexa-lang (`_arxiv.hexa` / `_yt.hexa`, invoked via `hexa run`); HTTP via curl, no API key. Error paths (network · parse · no-captions · bad-id) exit non-zero so callers can tell failure from a real result.",

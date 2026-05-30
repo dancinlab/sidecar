@@ -6,6 +6,17 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-30 — 🎓 easy-paper 0.1.0 신설: 논문 → 일반인용 `.easy.paper.md` author 스킬
+
+🎓 논문을 일반인이 알아듣게 다시 쓴 companion `<slug>.easy.paper.md` 를 생성하는 새 사이드카 스킬 `easy-paper` 추가. `paper`(arxiv LaTeX 스캐폴더 + `PAPER.tape` roster)와 `easy`(친근 prose 스타일 SSOT)의 형제로, 원본 논문은 read-only — 추가 companion 만 만든다.
+
+- **입력** — `/easy-paper <slug-or-paper.md>`. slug 면 root `PAPER.tape` roster 에서 dir 을 찾아 `PAPER.md` 스냅샷 + 본문(`main.tex`/`main.md`/`README.md`)을 읽고, path 면 그 `.md`/`.paper.md`/`.tex` 를 직접 읽는다.
+- **출력 4섹션** (전부 easy 7-요소 패턴) — ① **평이-초록** plain-language abstract(약어 첫등장 풀어쓰기) · ② **ASCII 그림 스케치** easy 4종 템플릿(전후/트리/나란히/구조)으로 실제 그림 도식화 · ③ **비유 섹션** 방법(HOW)+발견(WHAT)을 일상 비유로(각 비유는 실제 측정값에 연결) · ④ **"이 논문이 한 일"** 정확히 한 문단(질문+측정+발견).
+- **SSOT 참조** — 친근 스타일은 `hooks/easy-auto/styles/easy.<lang>.md`(= 자매 `easy` 스킬 styles) 를 point+summarize 로 적용, 전체 복제 금지. negative-result 논문은 부정 결과 그대로 유지, 숫자 날조 금지.
+- **번들** — worked 샘플 1개(`samples/sample-cost-routing.easy.paper.md`).
+- **안전** — 신규 디렉터리 `skills/easy-paper/` 만 추가. 기존 `skills/easy` · `skills/paper` · `hooks/easy-auto` 무변경(marketplace 등록 entry 제외). markdown + plugin.json 만, 실행 훅 로직 없음.
+- **버전** — plugin.json·marketplace.json **0.1.0** 신설 등록.
+
 ## 2026-05-30 — 🔄 sign-guard 0.2.0 + git-guard 0.8.0: SILENT ff-only stale-base auto-sync (proactive + reactive)
 
 🔄 stale-base 사고를 **조용히 자동 해소**한다. 동기(2026-05-30): 로컬 repo가 origin/main보다 28커밋 뒤처진 상태에서 에이전트가 STALE `project.tape`를 편집 — 그대로 랜딩했으면 origin governance 작업을 **되돌릴 뻔**했다. 기존 git-guard layer-5는 "로컬 main가 origin보다 N커밋 뒤처짐"이라고 *경고만* 했고, 사람/에이전트가 직접 `git pull --ff-only`를 기억해야 했는데 — 바로 그게 빠졌다. 그래서 이제 **조용히 자동 fast-forward** 한다(하드 블록 아님).

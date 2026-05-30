@@ -19,6 +19,16 @@ For the full audit trail, see `git log`.
 - **테스트** — disposable git repo 9-시나리오 PASS: clean+behind 무음 ff · diverged 한 줄+무force · dirty 트리 skip · no-origin skip · signed-stale-clean 파일 ff · signed-dirty 한 줄+로컬보존+no-deny · signed-no-origin skip · unsigned 여전히 DENY · detached skip.
 - **버전 lockstep (g22)** — git-guard `plugin.json`·`marketplace.json` 0.7.0→**0.8.0**; sign-guard 0.1.7→**0.2.0**.
 
+## 2026-05-30 — 📝 easy-doc 0.1.0: 일반인용 `<name>.easy.md` 문서 저작 스킬 신설 + 마켓플레이스 등록
+
+📝 신규 `easy-doc` 스킬 — 기술 파일(또는 주제)을 읽어 형제 문서 `<name>.easy.md` 를 생성하는 authoring 스킬. 자매 `easy` 스킬(세션 응답 스타일)과 달리 이쪽은 **파일 산출물**을 만든다. `easy`/`easy-auto` 트리는 무변경.
+
+- **스킬 신설 (PR1)** — `skills/easy-doc/`: `SKILL.md`(트리거 "/easy-doc"·"쉬운 문서 만들어"·"easy doc" + 저작 절차 + 출력 스켈레톤 + 가드레일) · `commands/easy-doc.md` · `.claude-plugin/plugin.json`(0.1.0).
+- **적용 contract** — 정전(SSOT)인 `hooks/easy-auto/styles/easy.<lang>.md` 의 7-요소 패턴(아이콘·이름·별칭·한줄설명·비유·ASCII·비교) + ASCII 구조 4종 템플릿(전후/트리/나란히/구조) + 일반인-번역 체크리스트를 **적용**. 레퍼런스 전체를 복제하지 않고 포인터+요약만(SKILL.md 가 source-of-truth 를 가리킴).
+- **worked sample 1종** — `samples/cache.easy.md`: 캐싱 spec 을 일반인 버전으로 옮긴 end-to-end 예시(7-요소 블록 3개 + structure-sketch·before/after·side-by-side 템플릿 사용 + 닫는 takeaway + 원본 대조).
+- **마켓플레이스 등록 (PR2)** — `marketplace.json` 에 `easy-doc` 엔트리(`./skills/easy-doc` · pinned 0.1.0) 추가, `easy` 와 `easy-auto` 사이. CHANGELOG 항목.
+- **safety** — 신규 디렉터리 only · 마크다운 + plugin.json only · 실행 hook 로직 無 · 기존 `easy`/`easy-auto` 콘텐츠 무변경(마켓플레이스 등록 1행만 추가).
+
 ## 2026-05-30 — 🎓 easy-auto 0.3.0: 일반인(layperson) + ASCII 구조 강화 (auto-inject styles 트리, 5개 언어)
 
 🎓 auto-inject 되는 `easy` 스타일 레퍼런스(`hooks/easy-auto/styles/easy.<lang>.md`, 5개 언어)를 일반인 친화 + ASCII-rich exemplar 로 강화. 기존 7-요소 패턴 · HEXA-WEAVE/NANOBOT gold · 측정 축 · 반례는 전부 보존(additive only), 훅 로직(`_easy_auto.hexa`·`hooks.json`)은 무변경 — 순수 콘텐츠 + 버전 범프.

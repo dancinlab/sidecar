@@ -6,6 +6,16 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 🔧 lab 1.5.0: upstream fix 무조건 자동 dispatch — g59 reflex가 핸드오프 노트만 남기지 않고 fix를 바로 ship
+
+`/lab` 캠페인 런이 **upstream-fixable gap**(hexa cloud/deck/CLI 한계 · CLI가 분류했어야 할 false-terminal · transport 모호성 · 빠진 preflight/OOM 축 · rent-guard가 막았어야 할 cost-leak · "툴을 손으로 우회한" 모든 순간)을 감지하면, 이제 핸드오프 노트만 남기고 넘어가지 않고 **백그라운드 fix 에이전트를 무조건·같은-턴·확인 없이 AUTO-DISPATCH해서 fix-at-source + PR까지 ship한다.** (#323 lab 1.4.0 위에 스택.)
+
+- **@U1 trigger**: 이미 tooling gap을 감지하는 지점들 — watch/harvest/next/auto/drive/pursue verb의 upstream-reflex(g59) prose + `upstream` verb — 에 와이어. ANY 감지된 upstream-fixable gap → auto-dispatch.
+- **@U2 action**: gap 감지 시 (a) `sidecar handoff add <repo> <gap>` 레코드를 종전대로 file AND (b) 즉시 ONE 백그라운드 fix 에이전트(general-purpose · run_in_background · isolation:worktree) spawn — self-contained prompt = 링크된 repo에서 fix-at-source + PR ship(branch off main · <200 lines · Co-Authored-By trailer · gh pr create · pr-cycle auto-merge · sidecar sync after). 사용자 확인 없음.
+- **@U3 unconditional + carve-out**: 4축 auto-decide fork 로직의 대상이 **아님** — ALWAYS-ON reflex(옵션 선택이 아님). upstream code-fix PR은 reversible + low-blast-radius → @L3 human-only gate에 절대 안 걸림 → 매번 auto-proceed. 유일한 브레이크 = (i) idempotency(핸드오프 trail에 이미 있거나 open PR이 이미 있는 gap은 재-dispatch 안 함 — upstream verb trail + `gh pr list` dedup pre-check) · (ii) 동시성 캡 ≤3 in-flight auto-dispatched fix 에이전트(나머지 큐잉).
+- **@U4 surface**: dispatch당 1줄 로그 — `🔧 upstream auto-dispatch: <gap one-liner> → agent <id> → PR pending (g59 · 무조건)`; `upstream` verb trail 리포트는 hand-filed 핸드오프뿐 아니라 auto-dispatched fix(agent id + PR state)도 표시.
+- **@U5 ship**: `skills/lab/SKILL.md`에 subsection `## upstream 자동 dispatch (g59 무조건 강화)` 추가 + watch/harvest/next/auto/drive/pursue + upstream verb 와이어. lab 1.4.0 → 1.5.0 (plugin.json · marketplace.json · 이 CHANGELOG). `bin/system_harness.hexa` 무손상.
+
 ## 2026-05-31 — 🤖 lab 1.4.0: 4축 auto-decide — mid-run 포크를 완성도·단순·안전·표준으로 자율 결정
 
 `/lab` 캠페인 런이 중간에 *옵션 선택*이 필요한 결정 게이트(예: live RTSC 런에서 떠오른 전략 포크 — clean-reset vs targeted-fix vs let-it-settle)에 부딪혔을 때, 사용자에게 메뉴를 띄워 멈추는 대신 canonical 4축으로 AUTO-PICK 후 계속 진행한다.

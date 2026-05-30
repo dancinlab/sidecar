@@ -1,0 +1,1404 @@
+// bin/pool.hexa — minimal host roster + remote exec.
+//
+// State file: ~/.pool/pool.json
+//   { "hosts": [ {"name": "<id>", "ssh": "<user@host>"}, ... ] }
+//
+// pi5-akida is anima-only (project.tape @D s8) and is hard-excluded from every
+// fan-out / route / health / init / clean-all path by name substring match.
+// Explicit `pool on pi5-akida <cmd>` / `pool clean pi5-akida` still work.
+//
+// macOS pool hosts (mini) are auto-dispatched ONLY for macOS-only commands
+// (swift / xcodebuild / codesign / …) per project.tape @D s12 — they never
+// join the OS-agnostic general-heavy round-robin (workstation protection).
+// Explicit `pool on mini <cmd>` still works for any command.
+//
+// verbs:
+//   pool add <name> <user@host> [--sudo]   register a host (probes OS via uname -s)
+//   pool rm <name>                  remove a host
+//   pool list [--json] [--fast]     roster + live load/ram/gpu/disk (--fast: skip probe)
+//   pool on <name> <cmd...>         exec cmd on host via ssh (streams stdout)
+//   pool on all <cmd...>            parallel fan-out (every host except pi5-akida)
+//   pool route <cmd...>             dispatch to the lowest-load host (skips pi5-akida)
+//   pool bg <name> <cmd...>         fire-and-forget dispatch (ssh -f -n; for `nohup ... &` patterns)
+//   pool status                     reachability probe (each host)
+//   pool refresh                    re-probe OS for every host
+//   pool init                       bootstrap every host (8 features; skips pi5-akida)
+//   pool clean <name>|all           run disk-cleanup now (safe tier; --deep adds model caches)
+//   pool desc <name> [text...]      set a host description (shown in pool list)
+//
+// Single hexa file, zero deps. Remote payloads (init features · disk-cleanup ·
+// usage probe) are embedded bash, dispatched over ssh — they configure the
+// remote Linux/macOS hosts, which do not run hexa.
+
+use "stdlib/alloc/json"
+use "stdlib/alloc/json_object"
+
+// ── state ────────────────────────────────────────────────────────────────
+
+fn _home() -> string { return env("HOME") }
+
+fn _dirname(p: string) -> string {
+    let parts = p.split("/")
+    let mut r = ""
+    let mut i = 0
+    while i < len(parts) - 1 {
+        if i > 0 { r = r + "/" }
+        r = r + parts[i]
+        i = i + 1
+    }
+    if len(r) == 0 { return "." }
+    return r
+}
+
+// State file: $POOL_STATE override, else ~/.pool/pool.json. Temp payload files
+// (.probe.sh · .script.sh) live alongside it.
+fn _state_path() -> string {
+    let p = env("POOL_STATE")
+    if len(p) > 0 { return p }
+    return _home() + "/.pool/pool.json"
+}
+fn _state_dir() -> string { return _dirname(_state_path()) }
+fn _ssh() -> string { return "ssh -o BatchMode=yes -o ConnectTimeout=3 -o StrictHostKeyChecking=accept-new" }
+
+// Wall-clock ceiling for a single foreground dispatch (fork-storm guard, TIME
+// axis — see FORK_GUARD.md). ssh keepalive (ServerAliveInterval, set globally in
+// ~/.ssh/config) already tears a DEAD connection down in ~30s; but a remote
+// command that hangs while the connection stays healthy (e.g. a wedged
+// `hexa run`) is invisible to keepalive — one held a local ssh ~3h on
+// 2026-05-26. `_stream_live` bounds that case by wall clock. In-source literal,
+// not an env opt-out (sidecar s11); generous enough for any legit interactive
+// command — truly long jobs belong on `pool bg` (detached) or cloud/nohup,
+// neither of which holds a foreground ssh.
+fn _dispatch_timeout_ms() -> int { return 3600000 }   // 1h
+
+// Single-quote a remote command so the LOCAL /bin/sh (exec_capture / async run
+// `/bin/sh -c`) passes it verbatim to ssh — the remote shell, not the local
+// one, expands $(...) · ; · globs. Mirrors Python's argv-list dispatch.
+fn _shq(s: string) -> string {
+    return "'" + s.replace("'", "'\\''") + "'"
+}
+
+fn _path_exists(path: string) -> bool {
+    let r = exec_capture("test -e " + path + " && echo y")
+    return r[0] == "y\n"
+}
+
+fn _load() {
+    let path = _state_path()
+    if !_path_exists(path) {
+        return json_parse("{\"hosts\":[]}")
+    }
+    let raw = read_file(path)
+    // Empty / torn read (e.g. caught mid-truncate by a legacy non-atomic
+    // writer): recover from the last good backup rather than returning an
+    // empty roster that a subsequent _save would then make permanent.
+    if len(raw.trim()) == 0 {
+        let bak = path + ".bak"
+        if _path_exists(bak) {
+            let braw = read_file(bak)
+            if len(braw.trim()) > 0 { return json_parse(braw) }
+        }
+        return json_parse("{\"hosts\":[]}")
+    }
+    return json_parse(raw)
+}
+
+// Host count of the roster currently ON DISK (independent of any in-memory
+// root). Used by _save's empty-clobber guard. Corrupt / unreadable → 0.
+fn _disk_host_count() -> int {
+    let path = _state_path()
+    if !_path_exists(path) { return 0 }
+    let mut raw = ""
+    try { raw = read_file(path) } catch e { return 0 }
+    if len(raw.trim()) == 0 { return 0 }
+    let mut root = json_parse("{\"hosts\":[]}")
+    try { root = json_parse(raw) } catch e { return 0 }
+    return len(json_object_get_array(root, "hosts"))
+}
+
+// Persist the roster. Concurrent claude sessions / agents share this single
+// ~/.pool/pool.json, so the write is hardened three ways against a race wipe:
+//   1. empty-clobber guard — refuse to overwrite a live roster with an empty
+//      one unless the caller explicitly intends it (cmd_rm passes allow_empty)
+//   2. backup rotation     — snapshot the current good roster to pool.json.bak
+//   3. atomic write        — write a unique temp in the same dir, then mv -f
+//      (rename(2), atomic on one fs) so a concurrent reader never sees a
+//      truncated file — which was the original wipe vector.
+fn _save(root, allow_empty: bool) {
+    let path = _state_path()
+    let dir  = _state_dir()
+    let _ = exec_capture("mkdir -p " + dir)
+
+    let n_new = len(json_object_get_array(root, "hosts"))
+    if n_new == 0 && !allow_empty {
+        if _disk_host_count() > 0 {
+            println("pool: refusing to overwrite a live roster with an empty one (kept on disk; backup at " + path + ".bak)")
+            return
+        }
+    }
+
+    if _path_exists(path) {
+        let _ = exec_capture("cp -p " + path + " " + path + ".bak")
+    }
+
+    let tr = exec_capture("mktemp " + dir + "/pool.json.XXXXXX")
+    let tmp = tr[0].trim()
+    write_file(tmp, json_dump_pretty(root, 2) + "\n")
+    let _ = exec_capture("mv -f " + tmp + " " + path)
+}
+
+fn _find(hosts, name: string) -> int {
+    let mut i = 0
+    while i < len(hosts) {
+        if json_object_get_str(hosts[i], "name", "") == name { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+// ── string / formatting helpers ────────────────────────────────────────────
+
+fn _pad(s: string, n: int) -> string {
+    let mut r = s
+    while len(r) < n { r = r + " " }
+    return r
+}
+
+// pi5-akida is anima-only (project.tape @D s8): NEVER an auto-dispatch / fan-out
+// candidate. Match on name OR ssh substring so a renamed clone is still caught.
+// Explicit `pool on pi5-akida <cmd>` bypasses this guard.
+fn _is_akida(h) -> bool {
+    let name = json_object_get_str(h, "name", "")
+    let ssh = json_object_get_str(h, "ssh", "")
+    return name.contains("akida") || ssh.contains("akida")
+}
+
+fn _imax(a: int, b: int) -> int {
+    if a > b { return a }
+    return b
+}
+
+fn _last_line(s: string) -> string {
+    let lines = s.split("\n")
+    let mut i = len(lines) - 1
+    while i >= 0 {
+        let t = lines[i].trim()
+        if len(t) > 0 { return t }
+        i = i - 1
+    }
+    return ""
+}
+
+// ── exec helpers ─────────────────────────────────────────────────────────
+
+// _probe_os(ssh_target) -> "macos" | "linux" | "unknown"
+fn _probe_os(target: string) -> string {
+    let r = exec_capture(_ssh() + " " + target + " -- uname -s")
+    if r[2] != 0 { return "unknown" }
+    let s = r[0].trim()
+    if s == "Darwin" { return "macos" }
+    if s == "Linux" { return "linux" }
+    return "unknown"
+}
+
+// _stream_live(cmd) -> exit code. Prints each stdout line as it arrives
+// (child stderr inherits the controller's terminal). Mirrors subprocess.call.
+//
+// Idle-poll backoff: 10ms → 250ms cap, doubling on each empty poll, resets to
+// 10ms when output arrives. Short commands keep 10ms responsiveness; long
+// idle waits (remote `sleep 30` loops, etc) drop the local poll rate from
+// 100Hz to 4Hz — ~25x reduction in local interpreter overhead while the
+// remote sleeps.
+fn _stream_live(cmd: string) -> int {
+    let h = exec_stream_async(cmd)
+    let start_ms = time_ms()
+    let to_ms = _dispatch_timeout_ms()
+    let mut done = false
+    let mut rc = 0
+    let mut idle_ms = 10
+    while !done {
+        if time_ms() - start_ms > to_ms {
+            let _ = exec_stream_kill(h)
+            println("pool: dispatch exceeded " + to_string(to_ms / 1000) + "s ceiling — killed (exit 124). long jobs → `pool bg` / cloud nohup.")
+            return 124
+        }
+        let r = exec_stream_poll(h)
+        if r[0] == 1 {
+            done = true
+            rc = exec_stream_close(h)
+        } else {
+            if len(r[1]) > 0 {
+                println(r[1])
+                idle_ms = 10
+            } else {
+                sleep_ms(idle_ms)
+                if idle_ms < 250 { idle_ms = idle_ms * 2 }
+            }
+        }
+    }
+    return rc
+}
+
+// _parallel(cmds, timeout_ms, max_workers) -> [exits, outs]
+// Launches up to max_workers commands at once (<=0 = all), polls round-robin,
+// collects each command's stdout into outs[i] (newline-joined), exit into
+// exits[i]. timeout_ms>0 kills stragglers (exit 124). The hexa-native parallel
+// primitive — exec_stream_async/poll/close.
+fn _parallel(cmds, timeout_ms: int, max_workers: int) {
+    let n = len(cmds)
+    let mut handles = []
+    let mut outs = []
+    let mut exits = []
+    let mut dones = []
+    let mut started = []
+    let mut i = 0
+    while i < n {
+        handles.push(0)
+        outs.push("")
+        exits.push(-1)
+        dones.push(false)
+        started.push(false)
+        i = i + 1
+    }
+    let mut cap = n
+    if max_workers > 0 {
+        if max_workers < n { cap = max_workers }
+    }
+    // initial launch: indices 0..cap-1 (pending indices stay contiguous: cap..n-1)
+    let mut li = 0
+    while li < n {
+        if li < cap {
+            handles[li] = exec_stream_async(cmds[li])
+            started[li] = true
+        }
+        li = li + 1
+    }
+    let start_ms = time_ms()
+    let mut remaining = n
+    let mut next = cap
+    while remaining > 0 {
+        i = 0
+        while i < n {
+            if started[i] {
+                if !dones[i] {
+                    let r = exec_stream_poll(handles[i])
+                    if r[0] == 1 {
+                        dones[i] = true
+                        exits[i] = exec_stream_close(handles[i])
+                        remaining = remaining - 1
+                        if next < n {
+                            handles[next] = exec_stream_async(cmds[next])
+                            started[next] = true
+                            next = next + 1
+                        }
+                    } else {
+                        if len(r[1]) > 0 { outs[i] = outs[i] + r[1] + "\n" }
+                    }
+                }
+            }
+            i = i + 1
+        }
+        if timeout_ms > 0 {
+            if time_ms() - start_ms > timeout_ms {
+                i = 0
+                while i < n {
+                    if !dones[i] {
+                        if started[i] { let _ = exec_stream_kill(handles[i]) }
+                        dones[i] = true
+                        exits[i] = 124
+                        remaining = remaining - 1
+                    }
+                    i = i + 1
+                }
+            }
+        }
+        sleep_ms(15)
+    }
+    let result = []
+    result.push(exits)
+    result.push(outs)
+    return result
+}
+
+// ── embedded bash payloads (raw — sent over ssh to remote hosts) ───────────
+
+fn _usage_probe() -> string {
+    return """export LC_ALL=C
+OS=$(uname -s)
+LOAD=$(uptime | sed -E 's/.*load averages?: //' | awk '{print $1}' | tr -d ',')
+case "$OS" in
+    Darwin)
+        RT=$(( $(sysctl -n hw.memsize) / 1073741824 ))
+        PAGES=$(vm_stat | awk '/Pages (active|wired down|occupied by compressor)/ {gsub(/\./,"",$NF); s+=$NF} END {print s+0}')
+        RU=$(( PAGES * 4096 / 1073741824 ))
+        DSK=$(df -h / | tail -1 | awk '{print $3"/"$2}')
+        GPU="-"
+        ;;
+    Linux)
+        RT=$(free -g | awk 'NR==2 {print $2}')
+        RU=$(free -g | awk 'NR==2 {print $3}')
+        DSK=$(df -h / | tail -1 | awk '{print $3"/"$2}')
+        if command -v nvidia-smi >/dev/null 2>&1; then
+            GPU=$(nvidia-smi --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>/dev/null | head -1 | awk '{print $1"%"}')
+        else
+            GPU="-"
+        fi
+        ;;
+    *)
+        RT=0; RU=0; DSK="-"; GPU="-"
+        ;;
+esac
+echo "$LOAD|$RU/${RT}G|$GPU|$DSK"
+"""
+}
+
+fn _tailscale_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+if command -v tailscale >/dev/null 2>&1; then
+    echo "[$HOSTN] tailscale already installed"
+    tailscale --version | head -1
+    exit 0
+fi
+OS=$(uname -s)
+if [ "$OS" = "Darwin" ]; then
+    if command -v brew >/dev/null 2>&1; then
+        brew install tailscale
+        brew services start tailscale || true
+    else
+        echo "[$HOSTN] ERROR: Homebrew required for tailscale install on macOS" >&2
+        exit 1
+    fi
+elif [ "$OS" = "Linux" ]; then
+    curl -fsSL https://tailscale.com/install.sh | __SUDO__ sh
+else
+    echo "[$HOSTN] ERROR: unsupported OS: $OS" >&2
+    exit 1
+fi
+echo "[$HOSTN] tailscale installed — run \`__SUDO__ tailscale up\` to authenticate"
+"""
+}
+
+// Shared disk-cleanup logic — the body of both the `pool clean` verb (run now,
+// over ssh) and the `/etc/cron.daily/disk-cleanup` hook that `pool init`
+// installs. Self-detects privilege (uid 0 → no sudo; else `sudo -n`). Safe tier
+// runs every time; deep tier (model caches · docker) is gated on --deep or the
+// host being past POOL_CLEAN_THRESH (default 85%). Uniform mtime retention.
+fn _cleanup_sh() -> string {
+    return """set -u
+HOSTN=$(hostname)
+DRY=${POOL_CLEAN_DRYRUN:-0}
+THRESH=${POOL_CLEAN_THRESH:-85}
+RETAIN=${POOL_CLEAN_RETAIN:-3}
+if [ "$(uname -s)" != Linux ]; then
+    echo "[$HOSTN] disk-cleanup skipped — Linux only (macOS self-manages caches/logs)"
+    exit 0
+fi
+if [ "$(id -u)" = 0 ]; then SUDO=; else SUDO="sudo -n"; fi
+
+dpct()   { df -Pk / | awk 'NR==2 {gsub(/%/,"",$5); print $5+0}'; }
+davail() { df -Pk / | awk 'NR==2 {print $4+0}'; }
+human()  { awk -v k="${1:-0}" 'BEGIN{u="KMGT";i=1;while(k>=1024&&i<4){k/=1024;i++}printf "%.1f%s",k,substr(u,i,1)}'; }
+
+B_PCT=$(dpct); B_AV=$(davail)
+DEEP=${POOL_CLEAN_DEEP:-0}; GATE=
+if [ "$DEEP" != 1 ] && [ "$B_PCT" -ge "$THRESH" ]; then
+    DEEP=1; GATE=" · deep tier engaged (${B_PCT}% >= ${THRESH}%)"
+fi
+MODE=safe; [ "$DEEP" = 1 ] && MODE=safe+deep
+[ "$DRY" = 1 ] && MODE="$MODE [dry-run]"
+echo "[$HOSTN] disk-cleanup — $MODE · ${B_PCT}% used · retain ${RETAIN}d$GATE"
+
+vac() {
+    [ -e "$1" ] || return 0
+    if [ "$DRY" = 1 ]; then
+        n=$($SUDO find "$1" -type f -mtime +"$RETAIN" 2>/dev/null | wc -l | tr -d ' ')
+        [ "${n:-0}" -gt 0 ] && echo "  dry · $1 — ${n} file(s) >${RETAIN}d"
+        return 0
+    fi
+    $SUDO find "$1" -type f -mtime +"$RETAIN" -delete 2>/dev/null || true
+    $SUDO find "$1" -depth -type d -empty -delete 2>/dev/null || true
+}
+
+if [ "$DRY" = 1 ]; then
+    echo "  dry · journalctl vacuum (2G/${RETAIN}d) · apt autoremove+clean · snap disabled-revs"
+else
+    $SUDO journalctl --vacuum-size=2G           >/dev/null 2>&1 || true
+    $SUDO journalctl --vacuum-time="${RETAIN}d" >/dev/null 2>&1 || true
+    export DEBIAN_FRONTEND=noninteractive
+    $SUDO apt-get -y autoremove --purge         >/dev/null 2>&1 || true
+    $SUDO apt-get clean                         >/dev/null 2>&1 || true
+    if command -v snap >/dev/null 2>&1; then
+        snap list --all 2>/dev/null | awk '/disabled/ {print $1, $3}' | while read -r s r; do
+            [ -n "$s" ] && $SUDO snap remove "$s" --revision="$r" >/dev/null 2>&1 || true
+        done
+    fi
+fi
+for p in /var/log /var/crash /tmp /var/tmp; do vac "$p"; done
+for d in /home/* /root; do
+    for c in uv pip puppeteer mathlib thumbnails; do vac "$d/.cache/$c"; done
+done
+
+if [ "$DEEP" = 1 ]; then
+    for d in /home/* /root; do
+        for c in huggingface torch torch_extensions npm yarn go-build; do vac "$d/.cache/$c"; done
+    done
+    if command -v docker >/dev/null 2>&1; then
+        if [ "$DRY" = 1 ]; then
+            echo "  dry · docker system prune (until=$((RETAIN*24))h)"
+        else
+            $SUDO docker system prune -af --filter "until=$((RETAIN*24))h" >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
+A_PCT=$(dpct); A_AV=$(davail)
+FREED=$((A_AV - B_AV)); [ "$FREED" -lt 0 ] && FREED=0
+if [ "$DRY" = 1 ]; then
+    echo "[$HOSTN] dry-run complete — nothing deleted"
+else
+    echo "[$HOSTN] done — ${B_PCT}% -> ${A_PCT}% used · freed $(human "$FREED") · $(human "$A_AV") free"
+fi
+"""
+}
+
+// `/etc/cron.daily/disk-cleanup` body — the shared logic above, logged. cron
+// runs it as root (no sudo) in gated mode (deep tier waits for the threshold).
+fn _cron_file() -> string {
+    return "#!/bin/sh\n" +
+        "# pool disk-cleanup — installed by `pool init`. Safe tier daily; deep tier\n" +
+        "# (model caches · docker) engages only when the disk is past the threshold.\n" +
+        "exec >>/var/log/pool-cleanup.log 2>&1\n" +
+        "echo \"=== $(date -Is 2>/dev/null || date) ===\"\n" +
+        _cleanup_sh()
+}
+
+// `pool init` feature wrapper — installs the cron file as the cron.daily hook.
+fn _disk_cleanup_sh() -> string {
+    return "set -e\n" +
+        "HOSTN=\"$(hostname)\"\n" +
+        "if [ \"$(uname -s)\" != \"Linux\" ]; then\n" +
+        "    echo \"[$HOSTN] disk-cleanup skipped — Linux only\"\n" +
+        "    exit 0\n" +
+        "fi\n" +
+        "__SUDO__ tee /etc/cron.daily/disk-cleanup >/dev/null <<'POOL_CRON_EOF'\n" +
+        _cron_file() +
+        "POOL_CRON_EOF\n" +
+        "__SUDO__ chmod 755 /etc/cron.daily/disk-cleanup\n" +
+        "echo \"[$HOSTN] /etc/cron.daily/disk-cleanup installed (safe tier daily · deep tier at >=85% · log /var/log/pool-cleanup.log)\"\n"
+}
+
+fn _no_sleep_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+OS=$(uname -s)
+if [ "$OS" != "Darwin" ]; then
+    echo "[$HOSTN] no-sleep skipped — macOS only"
+    exit 0
+fi
+__SUDO__ pmset -a displaysleep 0 sleep 0 disksleep 0
+defaults -currentHost write com.apple.screensaver idleTime 0
+defaults write com.apple.screensaver idleTime 0
+echo "[$HOSTN] no-sleep: pmset displaysleep=0 sleep=0 disksleep=0; screensaver idleTime=0"
+"""
+}
+
+fn _persistent_journal_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "[$HOSTN] persistent-journal skipped — Linux only"
+    exit 0
+fi
+if [ -d /var/log/journal ]; then
+    echo "[$HOSTN] persistent-journal already enabled (/var/log/journal exists)"
+    exit 0
+fi
+__SUDO__ mkdir -p /var/log/journal
+__SUDO__ systemd-tmpfiles --create --prefix /var/log/journal
+__SUDO__ systemctl restart systemd-journald
+echo "[$HOSTN] persistent-journal: /var/log/journal created (journalctl -b -1 survives reboots)"
+"""
+}
+
+fn _panic_recovery_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "[$HOSTN] panic-recovery skipped — Linux only"
+    exit 0
+fi
+__SUDO__ tee /etc/sysctl.d/60-pool-recovery.conf >/dev/null <<'SYSCTL_EOF'
+kernel.panic = 10
+kernel.panic_on_oom = 0
+SYSCTL_EOF
+__SUDO__ sysctl -q --system
+echo "[$HOSTN] panic-recovery: kernel.panic=10, kernel.panic_on_oom=0"
+"""
+}
+
+fn _earlyoom_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "[$HOSTN] earlyoom skipped — Linux only"
+    exit 0
+fi
+if systemctl is-active --quiet earlyoom 2>/dev/null; then
+    echo "[$HOSTN] earlyoom already active"
+    exit 0
+fi
+export DEBIAN_FRONTEND=noninteractive
+__SUDO__ apt-get update -qq
+__SUDO__ apt-get install -y earlyoom
+__SUDO__ systemctl enable --now earlyoom
+echo "[$HOSTN] earlyoom enabled (preempts kernel OOM-killer at <10% free RAM+swap)"
+"""
+}
+
+fn _swapfile_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "[$HOSTN] swapfile skipped — Linux only"
+    exit 0
+fi
+have_kb=$(awk '/^SwapTotal:/ {print $2}' /proc/meminfo)
+have_g=$((have_kb / 1024 / 1024))
+if [ "$have_g" -ge 30 ]; then
+    echo "[$HOSTN] swapfile skipped — existing swap ${have_g}G already >= 30G"
+    exit 0
+fi
+SWAP=/swapfile-pool
+if [ ! -f "$SWAP" ]; then
+    __SUDO__ fallocate -l 32G "$SWAP" 2>/dev/null \
+        || __SUDO__ dd if=/dev/zero of="$SWAP" bs=1M count=32768 status=none
+    __SUDO__ chmod 600 "$SWAP"
+    __SUDO__ mkswap "$SWAP" >/dev/null
+fi
+if ! swapon --show=NAME --noheadings 2>/dev/null | grep -qx "$SWAP"; then
+    __SUDO__ swapon "$SWAP"
+fi
+if ! grep -qE "^${SWAP}[[:space:]]" /etc/fstab; then
+    echo "${SWAP} none swap sw 0 0" | __SUDO__ tee -a /etc/fstab >/dev/null
+fi
+__SUDO__ tee /etc/sysctl.d/61-pool-swap.conf >/dev/null <<'SWAP_EOF'
+vm.swappiness = 10
+SWAP_EOF
+__SUDO__ sysctl -q --system
+echo "[$HOSTN] swapfile: ${SWAP} (32G) active; vm.swappiness=10"
+"""
+}
+
+fn _watchdog_sh() -> string {
+    return """set -e
+HOSTN="$(hostname)"
+if [ "$(uname -s)" != "Linux" ]; then
+    echo "[$HOSTN] watchdog skipped — Linux only"
+    exit 0
+fi
+echo 'softdog' | __SUDO__ tee /etc/modules-load.d/softdog.conf >/dev/null
+__SUDO__ modprobe softdog 2>/dev/null || true
+__SUDO__ mkdir -p /etc/systemd/system.conf.d
+__SUDO__ tee /etc/systemd/system.conf.d/50-pool-watchdog.conf >/dev/null <<'WD_EOF'
+[Manager]
+RuntimeWatchdogSec=30s
+ShutdownWatchdogSec=4min
+WD_EOF
+__SUDO__ systemctl daemon-reexec
+echo "[$HOSTN] watchdog: softdog + systemd RuntimeWatchdogSec=30s (auto-reset on kernel hang)"
+"""
+}
+
+// ── verbs ──────────────────────────────────────────────────────────────
+
+fn cmd_add(name: string, ssh_t: string, sudo: bool) -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    if _find(hosts, name) >= 0 {
+        println("already in roster: " + name)
+        return 1
+    }
+    let h = json_parse("{}")
+    let _ = json_object_set(h, "name", name)
+    let _ = json_object_set(h, "ssh", ssh_t)
+    if sudo { let _ = json_object_set(h, "sudo", true) }
+    let os = _probe_os(ssh_t)
+    let _ = json_object_set(h, "os", os)
+    let _ = json_array_push(hosts, h)
+    _save(root, false)
+    let mut line = "+ " + name + " (" + ssh_t + ")  " + os
+    if sudo { line = line + "  sudo" }
+    println(line)
+    return 0
+}
+
+fn cmd_rm(name: string) -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let idx = _find(hosts, name)
+    if idx < 0 {
+        println("not in roster: " + name)
+        return 1
+    }
+    let new_hosts = []
+    let mut i = 0
+    while i < len(hosts) {
+        if i != idx { let _ = json_array_push(new_hosts, hosts[i]) }
+        i = i + 1
+    }
+    let _ = json_object_set(root, "hosts", new_hosts)
+    // rm is the one verb that may legitimately empty the roster (removing the
+    // last host) — allow_empty=true exempts it from the empty-clobber guard.
+    _save(root, true)
+    println("- " + name)
+    return 0
+}
+
+fn cmd_refresh() -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let mut i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        let old = json_object_get_str(h, "os", "—")
+        let nw = _probe_os(json_object_get_str(h, "ssh", ""))
+        let _ = json_object_set(h, "os", nw)
+        println(json_object_get_str(h, "name", "?") + ": " + old + " → " + nw)
+        i = i + 1
+    }
+    _save(root, false)
+    return 0
+}
+
+fn cmd_list(as_json: bool, live: bool) -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+
+    // parallel usage probe over every host (shared + dedicated alike — informational)
+    let mut tnames = []
+    let mut tload = []
+    let mut tram = []
+    let mut tgpu = []
+    let mut tdisk = []
+    if live {
+        let probe = _state_dir() + "/.probe.sh"
+        let _ = exec_capture("mkdir -p " + _state_dir())
+        write_file(probe, _usage_probe())
+        let cmds = []
+        let mut i = 0
+        while i < len(hosts) {
+            let h = hosts[i]
+            tnames.push(json_object_get_str(h, "name", "?"))
+            cmds.push(_ssh() + " " + json_object_get_str(h, "ssh", "") + " bash -s < " + probe + " 2>/dev/null")
+            i = i + 1
+        }
+        if len(cmds) > 0 {
+            let res = _parallel(cmds, 8000, 8)
+            let outs = res[1]
+            i = 0
+            while i < len(tnames) {
+                let line = _last_line(outs[i])
+                let parts = line.split("|")
+                if len(parts) == 4 {
+                    tload.push(parts[0])
+                    tram.push(parts[1])
+                    tgpu.push(parts[2])
+                    tdisk.push(parts[3])
+                } else {
+                    tload.push("-")
+                    tram.push("-")
+                    tgpu.push("-")
+                    tdisk.push("-")
+                }
+                i = i + 1
+            }
+        }
+    }
+
+    if as_json {
+        if live {
+            let mut i = 0
+            while i < len(hosts) {
+                let h = hosts[i]
+                let ti = _ifind(tnames, json_object_get_str(h, "name", "?"))
+                if ti >= 0 {
+                    let u = json_parse("{}")
+                    let _ = json_object_set(u, "load", tload[ti])
+                    let _ = json_object_set(u, "ram", tram[ti])
+                    let _ = json_object_set(u, "gpu", tgpu[ti])
+                    let _ = json_object_set(u, "disk", tdisk[ti])
+                    let _ = json_object_set(h, "usage", u)
+                }
+                i = i + 1
+            }
+        }
+        println(json_dump_pretty(root, 2))
+        return 0
+    }
+
+    if len(hosts) == 0 {
+        println("empty roster — `pool add <name> <user@host>` to start")
+        return 0
+    }
+
+    // column widths
+    let mut nw = 1
+    let mut sw = 1
+    let mut ow = 1
+    let mut i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        nw = _imax(nw, len(json_object_get_str(h, "name", "?")))
+        sw = _imax(sw, len(json_object_get_str(h, "ssh", "?")))
+        ow = _imax(ow, len(json_object_get_str(h, "os", "-")))
+        i = i + 1
+    }
+
+    let mut lw = 4
+    let mut rw = 3
+    let mut gw = 3
+    let mut dw = 4
+    if live {
+        i = 0
+        while i < len(tnames) {
+            lw = _imax(lw, len(tload[i]))
+            rw = _imax(rw, len(tram[i]))
+            gw = _imax(gw, len(tgpu[i]))
+            dw = _imax(dw, len(tdisk[i]))
+            i = i + 1
+        }
+        println(_pad("", nw) + "  " + _pad("", sw) + "  " + _pad("", ow) + "  " +
+                _pad("load", lw) + "  " + _pad("ram", rw) + "  " + _pad("gpu", gw) + "  " +
+                _pad("disk", dw) + "  " + _pad("sudo", 4) + "  desc")
+    }
+
+    i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        let name = json_object_get_str(h, "name", "?")
+        let ssh = json_object_get_str(h, "ssh", "?")
+        let os = json_object_get_str(h, "os", "-")
+        let mut sudo_c = ""
+        if json_object_get_bool(h, "sudo", false) { sudo_c = "sudo" }
+        let desc = json_object_get_str(h, "description", "")
+        if live {
+            let mut ld = "-"
+            let mut ra = "-"
+            let mut gp = "-"
+            let mut dk = "-"
+            let ti = _ifind(tnames, name)
+            if ti >= 0 {
+                ld = tload[ti]
+                ra = tram[ti]
+                gp = tgpu[ti]
+                dk = tdisk[ti]
+            }
+            let row = _pad(name, nw) + "  " + _pad(ssh, sw) + "  " + _pad(os, ow) + "  " +
+                    _pad(ld, lw) + "  " + _pad(ra, rw) + "  " + _pad(gp, gw) + "  " + _pad(dk, dw) + "  " +
+                    _pad(sudo_c, 4) + "  " + desc
+            println(row.trim())
+        } else {
+            let row = _pad(name, nw) + "  " + _pad(ssh, sw) + "  " + _pad(os, ow) + "  " +
+                    _pad(sudo_c, 4) + "  " + desc
+            println(row.trim())
+        }
+        i = i + 1
+    }
+    return 0
+}
+
+fn _ifind(arr, name: string) -> int {
+    let mut i = 0
+    while i < len(arr) {
+        if arr[i] == name { return i }
+        i = i + 1
+    }
+    return -1
+}
+
+// pool bg <name> <cmd...> — fire-and-forget remote dispatch. Uses `ssh -f -n`
+// so the local ssh client backgrounds itself immediately (after auth) and
+// closes stdin; combined with the canonical `nohup ... > file 2>&1 &` pattern
+// on the remote, this guarantees the local wrapper exits in <1s rather than
+// becoming a 99% CPU zombie holding a half-open output pipe (the failure
+// mode that `_stream_live`'s idle backoff cannot recover from — if the remote
+// keeps an fd open, idle is never observed). Use for any `nohup ... &` style
+// remote launch; use plain `pool on` when you want to stream output.
+fn cmd_bg(av) -> int {
+    if len(av) < 4 {
+        println("usage: pool bg <name> <cmd...>")
+        return 1
+    }
+    let name = av[2]
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let idx = _find(hosts, name)
+    if idx < 0 {
+        println("not in roster: " + name)
+        return 1
+    }
+    let h = hosts[idx]
+    let target = json_object_get_str(h, "ssh", "")
+    let mut remote = ""
+    let mut i = 3
+    while i < len(av) {
+        if i > 3 { remote = remote + " " }
+        remote = remote + av[i]
+        i = i + 1
+    }
+    let r = exec_capture(_ssh() + " -f -n " + target + " -- " + _shq(remote))
+    if len(r[0]) > 0 { println(r[0]) }
+    if len(r[1]) > 0 { println(r[1]) }
+    return r[2]
+}
+
+fn cmd_on(av) -> int {
+    if len(av) < 4 {
+        println("usage: pool on <name> <cmd...>")
+        return 1
+    }
+    let name = av[2]
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let idx = _find(hosts, name)
+    if idx < 0 {
+        println("not in roster: " + name)
+        return 1
+    }
+    let h = hosts[idx]
+    let target = json_object_get_str(h, "ssh", "")
+    let mut remote = ""
+    let mut i = 3
+    while i < len(av) {
+        if i > 3 { remote = remote + " " }
+        remote = remote + av[i]
+        i = i + 1
+    }
+    return _stream_live(_ssh() + " " + target + " -- " + _shq(remote))
+}
+
+// pool on all <cmd...> — parallel dispatch to every host (skips pi5-akida).
+// Each output line is prefixed `[hostname]`. Aggregate exit = max returncode.
+// Generic verb, zero domain knowledge.
+fn cmd_on_all(remote: string, jobs: int, timeout_s: int) -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let mut tnames = []
+    let cmds = []
+    let mut i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        if !_is_akida(h) {
+            tnames.push(json_object_get_str(h, "name", "?"))
+            cmds.push(_ssh() + " " + json_object_get_str(h, "ssh", "") + " -- " + _shq(remote) + " 2>&1")
+        }
+        i = i + 1
+    }
+    if len(cmds) == 0 {
+        println("no fan-out candidates (roster only has pi5-akida — anima-only)")
+        return 1
+    }
+    let mut nw = 1
+    i = 0
+    while i < len(tnames) { nw = _imax(nw, len(tnames[i])); i = i + 1 }
+    let res = _parallel(cmds, timeout_s * 1000, jobs)
+    let exits = res[0]
+    let outs = res[1]
+    let mut rc_overall = 0
+    i = 0
+    while i < len(tnames) {
+        let lines = outs[i].split("\n")
+        let mut j = 0
+        while j < len(lines) {
+            if len(lines[j]) > 0 { println("[" + _pad(tnames[i], nw) + "] " + lines[j]) }
+            j = j + 1
+        }
+        let rc = exits[i]
+        if rc != 0 {
+            if rc > rc_overall { rc_overall = rc }
+        }
+        i = i + 1
+    }
+    return rc_overall
+}
+
+// pool route <cmd...> — pick the routing-eligible host with the lowest 1-min
+// load and dispatch <cmd> there. Routing-eligible = every host except
+// pi5-akida (anima-only · @D s8). Reuses `_usage_probe()` and `_parallel()`;
+// load is parsed as float. Prints the scored ranking, then streams the chosen
+// host's output (same path as `pool on <best> <cmd>`).
+fn cmd_route(av) -> int {
+    let mut remote = ""
+    let mut i = 2
+    while i < len(av) {
+        if i > 2 { remote = remote + " " }
+        remote = remote + av[i]
+        i = i + 1
+    }
+    if len(remote) == 0 {
+        println("usage: pool route <cmd...>")
+        return 1
+    }
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let mut cnames = []
+    let mut ctargets = []
+    i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        if !_is_akida(h) {
+            cnames.push(json_object_get_str(h, "name", "?"))
+            ctargets.push(json_object_get_str(h, "ssh", ""))
+        }
+        i = i + 1
+    }
+    if len(cnames) == 0 {
+        println("no routing-eligible hosts (roster only has pi5-akida — anima-only)")
+        return 1
+    }
+    let probe = _state_dir() + "/.probe.sh"
+    let _ = exec_capture("mkdir -p " + _state_dir())
+    write_file(probe, _usage_probe())
+    let cmds = []
+    i = 0
+    while i < len(ctargets) {
+        cmds.push(_ssh() + " " + ctargets[i] + " bash -s < " + probe + " 2>/dev/null")
+        i = i + 1
+    }
+    let res = _parallel(cmds, 8000, 8)
+    let outs = res[1]
+    let mut loads = []
+    let mut best = -1
+    let mut best_load = 0.0
+    i = 0
+    while i < len(cnames) {
+        let line = _last_line(outs[i])
+        let parts = line.split("|")
+        let mut lf = 999999.0
+        if len(parts) == 4 { lf = to_float(parts[0]) }
+        loads.push(lf)
+        if best < 0 { best = i; best_load = lf }
+        else { if lf < best_load { best = i; best_load = lf } }
+        i = i + 1
+    }
+    let mut nw = 1
+    i = 0
+    while i < len(cnames) { nw = _imax(nw, len(cnames[i])); i = i + 1 }
+    i = 0
+    while i < len(cnames) {
+        let mut mark = "  "
+        if i == best { mark = "→ " }
+        println(mark + _pad(cnames[i], nw) + "  load " + to_string(loads[i]))
+        i = i + 1
+    }
+    println("route → " + cnames[best] + ": " + remote)
+    return _stream_live(_ssh() + " " + ctargets[best] + " -- " + _shq(remote))
+}
+
+fn cmd_status() -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    if len(hosts) == 0 {
+        println("empty roster")
+        return 0
+    }
+    let mut width = 1
+    let mut i = 0
+    while i < len(hosts) {
+        width = _imax(width, len(json_object_get_str(hosts[i], "name", "?")))
+        i = i + 1
+    }
+    // parallel reachability over every host (shared + dedicated alike)
+    let mut tnames = []
+    let cmds = []
+    i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        tnames.push(json_object_get_str(h, "name", "?"))
+        cmds.push(_ssh() + " " + json_object_get_str(h, "ssh", "") + " -- true")
+        i = i + 1
+    }
+    let mut exits = []
+    if len(cmds) > 0 {
+        let res = _parallel(cmds, 8000, 8)
+        exits = res[0]
+    }
+    i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        let name = json_object_get_str(h, "name", "?")
+        let target = json_object_get_str(h, "ssh", "?")
+        let ti = _ifind(tnames, name)
+        let mut tag = "x  "
+        if ti >= 0 {
+            if exits[ti] == 0 { tag = "ok " }
+        }
+        println(_pad(name, width) + "  [" + tag + "]  " + target)
+        i = i + 1
+    }
+    return 0
+}
+
+// Per-host hexa-lang health probe. ssh into every non-akida host in
+// parallel and run a 2-line smoke: `hexa --version` (binary exists +
+// dispatcher works) and `hexa loop --status` from ~/core/hexa-lang
+// (loop verb dispatch + cycle.hexa accessible). Output one row per
+// host; exit 1 if any host fails — so `pool health || alert` can
+// drive a cron / launchd watcher. pi5-akida (anima-only) is skipped.
+//
+// Motivation: pool fleet install drifts silently — `pool status`
+// only shows ssh reachability, not hexa state. Run before
+// `hexa drill` / `hexa loop` campaigns to catch hexa.real-missing
+// or not-installed regressions early.
+fn cmd_health() -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    if len(hosts) == 0 {
+        println("empty roster")
+        return 0
+    }
+    let mut width = 4   // at least len("host")
+    let mut i = 0
+    while i < len(hosts) {
+        width = _imax(width, len(json_object_get_str(hosts[i], "name", "?")))
+        i = i + 1
+    }
+    // 2-stage stdout probe — first line = `hexa --version`, then `---`
+    // delimiter, then `hexa loop --status` first line. cd ... 2>/dev/null
+    // means hosts missing ~/core/hexa-lang fall through to a blank
+    // loop-state which parses as 🟡 (loop-only-fail), distinct from
+    // 🔴 (no hexa at all).
+    let probe = "(hexa --version 2>&1 | head -1; echo '---'; cd ~/core/hexa-lang 2>/dev/null && hexa loop --status 2>&1 | head -1)"
+    let mut tnames = []
+    let cmds = []
+    i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        if !_is_akida(h) {
+            tnames.push(json_object_get_str(h, "name", "?"))
+            cmds.push(_ssh() + " " + json_object_get_str(h, "ssh", "") + " -- " + _shq(probe))
+        }
+        i = i + 1
+    }
+    let mut exits = []
+    let mut outs = []
+    if len(cmds) > 0 {
+        let res = _parallel(cmds, 15000, 8)
+        exits = res[0]
+        outs = res[1]
+    }
+    let vw = 22
+    let lw = 22
+    println(_pad("host", width) + "  " + _pad("hexa version", vw) + "  " + _pad("loop verb", lw) + "  verdict")
+    let mut bad = 0
+    i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        let name = json_object_get_str(h, "name", "?")
+        if _is_akida(h) {
+            println(_pad(name, width) + "  " + _pad("(anima-only)", vw) + "  " + _pad("-", lw) + "  ⚪ skipped")
+        } else {
+            let ti = _ifind(tnames, name)
+            let mut version = ""
+            let mut loop_state = ""
+            let mut verdict = "🔴 broken"
+            if ti >= 0 {
+                let out = outs[ti]
+                let parts = out.split("---")
+                if len(parts) >= 1 { version = parts[0].trim() }
+                if len(parts) >= 2 { loop_state = parts[1].trim() }
+                if exits[ti] == 0 && version.starts_with("hexa ") {
+                    if loop_state.starts_with("[loop]") {
+                        verdict = "🟢 healthy"
+                    } else {
+                        verdict = "🟡 loop-fail"
+                    }
+                }
+            }
+            if !verdict.starts_with("🟢") { bad = bad + 1 }
+            if len(version) == 0 { version = "(unreachable)" }
+            if len(loop_state) == 0 { loop_state = "-" }
+            if len(version) > vw { version = version.substring(0, vw - 3) + "..." }
+            if len(loop_state) > lw { loop_state = loop_state.substring(0, lw - 3) + "..." }
+            println(_pad(name, width) + "  " + _pad(version, vw) + "  " + _pad(loop_state, lw) + "  " + verdict)
+        }
+        i = i + 1
+    }
+    if bad > 0 { return 1 }
+    return 0
+}
+
+fn cmd_init() -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let labels = []
+    let scripts = []
+    labels.push("tailscale");          scripts.push(_tailscale_sh())
+    labels.push("disk-cleanup");       scripts.push(_disk_cleanup_sh())
+    labels.push("no-sleep");           scripts.push(_no_sleep_sh())
+    labels.push("persistent-journal"); scripts.push(_persistent_journal_sh())
+    labels.push("panic-recovery");     scripts.push(_panic_recovery_sh())
+    labels.push("earlyoom");           scripts.push(_earlyoom_sh())
+    labels.push("swapfile");           scripts.push(_swapfile_sh())
+    labels.push("watchdog");           scripts.push(_watchdog_sh())
+
+    let _ = exec_capture("mkdir -p " + _state_dir())
+    let tmp = _state_dir() + "/.script.sh"
+    let mut rc_overall = 0
+    let mut any = false
+    let mut i = 0
+    while i < len(hosts) {
+        let h = hosts[i]
+        if _is_akida(h) {
+            println("=== skip " + json_object_get_str(h, "name", "?") + " (anima-only) ===")
+        } else {
+            any = true
+            let name = json_object_get_str(h, "name", "?")
+            let target = json_object_get_str(h, "ssh", "")
+            let mut sudo_token = ""
+            if json_object_get_bool(h, "sudo", false) { sudo_token = "sudo" }
+            println("=== pool init " + name + " (" + target + ") ===")
+            let mut j = 0
+            while j < len(labels) {
+                let label = labels[j]
+                println("  · " + label)
+                write_file(tmp, scripts[j].replace("__SUDO__", sudo_token))
+                let rc = _stream_live(_ssh() + " " + target + " bash -s < " + tmp)
+                if rc != 0 {
+                    println("    ! " + label + " failed (exit " + to_string(rc) + ")")
+                    rc_overall = rc
+                }
+                j = j + 1
+            }
+        }
+        i = i + 1
+    }
+    if !any {
+        println("no hosts to init (roster only has pi5-akida — anima-only)")
+        return 1
+    }
+    return rc_overall
+}
+
+fn cmd_clean(targets, dry: bool, deep: bool) -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let chosen = []
+    if len(targets) == 1 {
+        if targets[0] == "all" {
+            let mut i = 0
+            while i < len(hosts) {
+                let h = hosts[i]
+                let nm = json_object_get_str(h, "name", "?")
+                if _is_akida(h) {
+                    println("· skipped " + nm + " (anima-only)")
+                } else {
+                    chosen.push(h)
+                }
+                i = i + 1
+            }
+            return _clean_run(chosen, dry, deep)
+        }
+    }
+    let mut i = 0
+    while i < len(targets) {
+        let name = targets[i]
+        let idx = _find(hosts, name)
+        if idx < 0 {
+            println("not in roster: " + name)
+            return 1
+        }
+        chosen.push(hosts[idx])
+        i = i + 1
+    }
+    return _clean_run(chosen, dry, deep)
+}
+
+fn _clean_run(chosen, dry: bool, deep: bool) -> int {
+    if len(chosen) == 0 {
+        println("no host to clean")
+        return 1
+    }
+    let mut envp = ""
+    if dry { envp = envp + "export POOL_CLEAN_DRYRUN=1\n" }
+    if deep { envp = envp + "export POOL_CLEAN_DEEP=1\n" }
+    let _ = exec_capture("mkdir -p " + _state_dir())
+    let tmp = _state_dir() + "/.script.sh"
+    write_file(tmp, envp + _cleanup_sh())
+    let mut rc_overall = 0
+    let mut i = 0
+    while i < len(chosen) {
+        let h = chosen[i]
+        let rc = _stream_live(_ssh() + " " + json_object_get_str(h, "ssh", "") + " bash -s < " + tmp)
+        if rc != 0 {
+            println("  ! clean failed on " + json_object_get_str(h, "name", "?") + " (exit " + to_string(rc) + ")")
+            rc_overall = rc
+        }
+        i = i + 1
+    }
+    return rc_overall
+}
+
+fn cmd_desc(name: string, text: string) -> int {
+    let root = _load()
+    let hosts = json_object_get_array(root, "hosts")
+    let idx = _find(hosts, name)
+    if idx < 0 {
+        println("not in roster: " + name)
+        return 1
+    }
+    if len(text) > 0 {
+        let _ = json_object_set(hosts[idx], "description", text)
+        println(name + ": " + text)
+    } else {
+        let _ = json_object_delete(hosts[idx], "description")
+        println(name + ": description cleared")
+    }
+    _save(root, false)
+    return 0
+}
+
+fn _help() {
+    println("pool — host roster + remote exec")
+    println("")
+    println("  pool add <name> <user@host> [--sudo]   register a host (probes OS via uname -s)")
+    println("  pool rm  <name>                         remove from roster")
+    println("  pool list [--json] [--fast]             roster + live cpu/ram/gpu/disk (--fast skips probe)")
+    println("  pool on  <name> <cmd...>                ssh + exec on host")
+    println("  pool on  all <cmd...> [--jobs N] [--timeout S]   parallel fan-out (every host except pi5-akida)")
+    println("  pool route <cmd...>                     dispatch to the lowest-load host (skips pi5-akida)")
+    println("  pool bg <name> <cmd...>                 fire-and-forget dispatch (ssh -f -n; for `nohup ... &` patterns)")
+    println("  pool status                             live reachability probe (each host)")
+    println("  pool health                             hexa-lang fleet probe (hexa --version + loop verb); exit 1 on any failure")
+    println("  pool refresh                            re-probe os for every host")
+    println("  pool init                               bootstrap every host with all features (skips pi5-akida)")
+    println("                                          (tailscale · disk-cleanup · no-sleep · persistent-journal · panic-recovery · earlyoom · swapfile · watchdog)")
+    println("  pool clean <name>|all [--dry-run] [--deep]   run disk-cleanup now (safe tier; --deep adds model caches + docker; --dry-run measures only)")
+    println("  pool desc <name> [text...]              set a host description (shown in pool list)")
+    println("")
+    println("pi5-akida is anima-only (@D s8) and is hard-excluded from every fan-out / route /")
+    println("health / init / clean-all path. Explicit `pool on pi5-akida <cmd>` still works.")
+    println("")
+    println("state: ~/.pool/pool.json")
+}
+
+fn main() -> int {
+    let av = args()
+    if len(av) < 2 {
+        _help()
+        return 0
+    }
+    let verb = av[1]
+    if verb == "help" { _help(); return 0 }
+    if verb == "--help" { _help(); return 0 }
+    if verb == "-h" { _help(); return 0 }
+    if verb == "list" {
+        let mut as_json = false
+        let mut live = true
+        let mut i = 2
+        while i < len(av) {
+            if av[i] == "--json" { as_json = true }
+            if av[i] == "--fast" { live = false }
+            i = i + 1
+        }
+        return cmd_list(as_json, live)
+    }
+    if verb == "status" { return cmd_status() }
+    if verb == "health" { return cmd_health() }
+    if verb == "route" { return cmd_route(av) }
+    if verb == "bg" { return cmd_bg(av) }
+    if verb == "refresh" { return cmd_refresh() }
+    if verb == "init" { return cmd_init() }
+    if verb == "on" {
+        if len(av) < 3 {
+            println("usage: pool on <name> <cmd...>  OR  pool on all <cmd...>")
+            return 1
+        }
+        if av[2] == "all" {
+            let mut jobs = 0
+            let mut timeout_s = 30
+            let mut remote = ""
+            let mut i = 3
+            while i < len(av) {
+                if av[i] == "--jobs" {
+                    if i + 1 < len(av) { jobs = to_int(av[i + 1]); i = i + 1 }
+                } else {
+                    if av[i] == "--timeout" {
+                        if i + 1 < len(av) { timeout_s = to_int(av[i + 1]); i = i + 1 }
+                    } else {
+                        if len(remote) > 0 { remote = remote + " " }
+                        remote = remote + av[i]
+                    }
+                }
+                i = i + 1
+            }
+            if len(remote) == 0 {
+                println("usage: pool on all <cmd...>")
+                return 1
+            }
+            return cmd_on_all(remote, jobs, timeout_s)
+        }
+        return cmd_on(av)
+    }
+    if verb == "rm" {
+        if len(av) < 3 { println("usage: pool rm <name>"); return 1 }
+        return cmd_rm(av[2])
+    }
+    if verb == "add" {
+        let mut sudo = false
+        let mut name = ""
+        let mut ssh_t = ""
+        let mut pos = 0
+        let mut i = 2
+        while i < len(av) {
+            if av[i] == "--sudo" {
+                sudo = true
+            } else {
+                if pos == 0 { name = av[i] }
+                if pos == 1 { ssh_t = av[i] }
+                pos = pos + 1
+            }
+            i = i + 1
+        }
+        if pos < 2 { println("usage: pool add <name> <user@host> [--sudo]"); return 1 }
+        return cmd_add(name, ssh_t, sudo)
+    }
+    if verb == "clean" {
+        let mut dry = false
+        let mut deep = false
+        let pos = []
+        let mut i = 2
+        while i < len(av) {
+            if av[i] == "--dry-run" {
+                dry = true
+            } else {
+                if av[i] == "--deep" {
+                    deep = true
+                } else {
+                    pos.push(av[i])
+                }
+            }
+            i = i + 1
+        }
+        if len(pos) == 0 {
+            println("usage: pool clean <name>|all [--dry-run] [--deep]")
+            return 1
+        }
+        return cmd_clean(pos, dry, deep)
+    }
+    if verb == "desc" {
+        if len(av) < 3 { println("usage: pool desc <name> [text...]"); return 1 }
+        let mut text = ""
+        let mut i = 3
+        while i < len(av) {
+            if i > 3 { text = text + " " }
+            text = text + av[i]
+            i = i + 1
+        }
+        return cmd_desc(av[2], text)
+    }
+    println("unknown verb: " + verb)
+    _help()
+    return 1
+}

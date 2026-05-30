@@ -1,7 +1,7 @@
 {
   "name": "pool",
-  "description": "/pool <args> — wraps the `pool` CLI (host roster + remote exec — minimal, zero deps). Verbs: list · add <host> · on <host> <cmd> · status · install tailscale · rm <host>. NL trigger via skill ('pool 호스트', '다른 호스트에서 돌려', 'remote exec'). Pairs with commons.tape g9 + sidecar's pool-route hook.",
-  "version": "0.2.2",
+  "description": "/pool <args> — sidecar-OWNED `pool` CLI (host roster + remote exec — minimal, zero deps). Source bin/pool.hexa relocated into the plugin; install.hexa builds it to ~/.hx/bin/pool.bin + installs the shim. Canonical entry `sidecar pool <args>`; bare `pool` is a kept-working deprecation shim. Verbs: list · add <host> · on <host> <cmd> · status · health · route · bg · refresh · init · rm <host> · clean · desc. NL trigger via skill ('pool 호스트', '다른 호스트에서 돌려', 'remote exec'). Roster SSOT ~/.pool/pool.json (pool-route hook untouched). Pairs with commons g9.",
+  "version": "0.3.0",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/sidecar",
   "license": "MIT",

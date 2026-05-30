@@ -16,12 +16,13 @@
 #   sidecar reap        Reap stale `hexa-lsp` servers (idle > 2h) — fork-storm hygiene. Dry-run by default; `reap --kill` terminates them. Never touches claude (@D s9) or active hexa runs.
 #   sidecar handoff     Cross-project handoff registry (~/.sidecar/handoff/handoff.jsonl) — the single SSOT for cross-repo gap/patch/bug/RFC handoffs (commons g11·g36·g48·g59·g60; retires the per-repo INBOX domain). Sub-forms: `handoff add <repo> <text...>` = append an open entry · `handoff ls [<repo>]` = table (filter by repo) · `handoff done <id>` = flip status → done · `handoff` = counts summary. JSONL store, repo-external, portable via $HOME.
 #   sidecar mount       Code-tier sshfs manager — edit a remote repo locally, build on the remote's LOCAL fs. Config ~/.sidecar/codetier.conf. Sub-forms: `mount` = list+status · `mount add <name> <host>:<dir> [<mnt>]` · `mount rm <name>` · `mount up [name]` · `mount down [name]` (alias `sidecar unmount`) · `mount build <name> <cmd...>` = run on remote via ssh (mount-path build = slow). Generic: any host:repo, not project-bound.
+#   sidecar pool        Host roster + remote exec (sidecar-owned). Canonical entry for the `pool` CLI: `sidecar pool {list|add <host>|on <host> <cmd>|status|health|route|bg|refresh|init|rm|clean|desc}`. Built by install.hexa to ~/.hx/bin/pool.bin; the bare `pool` on PATH is a kept-working deprecation shim. Roster SSOT ~/.pool/pool.json (pool-route hook untouched).
 #   sidecar --help      Show this help.
 
 set -eu
 
 show_help() {
-  sed -n '2,19p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
+  sed -n '2,20p' "$0" | sed 's/^#\{0,1\} \{0,1\}//'
 }
 
 # Mirror plugin commands to ~/.claude/commands/ so they're bare-invocable
@@ -825,6 +826,21 @@ PY
         ;;
     esac
     ;;
+  pool)
+    # Host roster + remote exec — sidecar-owned (relocated from the standalone
+    # `pool` repo). `sidecar pool <args>` is the CANONICAL entry; the bare `pool`
+    # on PATH is a kept-working deprecation shim. Both exec the same binary built
+    # by install.hexa (~/.hx/bin/pool.bin). Roster SSOT: ~/.pool/pool.json (the
+    # pool-route hook is untouched). All args pass through unchanged.
+    POOL_BIN="$HOME/.hx/bin/pool.bin"
+    if [ -x "$POOL_BIN" ]; then exec "$POOL_BIN" "$@"; fi
+    # Fallback: build-from-source run if the binary hasn't been built yet.
+    _SRC=$(sidecar_root)/skills/pool/bin/pool.hexa
+    if [ ! -f "$_SRC" ]; then _SRC="$HOME/.claude/plugins/marketplaces/sidecar/skills/pool/bin/pool.hexa"; fi
+    if command -v hexa >/dev/null 2>&1 && [ -f "$_SRC" ]; then exec hexa "$_SRC" "$@"; fi
+    echo "sidecar pool: no pool.bin built and no buildable source — run 'sidecar sync'" >&2
+    exit 1
+    ;;
   master)
     # creator-only marker. master-tier plugins enable ONLY while ~/.sidecar/master
     # exists (install.hexa gate). on = mint marker · off = remove · status = show.
@@ -839,7 +855,7 @@ PY
     ;;
   *)
     echo "sidecar: unknown verb '$VERB'" >&2
-    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · reap · handoff · master" >&2
+    echo "  valid verbs: init · sync · mirror · shadow · unshadow · sign · profile · enable · disable · reset · paths · reap · handoff · mount · pool · master" >&2
     exit 1
     ;;
 esac

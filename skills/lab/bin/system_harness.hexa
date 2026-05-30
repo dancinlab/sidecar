@@ -171,7 +171,7 @@ fn _run_probe(probe: string, surface_row: array) -> array {
         return exec_with_status(cmd + " 2>&1")
     }
     if surface == "pool" {
-        return exec_with_status("pool on " + host + " " + _shq(probe) + " 2>&1")
+        return exec_with_status("sidecar pool on " + host + " " + _shq(probe) + " 2>&1")
     }
     return exec_with_status(probe)
 }
@@ -333,7 +333,7 @@ fn do_tick(path: string, apply: bool) {
                 if surface[2] != "" && surface[2] != "null" { cmd = cmd + " --port " + surface[2] }
                 if surface[3] == "true" { cmd = cmd + " --insecure" }
                 cmd = cmd + " -- bash -lc " + _shq(resume_cmd)
-            } else { if surface[1] == "pool" { cmd = "pool on " + host + " " + _shq(resume_cmd) } else { cmd = resume_cmd } }
+            } else { if surface[1] == "pool" { cmd = "sidecar pool on " + host + " " + _shq(resume_cmd) } else { cmd = resume_cmd } }
             let ar = exec_with_status(cmd + " 2>&1")
             note = " [applied rc=" + to_string(ar[1]) + "]"
         }

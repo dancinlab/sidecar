@@ -83,6 +83,35 @@ a fixed option grid.
    - **추천** — one-line "I'd pick X because Y" (the user can override)
    Close every round with: `→ A · B · 또는 자유응답 (예: "다른 안: …")`.
 
+   **`hexa easy` builtin = the deterministic backbone (wrap, don't hand-roll).**
+   The 7-element layout and its scoring are deterministic — they belong to the
+   `hexa easy` builtin (`stdlib/easy/cli.hexa`), the SAME backbone the
+   `easy-doc` / `easy-paper` skills wrap. The round's prose (the creative fill)
+   stays with the LLM; the skeleton and the gate do not:
+
+   ```
+   [ round N ] ─▶ ① hexa easy scaffold ─▶ ② LLM fills the slots ─▶ ③ hexa easy lint ─▶ render round
+                     7-element skeleton       creative question         advisory axis score
+                     (deterministic)          ← the ONLY LLM part       (deterministic)
+   ```
+
+   - **SSOT (do NOT duplicate)** — the 7-element pattern + 4 ASCII templates
+     live in the sibling `easy` / `easy-auto` plugin's styles. Read and APPLY,
+     don't restate: `${CLAUDE_PLUGIN_ROOT}/../../hooks/easy-auto/styles/easy.<lang>.md`,
+     else the cached mirror
+     `$HOME/.claude/plugins/cache/sidecar/easy-auto/<version>/styles/easy.<lang>.md`
+     (highest version: `ls -1 | sort -V | tail -1`). `ko` default.
+   - `hexa easy scaffold "<axis question>" --out -` — emit the empty 7-element
+     slots for the round instead of hand-rolling them.
+   - `hexa easy lint <rendered-round>` — advisory per-axis score (jargon-ratio ·
+     ascii-presence · acronym-expansion · analogy-presence · 7-element). It
+     gates the round's *prose quality*, never the disambiguation logic.
+   - **graceful fallback** — if `hexa easy` is unavailable (toolchain not
+     synced), hand-build the 7-element scaffold from the SSOT styles and
+     self-check against its translation checklist. The gate is advisory, so a
+     missing builtin never blocks a round. (The disambiguation/auto-pick logic
+     in this command is independent of the builtin and always runs.)
+
    **MANUAL** — wait for the user's chat reply, record the answer to the
    internal decision set, advance.
 

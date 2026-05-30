@@ -6,6 +6,21 @@ For the full audit trail, see `git log`.
 
 ---
 
+## 2026-05-31 — 🧶 step-by-step 0.9.0: chat-form 7-요소 라운드 scaffold 를 `hexa easy` 빌트인에 래핑
+
+`/sbs`(=`/step-by-step`) 의 disambiguation 라운드는 이미 easy-mode 7-요소 scaffold(아이콘·이름·별칭·하는 일·비유·ASCII·비교 표·추천)를 썼지만 **손으로 짜고** 있었다. 골격과 점수는 결정적이므로 `easy-doc`·`easy-paper` 가 쓰는 `hexa easy` 빌트인 backbone 에 동일하게 배선했다.
+
+```
+[ 라운드 N ] ─▶ ① hexa easy scaffold ─▶ ② LLM 슬롯 채움 ─▶ ③ hexa easy lint ─▶ 라운드 렌더
+                   7-슬롯 골격(결정적)      창의 질문(LLM만)      prose 품질 advisory
+```
+
+- **SSOT 포인터**: 7-요소 패턴 + 4종 ASCII 템플릿은 `hooks/easy-auto/styles/easy.<lang>.md` 소유 — 가리켜 쓰되 복제 금지(`${CLAUDE_PLUGIN_ROOT}/../../hooks/easy-auto/styles/`, 캐시 미러 폴백).
+- **`hexa easy scaffold`**: 라운드 빈 7-슬롯 골격(결정적). 손-롤 대체.
+- **`hexa easy lint`**: 라운드 prose 품질 advisory 게이트. **disambiguation/auto-pick 로직은 빌트인과 독립** — lint 는 prose만 채점, 결정 로직은 항상 그대로 실행.
+- **graceful fallback**: toolchain 미동기 시 styles SSOT 로 손-골격 + 체크리스트 self-check. advisory 라 빌트인 부재가 라운드를 막지 않는다.
+- 배선 위치: `step-by-step.md` Step 0.5(전체 배선) + alias `sbs.md`(요약 포인터) — alias 쌍 동기. README + plugin.json/marketplace.json 0.8.1 → 0.9.0.
+
 ## 2026-05-30 — 🪞 sidecar 0.8.1: `mirror` 가 고아(orphaned) 플러그인을 건너뛴다 — `system`→`lab` 중복 surface 차단
 
 `system → lab` 스킬 리네임 마무리. `sidecar mirror`(매 `/ij` 마다 실행)가 `~/.claude/plugins/cache/sidecar/*` 를 열거할 때 **버전별 `.orphaned_at` 마커를 무시**하고 가장 높은 버전을 골라 `commands/*.md` 를 복사했다. `system` 은 모든 캐시 버전(0.2.0~0.9.1)이 orphaned 인데도 0.9.1 의 `system.md` 가 매번 `~/.claude/commands/system.md` 로 재생성 → TUI 에 구버전 설명의 `/system` 가 후속 `lab` 과 **이중 노출**되었다.

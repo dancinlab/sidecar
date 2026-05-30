@@ -24,6 +24,25 @@
 | 멈춤 | 실패·비가역 단계만 | 라운드 단위 loop |
 | 쓸 때 | 의존성 있는 순차 작업을 한 런북으로 | 독립 작업을 한꺼번에 |
 
+## chat-form 7-요소 라운드 = `hexa easy` 빌트인 래핑 (0.9.0)
+
+disambiguation 라운드의 7-요소 scaffold(아이콘 · 이름 · 별칭 · 하는 일 · 비유
+· ASCII · 비교 표 · 추천)는 손으로 짜지 않는다. 골격과 점수는 결정적이므로
+`hexa easy` 빌트인에 맡긴다 — `easy-doc` · `easy-paper` 가 쓰는 바로 그 backbone.
+
+```
+[ 라운드 N ] ─▶ ① hexa easy scaffold ─▶ ② LLM 슬롯 채움 ─▶ ③ hexa easy lint ─▶ 라운드 렌더
+                   7-슬롯 골격(결정적)      창의 질문(LLM만)      prose 품질 advisory
+```
+
+- **SSOT** — 7-요소 패턴 + 4종 ASCII 템플릿은 `hooks/easy-auto/styles/easy.<lang>.md`
+  소유. 가리켜 쓰되 복제 금지.
+- `hexa easy scaffold` — 라운드 빈 7-슬롯 골격.
+- `hexa easy lint` — 라운드 prose 품질 advisory 게이트 (disambiguation/auto-pick
+  로직은 빌트인과 독립 · 항상 실행).
+- **graceful fallback** — toolchain 미동기 시 styles SSOT로 손-골격 + 체크리스트
+  self-check. advisory라 빌트인 부재가 라운드를 막지 않는다.
+
 ## 별칭
 
 `/sbs` — 동일 동작의 3글자 단축 (`/question`→`/q` 선례).

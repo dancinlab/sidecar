@@ -23,6 +23,12 @@ answer to each round.
    question per round in chat (NOT AskUserQuestion), each round using the
    easy-mode 7-element scaffold (icon · name · alias · plain-line · analogy
    · ASCII · compare-table · recommendation · `→ A · B · 또는 자유응답`).
+   The 7-element skeleton + its scoring are the deterministic `hexa easy`
+   builtin — wrap it (`hexa easy scaffold` for the round skeleton, `hexa easy
+   lint` as the advisory prose-quality gate), pointing at the easy-auto/styles
+   SSOT, with a graceful self-check fallback when the toolchain is unsynced —
+   the same backbone the `easy-doc` / `easy-paper` skills wrap. See
+   step-by-step.md Step 0.5 for the full wiring.
    - **MANUAL** waits for the user's chat reply.
    - **AUTO** auto-picks per the 4 axes (완성도 · 단순 · 안전(blast radius) ·
      표준(sidecar pattern fit)) with the parsed weights, no pause; logs

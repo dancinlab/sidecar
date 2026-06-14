@@ -11,10 +11,14 @@
 // The fal default (openai/gpt-image-2) is user-pinned — override only via -m.
 import { execShell } from "../lib/exec.ts";
 import { secretGet, secretBin } from "./secret.ts";
-import { info, ok, loudFail } from "../lib/log.ts";
+import { info, ok, loudFail, appendJsonl, nowIso } from "../lib/log.ts";
+import { readJsonl } from "../lib/json.ts";
+import { LOG_DIR } from "../lib/paths.ts";
 import { writeFileSync, mkdirSync, existsSync, statSync, readFileSync, rmSync } from "node:fs";
 import { resolve, dirname, basename } from "node:path";
 import { tmpdir } from "node:os";
+
+const LEDGER = resolve(LOG_DIR, "imagine.jsonl");
 
 const SIZES = ["square_hd", "square", "landscape_16_9", "portrait_16_9"];
 const BACKENDS: Record<string, { keyName: string; defaultModel: string }> = {
@@ -68,6 +72,13 @@ function bytes(p: string): number {
   } catch {
     return 0;
   }
+}
+
+// local provenance ledger — maps prompt/model/size → out file + request_id, so
+// history is available even without the provider API (and openai, which has no
+// list endpoint). Prompt is truncated; no API keys are ever recorded.
+function recordImagine(e: { backend: string; model: string; size: string; out: string; prompt: string; request_id?: string; status: string; bytes: number }): void {
+  appendJsonl(LEDGER, { kind: "imagine", ts: nowIso(), ...e, prompt: e.prompt.slice(0, 280) });
 }
 
 // ── fal.ai queue+poll ──────────────────────────────────────────────────────
@@ -127,6 +138,7 @@ async function backendFal(promptFile: string, out: string, size: string, model: 
       loudFail(`imagine[fal]: download failed (curl ${dl.code})`);
       return 3;
     }
+    recordImagine({ backend: "fal", model, size, out, prompt: promptText, request_id: rid, status: "ok", bytes: bytes(out) });
   } finally {
     rmSync(payload, { force: true });
   }
@@ -177,6 +189,7 @@ async function backendOpenai(promptFile: string, out: string, size: string, mode
       loudFail(`imagine[openai]: no image in response: ${r.out.slice(0, 300)}`);
       return 2;
     }
+    recordImagine({ backend: "openai", model, size, out, prompt: promptText, status: "ok", bytes: bytes(out) });
   } finally {
     rmSync(payload, { force: true });
   }
@@ -184,9 +197,97 @@ async function backendOpenai(promptFile: string, out: string, size: string, mode
   return 0;
 }
 
+// fal.ai request history — GET /v1/models/requests/by-endpoint (expand=payloads
+// returns json_input so the PROMPT is visible). endpoint_id is required by fal,
+// defaults to the imagine fal default model; override with -m a,b. openai has no
+// list endpoint → falls back to the local ledger.
+async function history(args: string[]): Promise<number> {
+  let backend = "fal";
+  let endpoints = "";
+  let start = "";
+  let limit = "20";
+  let status = "";
+  let local = false;
+  let asJson = false;
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if ((a === "-b" || a === "--backend") && i + 1 < args.length) backend = args[++i];
+    else if ((a === "-m" || a === "--endpoint") && i + 1 < args.length) endpoints = args[++i];
+    else if (a === "--start" && i + 1 < args.length) start = args[++i];
+    else if (a === "--limit" && i + 1 < args.length) limit = args[++i];
+    else if (a === "--status" && i + 1 < args.length) status = args[++i];
+    else if (a === "--local") local = true;
+    else if (a === "--json") asJson = true;
+  }
+
+  if (local || backend === "openai") {
+    const rows = readJsonl<Record<string, unknown>>(LEDGER).slice(-parseInt(limit, 10) || -20).reverse();
+    if (backend === "openai" && !local) info("imagine: openai has no provider history endpoint — showing local ledger.");
+    if (!rows.length) {
+      info(`imagine history (local): none recorded yet → ${LEDGER}`);
+      return 0;
+    }
+    if (asJson) {
+      process.stdout.write(JSON.stringify(rows, null, 2) + "\n");
+      return 0;
+    }
+    info(`imagine history (local · ${LEDGER}):`);
+    for (const r of rows) info(`  ${r.ts}  ${r.backend}/${r.model}  ${r.size}  ${r.status}  ${r.out}\n    "${String(r.prompt ?? "").slice(0, 120)}"`);
+    return 0;
+  }
+
+  // fal provider history
+  const key = await secretGet("fal.api_key");
+  if (!key) {
+    loudFail("imagine history: `secret get fal.api_key` empty.");
+    return 1;
+  }
+  const ids = (endpoints || BACKENDS.fal.defaultModel).split(",").map((s) => s.trim()).filter(Boolean);
+  const qs = new URLSearchParams();
+  for (const id of ids) qs.append("endpoint_id", id);
+  qs.set("limit", limit);
+  qs.set("expand", "payloads");
+  if (start) qs.set("start", start);
+  if (status) qs.set("status", status);
+  const r = await curl({ url: `https://api.fal.ai/v1/models/requests/by-endpoint?${qs.toString()}`, headers: [`Authorization: Key ${key}`], maxTime: 30 });
+  if (r.code !== 0) {
+    loudFail(`imagine history: request failed (curl ${r.code})`);
+    return 1;
+  }
+  let items: Array<Record<string, unknown>> = [];
+  try {
+    const j = JSON.parse(r.out);
+    if (j.error) {
+      loudFail(`imagine history: fal error — ${JSON.stringify(j.error)}`);
+      return 1;
+    }
+    items = j.items ?? [];
+  } catch {
+    loudFail(`imagine history: bad response: ${r.out.slice(0, 300)}`);
+    return 1;
+  }
+  if (asJson) {
+    process.stdout.write(JSON.stringify(items, null, 2) + "\n");
+    return 0;
+  }
+  if (!items.length) {
+    info(`imagine history (fal · ${ids.join(",")}): no requests in window (default last 24h; --start to widen).`);
+    return 0;
+  }
+  info(`imagine history (fal · ${ids.join(",")} · ${items.length}):`);
+  for (const it of items) {
+    const inp = (it.json_input ?? {}) as Record<string, unknown>;
+    const prompt = String(inp.prompt ?? "").replace(/\s+/g, " ").slice(0, 120);
+    info(`  ${it.ended_at ?? it.started_at ?? ""}  ${it.status_code ?? "?"}  ${it.request_id}  ${it.endpoint_id}\n    "${prompt}"`);
+  }
+  return 0;
+}
+
 function usage(): void {
   info("harness imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]");
   info("  list · help");
+  info("  history [-b fal|openai] [-m endpoint_id,…] [--start <iso>] [--limit N] [--status success|error] [--local] [--json]");
+  info("          fal: provider request history w/ prompts (GET /v1/models/requests/by-endpoint) · openai/--local: local ledger");
   info(`  sizes:    ${SIZES.join(" · ")}   (default square_hd)`);
   info("  backend:  fal (default, openai/gpt-image-2) · openai (gpt-image-1)");
   info("  keys:     secret get fal.api_key · secret get openai.api_key");
@@ -199,6 +300,7 @@ export async function runImagine(args: string[]): Promise<number> {
     usage();
     return 0;
   }
+  if (sub === "history" || sub === "hist") return history(args.slice(1));
   if (sub === "list") {
     info("imagine backends:");
     for (const [name, b] of Object.entries(BACKENDS)) info(`  ${name}  default model ${b.defaultModel}  key: secret get ${b.keyName}`);

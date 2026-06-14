@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat: imagine history — past-prompt history (fal provider API + local ledger)
+
+- **`harness imagine history [-b fal|openai] [-m endpoint_id,…] [--start <iso>] [--limit N] [--status success|error] [--local] [--json]`**.
+  - **fal**: 공급자 요청 히스토리를 직접 조회 — `GET https://api.fal.ai/v1/models/requests/by-endpoint?expand=payloads` (프롬프트=`json_input.prompt`, request_id, ended_at, status_code). `endpoint_id` 는 fal 필수값이라 기본=imagine fal 기본 모델(`openai/gpt-image-2`), `-m a,b` 로 다중 지정. 기본 윈도우 24h, `--start` 로 확장. auth 는 curl `-K` 로 키를 argv 밖에.
+  - **openai / `--local`**: openai 는 list 엔드포인트가 없어 로컬 ledger 로 폴백.
+- 생성 시 **로컬 provenance ledger**(`.harness/logs/imagine.jsonl`) 기록 — ts·backend·model·size·out·request_id·status + 프롬프트(280자 truncate). API 없이도 request_id↔출력파일 매핑 확보. 키는 절대 기록 안 함.
+
 ## feat: imagine — AI image generator (sidecar /imagine parity)
 
 - **`harness imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]`** + `list` · `help`.

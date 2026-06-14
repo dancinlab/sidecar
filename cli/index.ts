@@ -24,6 +24,7 @@ import { runUpstream } from "../modules/upstream.ts";
 import { runVerdict } from "../modules/verdict.ts";
 import { runAtlas } from "../modules/atlas.ts";
 import { runEnd } from "../modules/end.ts";
+import { runSecret } from "../modules/secret.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -60,6 +61,8 @@ hook delegates (wire these into your agent's settings.json):
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
   demi                     design-architecture program runbook (7-verb spine)
   pool {list|add|rm|on|status}   host roster + remote exec (~/.harness/pool.json, global)
+  secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
+                           ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -159,6 +162,8 @@ async function main(): Promise<number> {
       return runHandoff(rest);
     case "end":
       return runEnd(rest);
+    case "secret":
+      return runSecret(rest);
     case "ing":
       return runIng(rest);
     case "verdict":

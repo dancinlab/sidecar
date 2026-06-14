@@ -12,6 +12,7 @@ import { readJson } from "../lib/json.ts";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
+import { detectForcePush } from "./git-guard.ts";
 
 interface BashRule {
   id: string;
@@ -83,6 +84,18 @@ export async function preBash(_args: string[]): Promise<number> {
   const cmd = String(input.command ?? "");
   if (!cmd) return 0;
   const cwd = process.env.PWD ?? "";
+
+  // built-in git force-push guard — runs before config rules, default-on.
+  if (config().git.guardForcePush) {
+    const label = detectForcePush(cmd);
+    if (label) {
+      return emitBlock(
+        "GIT-FORCE-PUSH",
+        `${label} — rewrites or bypasses shared history. No override; if a force-push is genuinely required, run it outside the agent.`
+      );
+    }
+  }
+
   const cfg = loadConfig();
 
   for (const rule of cfg.pre_bash ?? []) {

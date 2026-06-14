@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## feat: git-guard — force-push deny in pre bash (sidecar git-guard parity)
+
+- **`pre bash` built-in 가드** (`modules/git-guard.ts`): force-type push 를 config 규칙보다 먼저 차단(deny). 탐지 대상: `git push --force` / `-f`, `--force-with-lease[=…]`, `git push <remote> +<refspec>`(refspec-level force). 따옴표 strip 후 토크나이즈 → `'--force'` / `+"main"` 같은 인용형도 잡음. `cd … && git push --force` 도 토큰 인접성으로 탐지.
+- `--no-verify` 는 force 가 아니므로 **차단하지 않음**(sidecar 와 동일, 하네스 자체 커밋도 사용). config `git.guardForcePush=false` 로 비활성(기본 on).
+- 차단 메시지: 오버라이드 없음 — 정말 필요하면 에이전트 밖에서 실행하라 안내. 14 케이스 단위검증 통과.
+
 ## fix: pr-cycle — full post-merge worktree sweep (sidecar 0.5.0 parity)
 
 - 기존엔 merge 후 `git worktree prune` 만 호출 → 실제 worktree 디렉토리·로컬 브랜치가 누적되는 누수. main merge(squash·admin·delete-branch into base)는 정상이었음.

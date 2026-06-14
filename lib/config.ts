@@ -85,6 +85,11 @@ export interface HarnessConfig {
     servers: { lang: string; extensions: string[]; command: string; args: string[] }[];
     rebuild: boolean;
   };
+  // git safety guards evaluated in `pre bash` BEFORE the config enforcement rules.
+  // guardForcePush DENIES force-type push (--force / -f / --force-with-lease /
+  // `git push <remote> +<refspec>`) which rewrites or bypasses shared history.
+  // `--no-verify` is intentionally NOT blocked (left to user discipline).
+  git: { guardForcePush: boolean };
   ledger: { staleSec: number };
 }
 
@@ -147,6 +152,7 @@ const DEFAULTS: HarnessConfig = {
     ],
     rebuild: true,
   },
+  git: { guardForcePush: true },
   ledger: { staleSec: 3600 },
 };
 

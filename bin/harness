@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# dancinlab/harness — project-agnostic CLI wrapper.
+# Resolves the harness install dir, then finds a usable `tsx` runtime:
+#   1. the consuming repo's node_modules/.bin/tsx (walk up from $PWD)
+#   2. the harness's own node_modules/.bin/tsx
+#   3. npx tsx (auto-download)
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HARNESS_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+find_tsx() {
+  local d="${PWD}"
+  while [ "$d" != "/" ] && [ -n "$d" ]; do
+    if [ -x "$d/node_modules/.bin/tsx" ]; then echo "$d/node_modules/.bin/tsx"; return 0; fi
+    d="$(dirname "$d")"
+  done
+  if [ -x "$HARNESS_DIR/node_modules/.bin/tsx" ]; then echo "$HARNESS_DIR/node_modules/.bin/tsx"; return 0; fi
+  return 1
+}
+
+if TSX="$(find_tsx)"; then
+  exec "$TSX" "$HARNESS_DIR/cli/index.ts" "$@"
+else
+  exec npx --yes tsx "$HARNESS_DIR/cli/index.ts" "$@"
+fi

@@ -1,0 +1,172 @@
+// harness pre bash|write — delegate target for an agent's PreToolUse hook.
+// On a blocking match it writes {"decision":"block","reason":"..."} to stdout
+// (the shape Claude Code / compatible runtimes read to veto a tool call).
+// On a warn it prints to stderr. On no match it stays silent (H1).
+//
+// settings.json wiring (Claude Code):
+//   "PreToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command",
+//     "command": "CLAUDE_TOOL_INPUT=\"$CLAUDE_TOOL_INPUT\" <harness> pre bash" }]}]
+//
+// CLAUDE_TOOL_INPUT / CODEX_TOOL_INPUT is JSON: {"command":"...","file_path":"...","content":"..."}
+import { readJson } from "../lib/json.ts";
+import { LOGS } from "../lib/paths.ts";
+import { appendJsonl } from "../lib/log.ts";
+import { config, resolveRuleFile } from "../lib/config.ts";
+
+interface BashRule {
+  id: string;
+  desc?: string;
+  match: string;
+  exceptions?: string[];
+  cwd_match?: string;
+  action: "block" | "warn" | "log_only";
+  reason: string;
+}
+
+interface WriteRule {
+  id: string;
+  desc?: string;
+  path_match: string;
+  content_forbidden_pattern?: string;
+  bypass_patterns?: string[];
+  exemption_markers?: string[];
+  action: "block" | "warn" | "log_only";
+  reason: string;
+}
+
+export interface PromptHintRule {
+  id: string;
+  desc?: string;
+  match_patterns: string[];
+  hint: string;
+}
+
+interface EnforcementConfig {
+  pre_bash?: BashRule[];
+  pre_write?: WriteRule[];
+  prompt_hints?: PromptHintRule[];
+}
+
+function loadConfig(): EnforcementConfig {
+  const cfg = config();
+  const file = resolveRuleFile(cfg.enforcementFile, "enforcement.json");
+  try {
+    return readJson<EnforcementConfig>(file);
+  } catch {
+    return {};
+  }
+}
+
+function parseToolInput(): Record<string, unknown> {
+  const raw = process.env.CLAUDE_TOOL_INPUT ?? process.env.CODEX_TOOL_INPUT ?? "";
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+function emitBlock(id: string, reason: string): number {
+  process.stdout.write(JSON.stringify({ decision: "block", reason: `[${id}] ${reason}` }) + "\n");
+  appendJsonl(LOGS.mistakes, { kind: "pre_block", rule_id: id, reason });
+  return 0;
+}
+
+function emitWarn(id: string, reason: string): void {
+  process.stderr.write(`[harness warn ${id}] ${reason}\n`);
+  appendJsonl(LOGS.observations, { kind: "pre_warn", rule_id: id, reason });
+}
+
+export async function preBash(_args: string[]): Promise<number> {
+  const input = parseToolInput();
+  const cmd = String(input.command ?? "");
+  if (!cmd) return 0;
+  const cwd = process.env.PWD ?? "";
+  const cfg = loadConfig();
+
+  for (const rule of cfg.pre_bash ?? []) {
+    if (!new RegExp(rule.match, "i").test(cmd)) continue;
+    if (rule.cwd_match && !cwd.includes(rule.cwd_match)) continue;
+    if (rule.exceptions?.some((p) => new RegExp(p, "i").test(cmd))) continue;
+
+    appendJsonl(LOGS.observations, { kind: "pre_bash_match", rule_id: rule.id, cmd_len: cmd.length });
+    if (rule.action === "block") return emitBlock(rule.id, rule.reason);
+    if (rule.action === "warn") emitWarn(rule.id, rule.reason);
+  }
+  return 0;
+}
+
+function checkBypassPatterns(content: string, patterns: string[], exemptions: string[]): string[] {
+  const hits: string[] = [];
+  const lines = content.split("\n");
+  for (const pat of patterns) {
+    const re = new RegExp(pat, "i");
+    for (const line of lines) {
+      if (!re.test(line)) continue;
+      if (exemptions.some((m) => line.includes(m))) continue;
+      hits.push(`${pat}  → "${line.trim().slice(0, 120)}"`);
+      break; // one report per pattern
+    }
+  }
+  return hits;
+}
+
+export async function preWrite(_args: string[]): Promise<number> {
+  const input = parseToolInput();
+  const filePath = String(input.file_path ?? "");
+  const content = String(input.content ?? input.new_string ?? "");
+  if (!filePath) return 0;
+  const cfg = loadConfig();
+
+  for (const rule of cfg.pre_write ?? []) {
+    if (!new RegExp(rule.path_match).test(filePath)) continue;
+
+    if (rule.content_forbidden_pattern && content) {
+      if (!new RegExp(rule.content_forbidden_pattern, "is").test(content)) continue;
+    }
+
+    if (rule.bypass_patterns && rule.bypass_patterns.length > 0) {
+      if (!content) continue;
+      const hits = checkBypassPatterns(content, rule.bypass_patterns, rule.exemption_markers ?? []);
+      if (hits.length === 0) continue;
+      appendJsonl(LOGS.observations, {
+        kind: "pre_write_bypass",
+        rule_id: rule.id,
+        file: filePath,
+        hits: hits.slice(0, 10),
+      });
+      const reasonWithHits = `${rule.reason}\n  matched ${hits.length}:\n${hits
+        .slice(0, 5)
+        .map((h) => `    • ${h}`)
+        .join("\n")}`;
+      if (rule.action === "block") return emitBlock(rule.id, reasonWithHits);
+      if (rule.action === "warn") emitWarn(rule.id, reasonWithHits);
+      continue;
+    }
+
+    appendJsonl(LOGS.observations, { kind: "pre_write_match", rule_id: rule.id, file: filePath });
+    if (rule.action === "block") return emitBlock(rule.id, rule.reason);
+    if (rule.action === "warn") emitWarn(rule.id, rule.reason);
+  }
+  return 0;
+}
+
+// Used by prompt-scan to surface prompt_hints alongside keyword matches.
+export function matchPromptHints(text: string): PromptHintRule[] {
+  const cfg = loadConfig();
+  const out: PromptHintRule[] = [];
+  const lowered = text.toLowerCase();
+  for (const rule of cfg.prompt_hints ?? []) {
+    if (rule.match_patterns.some((p) => new RegExp(p, "i").test(lowered))) out.push(rule);
+  }
+  return out;
+}
+
+export async function runPre(args: string[]): Promise<number> {
+  const sub = args[0];
+  if (sub === "bash") return preBash(args.slice(1));
+  if (sub === "write") return preWrite(args.slice(1));
+  process.stderr.write("usage: harness pre {bash|write}\n");
+  return 1;
+}

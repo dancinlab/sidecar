@@ -1,0 +1,22 @@
+{
+  "_doc": "User-prompt keyword triggers → recommended playbook/hint/tool. Plain substrings match literally; tokens with ^ $ | ( ) [ ] are treated as regex. Copy to .harness/keywords.json and add your project's triggers (mirror your CLAUDE.md / AGENTS.md).",
+  "rules": [
+    {
+      "id": "verify-before-commit",
+      "patterns": ["commit", "커밋", "push", "푸시", "ship", "배포"],
+      "tool": "harness verify",
+      "hint": "Run the configured verification checks before committing/pushing: `harness verify`."
+    },
+    {
+      "id": "session-handoff",
+      "patterns": ["handoff", "인계", "wrap up", "마무리", "끝내자"],
+      "tool": "harness handoff",
+      "hint": "Snapshot working state for the next session: `harness handoff <reason>`."
+    },
+    {
+      "id": "convergence-check",
+      "patterns": ["convergence", "수렴", "incident status"],
+      "tool": "harness convergence status"
+    }
+  ]
+}

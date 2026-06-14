@@ -1,0 +1,93 @@
+{
+  "_doc": "Generic enforcement SSOT — delegated from an agent's PreToolUse hook via `harness pre bash|write`. Copy to .harness/enforcement.json in your repo and add project rules. These defaults are domain-agnostic.",
+  "_actions": {
+    "block": "stdout {\"decision\":\"block\",\"reason\":\"...\"} — supported runtimes veto the tool call",
+    "warn": "stderr warning, no block",
+    "log_only": "observations.jsonl only"
+  },
+  "pre_bash": [
+    {
+      "id": "G-FORCE-PUSH",
+      "desc": "force-push to a protected branch",
+      "match": "git\\s+push\\s+.*--force(?!-with-lease)\\b.*\\b(main|master)\\b",
+      "exceptions": ["--force-with-lease", "# force-ok"],
+      "action": "warn",
+      "reason": "force-push to main/master detected. Prefer --force-with-lease, or add `# force-ok <reason>` if intentional."
+    },
+    {
+      "id": "G-CURL-PIPE-SH",
+      "desc": "curl|bash remote code execution",
+      "match": "(curl|wget)\\s+[^|]*\\|\\s*(sudo\\s+)?(ba)?sh\\b",
+      "exceptions": ["# curl-pipe-ok"],
+      "action": "warn",
+      "reason": "piping a remote download straight into a shell runs unreviewed code. Download, inspect, then run — or add `# curl-pipe-ok <reason>`."
+    },
+    {
+      "id": "G-RM-RF-ROOT",
+      "desc": "rm -rf on a dangerously broad path",
+      "match": "\\brm\\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*\\s+(/|~|\\$HOME|\\*)\\s*$",
+      "exceptions": ["# rm-ok"],
+      "action": "block",
+      "reason": "rm -rf on / ~ $HOME or bare * is almost never intended. Scope the path, or add `# rm-ok <reason>`."
+    }
+  ],
+  "pre_write": [
+    {
+      "id": "G-NO-INLINE-HOOK",
+      "desc": "agent settings must delegate to harness, not inline shell logic",
+      "path_match": "\\.claude/settings.*\\.json$",
+      "content_forbidden_pattern": "\"(PreToolUse|PostToolUse|UserPromptSubmit)\"[\\s\\S]{0,400}?\"command\"\\s*:\\s*\"(?!.*harness (?:pre|post|prompt))",
+      "action": "warn",
+      "reason": "Hook commands should delegate to `harness pre|post|prompt`, not inline shell. Put the rule in enforcement.json instead — one SSOT, testable, versioned."
+    },
+    {
+      "id": "G-ROOT-CAUSE",
+      "desc": "no suppression/bypass without a justification marker",
+      "path_match": "\\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|swift)$",
+      "bypass_patterns": [
+        "@ts-ignore",
+        "@ts-nocheck",
+        "eslint-disable(?!-next-line)",
+        "catch\\s*\\([^)]*\\)\\s*\\{\\s*\\}",
+        "\\.catch\\s*\\(\\s*\\(?[^)]*\\)?\\s*=>\\s*\\{\\s*\\}\\s*\\)",
+        "if\\s*\\(\\s*false\\s*\\)",
+        "NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*['\"]0['\"]",
+        "//\\s*(TODO|FIXME|HACK|XXX)\\b"
+      ],
+      "exemption_markers": ["@root-cause-ok", "@justified"],
+      "action": "warn",
+      "reason": "Suppression/bypass pattern detected — fix the root cause, don't hide the symptom. If genuinely justified, add `// @root-cause-ok <reason>` on the same line."
+    },
+    {
+      "id": "G-SECRET-LITERAL",
+      "desc": "hardcoded credential literal",
+      "path_match": "\\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|swift|env|ya?ml|json)$",
+      "bypass_patterns": [
+        "(aws_secret_access_key|aws_access_key_id)\\s*[:=]\\s*['\"][A-Za-z0-9/+]{16,}",
+        "(api[_-]?key|secret|password|passwd|token)\\s*[:=]\\s*['\"][^'\"\\n]{12,}['\"]",
+        "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+        "gh[pousr]_[A-Za-z0-9]{20,}",
+        "sk-[A-Za-z0-9]{20,}"
+      ],
+      "exemption_markers": ["@secret-ok", "process.env", "example", "REDACTED", "xxxx"],
+      "action": "warn",
+      "reason": "Possible hardcoded secret. Read it from an environment variable / secret store. If this is a placeholder/example, add `// @secret-ok`."
+    }
+  ],
+  "prompt_hints": [
+    {
+      "id": "G-FIX-ROOT-CAUSE",
+      "desc": "when asked to fix/patch/work-around, prefer root-cause",
+      "match_patterns": [
+        "work\\s*around",
+        "\\bbypass\\b",
+        "\\bsuppress\\b",
+        "just\\s+(ignore|skip|disable)",
+        "임시로",
+        "우회",
+        "대충"
+      ],
+      "hint": "Prefer the root cause over a suppression. Avoid @ts-ignore / eslint-disable / empty catch / leaving a bare TODO. If a workaround is genuinely justified, mark it with `@root-cause-ok <reason>`. (pre_write G-ROOT-CAUSE auto-flags these on write.)"
+    }
+  ]
+}

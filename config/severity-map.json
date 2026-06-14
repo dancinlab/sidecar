@@ -1,0 +1,22 @@
+{
+  "_doc": "Error signal → severity (block/defer/warn). block=fix now, defer=queue in errors.jsonl, warn=report only. Override per-repo via harness.config.json severityMapFile.",
+  "fallback": "defer",
+  "unknown_threshold": 30,
+  "rules": {
+    "lint_rule": {
+      "L0-LOCKDOWN": "warn",
+      "STALE": "warn",
+      "CONVERGENCE-MISSING": "block"
+    },
+    "build_kind": {
+      "bash_nonzero": "defer",
+      "tsc_error": "block",
+      "test_fail": "block",
+      "lint_error": "block",
+      "build_fail": "block"
+    },
+    "runtime_signal": {
+      "unknown": "defer"
+    }
+  }
+}

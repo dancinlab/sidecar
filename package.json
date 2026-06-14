@@ -1,0 +1,19 @@
+{
+  "name": "@dancinlab/harness",
+  "version": "0.1.0",
+  "description": "Project-agnostic AI coding harness — enforcement hooks, L0 lockdown, lint gates, error/work ledgers, all config-driven. Drop into any repo.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "harness": "./bin/harness"
+  },
+  "scripts": {
+    "harness": "tsx cli/index.ts"
+  },
+  "dependencies": {
+    "tsx": "^4.19.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

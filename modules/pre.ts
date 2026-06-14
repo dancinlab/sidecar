@@ -13,6 +13,7 @@ import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
+import { worktreeAddAdvisory } from "./worktree.ts";
 
 interface BashRule {
   id: string;
@@ -95,6 +96,10 @@ export async function preBash(_args: string[]): Promise<number> {
       );
     }
   }
+
+  // worktree-add advisory — non-blocking (stranded-work + branch-reuse hygiene)
+  const wtAdv = await worktreeAddAdvisory(cmd).catch(() => "");
+  if (wtAdv) emitWarn("WORKTREE-HYGIENE", wtAdv);
 
   const cfg = loadConfig();
 

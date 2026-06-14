@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat: worktree — no-pileup/no-stranded enforcement (sidecar worktree-gc/worktree-guard parity)
+
+원칙: PR/branch/worktree 누적 금지 · 워크트리에 작업 방치 금지 · 방치 작업 있으면 새 작업 시작 금지.
+
+- **`harness worktree scan`** — linked worktree 전수 분류(clean/dirty/unpushed/merged[gone]/locked) + **방치(stranded=dirty 또는 unpushed) 적발**. stranded 존재 시 exit 1 → 새 작업 게이트로 사용 가능.
+- **`harness worktree gc`** — merged([gone] upstream, squash-safe)·dangling **agent** worktree/branch 자동 sweep(`git worktree remove --force` + `git branch -D` + prune). UNCONDITIONAL live-work 가드: dirty·HEAD commit <1h·locked 는 SKIP → 진행 중 작업 절대 안 지움. 항상 exit 0.
+- **`harness worktree guard <cmd>`** — `git worktree add` advisory: 방치 작업 선존재 시 "먼저 완료(pr-cycle)/정리 후 새 작업" + 기존 브랜치 재사용 stale-base(anima #1105) 경고.
+- 자동 연동: ① SessionStart 훅에 `worktree gc` 추가(init) → 세션 시작마다 merged 자동 청소. ② `prompt`(UserPromptSubmit) 가 stranded worktree 있으면 새 작업 전 advisory 선출력. ③ `pre bash` 가 `git worktree add` 에 hygiene advisory.
+- 14-case 라이프사이클 검증(stranded SKIP / merged old-commit sweep). pr-cycle 은 이미 push→PR→**main merge(squash·admin)**→delete-branch→worktree sweep 까지 자동 — 본 모듈이 누적/방치 방지를 보강.
+
 ## feat: git-guard — force-push deny in pre bash (sidecar git-guard parity)
 
 - **`pre bash` built-in 가드** (`modules/git-guard.ts`): force-type push 를 config 규칙보다 먼저 차단(deny). 탐지 대상: `git push --force` / `-f`, `--force-with-lease[=…]`, `git push <remote> +<refspec>`(refspec-level force). 따옴표 strip 후 토크나이즈 → `'--force'` / `+"main"` 같은 인용형도 잡음. `cd … && git push --force` 도 토큰 인접성으로 탐지.

@@ -9,6 +9,7 @@ import { LOGS } from "../lib/paths.ts";
 import { appendJsonl, info } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { matchPromptHints } from "./pre.ts";
+import { strandedWorktrees } from "./worktree.ts";
 
 interface KeywordRule {
   id: string;
@@ -72,15 +73,22 @@ export async function runPromptScan(args: string[]): Promise<number> {
   }
   const matches = scanPrompt(text);
   const hints = matchPromptHints(text);
+  // Principle: no new work while prior work is abandoned in a worktree.
+  const stranded = await strandedWorktrees().catch(() => []);
   appendJsonl(LOGS.observations, {
     kind: "prompt_scan",
     text_len: text.length,
     matches: matches.map((m) => ({ id: m.id, pat: m.matched })),
     hints: hints.map((h) => h.id),
+    stranded: stranded.length,
   });
-  if (matches.length === 0 && hints.length === 0) return 0;
+  if (matches.length === 0 && hints.length === 0 && stranded.length === 0) return 0;
 
   const lines: string[] = [];
+  if (stranded.length) {
+    lines.push(`⚠ ${stranded.length} stranded worktree(s) — 방치된 작업을 먼저 완료(harness pr-cycle)/정리한 뒤 새 작업을 시작하세요:`);
+    for (const w of stranded) lines.push(`  • ${w.path} [${w.branch}] ${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`);
+  }
   if (matches.length) lines.push(`▶ harness prompt-scan: ${matches.length} keyword match(es)`);
   for (const m of matches) {
     lines.push(`  • ${m.id}  (← "${m.matched}")`);

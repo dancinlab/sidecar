@@ -25,6 +25,7 @@ import { runVerdict } from "../modules/verdict.ts";
 import { runAtlas } from "../modules/atlas.ts";
 import { runEnd } from "../modules/end.ts";
 import { runSecret } from "../modules/secret.ts";
+import { runLsp } from "../modules/lsp.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -63,6 +64,8 @@ hook delegates (wire these into your agent's settings.json):
   pool {list|add|rm|on|status}   host roster + remote exec (~/.harness/pool.json, global)
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
                            ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
+  lsp {wire|status|rebuild <file>}   editor LSP wiring (.lsp.json; hexa-lang \`hexa lsp\` for .hexa by default)
+                           + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -164,6 +167,8 @@ async function main(): Promise<number> {
       return runEnd(rest);
     case "secret":
       return runSecret(rest);
+    case "lsp":
+      return runLsp(rest);
     case "ing":
       return runIng(rest);
     case "verdict":

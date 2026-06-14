@@ -109,6 +109,16 @@ export function docViolations(staged: string[] | null): DocViolation[] {
     files = [];
     walkMd(REPO_ROOT, files);
   }
+  // optional scope: only enforce scatter/quickref within configured top-level dirs
+  // ("" = repo-root files). CLAUDE-MD check above is unaffected.
+  if (cfg.scopeDirs && cfg.scopeDirs.length) {
+    const scope = new Set(cfg.scopeDirs);
+    files = files.filter((abs) => {
+      const rel = relative(REPO_ROOT, abs);
+      const seg = rel.includes("/") ? rel.split("/")[0] : "";
+      return scope.has(seg);
+    });
+  }
   for (const abs of files) {
     const rel = relative(REPO_ROOT, abs);
     if (isAllowed(rel)) continue;

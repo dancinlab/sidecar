@@ -69,6 +69,10 @@ export interface HarnessConfig {
     scratchDir: string; // 임시 산출물 보관 (tmp 휘발 금지)
     scatterPatterns: string[]; // 흩어진 문서로 간주하는 .md 작명 패턴
     allow: string[]; // SSOT/허용 문서 (scatter·quickref 검사 제외)
+    // optional: limit scatter/quickref enforcement to these top-level dirs
+    // ("" = repo-root files). Undefined = whole repo. CLAUDE-MD check is unaffected.
+    // Use for research repos with a large legit doc corpus.
+    scopeDirs?: string[];
   };
   ledger: { staleSec: number };
 }

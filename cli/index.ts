@@ -14,6 +14,7 @@ import { runConvergence } from "../modules/convergence.ts";
 import { runSync } from "../modules/sync.ts";
 import { runInit } from "../modules/init.ts";
 import { runFolders } from "../modules/folders.ts";
+import { runPrefs } from "../modules/prefs.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -29,6 +30,7 @@ hook delegates (wire these into your agent's settings.json):
   post bash <exit> [cmd]   PostToolUse(Bash) — record + route non-zero exits
   post edit <file>         PostToolUse(Write/Edit) — flag L0 edits
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
+  prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -68,6 +70,8 @@ async function main(): Promise<number> {
       return 1;
     case "prompt":
       return runPromptScan(rest);
+    case "prefs":
+      return runPrefs(rest);
     case "lint":
       return runLint(rest);
     case "verify":

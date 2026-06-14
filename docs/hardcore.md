@@ -45,6 +45,21 @@ hardcore 도 정당한 예외는 인정한다 — 같은 줄/명령에 마커:
 | H-ROOT-CAUSE / H-SECRET | `@root-cause-ok` / `@secret-ok` |
 | H-DEBUG-LEFTOVER | `@debug-ok` |
 
+## prefs — 언어 선호 (3축)
+
+sidecar `prefs` 패리티. 코드 작성어 · 문서 작성어 · 응답어를 repo 단위로 고정하고, 매 턴 에이전트에 주입한다.
+
+```bash
+harness prefs show                 # 현재값
+harness prefs code english         # 코드/주석 언어
+harness prefs docs korean          # 문서(.md) 언어
+harness prefs response korean      # 사용자 응답 언어
+harness prefs inject               # UserPromptSubmit hook — # prefs 블록 주입 (init --hooks 가 자동 배선)
+```
+
+- 저장: `.harness/prefs.json` (`{code,docs,response}`). hardcore `init` 기본값 = code:english · docs:korean · response:korean.
+- **hardcore 강제**: `code=english` 인데 코드/주석에 한글이 들어가면 `post edit` 가 `🌐 prefs` 경고(UI 텍스트는 locale 파일로, 정당하면 `// @lang-ok`). 문서축은 주입(soft)만 — 오탐 방지.
+
 ## 규칙 추가 (이 브랜치에서 한 건씩)
 
 hardcore 규칙은 **이 브랜치의 `config/enforcement.hardcore.json` / `config/severity-map.hardcore.json` 에만** 추가한다(main 의 default 규칙은 건드리지 않음). 새 규칙은 `pre_bash` / `pre_write` / `prompt_hints` 에 append.

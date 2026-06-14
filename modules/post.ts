@@ -6,7 +6,8 @@ import { routeError } from "./errors.ts";
 import { isL0 } from "../lib/lockdown.ts";
 import { config } from "../lib/config.ts";
 import { postEditNudge } from "./folders.ts";
-import { existsSync, statSync } from "node:fs";
+import { codeLangViolation } from "./prefs.ts";
+import { existsSync, statSync, readFileSync } from "node:fs";
 
 export async function postBash(args: string[]): Promise<number> {
   const exit = parseInt(args[0] ?? "0", 10);
@@ -37,6 +38,11 @@ export async function postEdit(args: string[]): Promise<number> {
   }
   if (existsSync(file)) {
     appendJsonl(LOGS.observations, { kind: "post_edit_stat", file, size: statSync(file).size });
+    const v = codeLangViolation(file, readFileSync(file, "utf8"));
+    if (v) {
+      process.stderr.write(`\x1b[33m🌐 prefs: ${v}\x1b[0m\n`);
+      appendJsonl(LOGS.observations, { kind: "prefs_lang_warn", file });
+    }
   }
   postEditNudge(file);
   return 0;

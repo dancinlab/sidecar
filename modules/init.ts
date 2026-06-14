@@ -38,6 +38,7 @@ function hookSnippet(engineRel: string): string {
         ],
         UserPromptSubmit: [
           { hooks: [{ type: "command", command: `bash ${bin} prompt "$CLAUDE_USER_PROMPT"` }] },
+          { hooks: [{ type: "command", command: `bash ${bin} prefs inject` }] },
         ],
       },
     },
@@ -209,6 +210,17 @@ export async function runInit(args: string[]): Promise<number> {
     mkdirSync(dirname(dst), { recursive: true });
     copyFileSync(src, dst);
     actions.push({ path: `.harness/${name}`, how: "copy" });
+  }
+
+  // 2c. .harness/prefs.json (language prefs — defaults: code english / docs/response korean for hardcore)
+  {
+    const dst = resolve(REPO_ROOT, ".harness", "prefs.json");
+    const content = JSON.stringify(
+      flags.hardcore ? { code: "english", docs: "korean", response: "korean" } : { code: "english", docs: "english", response: "korean" },
+      null,
+      2
+    ) + "\n";
+    write(dst, content, ".harness/prefs.json");
   }
 
   // 3. .gitignore — ensure log/handoff dirs are ignored

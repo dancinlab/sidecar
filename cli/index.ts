@@ -23,6 +23,7 @@ import { runIng } from "../modules/ing.ts";
 import { runUpstream } from "../modules/upstream.ts";
 import { runVerdict } from "../modules/verdict.ts";
 import { runAtlas } from "../modules/atlas.ts";
+import { runEnd } from "../modules/end.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -73,6 +74,7 @@ reports:
   docs [status|check|scratch [name]]   single-doc discipline (architecture SSOT + log + scratch + quickref)
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
   handoff [reason]             session snapshot → .harness/handoff/
+  end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)
   ing [show|add|done|next|pod ...]   in-progress board → ING.md (작업 · POD running · next)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
@@ -155,6 +157,8 @@ async function main(): Promise<number> {
       return runDocs(rest);
     case "handoff":
       return runHandoff(rest);
+    case "end":
+      return runEnd(rest);
     case "ing":
       return runIng(rest);
     case "verdict":

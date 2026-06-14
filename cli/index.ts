@@ -18,6 +18,7 @@ import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
 import { runPod, runDemi, runDojo } from "../modules/runbooks.ts";
+import { runPool } from "../modules/pool.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -53,6 +54,7 @@ hook delegates (wire these into your agent's settings.json):
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
   demi                     design-architecture program runbook (7-verb spine)
+  pool {list|add|rm|on|status}   host roster + remote exec (~/.harness/pool.json, global)
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -99,6 +101,8 @@ async function main(): Promise<number> {
     case "demi":
     case "demiurge":
       return runDemi(rest);
+    case "pool":
+      return runPool(rest);
     case "pre":
       return runPre(rest);
     case "post":

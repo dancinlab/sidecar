@@ -22,6 +22,20 @@ function findSecretBin(): string | null {
   return null;
 }
 
+// Shared resolver (used by `secret` + `imagine`): PATH then known bin dirs.
+export async function secretBin(): Promise<string | null> {
+  const which = (await execShell("command -v secret 2>/dev/null")).stdout.trim();
+  return which || findSecretBin();
+}
+
+// Fetch a secret value. Returns "" on any failure. Caller MUST NOT log the value.
+export async function secretGet(key: string): Promise<string> {
+  const bin = await secretBin();
+  if (!bin) return "";
+  const r = await execShell(`${JSON.stringify(bin)} get ${JSON.stringify(key)}`);
+  return r.code === 0 ? r.stdout.trim() : "";
+}
+
 export async function runSecret(args: string[]): Promise<number> {
   // resolve via PATH first, then known locations
   const which = (await execShell("command -v secret 2>/dev/null")).stdout.trim();

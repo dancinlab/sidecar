@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat: imagine — AI image generator (sidecar /imagine parity)
+
+- **`harness imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]`** + `list` · `help`.
+  - 백엔드: **fal**(기본, fal.ai queue+poll, 기본 모델 `openai/gpt-image-2` — user-pinned, `-m` 로만 변경) · **openai**(`/v1/images/generations` 동기, 기본 `gpt-image-1`, b64_json/url 모두 처리).
+  - API 키는 `secret get fal.api_key` / `secret get openai.api_key` (방금 추가한 secret 모듈의 `secretGet` 재사용) — **인라인 금지·로그 금지**. 프롬프트는 **파일**에서 읽음(provenance·argv 유출 방지), payload 는 mktemp JSON.
+  - canonical 사이즈: `square_hd · square · landscape_16_9 · portrait_16_9` (openai 는 1024²/1536×1024/1024×1536 으로 변환).
+  - 보안 강화(sidecar 대비): auth 헤더를 curl `-K` config 파일로 전달 → **API 키가 process argv 에 남지 않음**. 임시파일은 finally 에서 삭제.
+- secret 모듈에 `secretBin()` / `secretGet()` export 추가(DRY 재사용).
+
 ## feat: worktree — no-pileup/no-stranded enforcement (sidecar worktree-gc/worktree-guard parity)
 
 원칙: PR/branch/worktree 누적 금지 · 워크트리에 작업 방치 금지 · 방치 작업 있으면 새 작업 시작 금지.

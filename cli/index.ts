@@ -27,6 +27,7 @@ import { runEnd } from "../modules/end.ts";
 import { runSecret } from "../modules/secret.ts";
 import { runLsp } from "../modules/lsp.ts";
 import { runWorktree } from "../modules/worktree.ts";
+import { runImagine } from "../modules/imagine.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -67,6 +68,8 @@ hook delegates (wire these into your agent's settings.json):
                            ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
   lsp {wire|status|rebuild <file>}   editor LSP wiring (.lsp.json; hexa-lang \`hexa lsp\` for .hexa by default)
                            + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited
+  imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help
+                           AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -174,6 +177,8 @@ async function main(): Promise<number> {
       return runLsp(rest);
     case "worktree":
       return runWorktree(rest);
+    case "imagine":
+      return runImagine(rest);
     case "ing":
       return runIng(rest);
     case "verdict":

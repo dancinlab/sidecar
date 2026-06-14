@@ -19,6 +19,7 @@ import { runEasy } from "../modules/easy.ts";
 import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
 import { runFanout } from "../modules/fanout.ts";
+import { runDocs } from "../modules/docs.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -51,6 +52,7 @@ gates & ledgers:
 reports:
   audit [full|summary|json]    6-axis self-scorecard
   gc [scan|drift]              broken markdown links in guides
+  docs [status|check|scratch [name]]   single-doc discipline (architecture SSOT + log + scratch + quickref)
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
   handoff [reason]             session snapshot → .harness/handoff/
   convergence {status|recompute|by-category}   optional incident tracker
@@ -110,6 +112,8 @@ async function main(): Promise<number> {
       return runGc(rest);
     case "folders":
       return runFolders(rest);
+    case "docs":
+      return runDocs(rest);
     case "handoff":
       return runHandoff(rest);
     case "convergence":

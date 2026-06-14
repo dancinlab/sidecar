@@ -113,6 +113,34 @@ harness afg [labels]   # 순차 포그라운드: 한 번에 하나씩 이 세션
 - REACTIVE only — 직전 턴 제시 목록만, 없는 브랜치 지어내기 금지. 종료 메시지 형태(`N agents launched…` / `N branches run sequentially…`)는 sidecar 와 동일.
 - abg=병렬(Agent run_in_background) · afg=순차 in-session(subagent 금지). 수동 호출(hook 아님).
 
+## docs — 단일 문서 규율 (중구난방 → 2파일 통합)
+
+AI 가 리포트/요약/노트를 흩뿌리는 걸 막고 **2개 단일 문서**로 모은다. `ARCHITECTURE.md` 존재 시 활성(opt-in by presence).
+
+```
+2-파일 규약
+├─ ARCHITECTURE.md  — 최종 아키텍처 SSOT (업데이트형: 항상 최신으로 덮어씀, 추가형 아님)
+└─ CHANGELOG.md     — 이력/결정 (추가형: append)
+임시 산출물         → scripts/scratch/ (tmp 휘발 금지)
+부득이 분리 문서     → 상단에 SSOT 로 가는 quickref 1줄 무조건 연결
+메인 CLAUDE.md      → 프로젝트 간략 설명 + 트리 구조(트리별 간략 설명) 반드시 포함
+```
+
+```bash
+harness docs status            # 활성 여부 + 흩어진 문서/quickref 누락/CLAUDE.md 위반
+harness docs check             # 위반 시 exit 1 (lint 가 자동 포함 — pre-commit 강제)
+harness docs scratch [name]    # scripts/scratch 경로 생성(tmp 대체)
+```
+
+검사 규칙 (lint 통합 · severity-map.hardcore = block):
+| 규칙 | 트리거 |
+|------|--------|
+| `DOC-SCATTER` | `-report/-summary/-notes/날짜-*.md` 등 흩어진 작명 |
+| `DOC-NO-QUICKREF` | 비-SSOT 분리 .md 상단에 SSOT 포인터 없음 |
+| `CLAUDE-MD-MISSING/NO-DESC/NO-TREE/TREE-NO-DESC` | 메인 CLAUDE.md 의 프로젝트설명·트리·트리설명 누락 |
+
+enforcement(hardcore): `H-SCATTER-DOC`(pre_write 흩어진 .md 작성 경고) · `H-TMP-SCRATCH`(pre_bash /tmp 작성 경고 → scripts/scratch) · prompt-hint `H-SINGLE-DOC`. `init --hardcore` 가 ARCHITECTURE.md·CHANGELOG.md·CLAUDE.md 스텁 + scripts/scratch/ 생성.
+
 ## 규칙 추가 (이 브랜치에서 한 건씩)
 
 hardcore 규칙은 **이 브랜치의 `config/enforcement.hardcore.json` / `config/severity-map.hardcore.json` 에만** 추가한다(main 의 default 규칙은 건드리지 않음). 새 규칙은 `pre_bash` / `pre_write` / `prompt_hints` 에 append.

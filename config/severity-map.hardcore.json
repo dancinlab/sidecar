@@ -8,7 +8,13 @@
       "STALE": "block",
       "CONVERGENCE-MISSING": "block",
       "CHANGELOG-MISSING": "block",
-      "PROTECTED-BRANCH": "block"
+      "PROTECTED-BRANCH": "block",
+      "DOC-SCATTER": "block",
+      "DOC-NO-QUICKREF": "block",
+      "CLAUDE-MD-MISSING": "block",
+      "CLAUDE-MD-NO-DESC": "block",
+      "CLAUDE-MD-NO-TREE": "block",
+      "CLAUDE-MD-TREE-NO-DESC": "warn"
     },
     "build_kind": {
       "bash_nonzero": "block",

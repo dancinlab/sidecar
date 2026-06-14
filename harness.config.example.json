@@ -38,6 +38,14 @@
 
   "guides": ["CLAUDE.md", "AGENTS.md", "README.md"],
 
+  "docs": {
+    "architecture": "ARCHITECTURE.md",
+    "log": "CHANGELOG.md",
+    "scratchDir": "scripts/scratch",
+    "scatterPatterns": ["-(report|summary|notes?|audit|status|plan|analysis|design)\\.md$", "\\d{6,8}[-_].*\\.md$"],
+    "allow": ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "CLAUDE.md", "AGENTS.md", "LICENSE"]
+  },
+
   "folderGuides": {
     "enabled": true,
     "roots": ["src", "packages"],

@@ -7,7 +7,13 @@
       "L0-LOCKDOWN": "warn",
       "STALE": "warn",
       "CONVERGENCE-MISSING": "block",
-      "CHANGELOG-MISSING": "block"
+      "CHANGELOG-MISSING": "block",
+      "DOC-SCATTER": "warn",
+      "DOC-NO-QUICKREF": "warn",
+      "CLAUDE-MD-MISSING": "warn",
+      "CLAUDE-MD-NO-DESC": "warn",
+      "CLAUDE-MD-NO-TREE": "warn",
+      "CLAUDE-MD-TREE-NO-DESC": "warn"
     },
     "build_kind": {
       "bash_nonzero": "defer",

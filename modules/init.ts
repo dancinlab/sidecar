@@ -229,6 +229,37 @@ export async function runInit(args: string[]): Promise<number> {
     write(dst, content, ".harness/prefs.json");
   }
 
+  // 2d. hardcore single-doc discipline scaffolds (create-if-absent):
+  //   ARCHITECTURE.md (update-in-place SSOT) · CHANGELOG.md (append) ·
+  //   CLAUDE.md (project blurb + tree) · scripts/scratch/ (tmp 대체).
+  if (flags.hardcore) {
+    const proj = basename(REPO_ROOT);
+    write(
+      resolve(REPO_ROOT, "ARCHITECTURE.md"),
+      `# ${proj} — 아키텍처 (SSOT · 업데이트형)\n\n` +
+        `> 최종 아키텍처 단일 SSOT. 변경 시 이 파일을 **갱신(덮어쓰기)** 한다(추가형 아님). 이력/결정은 CHANGELOG.md.\n\n` +
+        `## 개요\n(한 줄 설명)\n\n## 구성요소\n(컴포넌트별 역할)\n\n## 데이터 흐름\n(입력 → 처리 → 출력)\n`,
+      "ARCHITECTURE.md"
+    );
+    write(
+      resolve(REPO_ROOT, "CHANGELOG.md"),
+      `# CHANGELOG\n\n> 추가형(append-only) 이력. 최종 상태는 ARCHITECTURE.md.\n\n## (unreleased)\n- \n`,
+      "CHANGELOG.md"
+    );
+    write(
+      resolve(REPO_ROOT, "CLAUDE.md"),
+      `# ${proj}\n\n${proj} — (한 줄 프로젝트 설명을 여기에).\n\n## 구조\n\n\`\`\`\n${proj}/\n├─ src/         — 소스 코드\n├─ scripts/     — 빌드/운영 스크립트 (scratch/ = 임시 산출물 보관)\n├─ ARCHITECTURE.md — 최종 아키텍처 SSOT (업데이트형)\n└─ CHANGELOG.md  — 이력 (추가형)\n\`\`\`\n`,
+      "CLAUDE.md"
+    );
+    const scratch = resolve(REPO_ROOT, "scripts", "scratch");
+    if (!flags.dryRun) {
+      mkdirSync(scratch, { recursive: true });
+      const keep = resolve(scratch, ".gitkeep");
+      if (!existsSync(keep)) writeFileSync(keep, "");
+    }
+    actions.push({ path: "scripts/scratch/", how: flags.dryRun ? "would" : "create" });
+  }
+
   // 3. .gitignore — ensure log/handoff dirs are ignored
   const giPath = resolve(REPO_ROOT, ".gitignore");
   const needLines = [".harness/logs/", ".harness/handoff/"];

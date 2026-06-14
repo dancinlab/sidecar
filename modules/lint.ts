@@ -13,6 +13,7 @@ import { execShell } from "../lib/exec.ts";
 import { isL0 } from "../lib/lockdown.ts";
 import { config, repoPath } from "../lib/config.ts";
 import { routeError } from "./errors.ts";
+import { docViolations } from "./docs.ts";
 
 interface Violation {
   rule: string;
@@ -105,6 +106,12 @@ export async function runLint(args: string[]): Promise<number> {
         });
       }
     }
+  }
+
+  // 4b. single-doc discipline (staged .md scatter + quickref) — active only when
+  // the architecture SSOT file exists (opt-in by presence).
+  for (const d of docViolations(staged)) {
+    violations.push({ rule: d.rule, file: d.file, msg: d.msg });
   }
 
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });

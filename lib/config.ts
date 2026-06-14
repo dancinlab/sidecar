@@ -60,6 +60,16 @@ export interface HarnessConfig {
     ignore: string[];
     ext: string[];
   };
+  // single-doc discipline — keep AI output in two canonical files instead of
+  // scattering reports/notes. Active only when `architecture` file exists (opt-in
+  // by presence). architecture = UPDATE-in-place SSOT; log = APPEND-only.
+  docs: {
+    architecture: string; // 최종 아키텍처 SSOT (업데이트형, 추가형 아님)
+    log: string; // 추가형 로그 (append-only)
+    scratchDir: string; // 임시 산출물 보관 (tmp 휘발 금지)
+    scatterPatterns: string[]; // 흩어진 문서로 간주하는 .md 작명 패턴
+    allow: string[]; // SSOT/허용 문서 (scatter·quickref 검사 제외)
+  };
   ledger: { staleSec: number };
 }
 
@@ -90,6 +100,17 @@ const DEFAULTS: HarnessConfig = {
       ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".m", ".mm",
       ".swift", ".dart", ".hexa",
     ],
+  },
+  docs: {
+    architecture: "ARCHITECTURE.md",
+    log: "CHANGELOG.md",
+    scratchDir: "scripts/scratch",
+    scatterPatterns: [
+      "-(report|summary|notes|note|audit|status|plan|analysis|design|spec|overview|guide)\\.md$",
+      "(REPORT|SUMMARY|NOTES|TODO|AUDIT|STATUS|ANALYSIS)\\.md$",
+      "\\d{6,8}[-_].*\\.md$",
+    ],
+    allow: ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "CLAUDE.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
   },
   ledger: { staleSec: 3600 },
 };

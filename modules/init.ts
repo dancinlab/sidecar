@@ -6,7 +6,7 @@
 //   • scripts/harness         (thin wrapper)
 //   • prints the .claude/settings.json hook snippet (or writes it with --hooks)
 // Never overwrites existing files unless --force. With --dry-run, only reports.
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, statSync, readdirSync } from "node:fs";
 import { resolve, relative, basename, dirname } from "node:path";
 import { REPO_ROOT, HARNESS_ROOT, HARNESS_CONFIG_DIR } from "../lib/paths.ts";
 import { info, ok, warn } from "../lib/log.ts";
@@ -45,20 +45,107 @@ function hookSnippet(engineRel: string): string {
   );
 }
 
-function starterConfig(project: string): string {
+interface Check {
+  id: string;
+  cmd: string;
+  timeoutMs?: number;
+  slow?: boolean;
+}
+interface Stack {
+  ids: string[];
+  checks: Check[];
+  exts: string[];
+}
+
+// Detect the repo's ecosystem(s) from marker files → starter verify checks +
+// the extension set used for the changelog gate. Language-agnostic: detects
+// node / python / rust / go / swift / c-cmake / c-make / hexa, and merges if mixed.
+function detectStack(): Stack {
+  const has = (f: string) => existsSync(resolve(REPO_ROOT, f));
+  let top: string[] = [];
+  try {
+    top = readdirSync(REPO_ROOT);
+  } catch {
+    /* ignore */
+  }
+  const hasExt = (e: string) => top.some((n) => n.endsWith(e));
+
+  const ids: string[] = [];
+  const checks: Check[] = [];
+  const exts = new Set<string>();
+
+  if (has("package.json")) {
+    ids.push("node");
+    const pm = has("pnpm-lock.yaml") ? "pnpm" : has("yarn.lock") ? "yarn" : "npm";
+    if (has("tsconfig.json")) checks.push({ id: "typecheck", cmd: "npx tsc --noEmit", timeoutMs: 240000 });
+    checks.push({ id: "test", cmd: `${pm} test`, timeoutMs: 240000 });
+    ["ts", "tsx", "js", "jsx", "mjs", "cjs"].forEach((e) => exts.add(e));
+  }
+  if (has("Cargo.toml")) {
+    ids.push("rust");
+    checks.push({ id: "fmt", cmd: "cargo fmt --check", timeoutMs: 60000 });
+    checks.push({ id: "clippy", cmd: "cargo clippy -- -D warnings", timeoutMs: 300000 });
+    checks.push({ id: "test", cmd: "cargo test", timeoutMs: 300000, slow: true });
+    exts.add("rs");
+  }
+  if (has("pyproject.toml") || has("setup.py") || has("requirements.txt")) {
+    ids.push("python");
+    checks.push({ id: "lint", cmd: "ruff check .", timeoutMs: 120000 });
+    checks.push({ id: "test", cmd: "pytest -q", timeoutMs: 240000 });
+    exts.add("py");
+  }
+  if (has("go.mod")) {
+    ids.push("go");
+    checks.push({ id: "vet", cmd: "go vet ./...", timeoutMs: 120000 });
+    checks.push({ id: "test", cmd: "go test ./...", timeoutMs: 240000 });
+    exts.add("go");
+  }
+  if (has("Package.swift") || top.some((n) => n.endsWith(".xcodeproj"))) {
+    ids.push("swift");
+    checks.push({ id: "build", cmd: "swift build", timeoutMs: 600000, slow: true });
+    checks.push({ id: "test", cmd: "swift test", timeoutMs: 600000, slow: true });
+    ["swift", "m", "mm"].forEach((e) => exts.add(e));
+  }
+  if (has("CMakeLists.txt")) {
+    ids.push("cmake");
+    checks.push({ id: "build", cmd: "cmake --build build", timeoutMs: 600000, slow: true });
+    ["c", "h", "cpp", "cc", "cxx", "hpp"].forEach((e) => exts.add(e));
+  } else if (has("Makefile") || has("makefile")) {
+    ids.push("make");
+    checks.push({ id: "build", cmd: "make", timeoutMs: 600000, slow: true });
+    ["c", "h", "cpp", "cc", "cxx", "hpp"].forEach((e) => exts.add(e));
+  }
+  if (hasExt(".hexa")) {
+    ids.push("hexa");
+    checks.push({ id: "verify", cmd: "hexa verify", timeoutMs: 240000 });
+    exts.add("hexa");
+  }
+
+  return { ids, checks, exts: [...exts] };
+}
+
+function changelogTrigger(exts: string[]): string {
+  const set = exts.length
+    ? exts
+    : ["ts", "tsx", "js", "jsx", "py", "rb", "go", "rs", "java", "kt", "c", "h", "cpp", "cc", "hpp", "m", "mm", "swift", "hexa"];
+  return `\\.(${set.join("|")})$`;
+}
+
+function starterConfig(project: string, stack: Stack): string {
   return JSON.stringify(
     {
       project,
+      stack: stack.ids,
       lockdown: { files: [], fromMarkdown: "CLAUDE.md", onEditReminder: "L0 file edited — update CHANGELOG + issue tracker in the same change." },
       enforcementFile: ".harness/enforcement.json",
       keywordsFile: ".harness/keywords.json",
       severityMapFile: ".harness/severity-map.json",
-      verify: { checks: [] },
+      verify: { checks: stack.checks },
       lint: {
         freshnessFiles: [],
         changelog: {
           file: "CHANGELOG.md",
-          triggerPattern: "\\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|swift|vue|svelte)$",
+          triggerPattern: changelogTrigger(stack.exts),
           ignore: ["(^|/)(tests?|__tests__|spec)/", "\\.(test|spec)\\.[a-z]+$", "(^|/)\\.harness(-engine)?/"],
         },
       },
@@ -80,6 +167,7 @@ export async function runInit(args: string[]): Promise<number> {
   };
   const actions: Action[] = [];
   const engineRel = enginePath();
+  const stack = detectStack();
 
   const write = (abs: string, content: string, label: string) => {
     if (existsSync(abs) && !flags.force) {
@@ -96,7 +184,7 @@ export async function runInit(args: string[]): Promise<number> {
   };
 
   // 1. harness.config.json
-  write(resolve(REPO_ROOT, "harness.config.json"), starterConfig(basename(REPO_ROOT)), "harness.config.json");
+  write(resolve(REPO_ROOT, "harness.config.json"), starterConfig(basename(REPO_ROOT), stack), "harness.config.json");
 
   // 2. .harness/*.json (copy bundled defaults so the repo can customize)
   for (const name of ["enforcement.json", "keywords.json", "severity-map.json"]) {
@@ -180,6 +268,7 @@ export async function runInit(args: string[]): Promise<number> {
 
   // report
   info(`harness init ${flags.dryRun ? "(dry-run) " : ""}— repo: ${REPO_ROOT}`);
+  info(`  detected stack: ${stack.ids.length ? stack.ids.join(", ") : "none (generic — fill verify.checks manually)"}`);
   for (const a of actions) {
     const mark = a.how === "skip" ? "·" : a.how === "would" ? "?" : "✓";
     info(`  ${mark} ${a.how.padEnd(6)} ${a.path}`);

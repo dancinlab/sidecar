@@ -80,8 +80,14 @@ const DEFAULTS: HarnessConfig = {
     depth: 2,
     minFiles: 3,
     filename: "CLAUDE.md",
-    ignore: ["node_modules", ".git", ".next", "dist", "build", "coverage", ".harness", "__pycache__", "vendor"],
-    ext: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs", ".java", ".rb", ".vue", ".svelte", ".swift"],
+    ignore: ["node_modules", ".git", ".next", "dist", "build", "coverage", ".harness", "__pycache__", "vendor", "target", ".build", "DerivedData", "Pods"],
+    ext: [
+      ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".vue", ".svelte",
+      ".py", ".rb", ".php",
+      ".go", ".rs", ".java", ".kt", ".kts", ".scala",
+      ".c", ".h", ".cpp", ".cc", ".cxx", ".hpp", ".m", ".mm",
+      ".swift", ".dart", ".hexa",
+    ],
   },
   ledger: { staleSec: 3600 },
 };

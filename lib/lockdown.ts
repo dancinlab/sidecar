@@ -22,7 +22,7 @@ export function l0Files(): string[] {
       const blocks = [...text.matchAll(/🔴\s*L0[\s\S]*?(?=🟡|```|$)/g)];
       // path-like tokens: src/… scripts/… lib/… app/… or a CLAUDE*.md
       const re =
-        /\b((?:src|scripts|lib|app|packages|cli|modules)\/[^\s—|]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|sh)|CLAUDE(?:-[a-z0-9-]+)?\.md)\s*(?:—|\||$)/gim;
+        /\b((?:src|scripts|lib|app|packages|cli|modules|crates|cmd|internal|pkg|sources|core)\/[^\s—|]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|rb|php|go|rs|java|kt|kts|scala|c|h|cpp|cc|cxx|hpp|m|mm|swift|dart|hexa|sh)|CLAUDE(?:-[a-z0-9-]+)?\.md)\s*(?:—|\||$)/gim;
       for (const b of blocks) {
         let m: RegExpExecArray | null;
         re.lastIndex = 0;

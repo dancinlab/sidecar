@@ -7,6 +7,8 @@
 
 이 저장소는 dancinlab 의 모든 repo(edge · anima · …)가 공유하는 **엔진**이다. 프로젝트마다 달라지는 것은 `harness.config.json` + `.harness/*.json`(규칙 데이터)뿐이고, `.ts` 엔진 코드는 전부 공유한다.
 
+> 🌐 **언어 무관**: 웹뿐 아니라 Python · Rust · C/C++ · Go · Swift · hexa 로컬/모바일 앱에도 쓴다. `init` 이 스택을 감지해 검증 명령(cargo/pytest/swift build/…)과 다국어 우회패턴(`# type: ignore`·`#[allow]`·`swiftlint:disable`…)을 자동 적용. 엔진 실행에 개발머신 Node 1개만 필요(타깃 빌드와 무관). → [docs/languages.md](docs/languages.md)
+
 ```
 [ edge repo ]──┐
 [ anima repo ]─┼──▶ 같은 .ts 엔진 (이 repo)
@@ -153,6 +155,7 @@ bash .harness-engine/bin/harness verify list
 
 ## 더 읽기
 
+- [docs/languages.md](docs/languages.md) — 언어/플랫폼 범용성 (Python·Rust·C·Go·Swift·hexa 프리셋 + Node 런타임 요구)
 - [docs/architecture.md](docs/architecture.md) — 하네스를 "어떻게 구성하는가" 전수 설계 (운영 중인 하네스 전수조사에서 일반화)
 - [docs/install.md](docs/install.md) — repo 통합 상세 (submodule / vendor / 멀티 repo)
 - [docs/extending.md](docs/extending.md) — 규칙 추가, 도메인 모듈 확장 패턴

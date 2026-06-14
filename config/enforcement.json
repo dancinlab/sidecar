@@ -42,26 +42,34 @@
     },
     {
       "id": "G-ROOT-CAUSE",
-      "desc": "no suppression/bypass without a justification marker",
-      "path_match": "\\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|swift)$",
+      "desc": "no suppression/bypass without a justification marker (cross-language)",
+      "path_match": "\\.(ts|tsx|js|jsx|mjs|cjs|py|rb|php|go|rs|java|kt|kts|scala|c|h|cpp|cc|cxx|hpp|m|mm|swift|dart|hexa)$",
       "bypass_patterns": [
         "@ts-ignore",
         "@ts-nocheck",
         "eslint-disable(?!-next-line)",
+        "NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*['\"]0['\"]",
         "catch\\s*\\([^)]*\\)\\s*\\{\\s*\\}",
         "\\.catch\\s*\\(\\s*\\(?[^)]*\\)?\\s*=>\\s*\\{\\s*\\}\\s*\\)",
         "if\\s*\\(\\s*false\\s*\\)",
-        "NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*['\"]0['\"]",
-        "//\\s*(TODO|FIXME|HACK|XXX)\\b"
+        "#\\s*type:\\s*ignore",
+        "#\\s*noqa",
+        "except\\s*[\\w. ,()]*:\\s*pass\\s*$",
+        "//\\s*nolint",
+        "#\\[allow\\(",
+        "//\\s*swiftlint:disable",
+        "#pragma\\s+(GCC|clang)\\s+diagnostic\\s+ignored",
+        "//\\s*NOLINT",
+        "(//|#)\\s*(TODO|FIXME|HACK|XXX)\\b"
       ],
-      "exemption_markers": ["@root-cause-ok", "@justified"],
+      "exemption_markers": ["@root-cause-ok", "@justified", "noqa: <code>"],
       "action": "warn",
-      "reason": "Suppression/bypass pattern detected — fix the root cause, don't hide the symptom. If genuinely justified, add `// @root-cause-ok <reason>` on the same line."
+      "reason": "Suppression/bypass pattern detected — fix the root cause, don't hide the symptom. Covers JS/TS (@ts-ignore, eslint-disable), Python (# type: ignore, # noqa, except: pass), Go (//nolint), Rust (#[allow(...)]), Swift (swiftlint:disable), C/C++ (#pragma ... diagnostic ignored, NOLINT), plus TODO/FIXME. If genuinely justified, add `@root-cause-ok <reason>` on the same line."
     },
     {
       "id": "G-SECRET-LITERAL",
       "desc": "hardcoded credential literal",
-      "path_match": "\\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|swift|env|ya?ml|json)$",
+      "path_match": "\\.(ts|tsx|js|jsx|mjs|cjs|py|rb|php|go|rs|java|kt|scala|c|h|cpp|cc|hpp|m|mm|swift|dart|hexa|env|ya?ml|json|toml)$",
       "bypass_patterns": [
         "(aws_secret_access_key|aws_access_key_id)\\s*[:=]\\s*['\"][A-Za-z0-9/+]{16,}",
         "(api[_-]?key|secret|password|passwd|token)\\s*[:=]\\s*['\"][^'\"\\n]{12,}['\"]",

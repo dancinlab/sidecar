@@ -13,6 +13,7 @@ import { runGc } from "../modules/gc.ts";
 import { runConvergence } from "../modules/convergence.ts";
 import { runSync } from "../modules/sync.ts";
 import { runInit } from "../modules/init.ts";
+import { runFolders } from "../modules/folders.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -38,6 +39,7 @@ gates & ledgers:
 reports:
   audit [full|summary|json]    6-axis self-scorecard
   gc [scan|drift]              broken markdown links in guides
+  folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
   handoff [reason]             session snapshot → .harness/handoff/
   convergence {status|recompute|by-category}   optional incident tracker
   sync {run|diff}              run configured shared-file sync script
@@ -79,6 +81,8 @@ async function main(): Promise<number> {
       return runAudit(rest);
     case "gc":
       return runGc(rest);
+    case "folders":
+      return runFolders(rest);
     case "handoff":
       return runHandoff(rest);
     case "convergence":

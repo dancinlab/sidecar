@@ -46,6 +46,16 @@ export interface HarnessConfig {
   sync?: { script: string };
   // markdown guides whose relative links `gc` checks for drift
   guides: string[];
+  // nudge per-subfolder CLAUDE.md authoring: `folders` command + post-edit hint
+  folderGuides: {
+    enabled: boolean;
+    roots: string[];
+    depth: number;
+    minFiles: number;
+    filename: string;
+    ignore: string[];
+    ext: string[];
+  };
   ledger: { staleSec: number };
 }
 
@@ -62,6 +72,15 @@ const DEFAULTS: HarnessConfig = {
   verify: { checks: [] },
   lint: { freshnessFiles: [] },
   guides: ["CLAUDE.md", "AGENTS.md", "README.md"],
+  folderGuides: {
+    enabled: true,
+    roots: ["src", "lib", "app", "packages", "modules", "components", "services"],
+    depth: 2,
+    minFiles: 3,
+    filename: "CLAUDE.md",
+    ignore: ["node_modules", ".git", ".next", "dist", "build", "coverage", ".harness", "__pycache__", "vendor"],
+    ext: [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs", ".java", ".rb", ".vue", ".svelte", ".swift"],
+  },
   ledger: { staleSec: 3600 },
 };
 

@@ -5,6 +5,7 @@ import { LOGS } from "../lib/paths.ts";
 import { routeError } from "./errors.ts";
 import { isL0 } from "../lib/lockdown.ts";
 import { config } from "../lib/config.ts";
+import { postEditNudge } from "./folders.ts";
 import { existsSync, statSync } from "node:fs";
 
 export async function postBash(args: string[]): Promise<number> {
@@ -37,5 +38,6 @@ export async function postEdit(args: string[]): Promise<number> {
   if (existsSync(file)) {
     appendJsonl(LOGS.observations, { kind: "post_edit_stat", file, size: statSync(file).size });
   }
+  postEditNudge(file);
   return 0;
 }

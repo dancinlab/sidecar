@@ -33,5 +33,15 @@
 
   "guides": ["CLAUDE.md", "AGENTS.md", "README.md"],
 
+  "folderGuides": {
+    "enabled": true,
+    "roots": ["src", "packages"],
+    "depth": 2,
+    "minFiles": 3,
+    "filename": "CLAUDE.md",
+    "ignore": ["node_modules", ".git", ".next", "dist", "build"],
+    "ext": [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs"]
+  },
+
   "ledger": { "staleSec": 3600 }
 }

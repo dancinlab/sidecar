@@ -108,7 +108,34 @@ repo 군이 공통 도메인(예: 같은 배포 인프라)을 쓰면, 엔진을 
   NO (한 repo 전용)  → 패턴 A (repo 스크립트 + 가드)
 ```
 
-## 6. 로그 활용
+## 6. 서브폴더별 CLAUDE.md 유도 (folder-guides)
+
+각 소스 폴더에 로컬 `CLAUDE.md` 를 두면 에이전트가 그 폴더만 읽어도 맥락(목적·핵심파일·컨벤션·주의점)을 잡는다. 하네스가 이를 두 갈래로 유도한다:
+
+```
+능동: harness folders scan            누락 폴더 목록
+      harness folders scaffold <dir>  템플릿 생성
+수동(자동): post edit hook            CLAUDE.md 없는 폴더의 파일을 편집하면
+                                      그 폴더당 1회 "가이드 만드세요" 넛지 (dedupe)
+```
+
+`harness.config.json` 으로 조정:
+
+```jsonc
+"folderGuides": {
+  "enabled": true,
+  "roots": ["src", "packages"],   // 스캔할 최상위 폴더
+  "depth": 2,                       // root 포함 깊이 (root=1)
+  "minFiles": 3,                    // 소스파일 N개 이상인 폴더만 대상
+  "filename": "CLAUDE.md",
+  "ignore": ["node_modules", "dist"],
+  "ext": [".ts", ".tsx", ".py"]     // "소스파일"로 셀 확장자
+}
+```
+
+`enabled:false` 로 끄거나, `minFiles` 를 올려 노이즈를 줄인다. 스캐폴드된 템플릿은 목적/핵심파일/컨벤션/주의/관련 5칸을 비워두니 채우면 된다.
+
+## 7. 로그 활용
 
 모든 모듈은 `.harness/logs/*.jsonl` 에 append 한다. 직접 질의해 대시보드를 만들 수 있다:
 

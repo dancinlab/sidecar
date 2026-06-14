@@ -26,25 +26,29 @@ function enginePath(): string {
 
 function hookSnippet(engineRel: string): string {
   const bin = `${engineRel}/bin/harness`;
+  // Guard every hook: if the engine binary isn't present (e.g. submodule not yet
+  // `git submodule update --init`-ed), exit 0 silently instead of erroring. This
+  // keeps a fresh clone quiet until the engine is initialized.
+  const g = (inner: string) => `[ -x ${bin} ] && ${inner} || true`;
   return JSON.stringify(
     {
       hooks: {
         PreToolUse: [
-          { matcher: "Bash", hooks: [{ type: "command", command: `CLAUDE_TOOL_INPUT="$CLAUDE_TOOL_INPUT" bash ${bin} pre bash` }] },
-          { matcher: "Write|Edit", hooks: [{ type: "command", command: `CLAUDE_TOOL_INPUT="$CLAUDE_TOOL_INPUT" bash ${bin} pre write` }] },
+          { matcher: "Bash", hooks: [{ type: "command", command: g(`CLAUDE_TOOL_INPUT="$CLAUDE_TOOL_INPUT" bash ${bin} pre bash`) }] },
+          { matcher: "Write|Edit", hooks: [{ type: "command", command: g(`CLAUDE_TOOL_INPUT="$CLAUDE_TOOL_INPUT" bash ${bin} pre write`) }] },
         ],
         PostToolUse: [
-          { matcher: "Write|Edit", hooks: [{ type: "command", command: `bash ${bin} post edit "$CLAUDE_FILE_PATH"` }] },
+          { matcher: "Write|Edit", hooks: [{ type: "command", command: g(`bash ${bin} post edit "$CLAUDE_FILE_PATH"`) }] },
         ],
         UserPromptSubmit: [
-          { hooks: [{ type: "command", command: `bash ${bin} prompt "$CLAUDE_USER_PROMPT"` }] },
-          { hooks: [{ type: "command", command: `bash ${bin} prefs inject` }] },
-          { hooks: [{ type: "command", command: `bash ${bin} easy inject` }] },
-          { hooks: [{ type: "command", command: `bash ${bin} recommend inject` }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} prompt "$CLAUDE_USER_PROMPT"`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} prefs inject`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} easy inject`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} recommend inject`) }] },
         ],
         SessionStart: [
-          { hooks: [{ type: "command", command: `bash ${bin} easy inject` }] },
-          { hooks: [{ type: "command", command: `bash ${bin} recommend inject` }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} easy inject`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} recommend inject`) }] },
         ],
       },
     },
@@ -296,7 +300,7 @@ export async function runInit(args: string[]): Promise<number> {
     const preCommit = resolve(gitDir, "hooks", "pre-commit");
     // route via the repo's own scripts/harness wrapper (single source of truth
     // for the engine location), resolved from the repo top-level at hook time.
-    const body = `#!/usr/bin/env bash\n# installed by 'harness init' — block commits that fail harness lint gates\nexec bash "$(git rev-parse --show-toplevel)/scripts/harness" lint\n`;
+    const body = `#!/usr/bin/env bash\n# installed by 'harness init' — block commits that fail harness lint gates\nW="$(git rev-parse --show-toplevel)/scripts/harness"\n[ -x "$W" ] || exit 0   # engine/wrapper absent (submodule not init'd) → skip\nexec bash "$W" lint\n`;
     if (existsSync(preCommit) && !flags.force) {
       actions.push({ path: ".git/hooks/pre-commit", how: "skip" });
     } else if (flags.dryRun) {
@@ -312,7 +316,7 @@ export async function runInit(args: string[]): Promise<number> {
   if (flags.hardcore && existsSync(gitDir) && statSync(gitDir).isDirectory()) {
     const prePush = resolve(gitDir, "hooks", "pre-push");
     const body =
-      `#!/usr/bin/env bash\n# installed by 'harness init --hardcore' — block pushes that fail verify / have open errors\nROOT="$(git rev-parse --show-toplevel)"\nbash "$ROOT/scripts/harness" verify || exit 1\nbash "$ROOT/scripts/harness" errors drain_check 1 || exit 1\n`;
+      `#!/usr/bin/env bash\n# installed by 'harness init --hardcore' — block pushes that fail verify / have open errors\nROOT="$(git rev-parse --show-toplevel)"\n[ -x "$ROOT/scripts/harness" ] || exit 0   # engine/wrapper absent → skip\nbash "$ROOT/scripts/harness" verify || exit 1\nbash "$ROOT/scripts/harness" errors drain_check 1 || exit 1\n`;
     if (existsSync(prePush) && !flags.force) {
       actions.push({ path: ".git/hooks/pre-push", how: "skip" });
     } else if (flags.dryRun) {

@@ -12,10 +12,14 @@ import { runHandoff } from "../modules/handoff.ts";
 import { runGc } from "../modules/gc.ts";
 import { runConvergence } from "../modules/convergence.ts";
 import { runSync } from "../modules/sync.ts";
+import { runInit } from "../modules/init.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
 usage: harness <cmd> [args]
+
+setup:
+  init [--force] [--hooks] [--dry-run]   scaffold config + .harness rules + gitignore + wrapper
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -49,6 +53,9 @@ async function main(): Promise<number> {
   }
   const [cmd, ...rest] = argv;
   switch (cmd) {
+    case "init":
+    case "install":
+      return runInit(rest);
     case "pre":
       return runPre(rest);
     case "post":

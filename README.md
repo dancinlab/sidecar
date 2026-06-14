@@ -78,16 +78,27 @@ git submodule add https://github.com/dancinlab/harness .harness-engine
 # 또는 그냥 clone / vendor 해도 됨
 ```
 
-### 2. 설정 파일 작성
+### 2. 스캐폴딩 (한 방)
 
 ```bash
-cp .harness-engine/harness.config.example.json harness.config.json
-# project / lockdown.files / verify.checks 를 repo 에 맞게 수정
-mkdir -p .harness
-cp .harness-engine/config/enforcement.json .harness/enforcement.json   # 필요 시 규칙 추가
+bash .harness-engine/bin/harness init --hooks
 ```
 
-> `.harness/enforcement.json` 등을 두지 않으면 번들 기본 규칙(`config/*.json`)이 자동 적용된다.
+이 한 줄이 만든다 (기존 파일은 보존, `--force` 만 예외 · `--dry-run` 으로 미리보기):
+
+```
+✓ harness.config.json          프로젝트명 자동감지
+✓ .harness/enforcement.json    번들 기본 규칙 복사 (repo 가 수정)
+✓ .harness/keywords.json
+✓ .harness/severity-map.json
+✓ .gitignore                   로그/handoff 무시 추가
+✓ scripts/harness              얇은 래퍼
+✓ .claude/settings.json        hook 배선 (--hooks 일 때)
+```
+
+생성 후 `harness.config.json` 의 `verify.checks` · `lockdown.files` 만 repo 에 맞게 채우면 된다.
+
+> 수동 설정도 가능: `.harness/*.json` 을 두지 않으면 번들 기본 규칙(`config/*.json`)이 자동 적용된다.
 
 ### 3. 동작 확인
 

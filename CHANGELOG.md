@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 0.2.0
+
+- **`harness init` 추가** (`install` alias) — 한 방 스캐폴딩: `harness.config.json`(프로젝트명 자동감지) + `.harness/{enforcement,keywords,severity-map}.json`(번들 기본 복사) + `.gitignore` 로그 무시 + `scripts/harness` 래퍼 + `.claude/settings.json` hook(`--hooks`). 기존 파일은 보존(`--force` 만 예외), `--dry-run` 으로 미리보기. 멱등(재실행 시 skip).
+
 ## 0.1.0
 
 최초 공개 — 프로젝트-무관 AI 코딩 하네스 엔진.

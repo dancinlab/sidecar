@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## fix: pr-cycle — full post-merge worktree sweep (sidecar 0.5.0 parity)
+
+- 기존엔 merge 후 `git worktree prune` 만 호출 → 실제 worktree 디렉토리·로컬 브랜치가 누적되는 누수. main merge(squash·admin·delete-branch into base)는 정상이었음.
+- 이제 merge 성공 후 `sweepMergedWorktrees()`: MAIN worktree 로 cd(현재 worktree 안에서 실행한 경우 포함) → `git fetch -p` → upstream `[gone]`(squash-safe 머지 신호)인 **linked agent worktree**(`.claude/worktrees/`)만 `git worktree remove --force` + `git branch -D` + `git worktree prune`. main 체크아웃·locked·live/absent upstream(미푸시 작업 보유 가능)은 절대 건드리지 않음.
+
 ## feat: lsp (editor LSP wiring + grammar auto-rebuild)
 
 - **`harness lsp {wire|status|rebuild <file>}`** — sidecar hexa-lsp/lsp-rebuild parity.

@@ -76,6 +76,11 @@ export interface HarnessConfig {
     // ("" = repo-root files). Undefined = whole repo. CLAUDE-MD check is unaffected.
     // Use for research repos with a large legit doc corpus.
     scopeDirs?: string[];
+    // write-time enforcement (PreToolUse Write/Edit on .md). "warn" surfaces the
+    // violation the moment a scattered/quickref-less doc is created (default —
+    // the lint/commit check alone fires too late to be followed); "block" vetoes
+    // the write; "off" disables write-time checks (lint still reports).
+    enforce?: "off" | "warn" | "block";
   };
   // LSP wiring for the agent's editor. `wire` writes a Claude-Code `.lsp.json`
   // (canonical filename) mapping file extensions → a language server. `rebuild`
@@ -132,6 +137,7 @@ const DEFAULTS: HarnessConfig = {
       "\\d{6,8}[-_].*\\.md$",
     ],
     allow: ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "ING.md", "ATLAS.md", "CLAIMS.md", "CLAUDE.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
+    enforce: "warn",
   },
   lsp: {
     // hexa-lang LSP (sidecar hexa-lsp parity): cd into the FIRST candidate dir

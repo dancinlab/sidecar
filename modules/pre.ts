@@ -14,6 +14,7 @@ import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
+import { docWriteViolation } from "./docs.ts";
 
 interface BashRule {
   id: string;
@@ -135,6 +136,18 @@ export async function preWrite(_args: string[]): Promise<number> {
   const filePath = String(input.file_path ?? "");
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
+
+  // built-in single-doc discipline (write-time) — fires when a scattered or
+  // quickref-less .md is created, the moment it happens (lint alone is too late).
+  if (filePath.endsWith(".md")) {
+    const dv = docWriteViolation(filePath, content);
+    if (dv) {
+      const level = config().docs.enforce ?? "warn";
+      if (level === "block") return emitBlock(dv.rule, `${dv.msg} (docs.enforce=block)`);
+      emitWarn(dv.rule, dv.msg);
+    }
+  }
+
   const cfg = loadConfig();
 
   for (const rule of cfg.pre_write ?? []) {

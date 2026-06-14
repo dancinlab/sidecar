@@ -83,6 +83,7 @@ reports:
   audit [full|summary|json]    6-axis self-scorecard
   gc [scan|drift]              broken markdown links in guides
   docs [status|check|scratch [name]]   single-doc discipline (architecture SSOT + log + scratch + quickref)
+                               write-time enforced in \`pre write\` (docs.enforce: warn[default]|block|off)
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
   handoff [reason]             session snapshot → .harness/handoff/
   end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)

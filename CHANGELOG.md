@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat: docs — write-time single-doc enforcement (안 지켜지던 규율을 쓰는 순간 강제)
+
+- 문제: 단일문서 규율(ARCHITECTURE SSOT 통합 · 분리 시 quickref 연결)이 **lint/commit 시점에만** 검사돼 사후 → 에이전트가 이미 흩뿌린 뒤라 안 지켜짐.
+- 해결: **`pre write`(PreToolUse Write/Edit)에 write-time 검사 추가** — `.md` 를 쓰는 순간 판정.
+  - `DOC-SCATTER`: scatter 패턴(`*-report/summary/notes/audit…`, 날짜접두 등) + allow 외 + scope 내 → "ARCHITECTURE(갱신)/CHANGELOG(append)/scratch 로 통합" 안내.
+  - `DOC-NO-QUICKREF`: 분리 문서 상단 12줄에 SSOT 링크/포인터 없으면 → quickref 추가 안내.
+- `docs.enforce` 노브: `warn`(기본, 즉시 경고) · `block`(쓰기 veto) · `off`. ARCHITECTURE.md 존재 시에만 활성(opt-in), `docs.scopeDirs`/`docs.allow` 그대로 적용.
+- 검증: scatter→warn, no-quickref→warn, quickref 있음/allow 파일→무음, block 모드→`{"decision":"block"}`.
+
 ## feat: imagine history — past-prompt history (fal provider API + local ledger)
 
 - **`harness imagine history [-b fal|openai] [-m endpoint_id,…] [--start <iso>] [--limit N] [--status success|error] [--local] [--json]`**.

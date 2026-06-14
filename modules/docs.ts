@@ -4,6 +4,8 @@
 // scattering *-report.md / *-summary.md / dated notes. Any document that must
 // live separately MUST carry a quickref pointer back to the SSOT.
 // ACTIVE ONLY when the architecture file exists (opt-in by presence).
+// Enforced at WRITE time (PreToolUse Write/Edit, see docWriteViolation) as well
+// as at lint/commit time — the write-time hook is what makes it actually stick.
 import { existsSync, readFileSync, readdirSync, statSync, mkdirSync } from "node:fs";
 import { resolve, relative, basename } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
@@ -41,6 +43,51 @@ function hasQuickref(absFile: string): boolean {
   }
   if (head.includes(arch)) return true;
   return /\b(SSOT|quickref|단일\s*문서|↩|→\s*\[)/i.test(head);
+}
+
+// content-based quickref (for write-time, before the file exists on disk):
+// a separate doc must point back to the SSOT in its first ~12 lines.
+function contentHasQuickref(content: string): boolean {
+  const arch = basename(config().docs.architecture);
+  const head = content.split("\n").slice(0, 12).join("\n");
+  if (head.includes(arch)) return true;
+  return /\b(SSOT|quickref|단일\s*문서|↩|→\s*\[)/i.test(head);
+}
+
+function inScope(rel: string): boolean {
+  const scope = config().docs.scopeDirs;
+  if (!scope || !scope.length) return true;
+  const seg = rel.includes("/") ? rel.split("/")[0] : "";
+  return scope.includes(seg);
+}
+
+// Write-time single-doc check for ONE .md being written (PreToolUse Write/Edit).
+// Returns a violation or null. Honors docs.enforce ("off" → never flags).
+export function docWriteViolation(absOrRelPath: string, content: string): DocViolation | null {
+  if (config().docs.enforce === "off") return null;
+  if (!docsActive()) return null;
+  const abs = resolve(REPO_ROOT, absOrRelPath);
+  const rel = relative(REPO_ROOT, abs);
+  if (rel.startsWith("..")) return null; // outside repo
+  if (!rel.endsWith(".md")) return null;
+  if (isAllowed(rel)) return null;
+  if (!inScope(rel)) return null;
+  const cfg = config().docs;
+  if (isScatter(rel)) {
+    return {
+      rule: "DOC-SCATTER",
+      file: rel,
+      msg: `흩어진 문서 생성 차단 대상 — 아키텍처는 ${cfg.architecture}(갱신형 SSOT), 이력은 ${cfg.log}(append)로 통합하세요. 임시 산출물은 ${cfg.scratchDir}/ (tmp 휘발 금지).`,
+    };
+  }
+  if (content && !contentHasQuickref(content)) {
+    return {
+      rule: "DOC-NO-QUICKREF",
+      file: rel,
+      msg: `분리 문서에 quickref 누락 — 상단 12줄 내에 SSOT(${cfg.architecture})로 가는 링크/포인터 1줄을 넣으세요 (예: "> 📍 SSOT: [${basename(cfg.architecture)}](...)").`,
+    };
+  }
+  return null;
 }
 
 function walkMd(dir: string, out: string[]): void {

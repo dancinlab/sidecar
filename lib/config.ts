@@ -38,6 +38,8 @@ export interface HarnessConfig {
     freshnessFiles: FreshnessFile[];
     // commit-subject regex that REQUIRES `requiredFile` to be in the commit
     convergence?: { commitPattern: string; requiredFile: string };
+    // staged code changes REQUIRE the changelog file to also be staged
+    changelog?: { file: string; triggerPattern: string; ignore?: string[] };
   };
   // optional incident/convergence tracking over a JSON file with
   // { incidents: { records: [...] }, convergence: {...} }

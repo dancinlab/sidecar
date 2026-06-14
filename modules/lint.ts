@@ -38,11 +38,29 @@ function fileAgeDays(absPath: string): number | null {
 export async function runLint(args: string[]): Promise<number> {
   const cfg = config();
   const violations: Violation[] = [];
+  const staged = await stagedFiles();
 
   // 1. staged L0
-  for (const f of await stagedFiles()) {
+  for (const f of staged) {
     if (isL0(f)) {
       violations.push({ rule: "L0-LOCKDOWN", file: f, msg: "staged L0 file — handle deliberately" });
+    }
+  }
+
+  // 1b. changelog: staged code changes must include the changelog file
+  if (cfg.lint.changelog && staged.length > 0) {
+    const { file, triggerPattern, ignore } = cfg.lint.changelog;
+    const trigRe = new RegExp(triggerPattern);
+    const igRe = (ignore ?? []).map((p) => new RegExp(p));
+    const codeChanges = staged.filter(
+      (f) => f !== file && trigRe.test(f) && !igRe.some((r) => r.test(f))
+    );
+    if (codeChanges.length > 0 && !staged.includes(file)) {
+      violations.push({
+        rule: "CHANGELOG-MISSING",
+        file,
+        msg: `${codeChanges.length} code file(s) staged without ${file} (e.g. ${codeChanges[0]})`,
+      });
     }
   }
 

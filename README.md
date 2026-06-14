@@ -55,7 +55,7 @@ harness/
 | `pre bash` / `pre write` | enforcement 규칙 매칭 → block/warn | PreToolUse |
 | `post bash <exit>` / `post edit <file>` | 결과 기록, 0≠exit 라우팅, L0 편집 경고 | PostToolUse |
 | `prompt <text>` | 키워드 트리거 + 프롬프트 힌트 주입 | UserPromptSubmit |
-| `lint [all\|fast]` | staged-L0 + 신선도 + 수렴 누락 체크 | commit 전 |
+| `lint [all\|fast]` | staged-L0 + 신선도 + **CHANGELOG 누락** + 수렴 누락 체크 | commit 전 (git pre-commit hook) |
 | `verify [all\|fast\|list]` | config 의 검증 명령 병렬 실행 (실패 1개라도 → exit 1) | commit/push 전 |
 | `errors {route\|list\|drain_check\|mark_fixed}` | 오류 severity 분류 + 큐 | 상시 |
 | `ledger {register\|complete\|list\|gc\|dup_check}` | 백그라운드 에이전트 작업 등록(중복 방지) | Agent 전/후 |

@@ -135,7 +135,34 @@ repo 군이 공통 도메인(예: 같은 배포 인프라)을 쓰면, 엔진을 
 
 `enabled:false` 로 끄거나, `minFiles` 를 올려 노이즈를 줄인다. 스캐폴드된 템플릿은 목적/핵심파일/컨벤션/주의/관련 5칸을 비워두니 채우면 된다.
 
-## 7. 로그 활용
+## 7. 커밋 전 CHANGELOG 갱신 강제
+
+소스 코드를 staged 했는데 `CHANGELOG.md` 를 함께 staged 하지 않으면 `lint` 가 `CHANGELOG-MISSING`(severity=block)으로 막는다. 실제 "강제"는 `harness init` 이 깔아준 **git pre-commit hook**(`harness lint` 호출)이 한다.
+
+```
+git add src/foo.ts          (CHANGELOG 안 건드림)
+git commit -m "fix: ..."  ──▶ pre-commit → harness lint → CHANGELOG-MISSING → 커밋 차단
+git add CHANGELOG.md
+git commit -m "fix: ..."  ──▶ 통과
+```
+
+`harness.config.json` 으로 조정:
+
+```jsonc
+"lint": {
+  "changelog": {
+    "file": "CHANGELOG.md",
+    "triggerPattern": "\\.(ts|tsx|js|jsx|py|go|rs)$",  // 이 확장자가 staged 면 CHANGELOG 요구
+    "ignore": ["(^|/)(tests?|spec)/", "(^|/)\\.harness(-engine)?/"]  // 트리거 제외
+  }
+}
+```
+
+- docs/JSON-only 변경은 `triggerPattern` 에 안 걸리므로 CHANGELOG 불필요.
+- 긴급 우회는 `git commit --no-verify` (의도된 탈출구 — 남용 금지).
+- pre-commit hook 은 `.git/hooks/` 에 있어 커밋되지 않으므로 **clone 마다 `harness init` 1회** 필요(또는 `core.hooksPath` 사용).
+
+## 8. 로그 활용
 
 모든 모듈은 `.harness/logs/*.jsonl` 에 append 한다. 직접 질의해 대시보드를 만들 수 있다:
 

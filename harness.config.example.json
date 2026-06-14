@@ -24,7 +24,12 @@
     "freshnessFiles": [
       { "path": "docs/deploy-status.json", "maxAgeDays": 3, "rule": "DEPLOY-STATUS-STALE" }
     ],
-    "convergence": { "commitPattern": "^(fix|feat)", "requiredFile": "issues.json" }
+    "convergence": { "commitPattern": "^(fix|feat)", "requiredFile": "issues.json" },
+    "changelog": {
+      "file": "CHANGELOG.md",
+      "triggerPattern": "\\.(ts|tsx|js|jsx|py|go|rs)$",
+      "ignore": ["(^|/)(tests?|__tests__|spec)/", "\\.(test|spec)\\.[a-z]+$", "(^|/)\\.harness(-engine)?/"]
+    }
   },
 
   "convergence": { "issuesFile": "issues.json" },

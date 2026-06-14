@@ -1,6 +1,16 @@
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, realpathSync } from "node:fs";
+
+// Canonicalize (resolves symlinks, e.g. macOS /var → /private/var) so REPO_ROOT
+// and HARNESS_ROOT live in the same namespace and `relative()` between them works.
+function rp(p: string): string {
+  try {
+    return realpathSync(p);
+  } catch {
+    return p;
+  }
+}
 
 // The harness can be installed ANYWHERE inside (or beside) a consuming repo.
 // Two roots matter:
@@ -16,7 +26,7 @@ import { existsSync } from "node:fs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-export const HARNESS_ROOT = resolve(__dirname, "..");
+export const HARNESS_ROOT = rp(resolve(__dirname, ".."));
 export const HARNESS_CONFIG_DIR = resolve(HARNESS_ROOT, "config");
 
 function findRepoRoot(): string {
@@ -34,7 +44,7 @@ function findRepoRoot(): string {
   return process.cwd();
 }
 
-export const REPO_ROOT = findRepoRoot();
+export const REPO_ROOT = rp(findRepoRoot());
 
 // Logs live inside the consuming repo (gitignore `.harness/`), per-repo.
 export const LOG_DIR = process.env.HARNESS_LOG_DIR

@@ -6,7 +6,7 @@
 //   • scripts/harness         (thin wrapper)
 //   • prints the .claude/settings.json hook snippet (or writes it with --hooks)
 // Never overwrites existing files unless --force. With --dry-run, only reports.
-import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, statSync } from "node:fs";
 import { resolve, relative, basename, dirname } from "node:path";
 import { REPO_ROOT, HARNESS_ROOT, HARNESS_CONFIG_DIR } from "../lib/paths.ts";
 import { info, ok, warn } from "../lib/log.ts";
@@ -54,7 +54,14 @@ function starterConfig(project: string): string {
       keywordsFile: ".harness/keywords.json",
       severityMapFile: ".harness/severity-map.json",
       verify: { checks: [] },
-      lint: { freshnessFiles: [] },
+      lint: {
+        freshnessFiles: [],
+        changelog: {
+          file: "CHANGELOG.md",
+          triggerPattern: "\\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|java|rb|swift|vue|svelte)$",
+          ignore: ["(^|/)(tests?|__tests__|spec)/", "\\.(test|spec)\\.[a-z]+$", "(^|/)\\.harness(-engine)?/"],
+        },
+      },
       guides: ["CLAUDE.md", "AGENTS.md", "README.md"],
       ledger: { staleSec: 3600 },
     },
@@ -124,8 +131,9 @@ export async function runInit(args: string[]): Promise<number> {
     actions.push({ path: ".gitignore", how: "skip" });
   }
 
-  // 4. scripts/harness wrapper
-  const wrapper = `#!/usr/bin/env bash\nexec bash "$(dirname "$0")/${relative(resolve(REPO_ROOT, "scripts"), HARNESS_ROOT)}/bin/harness" "$@"\n`;
+  // 4. scripts/harness wrapper — resolve repo root (one level up from scripts/)
+  // then append the engine path relative to repo root (e.g. .harness-engine).
+  const wrapper = `#!/usr/bin/env bash\nROOT="$(cd "$(dirname "$0")/.." && pwd)"\nexec bash "$ROOT/${engineRel}/bin/harness" "$@"\n`;
   const wrapPath = resolve(REPO_ROOT, "scripts", "harness");
   if (existsSync(wrapPath) && !flags.force) {
     actions.push({ path: "scripts/harness", how: "skip" });
@@ -137,7 +145,25 @@ export async function runInit(args: string[]): Promise<number> {
     actions.push({ path: "scripts/harness", how: "create" });
   }
 
-  // 5. hooks
+  // 5. git pre-commit hook → runs `harness lint` (the actual "강제" for lint gates)
+  const gitDir = resolve(REPO_ROOT, ".git");
+  if (existsSync(gitDir) && statSync(gitDir).isDirectory()) {
+    const preCommit = resolve(gitDir, "hooks", "pre-commit");
+    // route via the repo's own scripts/harness wrapper (single source of truth
+    // for the engine location), resolved from the repo top-level at hook time.
+    const body = `#!/usr/bin/env bash\n# installed by 'harness init' — block commits that fail harness lint gates\nexec bash "$(git rev-parse --show-toplevel)/scripts/harness" lint\n`;
+    if (existsSync(preCommit) && !flags.force) {
+      actions.push({ path: ".git/hooks/pre-commit", how: "skip" });
+    } else if (flags.dryRun) {
+      actions.push({ path: ".git/hooks/pre-commit", how: "would" });
+    } else {
+      mkdirSync(dirname(preCommit), { recursive: true });
+      writeFileSync(preCommit, body, { mode: 0o755 });
+      actions.push({ path: ".git/hooks/pre-commit", how: "create" });
+    }
+  }
+
+  // 6. agent hooks
   if (flags.hooks) {
     const settingsPath = resolve(REPO_ROOT, ".claude", "settings.json");
     if (existsSync(settingsPath) && !flags.force) {

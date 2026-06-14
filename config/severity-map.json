@@ -6,7 +6,8 @@
     "lint_rule": {
       "L0-LOCKDOWN": "warn",
       "STALE": "warn",
-      "CONVERGENCE-MISSING": "block"
+      "CONVERGENCE-MISSING": "block",
+      "CHANGELOG-MISSING": "block"
     },
     "build_kind": {
       "bash_nonzero": "defer",

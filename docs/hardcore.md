@@ -99,6 +99,20 @@ harness sbs manual "기능 추가"
 
 `harness sbs` 는 ① `recommend resolve-mode` 로 모드를 결정해 `mode:`/`resolved:` 두 줄 출력 → ② `templates/sbs.md` 런북(파싱→채팅 disambiguation→합의화면→plan.md→백그라운드 handoff→auto-QA→halt→closure) 출력. 에이전트는 이 런북을 따른다. sidecar `sidecar sync`/`hexa easy`/플러그인 캐시 의존은 harness 등가물(`harness sync`/`harness easy`/엔진)로 일반화.
 
+## abg / afg — fan-out 런북 (sidecar all-bg-go / all-fg-go 패리티)
+
+직전 어시스턴트 턴이 제시한 브랜치들을 한 번에 처리. `harness sbs` 처럼 런북 출력기.
+
+```bash
+harness abg [labels]   # 병렬 백그라운드: 브랜치당 background Agent 동시 발사
+harness afg [labels]   # 순차 포그라운드: 한 번에 하나씩 이 세션에서 직접 실행(HALT on failure)
+# alias: all-bg-go / all-fg-go
+```
+
+- `templates/abg.md` / `templates/afg.md` 출력 + 라벨 제한(인자 있으면 해당 label 만).
+- REACTIVE only — 직전 턴 제시 목록만, 없는 브랜치 지어내기 금지. 종료 메시지 형태(`N agents launched…` / `N branches run sequentially…`)는 sidecar 와 동일.
+- abg=병렬(Agent run_in_background) · afg=순차 in-session(subagent 금지). 수동 호출(hook 아님).
+
 ## 규칙 추가 (이 브랜치에서 한 건씩)
 
 hardcore 규칙은 **이 브랜치의 `config/enforcement.hardcore.json` / `config/severity-map.hardcore.json` 에만** 추가한다(main 의 default 규칙은 건드리지 않음). 새 규칙은 `pre_bash` / `pre_write` / `prompt_hints` 에 append.

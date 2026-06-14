@@ -18,6 +18,7 @@ import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
 import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
+import { runFanout } from "../modules/fanout.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -37,6 +38,8 @@ hook delegates (wire these into your agent's settings.json):
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   recommend {inject|show|get-default|set-default <m>|clear-default|resolve-mode <a>}   4-axis rubric + default mode
   sbs [auto[:<axis>]|manual] [<task>]   step-by-step plan-first runbook (mode via recommend resolve-mode)
+  abg [labels]             all-bg-go — fan out prior-turn branches as parallel background Agents (runbook)
+  afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -85,6 +88,12 @@ async function main(): Promise<number> {
     case "sbs":
     case "step-by-step":
       return runSbs(rest);
+    case "abg":
+    case "all-bg-go":
+      return runFanout("abg", rest);
+    case "afg":
+    case "all-fg-go":
+      return runFanout("afg", rest);
     case "lint":
       return runLint(rest);
     case "verify":

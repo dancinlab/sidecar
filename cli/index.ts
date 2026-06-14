@@ -17,6 +17,7 @@ import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
+import { runPod, runDemi, runDojo } from "../modules/runbooks.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -49,6 +50,9 @@ hook delegates (wire these into your agent's settings.json):
   afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)
   fleet [name:goal,…|go|stop|status]   perpetual multi-lane orchestrator (runbook + roster)
   pr-cycle [gh flags]      push branch → open PR → self-merge (squash·admin·delete-branch)
+  pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
+  dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
+  demi                     design-architecture program runbook (7-verb spine)
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
@@ -88,6 +92,13 @@ async function main(): Promise<number> {
       return runFleet(rest);
     case "pr-cycle":
       return runPrCycle(rest);
+    case "pod":
+      return runPod(rest);
+    case "dojo":
+      return runDojo(rest);
+    case "demi":
+    case "demiurge":
+      return runDemi(rest);
     case "pre":
       return runPre(rest);
     case "post":

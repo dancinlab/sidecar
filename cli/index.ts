@@ -96,7 +96,8 @@ reports:
   docs [status|check|scratch [name]]   single-doc discipline (architecture SSOT + log + scratch + quickref)
                                write-time enforced in \`pre write\` (docs.enforce: warn[default]|block|off)
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
-  handoff [reason]             session snapshot → .harness/handoff/
+  handoff {add <text> [--to <repo>]|ls|done <id>|inject|snapshot}   repo-root handoff.jsonl open-work queue
+                               (committed · done=scrub · SessionStart inject · anti-scatter guard) + snapshot dossier
   end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)
   worktree {scan|gc|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged
                            (SessionStart-wire \`worktree gc\`; \`scan\` exit 1 gates new work on abandoned worktrees)

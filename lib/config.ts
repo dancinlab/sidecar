@@ -100,6 +100,10 @@ export interface HarnessConfig {
   // data is discarded on reboot/reaper. Steer it to docs.scratchDir, which is
   // git-tracked and committed, so progress is preserved on GitHub. Warn-only.
   tmpGuard: boolean;
+  // handoffGuard BLOCKS scattered handoff markdown (HANDOFF.md / INBOX.md /
+  // inbox/*.md at any depth) on Write/Edit — handoffs route through the
+  // repo-root handoff.jsonl registry (`harness handoff add`), not ad-hoc files.
+  handoffGuard: boolean;
   ledger: { staleSec: number };
 }
 
@@ -165,6 +169,7 @@ const DEFAULTS: HarnessConfig = {
   },
   git: { guardForcePush: true },
   tmpGuard: true,
+  handoffGuard: true,
   ledger: { staleSec: 3600 },
 };
 

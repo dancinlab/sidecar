@@ -16,6 +16,7 @@ import { detectForcePush } from "./git-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
+import { detectHandoffScatter } from "./handoff-guard.ts";
 
 interface BashRule {
   id: string;
@@ -143,6 +144,12 @@ export async function preWrite(_args: string[]): Promise<number> {
   const filePath = String(input.file_path ?? "");
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
+
+  // handoff-guard — block scattered HANDOFF.md / INBOX.md / inbox/*.md; route to handoff.jsonl.
+  if (config().handoffGuard) {
+    const hs = detectHandoffScatter(filePath);
+    if (hs) return emitBlock("HANDOFF-SCATTER", hs);
+  }
 
   // tmp-guard — writing a file into a volatile tmp dir loses it; steer to scratch.
   if (config().tmpGuard && isTmpPath(filePath)) {

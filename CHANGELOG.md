@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat: handoff rework — repo-root handoff.jsonl queue + anti-scatter guard (sidecar handoff parity)
+
+- handoff 를 **per-project repo-root `handoff.jsonl`** open-work 큐로 재설계 (단일 글로벌 레지스트리 아님 · 커밋 → GitHub 보존 · repo 와 함께 이동).
+- verbs: `add <text> [--to <repo>]` · `ls`(기본) · `done <id>` · `inject` · `snapshot`.
+  - **`done` = scrub**: done 마커가 아니라 파일에서 항목 **제거**(rewrite) → handoff.jsonl 은 항상 *열린 항목만* 보유. 비면 파일 삭제.
+  - **`inject`**(SessionStart): 이 repo 의 열린 handoff 를 additionalContext 로 표면화 → 잊힘 방지. 비었으면 무음.
+  - `snapshot [reason]`: 기존 세션-상태 dossier(.harness/handoff/*.md) 보존.
+- **handoff-guard** (`config.handoffGuard` 기본 on): Write/Edit 에서 흩어진 핸드오프 마크다운 **차단** — basename `HANDOFF.md`/`INBOX.md`, 또는 `(^|/)inbox/*.md` (임의 깊이) → handoff.jsonl 로 유도. `inbox/queue.json` 같은 비-md 는 통과(false-positive 가드).
+- SessionStart 훅에 `handoff inject` 추가(init). inbox 폴더 패턴 폐기, handoff 일원화.
+
 ## fix: export runBypass/runGo/runBrainstorm from runbooks (engine load broken since 8675cbd)
 
 - `cli/index.ts` 가 이 3개를 import 했지만 직전 커밋(8675cbd)이 `modules/runbooks.ts` 를 stage 안 해서, 커밋된 엔진이 로드 실패(`SyntaxError: no export named runBrainstorm`) → CLI 전체 비동작이었음. 로컬 working tree 엔 있어 테스트는 통과해 묻혀 있었고, engine-bump agent 들의 sanity gate(`harness help`)가 전파 직전 적발.

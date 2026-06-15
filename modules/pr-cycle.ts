@@ -129,10 +129,21 @@ export async function runPrCycle(args: string[]): Promise<number> {
     (await execShell(`git merge-base --is-ancestor ${JSON.stringify(sha)} origin/${base}`, { cwd: repoPath(".") })).code === 0;
   const baseTip = (await git(`git log --oneline -1 origin/${base}`)).out;
 
-  ok(`✅ MERGED → ${base} @ ${sha.slice(0, 9) || "?"}${num ? `  (PR #${num})` : ""}`);
-  info(`   state: ${state || "?"}${url ? ` · ${url}` : ""}`);
-  info(`   ${base} tip now: ${baseTip || "?"}`);
-  info(onBase ? `   ✔ verified: origin/${base} contains ${sha.slice(0, 9)}` : `   ⚠ could NOT verify ${sha.slice(0, 9)} on origin/${base} — check manually`);
+  // Final REPORT block — relay this to the user VERBATIM (the merge-to-base confirmation).
+  const shortSha = sha.slice(0, 9) || "?";
+  if (onBase) {
+    ok(`✅ ${base} 머지 완료 — 검증됨`);
+    info(`   - 상태: ${state || "MERGED"}`);
+    info(`   - 머지 커밋: ${shortSha} → origin/${base} 에 포함 확인됨 (✔ verified)`);
+    info(`   - origin/${base} 최신: ${baseTip || "?"}`);
+    info(`   - PR: #${num || "?"}${url ? ` · ${url}` : ""}`);
+  } else {
+    loudFail(`⚠ ${base} 머지 미검증 — 수동 확인 필요`);
+    info(`   - 상태: ${state || "?"}`);
+    info(`   - 머지 커밋: ${shortSha} → origin/${base} 에서 확인 안 됨`);
+    info(`   - origin/${base} 최신: ${baseTip || "?"}`);
+    info(`   - PR: #${num || "?"}${url ? ` · ${url}` : ""}`);
+  }
 
   // 5. post-merge worktree sweep — remove merged agent worktrees + local branches
   await sweepMergedWorktrees();

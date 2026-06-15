@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## feat: pr-cycle — relay-verbatim Korean merge report block
+
+- 최종 출력을 "✅ <base> 머지 완료 — 검증됨 / 상태 / 머지 커밋 → origin/<base> 포함 확인 / 최신 / PR #" 블록으로 (새 세션 에이전트가 그대로 복사해 보고하도록). 미검증 시 "⚠ <base> 머지 미검증 — 수동 확인 필요".
+
 ## feat: pr-cycle — verified merge confirmation + CI-retry + method fallback
 
 - 머지 후 **실제 origin/<base> 에 올라갔는지 검증**: `gh pr view` 로 state·mergeCommit·base·PR# 조회 → `git fetch` + `git merge-base --is-ancestor <sha> origin/<base>` 로 확인 → `✅ MERGED → <base> @ <sha> (PR #N) · ✔ verified` 명확 블록 출력 ("PR #N 머지" 만 떠서 main 반영 여부 불명확하던 문제 해결).

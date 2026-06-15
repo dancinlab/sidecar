@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## feat: commons — always-on cross-project governance SSOT
+
+- **`harness commons {inject|show}`** — 프로젝트-무관 거버넌스 규칙(c1~c10: root-cause·verify·anti-punt·single-doc·preserve·handoff·git-safety·4축추천·honesty·surgical)을 번들 `config/commons.md` 에서 매 턴 inject(UserPromptSubmit) → 컨텍스트에서 안 사라짐. repo override: `.harness/commons.md`.
+- 규칙들은 harness 훅(pre write root-cause·docs·tmp-guard·handoff-guard·git-guard·verify·recommend·askq)이 기계적으로도 강제 — commons 는 그 단일 살라이언스 SSOT.
+
 ## feat: ing — jsonl board + SessionStart inject (잘 안 쓰이던 ING 개선)
 
 - ING.md → **repo-root `ING.jsonl`** (한 줄 1항목, 기계가독·append/scrub). kinds: work·next·pod.

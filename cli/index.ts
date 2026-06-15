@@ -38,6 +38,7 @@ import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
 import { runFanout } from "../modules/fanout.ts";
 import { runDocs } from "../modules/docs.ts";
+import { runCommons } from "../modules/commons.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -56,6 +57,7 @@ hook delegates (wire these into your agent's settings.json):
   post bash <exit> [cmd]   PostToolUse(Bash) — record + route non-zero exits
   post edit <file>         PostToolUse(Write/Edit) — flag L0 edits
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
+  commons {inject|show}    always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
@@ -193,6 +195,8 @@ async function main(): Promise<number> {
       return runFolders(rest);
     case "docs":
       return runDocs(rest);
+    case "commons":
+      return runCommons(rest);
     case "handoff":
       return runHandoff(rest);
     case "end":

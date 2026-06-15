@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## docs(commons): c16 — break through walls (closed-negative ≠ terminal)
+
+- mini 세션에서 작성된 c16 을 repo SoT 로 반영: 벽(closed-negative·블로커)에 부딪히면 다른 메커니즘·각도·렌즈로 돌파를 한 번은 시도한 뒤에야 terminal 로 인정. 단 tune-to-green 금지(c9·p7) — 돌파는 사전등록(frozen-first)+대조(shuffle/dissociation/negative-control)로 검증된 진짜 새 각도라야 하고, 진짜 시도 뒤의 정직한 terminal 도 유효한 결과. CLAUDE.md SSOT 참조 c1–c16 로 갱신.
+
 ## feat(enforce): warn on raw runpod/vast CLI·API → steer to `harness pod`
 
 - `pre bash` 규칙 G-RAW-GPU-CLOUD 추가: `runpodctl`/`runpod`/`vastai` CLI 또는 `runpod.io`/`vast.ai` 로의 curl/wget/http 직접 호출 감지 시 **warn(유도)** — GPU 클라우드는 `harness pod` 런북으로 가도록 안내. block 아님(되돌리기·유도 성격). 의도적이면 `# pod-ok <이유>` 마커로 예외.

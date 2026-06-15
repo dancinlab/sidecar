@@ -4,7 +4,7 @@ Project-agnostic AI coding harness — guards, injects, and runbooks that wire a
 CLI into any agent (Claude Code, etc.) via hooks. Config-driven, zero domain hardcoding; ships as a
 global command (`~/.harness/cli` + `~/.local/bin/harness`) and as a Claude Code plugin (`/plugin`).
 
-> 📍 거버넌스/규칙 SSOT: [config/commons.md](config/commons.md) (always-on c1–c15) · 설계 SSOT:
+> 📍 거버넌스/규칙 SSOT: [config/commons.md](config/commons.md) (always-on c1–c16) · 설계 SSOT:
 > [ARCHITECTURE.md](ARCHITECTURE.md) · 이력: [CHANGELOG.md](CHANGELOG.md). This file = project map only.
 
 ## 구조 (tree)

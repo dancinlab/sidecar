@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## docs(commons): c12 — prefer global `harness`, avoid stale `.harness-engine`
+
+- 버그: repo `.harness-engine`(서브모듈) 핀이 stale 하면 global recommend default(완성도)를 못 읽어 `resolve-mode auto` 가 4축 balanced 로 떨어짐(글로벌 harness 는 정상). mini hexa-lang `.harness-engine` 49866ad → 최신 bump 으로 즉시 해소.
+- c12 강화: 항상 PATH 글로벌 `harness` 사용, stale 가능한 `.harness-engine/bin/harness` 직접 호출 지양. 최신화 `harness self-update`.
+
 ## docs: root CLAUDE.md for the harness repo (self-dogfood c4)
 
 - harness repo 자체에 루트 `CLAUDE.md`(프로젝트 설명 + 트리구조·노드별 설명 + SSOT 링크) 추가 → 자기 규칙(c4 메인 CLAUDE.md) 준수, lint `CLAUDE-MD-MISSING` 경고 해소.

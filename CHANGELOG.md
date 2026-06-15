@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## feat(verify): tier-rubric claim verification (sidecar parity) · old verify → `ci`
+
+- **rename**: 기존 `harness verify`(설정된 빌드/테스트 검증명령 병렬 실행) → **`harness ci`**. config 키는 호환 위해 `verify.checks` 그대로. 로그 kind `verify`→`ci`. 문서/keywords/commons/enforcement 의 `harness verify` 참조 일괄 `harness ci` 로 치환.
+- **신규 `harness verify`** = sidecar verify 이식 — 6단계 티어 루브릭(🔵 SUPPORTED-FORMAL · 🟢 NUMERICAL · 🟡 BY-CITATION · 🟠 INSUFFICIENT · 🔴 FALSIFIED · ⚪ SPECULATION-FENCED) + 규율(LLM 자가판정 금지·배지 verbatim·자동승격 금지·honesty-triad). `verify rubric`(루브릭 출력) · `verify fence "<claim>"`(⚪ 박제 → `.verdicts/claims.jsonl`) · `templates/verify.md` 런북. hexa 의존 form(`<id>`·`--expr`)은 범용 harness 에서 제외.
+- commons c12 에 `harness ci`(검증명령)·`harness verify`(주장검증) 추가. 검증: `ci list`·`verify rubric`·`verify fence` 동작 + 엔진 로드 PASS.
+
 ## feat(lint): doc-gate at commit time too — ARCHITECTURE·README·CHANGELOG enforced every task
 
 - pre-commit `harness lint` 에 doc-gate 추가: 의미있는 코드 변경이 staged 인데 `CHANGELOG.md` / (존재 시) `ARCHITECTURE.md`·`README.md` 가 같이 staged 안 됐으면 **commit 차단**. 기존엔 `pr-cycle` 시점에만 강제됐으나, 이제 pr-cycle 을 거치지 않는 모든 작업/커밋에도 동일 강제. 신규 룰 `ARCHITECTURE-MISSING`·`README-MISSING` = block (severity-map). 우회: `git commit --no-verify`.

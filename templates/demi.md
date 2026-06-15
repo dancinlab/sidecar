@@ -9,7 +9,7 @@
 ③ 설계(design)  — 각 컴포넌트 내부 설계 + 데이터흐름 + 불변식
 ④ 해석(analyze)⟲ — 트레이드오프·실패모드·대안 검토 → ②③로 되돌이(수렴까지 반복)
 ⑤ 합성(synth)   — 확정 설계를 단일 SSOT 문서로 합성 (ARCHITECTURE.md 갱신)
-⑥ 검증(verify)  — 설계 주장(성능·정합성)을 `harness verify`/근거로 확인 (LLM 자가판정 금지)
+⑥ 검증(verify)  — 설계 주장(성능·정합성)을 `harness ci`/근거로 확인 (LLM 자가판정 금지)
 ⑦ 인계(handoff) — 다음 세션/구현자에게 인계 (plan.md 또는 ARCHITECTURE + CHANGELOG)
 ```
 

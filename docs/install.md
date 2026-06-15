@@ -108,6 +108,6 @@ bash .harness-engine/bin/harness uninstall --keep-logs # 로그/handoff 만 남�
 ```bash
 bash .harness-engine/bin/harness            # 도움말
 bash .harness-engine/bin/harness audit      # 6축 스코어
-bash .harness-engine/bin/harness verify list
+bash .harness-engine/bin/harness ci list
 bash .harness-engine/bin/harness lint
 ```

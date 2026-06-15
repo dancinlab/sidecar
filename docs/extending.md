@@ -171,5 +171,5 @@ git commit -m "fix: ..."  ──▶ 통과
 jq -r 'select(.kind=="pre_block").rule_id' .harness/logs/mistakes.jsonl | sort | uniq -c | sort -rn
 
 # 최근 verify 실패
-jq 'select(.kind=="verify" and .failed>0)' .harness/logs/observations.jsonl | tail
+jq 'select(.kind=="ci" and .failed>0)' .harness/logs/observations.jsonl | tail
 ```

@@ -152,7 +152,7 @@ harness.config.json ─┬─ project            로그/리포트 라벨
 2. config 작성      cp harness.config.example.json harness.config.json   → 수정
 3. (선택) 규칙 추가  cp config/enforcement.json .harness/  → repo 규칙 append
 4. hook 배선        .claude/settings.json 에 pre/post/prompt delegate
-5. 검증            harness audit / harness verify list
+5. 검증            harness audit / harness ci list
 6. 운영            commit 전 verify, 세션 끝 handoff, 규칙 추가 전 bitter-gate
 ```
 

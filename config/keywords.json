@@ -4,8 +4,8 @@
     {
       "id": "verify-before-commit",
       "patterns": ["commit", "커밋", "push", "푸시", "ship", "배포"],
-      "tool": "harness verify",
-      "hint": "Run the configured verification checks before committing/pushing: `harness verify`."
+      "tool": "harness ci",
+      "hint": "Run the configured verification checks before committing/pushing: `harness ci`."
     },
     {
       "id": "session-handoff",

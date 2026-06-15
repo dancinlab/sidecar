@@ -29,7 +29,7 @@ bash .harness-engine/bin/harness init --hardcore --hooks
 - `.harness/enforcement.json` ← `config/enforcement.hardcore.json`
 - `.harness/severity-map.json` ← `config/severity-map.hardcore.json`
 - `harness.config.json` 에 `profile:"hardcore"` + `lint.protectedBranches:["main","master"]`
-- `.git/hooks/pre-push` 추가(`harness verify` + `errors drain_check 1`)
+- `.git/hooks/pre-push` 추가(`harness ci` + `errors drain_check 1`)
 
 ## 닫힌 탈출구 / 면제 마커
 

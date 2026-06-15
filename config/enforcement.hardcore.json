@@ -147,7 +147,7 @@
       "id": "H-PRE-COMMIT-FLOW",
       "desc": "hardcore commit flow",
       "match_patterns": ["커밋", "commit", "푸시", "push", "마무리", "wrap\\s*up"],
-      "hint": "hardcore 흐름: ① feature 브랜치에서 작업(main 직접 커밋 차단) ② 코드 변경 시 CHANGELOG 동시 stage(차단) ③ pre-commit=harness lint, pre-push=harness verify+errors drain 통과 ④ --no-verify 우회 금지."
+      "hint": "hardcore 흐름: ① feature 브랜치에서 작업(main 직접 커밋 차단) ② 코드 변경 시 CHANGELOG 동시 stage(차단) ③ pre-commit=harness lint, pre-push=harness ci+errors drain 통과 ④ --no-verify 우회 금지."
     }
   ]
 }

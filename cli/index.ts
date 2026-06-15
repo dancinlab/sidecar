@@ -3,6 +3,7 @@ import { runPre } from "../modules/pre.ts";
 import { postBash, postEdit } from "../modules/post.ts";
 import { runPromptScan } from "../modules/prompt-scan.ts";
 import { runLint } from "../modules/lint.ts";
+import { runCi } from "../modules/ci.ts";
 import { runVerify } from "../modules/verify.ts";
 import { runErrors } from "../modules/errors.ts";
 import { runLedger } from "../modules/ledger.ts";
@@ -96,7 +97,8 @@ hook delegates (wire these into your agent's settings.json):
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
-  verify [all|fast|list]   run configured verification commands in parallel
+  ci [all|fast|list]       run configured verification commands in parallel (was verify; config key stays verify.checks)
+  verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge · sidecar parity)
   errors {route|list|drain_check|mark_fixed}
   ledger {register|complete|list|gc|dup_check}
   bitter-gate audit [window]   rule-hit frequency → retire dormant rules
@@ -197,6 +199,8 @@ async function main(): Promise<number> {
       return runFanout("afg", rest);
     case "lint":
       return runLint(rest);
+    case "ci":
+      return runCi(rest);
     case "verify":
       return runVerify(rest);
     case "errors":

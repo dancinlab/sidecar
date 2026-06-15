@@ -12,7 +12,7 @@
 2. **업스트림 체크아웃** — 사이블링/서브모듈 있으면 그걸로, 없으면:
    `gh repo clone <upstream-repo> /tmp/<name> && cd /tmp/<name> && git checkout -B fix/<slug> origin/main`
 3. **root-cause 수정** — 증상 아닌 원인. 업스트림 컨벤션 따름.
-4. **verify** — 업스트림 검증(`harness verify` / `hexa verify` / build/test) + 회귀 없음. 가능하면 `harness verdict record` 로 기록.
+4. **verify** — 업스트림 검증(`harness ci` / `hexa verify` / build/test) + 회귀 없음. 가능하면 `harness verdict record` 로 기록.
 5. **PR + merge** — `harness pr-cycle` 또는 `gh pr create --fill` → `gh pr merge --squash --admin --delete-branch` (소유 repo). 서드파티면 PR 만.
 6. **다운스트림 반영** — 업스트림을 submodule 로 핀하면 `harness update`(submodule bump) + 재검증. inbox 메모 있으면 `fixed upstream #PR` 로 마감.
 

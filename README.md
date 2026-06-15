@@ -109,7 +109,7 @@ bash .harness-engine/bin/harness init --hooks
 
 ```bash
 bash .harness-engine/bin/harness audit
-bash .harness-engine/bin/harness verify list
+bash .harness-engine/bin/harness ci list
 ```
 
 ### 4. 에이전트 hook 배선 (Claude Code 예시)

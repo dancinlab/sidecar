@@ -1,55 +1,43 @@
-// harness verify [all|fast|list]
-// Run the project's verification checks (from harness.config.json) in parallel.
-// `fast` skips checks marked slow:true. Any failure → exit 1 (mandatory-pass).
-import { LOGS } from "../lib/paths.ts";
-import { appendJsonl, info, loudFail, ok } from "../lib/log.ts";
-import { execShell, tail } from "../lib/exec.ts";
-import { config, repoPath } from "../lib/config.ts";
-import type { VerifyCheck } from "../lib/config.ts";
+// harness verify [rubric | fence "<claim>"]  — tier-rubric claim verification
+// (sidecar parity). Routes correctness/purity/grade/identity claims to a 6-tier
+// rubric instead of LLM self-judgement; the agent reports the badge verbatim.
+//   bare | rubric    → print the rubric + discipline (templates/verify.md)
+//   fence "<claim>"  → record a ⚪ SPECULATION-FENCED claim to .verdicts/claims.jsonl
+// Running build/test verification COMMANDS is `harness ci`; recording a
+// PASS/FAIL command verdict is `harness verdict record`.
+import { existsSync, readFileSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
+import { HARNESS_ROOT, REPO_ROOT } from "../lib/paths.ts";
+import { appendJsonl, info, ok, loudFail } from "../lib/log.ts";
 
 export async function runVerify(args: string[]): Promise<number> {
-  const mode = args[0] ?? "all";
-  const checks: VerifyCheck[] = config().verify.checks ?? [];
+  const sub = args[0] ?? "rubric";
 
-  if (mode === "list") {
-    if (!checks.length) info("no verify checks configured (harness.config.json → verify.checks)");
-    for (const c of checks) info(`  ${c.id}${c.slow ? " (slow)" : ""}: ${c.cmd}`);
-    return 0;
-  }
-  if (!checks.length) {
-    info("no verify checks configured — nothing to run");
+  if (sub === "rubric" || sub === "show") {
+    const tpl = resolve(HARNESS_ROOT, "templates", "verify.md");
+    if (existsSync(tpl)) process.stdout.write(readFileSync(tpl, "utf8"));
+    else info("verify: templates/verify.md missing");
     return 0;
   }
 
-  const fast = mode === "fast" || args.includes("--no-build");
-  const run = fast ? checks.filter((c) => !c.slow) : checks;
-  const t0 = Date.now();
-
-  const results = await Promise.all(
-    run.map(async (c) => {
-      const r = await execShell(c.cmd, { cwd: repoPath("."), timeoutMs: c.timeoutMs ?? 240_000 });
-      return { id: c.id, ok: r.code === 0 && !r.killed, code: r.code, killed: r.killed, ms: r.ms, out: tail(r.stdout + "\n" + r.stderr, 6) };
-    })
-  );
-
-  const failed = results.filter((r) => !r.ok);
-  appendJsonl(LOGS.observations, {
-    kind: "verify",
-    mode,
-    total: results.length,
-    failed: failed.length,
-    elapsed_ms: Date.now() - t0,
-    items: results.map((r) => ({ id: r.id, ok: r.ok, code: r.code, ms: r.ms })),
-  });
-
-  if (failed.length === 0) {
-    ok(`verify: ${results.length}/${results.length} passed (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+  if (sub === "fence") {
+    const claim = args.slice(1).join(" ").trim();
+    if (!claim) {
+      loudFail('verify fence "<claim>" — record an unverified claim as ⚪ SPECULATION-FENCED');
+      return 2;
+    }
+    const dir = resolve(REPO_ROOT, ".verdicts");
+    mkdirSync(dir, { recursive: true });
+    appendJsonl(resolve(dir, "claims.jsonl"), { kind: "claim", tier: "SPECULATION-FENCED", badge: "⚪", claim });
+    ok(`⚪ SPECULATION-FENCED 박제: "${claim.slice(0, 80)}" → .verdicts/claims.jsonl`);
+    info("  (검증되면 harness ci / harness verdict record 로 🟢/🔵 승격)");
     return 0;
   }
-  loudFail(`verify: ${failed.length}/${results.length} failed`);
-  for (const f of failed) {
-    info(`  ✗ ${f.id} (code=${f.code}${f.killed ? " timeout" : ""})`);
-    info(f.out.split("\n").map((l) => `      ${l}`).join("\n"));
-  }
-  return 1;
+
+  // any other token → treat the whole arg as a claim, show the rubric to grade it
+  info(`verify: grade this claim with the rubric below (badge verbatim, no self-promotion) —`);
+  info(`  claim: ${args.join(" ").trim()}`);
+  const tpl = resolve(HARNESS_ROOT, "templates", "verify.md");
+  if (existsSync(tpl)) process.stdout.write("\n" + readFileSync(tpl, "utf8"));
+  return 0;
 }

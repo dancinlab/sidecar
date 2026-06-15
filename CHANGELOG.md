@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## feat(enforce): warn on raw runpod/vast CLI·API → steer to `harness pod`
+
+- `pre bash` 규칙 G-RAW-GPU-CLOUD 추가: `runpodctl`/`runpod`/`vastai` CLI 또는 `runpod.io`/`vast.ai` 로의 curl/wget/http 직접 호출 감지 시 **warn(유도)** — GPU 클라우드는 `harness pod` 런북으로 가도록 안내. block 아님(되돌리기·유도 성격). 의도적이면 `# pod-ok <이유>` 마커로 예외.
+- 검증: runpodctl·vastai·curl runpod API 모두 warn 발화, `# pod-ok` 예외 침묵, "vast number" 류 오탐 없음(vastai 만 매칭, vast 단독 제외).
+
 ## feat(enforce): pod/demi/dojo to sidecar level (keyword triggers + c12)
 
 - GPU 클라우드(`harness pod`)·설계(`harness demi`)·학습잡(`harness dojo`) 사용을 hint 가 아닌 **keywords 트리거**로 강제 — sidecar 수준. `config/keywords.json` 에 gpu-cloud-pod(gpu/runpod/vast/파인튜닝/hexa cloud…→pod), design-architecture(아키텍처 설계…→demi), training-job(학습잡/dojo…→dojo) 3룰 추가. UserPromptSubmit hook 매칭 시 자동 발화.

@@ -15,6 +15,14 @@
       "reason": "force-push to main/master detected. Prefer --force-with-lease, or add `# force-ok <reason>` if intentional."
     },
     {
+      "id": "G-RAW-GPU-CLOUD",
+      "desc": "raw runpod/vast CLI or API call — should go through `harness pod`",
+      "match": "(^|[\\s;&|(])(runpodctl|runpod|vastai)\\b|\\b(curl|wget|http|https)\\b[^|]*\\b(runpod\\.io|vast\\.ai)\\b",
+      "exceptions": ["# pod-ok"],
+      "action": "warn",
+      "reason": "raw runpod/vast CLI·API 직접 호출 감지 — GPU 클라우드는 `harness pod` 런북으로 (preflight→fire→poll→harvest→down, cost-gated). 실행중 pod 는 `harness ing pod add` 로 보드 등록. 의도적이면 `# pod-ok <이유>` 마커 추가. (commons c12 · sidecar parity)"
+    },
+    {
       "id": "G-CURL-PIPE-SH",
       "desc": "curl|bash remote code execution",
       "match": "(curl|wget)\\s+[^|]*\\|\\s*(sudo\\s+)?(ba)?sh\\b",

@@ -5,15 +5,32 @@
 // resolver consumed by `harness sbs` (LOCKED precedence in code, not prose).
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
+import { homedir } from "node:os";
 import { HARNESS_CONFIG_DIR, REPO_ROOT } from "../lib/paths.ts";
 import { resolveRuleFile } from "../lib/config.ts";
 import { readStdin } from "../lib/exec.ts";
 import { info } from "../lib/log.ts";
 
-// per-repo standing default mode (one token). sidecar uses ~/.sidecar host-state;
-// harness keeps it per-repo under .harness/ (committed = team-shared).
+// Standing default mode (one token), resolved with precedence:
+//   per-repo .harness/recommend-default  (committed = team-shared, wins)
+//   > global ~/.harness/recommend-default (host-wide — `set-default --global`)
+//   > "present" (the original 4-axis-box behavior)
+// The global tier is what makes a host-wide "공용 완성도" default actually
+// inherit across every repo on the machine (sidecar uses ~/.sidecar host-state).
 function defaultFile(): string {
   return resolve(REPO_ROOT, ".harness", "recommend-default");
+}
+function globalDefaultFile(): string {
+  return resolve(homedir(), ".harness", "recommend-default");
+}
+function readWithSource(): { mode: string; source: "repo" | "global" | "none" } {
+  for (const [f, src] of [[defaultFile(), "repo"], [globalDefaultFile(), "global"]] as const) {
+    if (existsSync(f)) {
+      const v = readFileSync(f, "utf8").trim();
+      if (v) return { mode: v, source: src };
+    }
+  }
+  return { mode: "present", source: "none" };
 }
 
 function axisLabel(axis: string): string {
@@ -30,10 +47,7 @@ function modeLabel(mode: string): string {
 }
 
 function readDefault(): string {
-  const f = defaultFile();
-  if (!existsSync(f)) return "present";
-  const v = readFileSync(f, "utf8").trim();
-  return v || "present";
+  return readWithSource().mode;
 }
 
 function defaultDirective(): string {
@@ -137,23 +151,29 @@ export async function runRecommend(args: string[]): Promise<number> {
     return 0;
   }
   if (sub === "set-default") {
-    const mode = (args[1] ?? "").trim();
+    const isGlobal = args.includes("--global") || args.includes("-g");
+    const mode = (args.slice(1).find((a) => !a.startsWith("-")) ?? "").trim();
     if (!modeLabel(mode)) {
-      info("usage: harness recommend set-default <present|auto|complete|simple|safe|std>");
+      info("usage: harness recommend set-default <present|auto|complete|simple|safe|std> [--global]");
       return 1;
     }
-    mkdirSync(dirname(defaultFile()), { recursive: true });
-    writeFileSync(defaultFile(), mode + "\n", "utf8");
-    info(`recommend default mode = ${modeLabel(mode)}`);
+    const f = isGlobal ? globalDefaultFile() : defaultFile();
+    mkdirSync(dirname(f), { recursive: true });
+    writeFileSync(f, mode + "\n", "utf8");
+    info(`recommend default mode = ${modeLabel(mode)} [${isGlobal ? "global ~/.harness" : "repo .harness"}]`);
+    if (!isGlobal && existsSync(globalDefaultFile())) info("  note: a global default also exists; the repo default takes precedence here.");
     return 0;
   }
   if (sub === "clear-default") {
-    if (existsSync(defaultFile())) rmSync(defaultFile());
-    info(`recommend default mode = ${modeLabel("present")} (cleared)`);
+    const isGlobal = args.includes("--global") || args.includes("-g");
+    const f = isGlobal ? globalDefaultFile() : defaultFile();
+    if (existsSync(f)) rmSync(f);
+    info(`recommend default [${isGlobal ? "global" : "repo"}] cleared → effective: ${modeLabel(readDefault())}`);
     return 0;
   }
   if (sub === "get-default") {
-    info(`recommend default mode = ${modeLabel(readDefault())}`);
+    const { mode, source } = readWithSource();
+    info(`recommend default mode = ${modeLabel(mode)} [source: ${source}]`);
     return 0;
   }
   if (sub === "resolve-mode") {

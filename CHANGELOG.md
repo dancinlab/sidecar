@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## fix: recommend — global default fallback (공용 완성도 auto-pick 미작동 수정)
+
+- 증상: mini 에 "공용 완성도" default 를 걸어도 ★표시·auto-pick 둘 다 안 뜨고 4축 박스만 떠서 punt("어느 쪽으로?").
+- 원인: harness 가 default 를 **per-repo `.harness/recommend-default`** 만 읽음 → repo 에 파일 없으면 `readDefault()`=present → `defaultDirective()` 빈값 → FIXED-axis(★+auto-proceed) directive 자체가 주입 안 됨.
+- 수정: **global fallback** 추가 — 우선순위 `repo .harness/recommend-default` > `global ~/.harness/recommend-default` > `present`. `set-default <mode> [--global]` / `clear-default [--global]` / `get-default [source: repo|global|none]`. sbs 는 `resolveMode→readDefault` 경유라 자동 상속.
+- 검증: clean repo 에서 global complete 상속, `resolve-mode ""`→`auto axis=complete inherited`, sbs bare→auto-pick.
+
 ## feat: tmp-guard + bypass · trail · go · brainstorm
 
 - **tmp-guard** (`modules/tmp-guard.ts`, config `tmpGuard` 기본 on) — 진행/작업 데이터를 휘발 tmp(`/tmp`·`/private/tmp`·`/var/folders`·`$TMPDIR`)에 쓰면 `pre bash`(리다이렉트/tee/-o/--output 탐지)·`pre write`(파일경로)에서 경고 → git-추적 `docs.scratchDir`(scripts/scratch)에 쓰고 커밋해 **GitHub 보관** 유도. read-only `/tmp` 참조는 무시. warn-only.

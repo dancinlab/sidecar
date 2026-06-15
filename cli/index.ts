@@ -57,7 +57,8 @@ hook delegates (wire these into your agent's settings.json):
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
-  recommend {inject|show|get-default|set-default <m>|clear-default|resolve-mode <a>}   4-axis rubric + default mode
+  recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
+                           4-axis rubric + default mode (repo .harness > global ~/.harness > present; fixed axis = auto-pick)
   sbs [auto[:<axis>]|manual] [<task>]   step-by-step plan-first runbook (mode via recommend resolve-mode)
   abg [labels]             all-bg-go — fan out prior-turn branches as parallel background Agents (runbook)
   afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)

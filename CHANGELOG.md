@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## feat: pr-cycle doc-gate — ARCHITECTURE.md도 매 사이클 필수 (존재 시)
+
+- doc-gate 를 "권장"에서 **차단**으로 승격: repo 에 `ARCHITECTURE.md`(최종 아키텍처 SSOT)가 있으면 매 의미있는 사이클마다 갱신 없으면 CHANGELOG 와 함께 **거부**. 누락 문서 목록을 한 줄로 표시. (`--no-doc` 우회.)
+- commons c14 문구도 ARCHITECTURE 필수로 갱신. (gate 는 루트 `ARCHITECTURE.md` 존재 여부로 판단 — 없는 repo 는 CHANGELOG 만.)
+
 ## feat: pr-cycle doc-gate + commons c14 — every cycle = docs + verified merge
 
 - pr-cycle 에 **doc-update 게이트** 추가: 이번 사이클(origin/<base>...HEAD) 에 의미있는 변경이 있는데 `CHANGELOG.md` 갱신이 없으면 push 전 **거부**(`--no-doc` 로만 우회). `ARCHITECTURE.md`(SSOT) 존재 시 미갱신이면 권장 안내.

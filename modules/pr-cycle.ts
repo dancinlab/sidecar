@@ -71,13 +71,14 @@ export async function runPrCycle(args: string[]): Promise<number> {
     const hasChangelog = changed.some((f) => /(^|\/)CHANGELOG\.md$/.test(f));
     const archExists = (await git("git ls-files ARCHITECTURE.md")).out.length > 0;
     const hasArch = changed.some((f) => /(^|\/)ARCHITECTURE\.md$/.test(f));
-    if (meaningful.length && !hasChangelog) {
-      loudFail(`pr-cycle: 문서 업데이트 필수 — 이 사이클 변경(${meaningful.length}개)에 CHANGELOG.md 갱신이 없습니다.`);
-      info("   CHANGELOG.md 에 이번 변경을 append 한 뒤 다시 실행하세요 (정말 문서 불필요하면 --no-doc).");
-      info(archExists && !hasArch ? "   + ARCHITECTURE.md(SSOT)도 설계 변경이면 갱신 권장." : "");
+    const missing: string[] = [];
+    if (meaningful.length && !hasChangelog) missing.push("CHANGELOG.md (append)");
+    if (meaningful.length && archExists && !hasArch) missing.push("ARCHITECTURE.md (갱신형 SSOT 현행화)");
+    if (missing.length) {
+      loudFail(`pr-cycle: 문서 업데이트 필수 — 이 사이클 변경(${meaningful.length}개)에 누락: ${missing.join(" · ")}`);
+      info("   해당 문서를 갱신한 뒤 다시 실행하세요 (정말 문서 불필요하면 --no-doc).");
       return 1;
     }
-    if (archExists && !hasArch) info("   ⓘ ARCHITECTURE.md(SSOT) 미갱신 — 설계가 바뀌었다면 갱신하세요 (권장).");
   }
 
   // 1. push

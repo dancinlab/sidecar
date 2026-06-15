@@ -15,6 +15,7 @@ import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
+import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 
 interface BashRule {
   id: string;
@@ -102,6 +103,12 @@ export async function preBash(_args: string[]): Promise<number> {
   const wtAdv = await worktreeAddAdvisory(cmd).catch(() => "");
   if (wtAdv) emitWarn("WORKTREE-HYGIENE", wtAdv);
 
+  // tmp-guard — progress/working data written to volatile tmp is discarded.
+  if (config().tmpGuard) {
+    const where = detectTmpBashWrite(cmd);
+    if (where) emitWarn("TMP-VOLATILE", `output → ${where} is volatile (lost on reboot/reaper). For progress/working data use ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
+  }
+
   const cfg = loadConfig();
 
   for (const rule of cfg.pre_bash ?? []) {
@@ -136,6 +143,11 @@ export async function preWrite(_args: string[]): Promise<number> {
   const filePath = String(input.file_path ?? "");
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
+
+  // tmp-guard — writing a file into a volatile tmp dir loses it; steer to scratch.
+  if (config().tmpGuard && isTmpPath(filePath)) {
+    emitWarn("TMP-VOLATILE", `${filePath} is in a volatile tmp dir (lost on reboot/reaper). Write progress/working data to ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
+  }
 
   // built-in single-doc discipline (write-time) — fires when a scattered or
   // quickref-less .md is created, the moment it happens (lint alone is too late).

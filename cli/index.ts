@@ -17,7 +17,8 @@ import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
-import { runPod, runDemi, runDojo, runMicroExp } from "../modules/runbooks.ts";
+import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm } from "../modules/runbooks.ts";
+import { runTrail } from "../modules/trail.ts";
 import { runPool } from "../modules/pool.ts";
 import { runIng } from "../modules/ing.ts";
 import { runUpstream } from "../modules/upstream.ts";
@@ -65,6 +66,10 @@ hook delegates (wire these into your agent's settings.json):
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
   micro-exp [<scope>]      context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)
+  bypass                   anti-punt self-check runbook (proceed on local+reversible; ask only when outward/decision)
+  go                       continue the most-recently proposed action without re-confirming
+  brainstorm               iterative ideation rounds until depletion (breadth over selection)
+  trail {push <note>|pop|show|drop <n>|clear}   main-flow return stack → git-tracked TRAIL.md (survives sessions)
   demi                     design-architecture program runbook (7-verb spine)
   pool {list|add|rm|on|status}   host roster + remote exec (~/.harness/pool.json, global)
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
@@ -130,6 +135,14 @@ async function main(): Promise<number> {
     case "micro-exp":
     case "micro":
       return runMicroExp(rest);
+    case "bypass":
+      return runBypass(rest);
+    case "go":
+      return runGo(rest);
+    case "brainstorm":
+      return runBrainstorm(rest);
+    case "trail":
+      return runTrail(rest);
     case "demi":
     case "demiurge":
       return runDemi(rest);

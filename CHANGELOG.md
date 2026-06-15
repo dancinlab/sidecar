@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## feat: tmp-guard + bypass · trail · go · brainstorm
+
+- **tmp-guard** (`modules/tmp-guard.ts`, config `tmpGuard` 기본 on) — 진행/작업 데이터를 휘발 tmp(`/tmp`·`/private/tmp`·`/var/folders`·`$TMPDIR`)에 쓰면 `pre bash`(리다이렉트/tee/-o/--output 탐지)·`pre write`(파일경로)에서 경고 → git-추적 `docs.scratchDir`(scripts/scratch)에 쓰고 커밋해 **GitHub 보관** 유도. read-only `/tmp` 참조는 무시. warn-only.
+- **`harness trail {push <note>|pop|show|drop <n>|clear}`** — main-flow 복귀 스택(sidecar trail parity). 곁가지로 샐 때 위치 push, 복귀 시 pop. repo-root **`TRAIL.md`(git-tracked·커밋)** 에 저장 → 세션/리부트 넘어 보존. docs.allow 에 TRAIL.md 추가.
+- **`harness bypass`** — anti-punt self-check 런북: local+reversible 이면 묻지 말고 진행, outward/되돌리기어려움/유저결정 때만 질문.
+- **`harness go`** — 직전 제안 액션 재확인 없이 계속.
+- **`harness brainstorm`** — 고갈까지 라운드별 아이디어 발산(breadth) 런북.
+
 ## feat: micro-exp — context-driven micro-experiment sweep (sidecar micro-exp parity)
 
 - **`harness micro-exp [<scope>]`** — N개의 작고 검증가능한 실험을 병렬로 돌리는 sweep 런북(런북 프린터 + 배치 산출물). domain-agnostic, `kind` 추상(`<runnable>`+`<parser>` 계약).

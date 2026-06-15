@@ -95,6 +95,11 @@ export interface HarnessConfig {
   // `git push <remote> +<refspec>`) which rewrites or bypasses shared history.
   // `--no-verify` is intentionally NOT blocked (left to user discipline).
   git: { guardForcePush: boolean };
+  // tmpGuard warns (pre bash/write) when progress/working data is written to a
+  // volatile tmp location (/tmp · /private/tmp · /var/folders · $TMPDIR) — that
+  // data is discarded on reboot/reaper. Steer it to docs.scratchDir, which is
+  // git-tracked and committed, so progress is preserved on GitHub. Warn-only.
+  tmpGuard: boolean;
   ledger: { staleSec: number };
 }
 
@@ -136,7 +141,7 @@ const DEFAULTS: HarnessConfig = {
       "(REPORT|SUMMARY|NOTES|TODO|AUDIT|STATUS|ANALYSIS)\\.md$",
       "\\d{6,8}[-_].*\\.md$",
     ],
-    allow: ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "ING.md", "ATLAS.md", "CLAIMS.md", "CLAUDE.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
+    allow: ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "ING.md", "ATLAS.md", "CLAIMS.md", "TRAIL.md", "CLAUDE.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
     enforce: "warn",
   },
   lsp: {
@@ -159,6 +164,7 @@ const DEFAULTS: HarnessConfig = {
     rebuild: true,
   },
   git: { guardForcePush: true },
+  tmpGuard: true,
   ledger: { staleSec: 3600 },
 };
 

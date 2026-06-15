@@ -91,7 +91,12 @@ export async function runPrCycle(args: string[]): Promise<number> {
   info("  ✓ pushed");
 
   // 2. open PR (--fill + any extra flags). If one already exists, continue.
-  const extra = args.map((a) => JSON.stringify(a)).join(" ");
+  //    Strip pr-cycle's own flags so they don't leak into `gh pr create`.
+  const OWN_FLAGS = new Set(["--no-doc"]);
+  const extra = args
+    .filter((a) => !OWN_FLAGS.has(a))
+    .map((a) => JSON.stringify(a))
+    .join(" ");
   const create = await git(`gh pr create --fill ${extra}`.trim());
   if (create.code !== 0 && !/already exists/i.test(create.out)) {
     loudFail("pr-cycle: gh pr create failed");

@@ -1,0 +1,3 @@
+{"ts":"2026-06-15T04:28:15.533Z","id":"1","from":"harness","to":"harness","text":"harness QA 전수 진행 — 모든 명령/훅을 고갈(no-new-finding)까지 검증. mini 세션에서 수행 예정."}
+{"ts":"2026-06-15T04:28:16.612Z","id":"2","from":"harness","to":"harness","text":"pod/cloud 개선 — runbook/코드가 'hexa cloud' 전제인데 실제 워크플로는 runpod/vast CLI·API 직접 사용. pod 런북 + (필요시) 모듈을 runpod/vast 직접 연동으로 개선 필요."}
+{"ts":"2026-06-15T04:30:06.663Z","id":"3","from":"harness","to":"kosmos","text":"kosmos-lsp 바이너리 mini 에 미설치 — kosmos .lsp.json 은 깔렸으나 LSP 서버가 실제 뜨려면 kosmos-lsp 빌드/설치 필요 (mini)."}

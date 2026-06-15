@@ -68,6 +68,7 @@ harness/
 | `handoff [reason]` | 세션 스냅샷 → `.harness/handoff/` | 세션 종료 |
 | `convergence {status\|recompute\|by-category}` | (선택) incident 수렴 추적 | 버그 수정 후 |
 | `sync {run\|diff}` | (선택) repo 자체 공유파일 sync 스크립트 실행 | 공유파일 변경 후 |
+| `pool {list\|add\|rm\|on <h> <cmd>\|status}` | 호스트 로스터 + 원격 실행. `shared:false` 호스트는 **제한 호스트** — `allow` 프로젝트 컨텍스트 밖에선 `on` 차단(공용 컴퓨트로 못 씀) | 원격 실행 시 |
 
 ---
 

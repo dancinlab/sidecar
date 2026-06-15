@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(pool): enforce restricted hosts — private/research machines blocked from shared pool use
+
+- `pool.json` 의 `shared:false` 플래그가 그동안 **로스터에 적혀만 있고 강제되지 않았음** (`Host` 인터페이스가 `name`/`target` 만 읽음) → 어느 repo 에서든 `harness pool on akida` 가 통과돼 anima 연구 전용 머신이 공용 컴퓨트로 사용됨.
+- `modules/pool.ts` 에 가드 추가: `shared:false` = **제한 호스트**. `allow:[...]` 프로젝트 마커(cwd 경로 세그먼트, 대소문자 무시·정확한 세그먼트 매칭이라 `anima` 가 `animation` 에 안 걸림)와 현재 위치가 일치할 때만 허용. 불일치 시 `on` 차단(ssh 전 `loudFail`+exit 1) · `status` 는 ping 안 하고 🔒 표시 · `list` 는 🔓허용/🔒차단 + 허용 프로젝트 표기.
+- 의도적 일회성 override 는 env `HARNESS_POOL_ALLOW="<name> ..."` (loud · 우연한 공용사용 아님). `allow` 없는 제한 호스트(ghost=개인 시스템)는 어느 프로젝트에서도 차단.
+- `~/.harness/pool.json` 의 akida 에 `allow:["anima"]` 부여. 검증: dancinlab/harness 에서 `on akida`/`on ghost` → 차단(exit 1) · `on aiden` → 통과 · `/tmp/anima/sub` 에서 `on akida` → 통과 · env override → list 🔓 모두 출력 PASS.
+
 ## feat(verify): tier-rubric claim verification (sidecar parity) · old verify → `ci`
 
 - **rename**: 기존 `harness verify`(설정된 빌드/테스트 검증명령 병렬 실행) → **`harness ci`**. config 키는 호환 위해 `verify.checks` 그대로. 로그 kind `verify`→`ci`. 문서/keywords/commons/enforcement 의 `harness verify` 참조 일괄 `harness ci` 로 치환.

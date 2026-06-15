@@ -70,6 +70,17 @@ export function docWriteViolation(absOrRelPath: string, content: string): DocVio
   const rel = relative(REPO_ROOT, abs);
   if (rel.startsWith("..")) return null; // outside repo
   if (!rel.endsWith(".md")) return null;
+  // single-SSOT: the architecture doc lives ONLY at the root canonical path —
+  // no docs/architecture.md, no nested ARCHITECTURE.md (둘 다 쓰면 안 됨, 루트에만).
+  const archRel = config().docs.architecture;
+  const base = basename(rel).toLowerCase();
+  if ((base === basename(archRel).toLowerCase() || base === "architecture.md") && rel !== archRel) {
+    return {
+      rule: "DOC-ARCH-NONROOT",
+      file: rel,
+      msg: `아키텍처 SSOT 는 루트 ${archRel} 하나만 — ${rel} 금지. 내용을 루트 ${archRel} 로 통합하세요 (단일 SSOT).`,
+    };
+  }
   if (isAllowed(rel)) return null;
   if (!inScope(rel)) return null;
   const cfg = config().docs;

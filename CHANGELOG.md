@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## fix: export runBypass/runGo/runBrainstorm from runbooks (engine load broken since 8675cbd)
+
+- `cli/index.ts` 가 이 3개를 import 했지만 직전 커밋(8675cbd)이 `modules/runbooks.ts` 를 stage 안 해서, 커밋된 엔진이 로드 실패(`SyntaxError: no export named runBrainstorm`) → CLI 전체 비동작이었음. 로컬 working tree 엔 있어 테스트는 통과해 묻혀 있었고, engine-bump agent 들의 sanity gate(`harness help`)가 전파 직전 적발.
+- 누락 export 3개를 커밋. (재발 방지 후속: 엔진 로드 스모크를 lint/CI 에 추가 검토.)
+
 ## fix: recommend — global default fallback (공용 완성도 auto-pick 미작동 수정)
 
 - 증상: mini 에 "공용 완성도" default 를 걸어도 ★표시·auto-pick 둘 다 안 뜨고 4축 박스만 떠서 punt("어느 쪽으로?").

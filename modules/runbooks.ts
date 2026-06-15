@@ -56,6 +56,18 @@ export async function runDojo(args: string[]): Promise<number> {
   return 0;
 }
 
+export async function runBypass(_args: string[]): Promise<number> {
+  return printTemplate("bypass");
+}
+
+export async function runGo(_args: string[]): Promise<number> {
+  return printTemplate("go");
+}
+
+export async function runBrainstorm(_args: string[]): Promise<number> {
+  return printTemplate("brainstorm");
+}
+
 export async function runMicroExp(args: string[]): Promise<number> {
   const scope = args.find((a) => !a.startsWith("-"));
   const force = args.includes("--force");

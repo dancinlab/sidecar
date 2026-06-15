@@ -28,6 +28,8 @@ import { runSecret } from "../modules/secret.ts";
 import { runLsp } from "../modules/lsp.ts";
 import { runWorktree } from "../modules/worktree.ts";
 import { runImagine } from "../modules/imagine.ts";
+import { runResearch } from "../modules/research.ts";
+import { runWatch } from "../modules/watch.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
@@ -68,6 +70,8 @@ hook delegates (wire these into your agent's settings.json):
                            ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
   lsp {wire|status|rebuild <file>}   editor LSP wiring (.lsp.json; hexa-lang \`hexa lsp\` for .hexa by default)
                            + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited
+  research {arxiv <query|id> [--n N] | yt <url|id> [lang]}   fetch arXiv papers / YouTube transcript (no key)
+  watch <url|path> [question] [flags]   download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
                            history [-b][-m][--start][--limit][--status][--local][--json] — past prompts (fal API / local ledger)
@@ -181,6 +185,10 @@ async function main(): Promise<number> {
       return runWorktree(rest);
     case "imagine":
       return runImagine(rest);
+    case "research":
+      return runResearch(rest);
+    case "watch":
+      return runWatch(rest);
     case "ing":
       return runIng(rest);
     case "verdict":

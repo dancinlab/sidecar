@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## feat: research + watch (sidecar research-skill / watch parity)
+
+- **`harness research {arxiv|yt}`** — 외부 연구자료 fetch, **API 키 불필요**.
+  - `arxiv <query|id> [--n N]` — arXiv 공식 API 검색/조회 → 제목·저자·날짜·카테고리·PDF·초록 (id 자동 판별, 기본 submittedDate desc).
+  - `yt <url|id> [lang]` — YouTube 자막 트랜스크립트. InnerTube `player` API(ANDROID client 20.10.38) → caption track → `fmt=json3` 큐별 1줄(XML fallback) + 연속중복 dedup.
+  - 검증: arXiv 1706.03762(Attention Is All You Need) · yt dQw4w9WgXcQ(60줄) 실동작.
+- **`harness watch <url|path> [question] [flags]`** — 에이전트가 영상을 실제로 "보게" 함.
+  - `yt-dlp` 다운로드(yt-dlp 지원 플랫폼 + 로컬파일) → `ffmpeg` 프레임(길이별 예산, 2fps/100 캡, `--start/--end` 윈도우 기준) + 타임스탬프 트랜스크립트(네이티브 자막 우선 → Whisper Groq/OpenAI 옵션) → 프레임 경로 + 트랜스크립트 출력(에이전트가 Read).
+  - 자막은 best-effort(`--ignore-errors`, 429 시에도 영상 진행), Whisper 키 없으면 frames-only 로 graceful degrade(절대 hard-fail 안 함). 키는 env/`secret` CLI.
+  - flags: `--start --end --max-frames --fps --resolution --whisper groq|openai --no-whisper --out-dir`.
+  - 검증: dQw4w9WgXcQ 8초 윈도우 → 4프레임 + 89줄 트랜스크립트.
+
 ## feat: docs — write-time single-doc enforcement (안 지켜지던 규율을 쓰는 순간 강제)
 
 - 문제: 단일문서 규율(ARCHITECTURE SSOT 통합 · 분리 시 quickref 연결)이 **lint/commit 시점에만** 검사돼 사후 → 에이전트가 이미 흩뿌린 뒤라 안 지켜짐.

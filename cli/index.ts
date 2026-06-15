@@ -13,6 +13,7 @@ import { runGc } from "../modules/gc.ts";
 import { runConvergence } from "../modules/convergence.ts";
 import { runSync } from "../modules/sync.ts";
 import { runInit } from "../modules/init.ts";
+import { runInstallHooks, runSelfUpdate } from "../modules/setup.ts";
 import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
@@ -49,6 +50,8 @@ setup:
                                          (--hardcore = strict profile: block-everything + branch protection + pre-push verify)
   uninstall [--dry-run] [--keep-logs]   remove harness-injected files (config/.harness/hooks/wrapper); keeps user content
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
+  install-hooks [--global|--repo]   merge harness hooks into ~/.claude/settings.json (global, like a plugin) or repo .claude (needs harness on PATH)
+  self-update              git-pull the harness CLI clone this binary runs from (e.g. ~/.harness/cli) to latest main
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -129,6 +132,10 @@ async function main(): Promise<number> {
       return runUninstall(rest);
     case "update":
       return runUpdate(rest);
+    case "install-hooks":
+      return runInstallHooks(rest);
+    case "self-update":
+      return runSelfUpdate(rest);
     case "fleet":
       return runFleet(rest);
     case "pr-cycle":

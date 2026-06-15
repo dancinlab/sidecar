@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat: install-hooks (global) + self-update — harness fires everywhere (plugin-equivalent)
+
+- 문제: harness 훅이 repo별 `.claude/settings.json` 에만 있어 (gitignore/미클론/미-init 시) **무시됨**. 이전 sidecar 는 전역 플러그인이라 항상 발동했는데 제거됨 → mini 전역 훅 0개 → 아무것도 안 걸림.
+- **`harness install-hooks [--global|--repo]`** — `~/.claude/settings.json`(전역, 기본)에 harness 훅 블록(PreToolUse pre bash/write/askq · PostToolUse post edit · UserPromptSubmit prompt+commons+recommend+prefs+easy inject · SessionStart commons/recommend/worktree gc/handoff/ing inject)을 merge → **모든 세션/repo 에서 발동**(전역 플러그인 등가). 기존 비-harness 훅 보존, 재실행 시 harness 항목 dedup. 전역 `harness` 가 PATH 에 있어야 함.
+- **`harness self-update`** — 이 바이너리가 실행되는 CLI clone(예: `~/.harness/cli`)을 최신 main 으로 git-pull. (repo 의 submodule 은 `harness update`.)
+- 적용: mini·ghost 전역 훅 설치 + `~/.harness/cli` 최신화 완료.
+
 ## feat: commons — always-on cross-project governance SSOT
 
 - **`harness commons {inject|show}`** — 프로젝트-무관 거버넌스 규칙(c1~c10: root-cause·verify·anti-punt·single-doc·preserve·handoff·git-safety·4축추천·honesty·surgical)을 번들 `config/commons.md` 에서 매 턴 inject(UserPromptSubmit) → 컨텍스트에서 안 사라짐. repo override: `.harness/commons.md`.

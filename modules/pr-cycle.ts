@@ -60,7 +60,8 @@ export async function runPrCycle(args: string[]): Promise<number> {
   info(`pr-cycle: branch '${branch}'`);
 
   // 0. doc-update gate — every cycle MUST update docs (CHANGELOG append; ARCHITECTURE
-  //    SSOT when present). Refuse to ship code without a CHANGELOG entry. Override: --no-doc.
+  //    SSOT + README current-info when present). Refuse to ship code without a
+  //    CHANGELOG entry. Override: --no-doc.
   if (!args.includes("--no-doc")) {
     const baseGuess =
       (await git("git rev-parse --abbrev-ref origin/HEAD 2>/dev/null")).out.replace(/^origin\//, "") || "main";
@@ -71,9 +72,12 @@ export async function runPrCycle(args: string[]): Promise<number> {
     const hasChangelog = changed.some((f) => /(^|\/)CHANGELOG\.md$/.test(f));
     const archExists = (await git("git ls-files ARCHITECTURE.md")).out.length > 0;
     const hasArch = changed.some((f) => /(^|\/)ARCHITECTURE\.md$/.test(f));
+    const readmeExists = (await git("git ls-files README.md")).out.length > 0;
+    const hasReadme = changed.some((f) => /(^|\/)README\.md$/.test(f));
     const missing: string[] = [];
     if (meaningful.length && !hasChangelog) missing.push("CHANGELOG.md (append)");
     if (meaningful.length && archExists && !hasArch) missing.push("ARCHITECTURE.md (갱신형 SSOT 현행화)");
+    if (meaningful.length && readmeExists && !hasReadme) missing.push("README.md (최신 정보 유지)");
     if (missing.length) {
       loudFail(`pr-cycle: 문서 업데이트 필수 — 이 사이클 변경(${meaningful.length}개)에 누락: ${missing.join(" · ")}`);
       info("   해당 문서를 갱신한 뒤 다시 실행하세요 (정말 문서 불필요하면 --no-doc).");

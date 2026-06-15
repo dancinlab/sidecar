@@ -166,6 +166,8 @@ bash .harness-engine/bin/harness verify list
 
 이 repo 자체가 하네스를 쓴다(dogfooding) — `harness.config.json`(profile:default) + `.claude/settings.json` self hooks + pre-commit `bin/harness lint`. 코어(`.ts`) 변경 시 CHANGELOG 동시 갱신이 강제되고, 번들 enforcement(root-cause·secret·force-push)가 자기 코드에도 적용된다. hardcore 자기모순(main 보호·no-verify 차단)만 빼서 개발 흐름은 막지 않는다.
 
+매 사이클(`harness pr-cycle`)의 doc-gate 는 의미있는 변경에 대해 **CHANGELOG.md(append) + (존재 시) ARCHITECTURE.md·README.md 현행화**를 요구한다 — 셋 중 미갱신이 있으면 머지를 거부한다(`--no-doc` 는 진짜 문서 불필요할 때만). 이 README 도 그 대상이므로 매 사이클 최신 상태로 유지된다. (commons c14)
+
 ## 라이선스
 
 MIT

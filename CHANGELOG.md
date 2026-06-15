@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## feat(pr-cycle): doc-gate also requires README.md current-info each cycle
+
+- pr-cycle doc-gate 에 README.md 추가: 의미있는 변경 시 README.md(repo 에 존재하면) 미갱신이면 ARCHITECTURE 와 동일하게 **거부**. 매 사이클 README 최신정보 유지 강제. commons c14 문구도 README 포함으로 갱신.
+- 검증: 이 PR 자체가 새 게이트를 통과(CHANGELOG+ARCHITECTURE 불필요·README 갱신 동반). `--no-doc` 우회 보존.
+
 ## docs(commons): c16 — break through walls (closed-negative ≠ terminal)
 
 - mini 세션에서 작성된 c16 을 repo SoT 로 반영: 벽(closed-negative·블로커)에 부딪히면 다른 메커니즘·각도·렌즈로 돌파를 한 번은 시도한 뒤에야 terminal 로 인정. 단 tune-to-green 금지(c9·p7) — 돌파는 사전등록(frozen-first)+대조(shuffle/dissociation/negative-control)로 검증된 진짜 새 각도라야 하고, 진짜 시도 뒤의 정직한 terminal 도 유효한 결과. CLAUDE.md SSOT 참조 c1–c16 로 갱신.

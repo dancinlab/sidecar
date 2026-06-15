@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## fix(pool): remote ssh command no longer expands locally — argv exec, not shell string
+
+- `pool on <host> <cmd>` 가 `execShell` 으로 `ssh ... "remotecmd"` 전체 문자열을 **로컬 mac 셸(`bash -lc`)** 에 통과시키던 버그. ssh 가 보내기 *전에* 로컬 셸이 `$VAR`/`$(...)`/백틱을 먼저 전개 → `harness pool on aiden 'echo $(hostname)'` 가 원격 호스트가 아니라 **mac 의 hostname** 을 출력하고, 셸 변수는 로컬에서 빈 값으로 사라짐.
+- 수정: `modules/pool.ts` 의 `SSH` 상수(공백조인 문자열)를 `SSH_ARGS` argv 배열로 바꾸고, `on`/`status` 의 ssh 호출을 `execArgs("ssh", [...SSH_ARGS, h.target, cmd], opts)` 로 전환 — ssh 바이너리를 직접 spawn(로컬 셸 없음). `cmd` 를 단일 argv 원소로 넘기므로 로컬 전개가 일어나지 않고, ssh 가 원격 로그인 셸로 그대로 전달해 거기서 전개(파이프 `| sudo tee`·리다이렉트 `>> file` 도 원격에서 정상 동작).
+- 가드(제한 호스트 차단)·list/status 출력·pool.json 은 무변경. 검증(aiden): `echo REMOTE_$(hostname)` → `REMOTE_aiden-B650M-K` (mac 아님) · `echo hi | tr a-z A-Z` → `HI` · `echo OK` → `OK` · 비-anima cwd 에서 `on akida` → 차단(exit 1, 차단됨) PASS.
+
 ## feat(pool): enforce restricted hosts — private/research machines blocked from shared pool use
 
 - `pool.json` 의 `shared:false` 플래그가 그동안 **로스터에 적혀만 있고 강제되지 않았음** (`Host` 인터페이스가 `name`/`target` 만 읽음) → 어느 repo 에서든 `harness pool on akida` 가 통과돼 anima 연구 전용 머신이 공용 컴퓨트로 사용됨.

@@ -56,6 +56,13 @@ export async function runDojo(args: string[]): Promise<number> {
   return 0;
 }
 
+export async function runGap(args: string[]): Promise<number> {
+  printTemplate("gap");
+  const arg = args.join(" ").trim();
+  info(`\n# arguments: ${arg || "(none → mode C · target = current work in context)"}`);
+  return 0;
+}
+
 export async function runBypass(_args: string[]): Promise<number> {
   return printTemplate("bypass");
 }

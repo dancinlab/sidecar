@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## feat(gap): multi-axis gap exploration runbook (sidecar parity)
+
+- `harness gap [full|list|<scope>]` 추가 — 현재 작업을 40개 돌파전략 렌즈(8 family: Math-Structural·Adversarial-Stress·Economic-Resource·Epistemic-Evidence·Convergence-Closure·Simplicity-Canonical·Temporal-Dynamics·Coverage-Consistency)로 훑어 gap 을 표면화. 3모드: bare=mode C(40렌즈 인라인 트리아지 → hot family 만 subagent deep-dive) · `full`=mode A(family당 subagent fan-out, 트리아지 생략) · `list`=카탈로그 출력. surface·prioritise 만 하고 fix 안 함.
+- 구현: `templates/gap.md`(런북 본문, sidecar `commands/gap` 이식) + `modules/runbooks.ts` runGap + cli 등록. DESIGN.log→ARCHITECTURE/CHANGELOG, subagent=Agent tool(Explore/general-purpose)로 harness 맥락 조정. 검증: 8 family·42 bullet(occams-razor F4·F6 중복) 출력 + args 힌트 확인.
+
 ## feat(pr-cycle): doc-gate also requires README.md current-info each cycle
 
 - pr-cycle doc-gate 에 README.md 추가: 의미있는 변경 시 README.md(repo 에 존재하면) 미갱신이면 ARCHITECTURE 와 동일하게 **거부**. 매 사이클 README 최신정보 유지 강제. commons c14 문구도 README 포함으로 갱신.

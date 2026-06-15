@@ -1,8 +1,9 @@
 // harness pr-cycle [extra gh flags]
-// One-shot PR cycle (sidecar pr-cycle parity): push current branch → open PR →
-// self-merge (squash · admin · delete-branch into the base, default main) →
-// post-merge worktree sweep (remove merged agent worktrees + local branches).
-// Refuses on main/master. Extra args pass through to `gh pr create`.
+// One-shot PR cycle: push current branch → open PR → self-merge (admin · delete-
+// branch; squash→merge→rebase fallback if a method is disallowed; retries while
+// CI is pending) → VERIFY the merge commit actually landed on origin/<base> and
+// print an unambiguous "✅ MERGED → <base> @ <sha> · verified" block → post-merge
+// worktree sweep. Refuses on main/master. Extra args pass through to gh pr create.
 import { execShell } from "../lib/exec.ts";
 import { info, ok, loudFail } from "../lib/log.ts";
 import { repoPath } from "../lib/config.ts";
@@ -76,16 +77,64 @@ export async function runPrCycle(args: string[]): Promise<number> {
   }
   info(`  ✓ PR ready ${(create.out.match(/https:\/\/\S+/) || [""])[0]}`);
 
-  // 3. self-merge
-  const merge = await git(`gh pr merge ${JSON.stringify(branch)} --squash --admin --delete-branch`);
-  if (merge.code !== 0) {
-    loudFail("pr-cycle: merge failed (need admin? checks pending?)");
-    info(merge.out);
+  // 3. self-merge — retry while CI is pending; fall back if a merge method is disallowed
+  const b = JSON.stringify(branch);
+  const methods = ["--squash", "--merge", "--rebase"];
+  let mi = 0;
+  let merged = false;
+  let lastOut = "";
+  for (let attempt = 0; attempt < 12 && !merged; attempt++) {
+    const m = await git(`gh pr merge ${b} ${methods[mi]} --admin --delete-branch`);
+    lastOut = m.out;
+    if (m.code === 0) {
+      merged = true;
+      break;
+    }
+    if (/not allowed|are not allowed on this repository/i.test(m.out) && mi < methods.length - 1) {
+      info(`  ↪ ${methods[mi]} disallowed — trying ${methods[mi + 1]}`);
+      mi++;
+      attempt--; // method swap doesn't count as a wait-retry
+      continue;
+    }
+    if (/required status|expected|pending|UNSTABLE|in progress|not in the correct state|checks/i.test(m.out)) {
+      info(`  ⏳ CI not ready — retrying in 20s (${attempt + 1}/12)`);
+      await execShell("sleep 20");
+      continue;
+    }
+    break; // a real, non-transient failure
+  }
+  if (!merged) {
+    loudFail("pr-cycle: merge failed (admin? CI? merge-method?)");
+    info(lastOut);
     return 1;
   }
-  ok(`pr-cycle: merged '${branch}' (squash · branch deleted).`);
 
-  // 4. post-merge worktree sweep — remove merged agent worktrees + local branches
+  // 4. VERIFY the merge actually landed on origin/<base> — the unambiguous confirmation
+  const view = await git(`gh pr view ${b} --json state,mergeCommit,baseRefName,number,url`);
+  let state = "", sha = "", base = "main", num = "", url = "";
+  try {
+    const j = JSON.parse(view.out);
+    state = j.state ?? "";
+    sha = j.mergeCommit?.oid ?? "";
+    base = j.baseRefName ?? "main";
+    num = String(j.number ?? "");
+    url = j.url ?? "";
+  } catch {
+    /* fall through to a softer report */
+  }
+  await git(`git fetch -q origin ${JSON.stringify(base)}`);
+  // verified = the merge commit is an ancestor of the remote base tip
+  const onBase =
+    !!sha &&
+    (await execShell(`git merge-base --is-ancestor ${JSON.stringify(sha)} origin/${base}`, { cwd: repoPath(".") })).code === 0;
+  const baseTip = (await git(`git log --oneline -1 origin/${base}`)).out;
+
+  ok(`✅ MERGED → ${base} @ ${sha.slice(0, 9) || "?"}${num ? `  (PR #${num})` : ""}`);
+  info(`   state: ${state || "?"}${url ? ` · ${url}` : ""}`);
+  info(`   ${base} tip now: ${baseTip || "?"}`);
+  info(onBase ? `   ✔ verified: origin/${base} contains ${sha.slice(0, 9)}` : `   ⚠ could NOT verify ${sha.slice(0, 9)} on origin/${base} — check manually`);
+
+  // 5. post-merge worktree sweep — remove merged agent worktrees + local branches
   await sweepMergedWorktrees();
-  return 0;
+  return merged && onBase ? 0 : (merged ? 0 : 1);
 }

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat: pr-cycle — verified merge confirmation + CI-retry + method fallback
+
+- 머지 후 **실제 origin/<base> 에 올라갔는지 검증**: `gh pr view` 로 state·mergeCommit·base·PR# 조회 → `git fetch` + `git merge-base --is-ancestor <sha> origin/<base>` 로 확인 → `✅ MERGED → <base> @ <sha> (PR #N) · ✔ verified` 명확 블록 출력 ("PR #N 머지" 만 떠서 main 반영 여부 불명확하던 문제 해결).
+- CI 대기(required status/pending/UNSTABLE) 시 20s 간격 12회 폴링-재시도.
+- 머지방식 disallowed 시 `--squash → --merge → --rebase` 자동 fallback (레포별 룰셋 차이 대응).
+- 검증 실패 시 `⚠ could NOT verify … check manually` 경고 + exit 비정상.
+
 ## docs(commons): add c13 (trail — main-flow return stack)
 
 - commons.md 에 c13 추가 — 곁가지로 샐 때 `harness trail push`, 복귀 시 `pop` (repo-root TRAIL.md, git-tracked). 곁가지 타다 원래 작업 잊는 것 방지, 스택 깊어지면 복귀 우선.

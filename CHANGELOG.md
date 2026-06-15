@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## docs(commons): add c13 (trail — main-flow return stack)
+
+- commons.md 에 c13 추가 — 곁가지로 샐 때 `harness trail push`, 복귀 시 `pop` (repo-root TRAIL.md, git-tracked). 곁가지 타다 원래 작업 잊는 것 방지, 스택 깊어지면 복귀 우선.
+
 ## docs(commons): add c11 (ING in-progress tracking) + c12 (use the harness CLI)
 
 - commons.md 에 c11 추가 — 다단계/장기 작업은 `ING.jsonl`(`harness ing add/next/pod`, done=scrub)에 추적, SessionStart 표면화.

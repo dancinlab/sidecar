@@ -1,8 +1,10 @@
-// harness pod | demi | dojo — sidecar pod/demiurge/dojo parity as harness runbooks.
-//   pod  — GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down)
-//   demi — design-architecture program runbook (7-verb spine)
-//   dojo — cloud training-job scaffolder: prints runbook + (with a slug) emits
-//          exports/dojo/<slug>/{job,train,run.sh}
+// harness pod | demi | dojo | micro-exp — sidecar parity as harness runbooks.
+//   pod       — GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down)
+//   demi      — design-architecture program runbook (7-verb spine)
+//   dojo      — cloud training-job scaffolder: prints runbook + (with a slug) emits
+//               exports/dojo/<slug>/{job,train,run.sh}
+//   micro-exp — context-driven micro-experiment sweep runbook + (with a scope) emits
+//               exports/sweep/<batch_id>/{ledger,state}.json
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { HARNESS_ROOT, REPO_ROOT } from "../lib/paths.ts";
@@ -51,5 +53,32 @@ export async function runDojo(args: string[]): Promise<number> {
     created++;
   }
   ok(`\ndojo: scaffolded exports/dojo/${slug}/ (${created} file(s), lang=${lang}). fill spec + run.sh.`);
+  return 0;
+}
+
+export async function runMicroExp(args: string[]): Promise<number> {
+  const scope = args.find((a) => !a.startsWith("-"));
+  const force = args.includes("--force");
+  printTemplate("micro-exp");
+  if (!scope) {
+    info("\n(scaffold a batch: `harness micro-exp <scope|batch_id> [--force]`)");
+    return 0;
+  }
+  // batch_id from the scope slug (caller appends a date in context if wanted)
+  const batch = scope.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const dir = resolve(REPO_ROOT, "exports", "sweep", batch);
+  const files: Record<string, string> = {
+    "ledger.json": JSON.stringify({ batch_id: batch, candidates: [], waves: [], note: "typed aggregate surface — never let it drift from atlas/verdict state" }, null, 2) + "\n",
+    "state.json": JSON.stringify({ batch_id: batch, budget: { pod_concurrent_max: 4 }, dispatched: [] }, null, 2) + "\n",
+  };
+  mkdirSync(dir, { recursive: true });
+  let created = 0;
+  for (const [f, body] of Object.entries(files)) {
+    const p = resolve(dir, f);
+    if (existsSync(p) && !force) continue;
+    writeFileSync(p, body);
+    created++;
+  }
+  ok(`\nmicro-exp: scaffolded exports/sweep/${batch}/ (${created} file(s)). enumerate candidates from context → Stage 1.5 infra gate → dispatch.`);
   return 0;
 }

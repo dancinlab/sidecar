@@ -17,7 +17,7 @@ import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
-import { runPod, runDemi, runDojo } from "../modules/runbooks.ts";
+import { runPod, runDemi, runDojo, runMicroExp } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runIng } from "../modules/ing.ts";
 import { runUpstream } from "../modules/upstream.ts";
@@ -64,6 +64,7 @@ hook delegates (wire these into your agent's settings.json):
   pr-cycle [gh flags]      push branch → open PR → self-merge (squash·admin·delete-branch)
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
+  micro-exp [<scope>]      context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)
   demi                     design-architecture program runbook (7-verb spine)
   pool {list|add|rm|on|status}   host roster + remote exec (~/.harness/pool.json, global)
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
@@ -126,6 +127,9 @@ async function main(): Promise<number> {
       return runPod(rest);
     case "dojo":
       return runDojo(rest);
+    case "micro-exp":
+    case "micro":
+      return runMicroExp(rest);
     case "demi":
     case "demiurge":
       return runDemi(rest);

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat: micro-exp — context-driven micro-experiment sweep (sidecar micro-exp parity)
+
+- **`harness micro-exp [<scope>]`** — N개의 작고 검증가능한 실험을 병렬로 돌리는 sweep 런북(런북 프린터 + 배치 산출물). domain-agnostic, `kind` 추상(`<runnable>`+`<parser>` 계약).
+  - 흐름: context 에서 후보 self-enumerate(매니페스트 없음) → **Stage 1.5 인프라 존재 게이트**(미비 시 build 우선 HALT) → 예산 선언 → 디스패치(rented `harness pod` / local `harness pool on <host>`) → **Monitor** closed-loop → harvest → parse Agent → 흡수(closed-form=`harness atlas`/`verdict`, observation=verbatim verdict) → `exports/sweep/<batch_id>/ledger.json` 집계.
+  - 정직성: FALSIFIED 는 CLOSED-negative 로 보존(skip 금지) · 예산 캡 · pod-cap≠agent-cap · parse Agent verbatim.
+  - `<scope>` 주면 `exports/sweep/<batch_id>/{ledger,state}.json` 스캐폴드. `templates/micro-exp.md` 런북.
+
 ## feat: research + watch (sidecar research-skill / watch parity)
 
 - **`harness research {arxiv|yt}`** — 외부 연구자료 fetch, **API 키 불필요**.

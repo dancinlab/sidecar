@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## fix(pr-cycle): strip own flags before `gh pr create`
+
+- `pr-cycle --no-doc` 가 `--no-doc` 를 `gh pr create` passthrough 에 그대로 넘겨 `unknown flag` 로 실패하던 버그. pr-cycle 자기 플래그(OWN_FLAGS)는 passthrough 에서 제외. push 단계는 영향 없었음.
+
+## docs(commons): c15 — no proactive papers before explicit ask
+
+- commons 에 c15 추가: 유저가 명시적으로 논문/arXiv/레퍼런스/선행연구를 요청하기 전에는 논문을 먼저 언급·제시·추천·인용하지 않는다. 일반 응답에 곁다리 논문 나열 금지, `harness research` 도 유저 지시 시에만. CLAUDE.md SSOT 참조도 c1–c15 로 갱신.
+
 ## feat(lockdown): L0 is opt-in — none until designated + `harness lockdown` 관리 명령
 
 - **DEFAULT 변경**: `lib/config.ts` DEFAULTS 에서 `lockdown.fromMarkdown: "CLAUDE.md"` 제거 → config 없는 repo 는 **L0 0개**(별도 지정 전엔 없음). 기존엔 CLAUDE.md 의 🔴 L0 블록을 자동 스캔해 L0 가 암묵적으로 생겼음(CLAUDE.md 자체 포함 가능) — 이제 OFF. markdown 스캔은 `lockdown.fromMarkdown` 을 명시한 repo 만 opt-in.

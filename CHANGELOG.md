@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## docs: root CLAUDE.md for the harness repo (self-dogfood c4)
+
+- harness repo 자체에 루트 `CLAUDE.md`(프로젝트 설명 + 트리구조·노드별 설명 + SSOT 링크) 추가 → 자기 규칙(c4 메인 CLAUDE.md) 준수, lint `CLAUDE-MD-MISSING` 경고 해소.
+
+## fix: single architecture SSOT at root — consolidate + enforce (둘 다 금지, 루트에만)
+
+- harness-build 자체를 단일 SSOT 로 정리: `docs/architecture.md` → 루트 **`ARCHITECTURE.md`** 이동, guides·README 참조 갱신.
+- **DOC-ARCH-NONROOT 가드**: `pre write` 에서 루트 외 architecture 문서(`docs/architecture.md`·`sub/ARCHITECTURE.md` 등) 생성 차단 → 루트 `ARCHITECTURE.md` 단일 SSOT 로 통합 유도. (아키텍처를 두 곳에 두는 것 금지.)
+
 ## feat: pr-cycle doc-gate — ARCHITECTURE.md도 매 사이클 필수 (존재 시)
 
 - doc-gate 를 "권장"에서 **차단**으로 승격: repo 에 `ARCHITECTURE.md`(최종 아키텍처 SSOT)가 있으면 매 의미있는 사이클마다 갱신 없으면 CHANGELOG 와 함께 **거부**. 누락 문서 목록을 한 줄로 표시. (`--no-doc` 우회.)

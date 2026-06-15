@@ -113,9 +113,11 @@ export interface HarnessConfig {
 
 const DEFAULTS: HarnessConfig = {
   project: "unknown",
+  // L0 is OPT-IN: empty by default — there is NO L0 until a repo explicitly
+  // designates files (via `harness lockdown add` → harness.config.json, or by
+  // setting lockdown.fromMarkdown to a guide that carries a 🔴 L0 block).
   lockdown: {
     files: [],
-    fromMarkdown: "CLAUDE.md",
     onEditReminder: "L0 file edited — update your changelog / issue tracker in the same change.",
   },
   enforcementFile: ".harness/enforcement.json",

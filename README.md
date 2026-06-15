@@ -158,7 +158,7 @@ bash .harness-engine/bin/harness verify list
 ## 더 읽기
 
 - [docs/languages.md](docs/languages.md) — 언어/플랫폼 범용성 (Python·Rust·C·Go·Swift·hexa 프리셋 + Node 런타임 요구)
-- [docs/architecture.md](docs/architecture.md) — 하네스를 "어떻게 구성하는가" 전수 설계 (운영 중인 하네스 전수조사에서 일반화)
+- [ARCHITECTURE.md](ARCHITECTURE.md) — 하네스를 "어떻게 구성하는가" 전수 설계 (단일 SSOT · 루트, 운영 하네스 전수조사에서 일반화)
 - [docs/install.md](docs/install.md) — repo 통합 상세 (submodule / vendor / 멀티 repo)
 - [docs/extending.md](docs/extending.md) — 규칙 추가, 도메인 모듈 확장 패턴
 

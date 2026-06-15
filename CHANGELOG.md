@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## feat(lockdown): L0 is opt-in — none until designated + `harness lockdown` 관리 명령
+
+- **DEFAULT 변경**: `lib/config.ts` DEFAULTS 에서 `lockdown.fromMarkdown: "CLAUDE.md"` 제거 → config 없는 repo 는 **L0 0개**(별도 지정 전엔 없음). 기존엔 CLAUDE.md 의 🔴 L0 블록을 자동 스캔해 L0 가 암묵적으로 생겼음(CLAUDE.md 자체 포함 가능) — 이제 OFF. markdown 스캔은 `lockdown.fromMarkdown` 을 명시한 repo 만 opt-in.
+- **`harness lockdown` 신규 명령** (`modules/lockdown-cmd.ts`): `status`/`list` 조회 · `add <path...>` 지정 · `rm <path...>` 해제 · `check <path>` 판정. add/rm 은 `harness.config.json` 의 `lockdown.files` 를 다른 키 보존하며 갱신.
+- 검증: 임시 repo 에서 🔴 CLAUDE.md 블록이 있어도 기본 NONE · add→config 기록→check L0→rm→NONE 라운드트립 PASS. harness-build 자체(명시 5파일)는 그대로 유지, CLAUDE.md 는 `not L0` 확인.
+
 ## docs(commons): c12 — prefer global `harness`, avoid stale `.harness-engine`
 
 - 버그: repo `.harness-engine`(서브모듈) 핀이 stale 하면 global recommend default(완성도)를 못 읽어 `resolve-mode auto` 가 4축 balanced 로 떨어짐(글로벌 harness 는 정상). mini hexa-lang `.harness-engine` 49866ad → 최신 bump 으로 즉시 해소.

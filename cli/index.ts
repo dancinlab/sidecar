@@ -39,6 +39,7 @@ import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
 import { runFanout } from "../modules/fanout.ts";
 import { runDocs } from "../modules/docs.ts";
+import { runLockdown } from "../modules/lockdown-cmd.ts";
 import { runCommons } from "../modules/commons.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
@@ -101,6 +102,8 @@ reports:
   gc [scan|drift]              broken markdown links in guides
   docs [status|check|scratch [name]]   single-doc discipline (architecture SSOT + log + scratch + quickref)
                                write-time enforced in \`pre write\` (docs.enforce: warn[default]|block|off)
+  lockdown {status|add <path...>|rm <path...>|check <path>}   manage L0 set (opt-in · none until designated)
+                               add/rm mutate harness.config.json lockdown.files
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
   handoff {add <text> [--to <repo>]|ls|done <id>|inject|snapshot}   repo-root handoff.jsonl open-work queue
                                (committed · done=scrub · SessionStart inject · anti-scatter guard) + snapshot dossier
@@ -202,6 +205,8 @@ async function main(): Promise<number> {
       return runFolders(rest);
     case "docs":
       return runDocs(rest);
+    case "lockdown":
+      return runLockdown(rest);
     case "commons":
       return runCommons(rest);
     case "handoff":

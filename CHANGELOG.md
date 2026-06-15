@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## docs(commons): add c11 (ING in-progress tracking) + c12 (use the harness CLI)
+
+- commons.md 에 c11 추가 — 다단계/장기 작업은 `ING.jsonl`(`harness ing add/next/pod`, done=scrub)에 추적, SessionStart 표면화.
+- c12 추가 — 같은 일은 harness 명령으로(imagine·research·watch·pool·lsp·secret·sbs·micro-exp·verdict), raw/우회·폐기된 sidecar/hexa-cloud 습관 대신 harness 우선. (에이전트가 harness 기능을 안 쓰고 우회하던 문제 대응.)
+
 ## feat: Claude Code plugin package (marketplace) — reload via /plugin
 
 - harness 를 **Claude Code 플러그인**으로 패키징: `.claude-plugin/marketplace.json`(마켓 "harness") + `plugin/.claude-plugin/plugin.json` + `plugin/hooks/hooks.json`(전역 `harness` CLI 를 guard 와 함께 호출). sidecar 처럼 `/plugin` 으로 reload·enable/disable 관리 가능.

@@ -36,12 +36,14 @@ function hookSnippet(engineRel: string): string {
         PreToolUse: [
           { matcher: "Bash", hooks: [{ type: "command", command: g(`CLAUDE_TOOL_INPUT="$CLAUDE_TOOL_INPUT" bash ${bin} pre bash`) }] },
           { matcher: "Write|Edit", hooks: [{ type: "command", command: g(`CLAUDE_TOOL_INPUT="$CLAUDE_TOOL_INPUT" bash ${bin} pre write`) }] },
+          { matcher: "AskUserQuestion", hooks: [{ type: "command", command: g(`bash ${bin} pre askq`) }] },
         ],
         PostToolUse: [
           { matcher: "Write|Edit", hooks: [{ type: "command", command: g(`bash ${bin} post edit "$CLAUDE_FILE_PATH"`) }] },
         ],
         UserPromptSubmit: [
           { hooks: [{ type: "command", command: g(`bash ${bin} prompt "$CLAUDE_USER_PROMPT"`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} commons inject`) }] },
           { hooks: [{ type: "command", command: g(`bash ${bin} prefs inject`) }] },
           { hooks: [{ type: "command", command: g(`bash ${bin} easy inject`) }] },
           { hooks: [{ type: "command", command: g(`bash ${bin} recommend inject`) }] },
@@ -50,6 +52,8 @@ function hookSnippet(engineRel: string): string {
           { hooks: [{ type: "command", command: g(`bash ${bin} easy inject`) }] },
           { hooks: [{ type: "command", command: g(`bash ${bin} recommend inject`) }] },
           { hooks: [{ type: "command", command: g(`bash ${bin} worktree gc`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} handoff inject`) }] },
+          { hooks: [{ type: "command", command: g(`bash ${bin} ing inject`) }] },
         ],
       },
     },

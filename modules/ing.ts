@@ -1,113 +1,126 @@
-// harness ing [show|add <text>|done <match>|next <text>|pod ...]
-// Single-file in-progress tracker at repo-root ING.md — the "now" board:
-//   ## 작업 (in-progress) · ## POD (running) · ## 다음 (next)
-// Completed work graduates to CHANGELOG.md; final design to ARCHITECTURE.md.
-//   ing                    show ING.md
-//   ing add <text>         add an in-progress item
-//   ing done <match>       flip a matching item to [x]
-//   ing next <text>        add a next-up item
-//   ing pod add <id> <provider> <gpu> <purpose> [cost]   track a running pod
-//   ing pod rm <id>        drop a pod row
-//   ing pod list           print the POD table
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+// harness ing {show|add <text>|done <id|match>|next <text>|pod ...|inject}
+// In-progress board at repo-root ING.jsonl (was ING.md) — the "now" board, one
+// JSON line per item so it's machine-readable and append/scrub-friendly. Kinds:
+//   work  — in-progress task   · next — queued task   · pod — running GPU pod
+// `done` SCRUBS the item (completed work graduates to CHANGELOG; ING holds only
+// what's ACTIVE). SessionStart `inject` surfaces open work + running pods so the
+// board is actually seen each session (it went unused as a passive .md file).
+import { existsSync, writeFileSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
-import { info, ok } from "../lib/log.ts";
+import { appendJsonl, info, ok, nowIso } from "../lib/log.ts";
+import { readStdin } from "../lib/exec.ts";
+import { readJsonl } from "../lib/json.ts";
+
+interface Item {
+  kind: "work" | "next" | "pod";
+  id: string;
+  ts: string;
+  text?: string;
+  provider?: string;
+  gpu?: string;
+  purpose?: string;
+  cost?: string;
+}
 
 function ingPath(): string {
-  return resolve(REPO_ROOT, "ING.md");
+  return resolve(REPO_ROOT, "ING.jsonl");
+}
+function items(): Item[] {
+  return readJsonl<Item>(ingPath()).filter((x) => x && x.kind && x.id);
+}
+function writeAll(rows: Item[]): void {
+  const p = ingPath();
+  if (!rows.length) {
+    if (existsSync(p)) rmSync(p);
+    return;
+  }
+  writeFileSync(p, rows.map((r) => JSON.stringify(r)).join("\n") + "\n", "utf8");
+}
+function nextId(rows: Item[]): string {
+  return String(rows.reduce((m, r) => Math.max(m, parseInt(r.id, 10) || 0), 0) + 1);
 }
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-const TEMPLATE = `# ING — 진행중 (in-progress)
-
-> 📍 SSOT: [ARCHITECTURE.md](ARCHITECTURE.md) · 이력 [CHANGELOG.md](CHANGELOG.md)
-> 이 repo 의 **현재 진행중** 작업·POD 단일 추적. 완료 → CHANGELOG, 최종 설계 → ARCHITECTURE.
-
-## 작업 (in-progress)
-
-## POD (running)
-
-| id | provider | gpu | purpose | cost/hr | status | since |
-|----|----------|-----|---------|---------|--------|-------|
-
-## 다음 (next)
-`;
-
-function read(): string {
-  const p = ingPath();
-  if (!existsSync(p)) {
-    writeFileSync(p, TEMPLATE, "utf8");
-    return TEMPLATE;
-  }
-  return readFileSync(p, "utf8");
-}
-function write(s: string): void {
-  writeFileSync(ingPath(), s, "utf8");
-}
-
-// insert a line right after the given "## <section>" header (after its blank line).
-function insertUnder(text: string, header: string, line: string): string {
-  const lines = text.split("\n");
-  const idx = lines.findIndex((l) => l.trim() === header);
-  if (idx < 0) return text + `\n${header}\n\n${line}\n`;
-  let at = idx + 1;
-  if (lines[at] !== undefined && lines[at].trim() === "") at++; // skip one blank
-  lines.splice(at, 0, line);
-  return lines.join("\n");
+  return nowIso().slice(0, 10);
 }
 
 export async function runIng(args: string[]): Promise<number> {
   const sub = args[0] ?? "show";
 
-  if (sub === "show") {
-    process.stdout.write(read());
+  if (sub === "add" || sub === "next") {
+    const text = args.slice(1).join(" ").trim();
+    if (!text) return usage();
+    const rows = items();
+    appendJsonl(ingPath(), { kind: sub === "add" ? "work" : "next", id: nextId(rows), ts: nowIso(), text });
+    ok(`ing: + ${sub === "add" ? "작업" : "다음"} — ${text} (commit ING.jsonl)`);
     return 0;
   }
-  if (sub === "add") {
-    const t = args.slice(1).join(" ");
-    if (!t) return usage();
-    write(insertUnder(read(), "## 작업 (in-progress)", `- [ ] ${t} · since ${today()}`));
-    ok(`ing: + 작업 — ${t}`);
-    return 0;
-  }
-  if (sub === "next") {
-    const t = args.slice(1).join(" ");
-    if (!t) return usage();
-    write(insertUnder(read(), "## 다음 (next)", `- ${t}`));
-    ok(`ing: + 다음 — ${t}`);
-    return 0;
-  }
+
   if (sub === "done") {
-    const m = args.slice(1).join(" ");
-    if (!m) return usage();
-    const lines = read().split("\n");
-    let hit = false;
-    for (let i = 0; i < lines.length; i++) {
-      if (!hit && /^- \[ \] /.test(lines[i]) && lines[i].includes(m)) {
-        lines[i] = lines[i].replace("- [ ]", "- [x]");
-        hit = true;
-      }
+    const m = args.slice(1).join(" ").trim();
+    const rows = items();
+    const kept = rows.filter((r) => !(r.kind !== "pod" && (r.id === m || (r.text ?? "").includes(m))));
+    if (!m || kept.length === rows.length) {
+      info(`ing: no work/next item matching "${m}". open ids: ${rows.filter((r) => r.kind !== "pod").map((r) => r.id).join(", ") || "none"}`);
+      return 1;
     }
-    write(lines.join("\n"));
-    info(hit ? `ing: ✓ done — ${m} (완료분은 CHANGELOG 로 옮기세요)` : `ing: no in-progress item matching "${m}"`);
+    writeAll(kept); // scrub — graduate completed work to CHANGELOG
+    ok(`ing: ✓ done "${m}" scrubbed — 완료분은 CHANGELOG 로 (commit ING.jsonl)`);
     return 0;
   }
+
   if (sub === "pod") return pod(args.slice(1));
 
-  return usage();
+  if (sub === "inject") {
+    try {
+      const j = JSON.parse(readStdin());
+      const ev = String(j.hook_event_name ?? j.hookEventName ?? "");
+      if (!ev) return 0;
+      const rows = items();
+      const work = rows.filter((r) => r.kind === "work");
+      const pods = rows.filter((r) => r.kind === "pod");
+      if (!work.length && !pods.length) return 0; // silent when nothing active
+      const parts: string[] = [];
+      if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id} ${r.text}`).join(" · "));
+      if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
+      const ctx = `🔵 ING (진행중) — ${parts.join("  |  ")}  · \`harness ing show\` / done <id>`;
+      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: ctx } }) + "\n");
+    } catch {
+      return 0;
+    }
+    return 0;
+  }
+
+  // show
+  const rows = items();
+  if (!rows.length) {
+    info("ing: empty (ING.jsonl). add: harness ing add <text> · next <text> · pod add ...");
+    return 0;
+  }
+  const work = rows.filter((r) => r.kind === "work");
+  const pods = rows.filter((r) => r.kind === "pod");
+  const next = rows.filter((r) => r.kind === "next");
+  info(`ING — 진행중 (repo-root ING.jsonl) · 완료→CHANGELOG · 최종설계→ARCHITECTURE`);
+  info(`작업 (in-progress): ${work.length || "—"}`);
+  for (const r of work) info(`  • #${r.id} ${r.text}   (since ${r.ts.slice(0, 10)})`);
+  if (pods.length) {
+    info(`POD (running): ${pods.length}`);
+    for (const r of pods) info(`  • ${r.id} | ${r.provider ?? "-"} | ${r.gpu ?? "-"} | ${r.purpose ?? "-"} | ${r.cost ?? "-"} | since ${r.ts.slice(0, 10)}`);
+  }
+  if (next.length) {
+    info(`다음 (next): ${next.length}`);
+    for (const r of next) info(`  • #${r.id} ${r.text}`);
+  }
+  return 0;
 }
 
 function pod(args: string[]): number {
   const verb = args[0] ?? "list";
-  const text = read();
-  const rows = text.split("\n").filter((l) => /^\| /.test(l) && !/^\| id |^\|----/.test(l) && !l.includes("---"));
-
+  const rows = items();
   if (verb === "list") {
-    if (!rows.length) info("ing pod: no running pods.");
-    else for (const r of rows) info(`  ${r}`);
+    const pods = rows.filter((r) => r.kind === "pod");
+    if (!pods.length) info("ing pod: no running pods.");
+    else for (const r of pods) info(`  ${r.id} | ${r.provider ?? "-"} | ${r.gpu ?? "-"} | ${r.purpose ?? "-"} | ${r.cost ?? "-"}`);
     return 0;
   }
   if (verb === "add") {
@@ -118,13 +131,9 @@ function pod(args: string[]): number {
     }
     const cost = rest.length && /^[\d.$]/.test(rest[rest.length - 1]) ? rest.pop()! : "-";
     const purpose = rest.join(" ") || "-";
-    const row = `| ${id} | ${provider ?? "-"} | ${gpu ?? "-"} | ${purpose} | ${cost} | running | ${today()} |`;
-    // drop any existing row for this id, then insert right after the table separator
-    const lines = text.split("\n").filter((l) => !new RegExp(`^\\|\\s*${id}\\s*\\|`).test(l));
-    const sep = lines.findIndex((l) => /^\|-+\|/.test(l.replace(/\s/g, "")) || /^\|----\|/.test(l));
-    if (sep >= 0) lines.splice(sep + 1, 0, row);
-    else lines.push(row);
-    write(lines.join("\n"));
+    const kept = rows.filter((r) => !(r.kind === "pod" && r.id === id));
+    kept.push({ kind: "pod", id, ts: nowIso(), provider: provider ?? "-", gpu: gpu ?? "-", purpose, cost });
+    writeAll(kept);
     ok(`ing pod: + ${id} (${gpu ?? "-"} · ${purpose})`);
     return 0;
   }
@@ -134,8 +143,7 @@ function pod(args: string[]): number {
       info("usage: harness ing pod rm <id>");
       return 1;
     }
-    const out = text.split("\n").filter((l) => !new RegExp(`^\\|\\s*${id}\\s*\\|`).test(l)).join("\n");
-    write(out);
+    writeAll(rows.filter((r) => !(r.kind === "pod" && r.id === id)));
     info(`ing pod: removed ${id}`);
     return 0;
   }
@@ -144,6 +152,6 @@ function pod(args: string[]): number {
 }
 
 function usage(): number {
-  info("usage: harness ing {show|add <text>|done <match>|next <text>|pod {add|rm|list}}");
+  info("usage: harness ing {show|add <text>|done <id|match>|next <text>|pod {add|rm|list}|inject}");
   return 1;
 }

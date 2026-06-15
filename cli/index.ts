@@ -38,6 +38,7 @@ import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
 import { runFanout } from "../modules/fanout.ts";
 import { runDocs } from "../modules/docs.ts";
+import { runCommons } from "../modules/commons.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -52,9 +53,11 @@ setup:
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
   pre write                PreToolUse(Write/Edit) — path/content rules
+  pre askq                 PreToolUse(AskUserQuestion) — deny option-box → ask in plain chat (config.askqText)
   post bash <exit> [cmd]   PostToolUse(Bash) — record + route non-zero exits
   post edit <file>         PostToolUse(Write/Edit) — flag L0 edits
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
+  commons {inject|show}    always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
@@ -96,11 +99,12 @@ reports:
   docs [status|check|scratch [name]]   single-doc discipline (architecture SSOT + log + scratch + quickref)
                                write-time enforced in \`pre write\` (docs.enforce: warn[default]|block|off)
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
-  handoff [reason]             session snapshot → .harness/handoff/
+  handoff {add <text> [--to <repo>]|ls|done <id>|inject|snapshot}   repo-root handoff.jsonl open-work queue
+                               (committed · done=scrub · SessionStart inject · anti-scatter guard) + snapshot dossier
   end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)
   worktree {scan|gc|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged
                            (SessionStart-wire \`worktree gc\`; \`scan\` exit 1 gates new work on abandoned worktrees)
-  ing [show|add|done|next|pod ...]   in-progress board → ING.md (작업 · POD running · next)
+  ing [show|add|done|next|pod ...|inject]   in-progress board → ING.jsonl (작업·POD·next · done=scrub · SessionStart inject)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
   upstream {list|fix <name|repo>}   in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)
@@ -191,6 +195,8 @@ async function main(): Promise<number> {
       return runFolders(rest);
     case "docs":
       return runDocs(rest);
+    case "commons":
+      return runCommons(rest);
     case "handoff":
       return runHandoff(rest);
     case "end":

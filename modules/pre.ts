@@ -16,6 +16,7 @@ import { detectForcePush } from "./git-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
+import { detectHandoffScatter } from "./handoff-guard.ts";
 
 interface BashRule {
   id: string;
@@ -144,6 +145,12 @@ export async function preWrite(_args: string[]): Promise<number> {
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
 
+  // handoff-guard — block scattered HANDOFF.md / INBOX.md / inbox/*.md; route to handoff.jsonl.
+  if (config().handoffGuard) {
+    const hs = detectHandoffScatter(filePath);
+    if (hs) return emitBlock("HANDOFF-SCATTER", hs);
+  }
+
   // tmp-guard — writing a file into a volatile tmp dir loses it; steer to scratch.
   if (config().tmpGuard && isTmpPath(filePath)) {
     emitWarn("TMP-VOLATILE", `${filePath} is in a volatile tmp dir (lost on reboot/reaper). Write progress/working data to ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
@@ -206,10 +213,20 @@ export function matchPromptHints(text: string): PromptHintRule[] {
   return out;
 }
 
+// PreToolUse(AskUserQuestion) — deny the arrow-key option box; ask in plain chat.
+export async function preAskq(_args: string[]): Promise<number> {
+  if (!config().askqText) return 0;
+  return emitBlock(
+    "ASKQ-TEXT",
+    "this session asks questions in plain CHAT, not the arrow-key option box. Re-ask conversationally as plain text in your reply — do NOT call AskUserQuestion: state the question in prose; if you had options, list them inline (short bullets) and mark the one you'd recommend; accept a free-form answer. (ExitPlanMode for plan approval is unaffected.)"
+  );
+}
+
 export async function runPre(args: string[]): Promise<number> {
   const sub = args[0];
   if (sub === "bash") return preBash(args.slice(1));
   if (sub === "write") return preWrite(args.slice(1));
-  process.stderr.write("usage: harness pre {bash|write}\n");
+  if (sub === "askq") return preAskq(args.slice(1));
+  process.stderr.write("usage: harness pre {bash|write|askq}\n");
   return 1;
 }

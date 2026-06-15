@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { homedir } from "node:os";
-import { execShell, pmap } from "../lib/exec.ts";
+import { execArgs, pmap } from "../lib/exec.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
 
 interface Host {
@@ -73,7 +73,9 @@ function save(r: Roster): void {
   writeFileSync(rosterPath(), JSON.stringify(r, null, 2) + "\n", "utf8");
 }
 
-const SSH = `ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o BatchMode=yes`;
+// ssh options as an argv array (NOT a shell string). We spawn ssh directly via
+// execArgs so the local shell never gets a chance to parse the remote command.
+const SSH_ARGS = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes"];
 
 export async function runPool(args: string[]): Promise<number> {
   const sub = args[0] ?? "list";
@@ -137,7 +139,11 @@ export async function runPool(args: string[]): Promise<number> {
       );
       return 1;
     }
-    const res = await execShell(`${SSH} ${JSON.stringify(h.target)} ${JSON.stringify(cmd)}`, { timeoutMs: 120_000 });
+    // Pass `cmd` as a SINGLE argv element to ssh via execArgs (direct spawn, no
+    // local shell). This prevents the LOCAL mac shell from expanding $VAR/$(...)/
+    // backticks inside the remote command — ssh forwards `cmd` verbatim to the
+    // REMOTE login shell, which expands it (and pipes/redirects) correctly there.
+    const res = await execArgs("ssh", [...SSH_ARGS, h.target, cmd], { timeoutMs: 120_000 });
     process.stdout.write(res.stdout);
     if (res.stderr) process.stderr.write(res.stderr);
     if (res.code !== 0) loudFail(`pool on ${name}: exit ${res.code}`);
@@ -152,7 +158,7 @@ export async function runPool(args: string[]): Promise<number> {
       // Restricted + blocked hosts are not pinged — they are not shared compute,
       // so we don't reach out to them outside their allowed project context.
       if (!guard(h).ok) return { h, blocked: true, up: false };
-      const res = await execShell(`${SSH} ${JSON.stringify(h.target)} 'echo ok'`, { timeoutMs: 15_000 });
+      const res = await execArgs("ssh", [...SSH_ARGS, h.target, "echo ok"], { timeoutMs: 15_000 });
       return { h, blocked: false, up: res.code === 0 && res.stdout.includes("ok") };
     });
     for (const { h, blocked, up } of out) {

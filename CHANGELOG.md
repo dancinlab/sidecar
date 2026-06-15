@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## feat(enforce): pod/demi/dojo to sidecar level (keyword triggers + c12)
+
+- GPU 클라우드(`harness pod`)·설계(`harness demi`)·학습잡(`harness dojo`) 사용을 hint 가 아닌 **keywords 트리거**로 강제 — sidecar 수준. `config/keywords.json` 에 gpu-cloud-pod(gpu/runpod/vast/파인튜닝/hexa cloud…→pod), design-architecture(아키텍처 설계…→demi), training-job(학습잡/dojo…→dojo) 3룰 추가. UserPromptSubmit hook 매칭 시 자동 발화.
+- commons c12 목록에 pod/demi/dojo 추가 + "수동 runpod·vast·train 스크립트" 안티패턴 명시. 검증: 세 트리거 모두 `harness prompt` 에서 발화 확인.
+
 ## fix(pr-cycle): strip own flags before `gh pr create`
 
 - `pr-cycle --no-doc` 가 `--no-doc` 를 `gh pr create` passthrough 에 그대로 넘겨 `unknown flag` 로 실패하던 버그. pr-cycle 자기 플래그(OWN_FLAGS)는 passthrough 에서 제외. push 단계는 영향 없었음.

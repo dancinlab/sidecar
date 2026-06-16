@@ -19,6 +19,7 @@
     "SessionStart": [
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness commons inject || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness recommend inject || true" }] },
+      { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness architecture inject || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness worktree gc || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness handoff inject || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness ing inject || true" }] }

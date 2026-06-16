@@ -35,6 +35,7 @@ function hookSpec(): Record<string, unknown[]> {
     SessionStart: [
       entry("harness commons inject"),
       entry("harness recommend inject"),
+      entry("harness architecture inject"),
       entry("harness worktree gc"),
       entry("harness handoff inject"),
       entry("harness ing inject"),

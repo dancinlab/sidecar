@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## docs(commons): c16 도입부 정정 — "한 번 시도"가 아니라 MULTI-LENS(≥2–3 렌즈) 이상
+
+- c16 도입부가 "다른 렌즈로 돌파를 **한 번은** 시도하고서야 terminal" 로 약하게 쓰여 있던 것을 정정: terminal 로 받으려면 **MULTI-LENS(≥2–3 원리적 렌즈) 이상** 돌파를 시도하고 각각 통제(shuffle/ablation/negative-control)로 기각된 뒤에야 받아들인다 — **한 번 시도로 끝내지 않는다** (단일 렌즈 한 번 막힘은 미완). (d)천장 항목과 도입부의 강도를 일치시킴.
+
 ## docs(commons): c16 — 벽 분류(taxonomy) 5종 + MULTI-LENS·ablation 천장확정 + 법칙도 벽
 
 - anima `a_break_the_wall` 거버넌스를 project-agnostic 으로 일반화해 commons c16 을 강화. 기존 "다른 렌즈로 한 번은 돌파 시도" 골격 위에 벽 **분류 우선** 체계를 추가:

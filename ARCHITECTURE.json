@@ -4,6 +4,7 @@
   "title": "harness — 아키텍처 SSOT",
   "summary": "AI 코딩 하네스 엔진. 핵심: 규칙은 코드가 아니라 데이터 — 엔진(언제·어떻게 검사)은 공유, 규칙(무엇을 검사)만 per-repo 주입.",
   "viewer": "ARCHITECTURE.html",
+  "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
   "columns": [
     { "key": "이름", "label": "이름", "tree": true },
     { "key": "역할", "label": "역할" },
@@ -136,6 +137,16 @@
           { "이름": "4. hook 배선", "역할": ".claude/settings.json에 pre/post/prompt delegate", "구분": "step", "상세": "" },
           { "이름": "5. 검증", "역할": "harness audit / harness ci list", "구분": "step", "상세": "" },
           { "이름": "6. 운영", "역할": "commit 전 verify, 세션 끝 handoff, 규칙 추가 전 bitter-gate", "구분": "step", "상세": "" }
+        ]
+      },
+      {
+        "이름": "viewer — 아키텍처 뷰어",
+        "역할": "이 트리(ARCHITECTURE.json)를 사람이 보는 도구",
+        "구분": "group",
+        "상세": "JSON이 SSOT, HTML/서버는 표시 수단",
+        "children": [
+          { "이름": "ARCHITECTURE.html", "역할": "의존성 0 자립형 뷰어", "구분": "viewer", "상세": "json fetch→컬럼 그리드 트리(접기·검색·다크모드·드롭 fallback)" },
+          { "이름": "serve.py", "역할": "python3 serve.py [port] [--no-open]", "구분": "viewer", "상세": "로컬 정적 서버 + 브라우저 자동 오픈 — file:// fetch 차단 우회" }
         ]
       }
     ]

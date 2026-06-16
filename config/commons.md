@@ -21,6 +21,8 @@ local + reversible + 비파괴 + 유저-전용-입력 아님 → **그냥 실행
 AI 산출물은 두 문서로 통합: **ARCHITECTURE**(갱신형 SSOT — `.md` 산문 또는 `.json` 트리[+`.html`
 뷰어] 중 택1) + **CHANGELOG.md**(append). 흩어진 `*-report/summary/notes` 금지. 부득이 분리 시 상단에
 SSOT quickref 1줄. 메인 CLAUDE.md = 프로젝트 설명 + 트리구조(노드별 한 줄).
+`.json` 트리 채택 시: JSON 이 SSOT(AI·툴 파싱), 사람은 `.html` 뷰어로 본다 — 로컬은 `python3 serve.py`
+(정적 서버 + 브라우저 자동 오픈, `file://` fetch 차단 우회), 원격은 raw.githack.com / GitHub Pages.
 
 ## c5 — preserve, don't discard
 진행/작업 데이터는 휘발 `/tmp` 가 아니라 git-tracked 경로(`scripts/scratch/`)에 쓰고 커밋한다

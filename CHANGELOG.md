@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(architecture): serve.py — 로컬/LAN 뷰어 서버 (ghost 등 다른 기계에서도 접속)
+
+- **신규 `serve.py`** — `python3 serve.py [port] [--no-open]`. `ARCHITECTURE.html`이 있는 디렉토리에서 정적 서버를 띄우고(`file://` fetch 차단 우회) 브라우저를 자동으로 연다. 포트 기본 8000, 사용 중이면 다음 포트 안내.
+- **LAN 노출**: `0.0.0.0` 바인딩이라 같은 네트워크의 다른 기계(예: ghost `192.168.50.150`)도 접속 가능. 시작 시 이 기계의 LAN IP를 자동 탐지해 `http://<IP>:<port>/ARCHITECTURE.html` 안내를 출력(`--no-open`은 헤드리스용).
+- `ARCHITECTURE.json`에 `viewer` 그룹(ARCHITECTURE.html · serve.py) + `serve` 메타 추가. README·commons c4에 로컬 보기(`python3 serve.py`) / 원격 보기(raw.githack.com · GitHub Pages) 명시.
+- 검증: 헤드리스 기동 후 `localhost`·실제 LAN IP(192.168.50.39) 양쪽에서 `ARCHITECTURE.html`(text/html)·`ARCHITECTURE.json`(application/json) 200 + IP 안내 출력 PASS.
+
 ## docs(architecture): ARCHITECTURE.md → ARCHITECTURE.json (tree SSOT) + ARCHITECTURE.html (viewer)
 
 - **신규 SSOT `ARCHITECTURE.json`** — 아키텍처를 산문(.md) 대신 **컬럼형 재귀 트리**로 표현. 노드마다 명시적 컬럼 키(`이름`·`역할`·`구분`·`상세`) + `children`. 상단 `columns[]`가 표시 열 순서를 정의(`tree:true` 컬럼이 가지 렌더). JSON이 단일 진실원 — AI/툴은 파싱, 사람은 뷰어로 본다.

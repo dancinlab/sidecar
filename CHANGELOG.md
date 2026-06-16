@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## docs(commons): c16 — 벽 분류(taxonomy) 5종 + MULTI-LENS·ablation 천장확정 + 법칙도 벽
+
+- anima `a_break_the_wall` 거버넌스를 project-agnostic 으로 일반화해 commons c16 을 강화. 기존 "다른 렌즈로 한 번은 돌파 시도" 골격 위에 벽 **분류 우선** 체계를 추가:
+  - (a) 틀린 측정/metric-artifact · (b) 틀린 방향/변수 혼재 · (c) substrate/인프라 벽 · (d) 진짜 천장/중복 · (e) 투자 부족 — 종류마다 돌파법·난이도가 다름.
+  - (c) **인프라/측정 벽을 과학·성능 천장으로 박제 금지** — 근본수정(c1) 대상, substrate 가 돈 뒤에야 verdict.
+  - (d) **CONFIDENT-terminal 은 MULTI-LENS** — 다른 원리적 렌즈 ≥2–3개를 각각 통제(shuffle/ablation/negative-control)로 기각한 뒤에야 천장 확정. ablation 동일 → 메커니즘 INERT.
+  - (e) 투자 부족 → c17 대로 pool/`hexa cloud` 분산.
+  - **LAW(법칙)도 벽** — 사후맞춤 descriptive 법칙은 새 케이스 frozen 예측 + 실측 falsify 후에만 확정.
+- tune-to-green 금지(c9·p7) · frozen-first + 대조 원칙은 유지.
+
 ## feat(pool): `specs` — 호스트별 코어·메모리·GPU 프로브 + 인라인 표기
 
 - 신규 `harness pool specs [name]` — 각 공용 호스트를 ssh 로 프로브해 **코어 수·총 메모리(GiB)·GPU 모델**을 수집하고 로스터(`~/.harness/pool.json`)의 `Host.specs` 에 캐시. 한 호스트만 지정(`specs <name>`)도 지원.

@@ -96,3 +96,10 @@ ARCHITECTURE·README·ING 미갱신이면 **거부**한다(`--no-doc` 는 진짜
 다른 substrate/도메인 렌즈에선 어떻게 푸나"를 먼저 묻는다. **단, tune-to-green 금지 (c9·p7)**:
 돌파는 사전등록(frozen-first) + 대조(shuffle/dissociation/negative-control)로 검증된 진짜 새 각도라야
 하며, 그런 진짜 시도 뒤의 정직한 🧱(terminal)도 유효한 결과다. 한 번 막혔다고 포기·우회·축소하지 말 것.
+
+## c17 — 무거운 작업은 pool(공유자원)에서
+빌드·테스트·대규모 스윕·장시간 연산 등 **무거운 작업**은 로컬 단일 머신에서 묶어 돌리지 말고
+`harness pool` 로 등록된 **공유 컴퓨트 호스트**에서 돌린다 (`harness pool on <host> <cmd…>` ·
+백그라운드는 `pool bg` · 최적 호스트 선택은 `pool route` · 가용성은 `pool status`/`health`). 한 호스트에
+부하를 몰지 말고 pool 에 분산해 공유자원을 활용한다. `shared:false` 로 표시된 제한 호스트는 공유 풀
+컴퓨트로 쓰지 않는다(가드가 차단). GPU·학습은 c12 대로 `hexa cloud`/`hexa dojo` 우선.

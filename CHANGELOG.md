@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## docs(commons): c17 — 무거운 작업은 pool(공유 컴퓨트)에서 분산 실행
+
+- 신규 always-on 규칙 **c17** 추가: 빌드·테스트·대규모 스윕·장시간 연산 등 무거운 작업은 로컬 단일 머신에 몰지 말고 `harness pool` 로 등록된 공유 컴퓨트 호스트에서 돌린다(`pool on`/`bg`/`route`/`status`). `shared:false` 제한 호스트는 공유 풀로 쓰지 않음(가드 차단). GPU·학습은 c12 대로 `hexa cloud`/`hexa dojo` 우선.
+- CLAUDE.md SSOT 참조 `c1–c16` → `c1–c17` 갱신.
+
 ## chore(governance): GPU/학습/deck 강제를 hexa 빌트인으로 전환 · demi 폐기
 
 - **cloud**: GPU 클라우드 권장 도구를 `harness pod` → **`hexa cloud`** 로 전환. keywords `gpu-cloud-pod`→`gpu-cloud-hexa` (tool=`hexa cloud`, hint 갱신), enforcement `G-RAW-GPU-CLOUD` reason/exception(`# pod-ok`→`# cloud-ok`)도 hexa cloud 로. runpod/vast raw 차단 룰 자체는 유지.

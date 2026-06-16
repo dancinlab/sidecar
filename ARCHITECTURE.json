@@ -61,7 +61,7 @@
               { "이름": "pre", "역할": "정규식 규칙 엔진", "구분": "module", "상세": "규칙은 전부 외부 JSON" },
               { "이름": "post", "역할": "exit/파일경로만 봄", "구분": "module", "상세": "도메인 지식 0" },
               { "이름": "prompt", "역할": "키워드→힌트 매핑", "구분": "module", "상세": "키워드는 외부 JSON" },
-              { "이름": "lint", "역할": "staged-L0·신선도·수렴 + doc-gate", "구분": "module", "상세": "CHANGELOG·ARCHITECTURE·README 미동반=block" },
+              { "이름": "lint", "역할": "staged-L0·신선도·수렴 + doc-gate", "구분": "module", "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ING.jsonl 현행화도 gate)" },
               { "이름": "verify", "역할": "검증 명령 병렬 실행", "구분": "module", "상세": "명령은 config 선언" },
               { "이름": "errors", "역할": "(kind,code)→severity 분류", "구분": "module", "상세": "맵은 외부 JSON" },
               { "이름": "ledger", "역할": "에이전트 작업 등록 (중복 방지)", "구분": "module", "상세": "도메인 무관" },

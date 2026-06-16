@@ -69,15 +69,24 @@ export async function runPrCycle(args: string[]): Promise<number> {
     const changed = (await git(`git diff --name-only origin/${baseGuess}...HEAD`)).out.split("\n").filter(Boolean);
     const ignore = /(^|\/)(tests?|__tests__|spec)\/|\.(test|spec)\.[a-z]+$|(^|\/)\.harness(-engine)?\//i;
     const meaningful = changed.filter((f) => !ignore.test(f));
+    const tracked = async (f: string) => (await git(`git ls-files ${f}`)).out.length > 0;
     const hasChangelog = changed.some((f) => /(^|\/)CHANGELOG\.md$/.test(f));
-    const archExists = (await git("git ls-files ARCHITECTURE.md")).out.length > 0;
-    const hasArch = changed.some((f) => /(^|\/)ARCHITECTURE\.md$/.test(f));
-    const readmeExists = (await git("git ls-files README.md")).out.length > 0;
+    // ARCHITECTURE SSOT may be .json (tree) or .md (prose) — gate whichever is tracked.
+    const archDoc = (await tracked("ARCHITECTURE.json"))
+      ? "ARCHITECTURE.json"
+      : (await tracked("ARCHITECTURE.md"))
+        ? "ARCHITECTURE.md"
+        : null;
+    const hasArch = archDoc !== null && changed.some((f) => f === archDoc || f.endsWith("/" + archDoc));
+    const readmeExists = await tracked("README.md");
     const hasReadme = changed.some((f) => /(^|\/)README\.md$/.test(f));
+    const ingExists = await tracked("ING.jsonl");
+    const hasIng = changed.some((f) => /(^|\/)ING\.jsonl$/.test(f));
     const missing: string[] = [];
     if (meaningful.length && !hasChangelog) missing.push("CHANGELOG.md (append)");
-    if (meaningful.length && archExists && !hasArch) missing.push("ARCHITECTURE.md (갱신형 SSOT 현행화)");
+    if (meaningful.length && archDoc && !hasArch) missing.push(`${archDoc} (갱신형 SSOT 현행화)`);
     if (meaningful.length && readmeExists && !hasReadme) missing.push("README.md (최신 정보 유지)");
+    if (meaningful.length && ingExists && !hasIng) missing.push("ING.jsonl (진행상황 현행화 · 완료분 harness ing done)");
     if (missing.length) {
       loudFail(`pr-cycle: 문서 업데이트 필수 — 이 사이클 변경(${meaningful.length}개)에 누락: ${missing.join(" · ")}`);
       info("   해당 문서를 갱신한 뒤 다시 실행하세요 (정말 문서 불필요하면 --no-doc).");

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## fix(doc-gate): pr-cycle gates ARCHITECTURE.json (not just .md) + adds ING.jsonl 현행화
+
+- `modules/pr-cycle.ts` doc-gate 가 `ARCHITECTURE.md` 만 하드코딩하던 걸 **`ARCHITECTURE.json` 우선**(없으면 `.md`)으로 일반화 — lint.ts 와 동일 패턴. 의미있는 변경에 ARCHITECTURE(존재 형식) 미동반이면 거부.
+- **신규 ING gate**: `ING.jsonl` 이 tracked 인 repo 는 사이클 변경 시 `ING.jsonl` 현행화(완료분 `harness ing done` / 다음 단계)도 함께 staged 안 됐으면 pr-cycle 거부. 진행상황이 매 사이클 따라오게 강제.
+- commons c14: 사이클 문서 목록에 `ING.jsonl` 추가, doc-gate 거부 조건에 ING 포함. ARCHITECTURE.json `lint` 노드 상세도 현행화.
+- 검증: `python3 json.load` PASS · `harness lint fast` = ok (pr-cycle.ts 컴파일 PASS).
+
 ## feat(architecture): serve.py — 로컬/LAN 뷰어 서버 (ghost 등 다른 기계에서도 접속)
 
 - **신규 `serve.py`** — `python3 serve.py [port] [--no-open]`. `ARCHITECTURE.html`이 있는 디렉토리에서 정적 서버를 띄우고(`file://` fetch 차단 우회) 브라우저를 자동으로 연다. 포트 기본 8000, 사용 중이면 다음 포트 안내.

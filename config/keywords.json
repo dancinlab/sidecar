@@ -31,22 +31,22 @@
       "hint": "각 소스 서브폴더에 CLAUDE.md(로컬 가이드)를 두면 AI 가 그 폴더만 읽어도 맥락을 잡는다. 누락 폴더 확인: `harness folders scan`, 템플릿 생성: `harness folders scaffold <dir>`."
     },
     {
-      "id": "gpu-cloud-pod",
+      "id": "gpu-cloud-hexa",
       "patterns": ["gpu", "GPU", "hexa cloud", "클라우드 실행", "클라우드에서 돌", "runpod", "vast", "vast.ai", "파인튜닝", "fine-tune", "fine tune", "finetune", "학습 돌려", "학습 돌리", "pod 띄", "pod 올려", "클라우드 학습", "cloud run", "원격 gpu"],
-      "tool": "harness pod",
-      "hint": "GPU 클라우드 작업은 raw runpod/vast/`hexa cloud` 우회 대신 `harness pod` 런북으로: preflight→fire→poll→harvest→down (cost-gated). 실행중 pod 는 `harness ing pod add` 로 보드에 등록. (sidecar parity — c12)"
-    },
-    {
-      "id": "design-architecture",
-      "patterns": ["아키텍처 설계", "설계 프로그램", "구조 설계", "설계 착수", "design architecture", "architecture program", "시스템 설계", "재설계"],
-      "tool": "harness demi",
-      "hint": "설계-아키텍처 작업은 `harness demi` 7-verb 스파인 런북으로 진행 (즉흥 설계 대신). 최종 산출은 ARCHITECTURE.md(c4 단일 SSOT). (sidecar parity — c12)"
+      "tool": "hexa cloud",
+      "hint": "GPU 클라우드 작업은 raw runpod/vast 우회 대신 `hexa cloud` 로: `hexa cloud run <host> -- <argv...>` (run|nohup|poll|copy-to|copy-from, 31 sub-verbs · structured-argv remote dispatch). 실행중 작업은 `harness ing pod add` 로 보드에 등록. (c12)"
     },
     {
       "id": "training-job",
       "patterns": ["학습 잡", "학습잡", "training job", "트레이닝 잡", "train job", "학습 스캐폴", "training run", "학습 스크립트", "dojo"],
-      "tool": "harness dojo",
-      "hint": "클라우드 학습잡은 수동 train 스크립트 대신 `harness dojo <slug>` 스캐폴더로: 런북 + exports/dojo/<slug>/{job,train,run.sh} 생성. GPU 실행은 `harness pod`. (sidecar parity — c12)"
+      "tool": "hexa dojo",
+      "hint": "클라우드 학습잡은 수동 train 스크립트 대신 `hexa dojo <domain> <slug> '<spec>'` 빵틀로: exports/<domain>/dojo/<slug>/{.hexa,.py,run.sh} 생성 (--lang=hexa|py|both). GPU 실행은 `hexa cloud`. (c12)"
+    },
+    {
+      "id": "input-deck",
+      "patterns": ["deck", "빵틀", "input deck", "deck 생성", "deck 만들", "bake deck", "빵 굽"],
+      "tool": "hexa deck",
+      "hint": "도메인 input deck 은 `hexa deck <domain> <slug> '<spec-json>'` 로: exports/<domain>/decks/<slug>/ 생성. `hexa deck domains` (도메인 목록: rtsc·nuclear·material·chem·chip·bio) · stub 도메인은 honest exit-1. (c12)"
     }
   ]
 }

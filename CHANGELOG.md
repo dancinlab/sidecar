@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## chore(governance): GPU/학습/deck 강제를 hexa 빌트인으로 전환 · demi 폐기
+
+- **cloud**: GPU 클라우드 권장 도구를 `harness pod` → **`hexa cloud`** 로 전환. keywords `gpu-cloud-pod`→`gpu-cloud-hexa` (tool=`hexa cloud`, hint 갱신), enforcement `G-RAW-GPU-CLOUD` reason/exception(`# pod-ok`→`# cloud-ok`)도 hexa cloud 로. runpod/vast raw 차단 룰 자체는 유지.
+- **deck**: 신규 keywords `input-deck` 트리거 추가 (deck·빵틀·input deck → **`hexa deck <domain> <slug> '<spec>'`**). `hexa deck` 이 hexa-lang upstream 에서 1급 서브커맨드로 승격됨(PR #3453)에 따라 강제 가능해짐.
+- **dojo**: 학습잡 권장 도구를 `harness dojo` → **`hexa dojo <domain> <slug> '<spec>'`** 로 전환 (keywords `training-job` hint 갱신).
+- **demi 폐기**: 실수로 구성됐던 `design-architecture` keywords 트리거(→`harness demi`) 제거. demi 는 harness 엔진 모듈로 존재하지 않았고(트리거로만 강제) 설계 작업을 특정 도구로 강제할 근거 없음 → 트리거 삭제로 폐기.
+- commons c12 전면 갱신: GPU·학습·deck = hexa 빌트인 명시, demi 제거, "폐기된 hexa cloud" 표현 삭제(이제 권장), `hexa` 글로벌 PATH 사용 추가.
+- 검증(c2): keywords/enforcement JSON valid · demi 0건 · `harness prompt` 로 deck/cloud/dojo 트리거가 hexa 힌트 발화 + 설계 키워드 무발화(demi 폐기) 출력 확인 · `hexa deck` 머지된 toolchain 에서 실동작(rc=0, 6 domains).
+
 ## fix(ing): `done <id>` no longer mass-scrubs the board (substring → exact-id match)
 
 - **데이터 유실 버그**: `modules/ing.ts` 의 `done` 이 `r.id === m || text.includes(m)` 로 매칭 — `done 1` 시 `text.includes("1")` 가 텍스트에 숫자 1이 든 **모든 항목**(H_1382·303M·id=12…)을 매칭해 보드 전체를 scrub. 텍스트에 숫자가 흔한 ING 에선 단일 id done 이 OPEN 항목까지 통째로 날림(anima 세션 2회 재현 + main merge 로 빈 ING 전파).

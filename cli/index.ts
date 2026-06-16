@@ -43,6 +43,7 @@ import { runFanout } from "../modules/fanout.ts";
 import { runDocs } from "../modules/docs.ts";
 import { runLockdown } from "../modules/lockdown-cmd.ts";
 import { runCommons } from "../modules/commons.ts";
+import { runArchitecture } from "../modules/architecture.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -64,6 +65,7 @@ hook delegates (wire these into your agent's settings.json):
   post edit <file>         PostToolUse(Write/Edit) — flag L0 edits
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
   commons {inject|show}    always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)
+  architecture {inject|show}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart, like CLAUDE.md
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
@@ -221,6 +223,8 @@ async function main(): Promise<number> {
       return runLockdown(rest);
     case "commons":
       return runCommons(rest);
+    case "architecture":
+      return runArchitecture(rest);
     case "handoff":
       return runHandoff(rest);
     case "end":

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(architecture): SessionStart 에 ARCHITECTURE.json 자동 주입 (CLAUDE.md 처럼)
+
+- 신규 `modules/architecture.ts` + `harness architecture {inject|show}` — SessionStart 에서 repo-root `ARCHITECTURE.json`(우선)/`.md` 를 additionalContext 로 주입. CLAUDE.md 처럼 첫 턴부터 설계 SSOT(c4·c14)가 컨텍스트에 상주해, 매번 파일을 열지 않아도 최종 아키텍처를 참조·lockstep 갱신할 수 있음.
+- JSON 우선(c4 — AI·툴 파싱 타깃). 80KB 초과 시 head+포인터로 절단해 컨텍스트 폭주 방지. 파일 부재·이벤트 없음 시 무음(다른 inject 와 동일 가드).
+- hook 배선: `cli/index.ts` 등록 + help 라인 · `modules/setup.ts` hookSpec SessionStart · `plugin/hooks/hooks.json` SessionStart 에 `harness architecture inject` 추가 (commons·recommend 다음, worktree gc 앞).
+- 검증(c2): `architecture inject` SessionStart 모사 → 유효 envelope JSON, additionalContext 8904자(미절단) · 이벤트 없음 시 무음 · `help` 로드 OK · hooks.json valid.
+
 ## docs(commons): c16 도입부 정정 — "한 번 시도"가 아니라 MULTI-LENS(≥2–3 렌즈) 이상
 
 - c16 도입부가 "다른 렌즈로 돌파를 **한 번은** 시도하고서야 terminal" 로 약하게 쓰여 있던 것을 정정: terminal 로 받으려면 **MULTI-LENS(≥2–3 원리적 렌즈) 이상** 돌파를 시도하고 각각 통제(shuffle/ablation/negative-control)로 기각된 뒤에야 받아들인다 — **한 번 시도로 끝내지 않는다** (단일 렌즈 한 번 막힘은 미완). (d)천장 항목과 도입부의 강도를 일치시킴.

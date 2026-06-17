@@ -12,6 +12,7 @@
     "UserPromptSubmit": [
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness prompt \"$CLAUDE_USER_PROMPT\" || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness commons inject || true" }] },
+      { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness claudemd inject || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness recommend inject || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness prefs inject || true" }] },
       { "hooks": [{ "type": "command", "command": "command -v harness >/dev/null 2>&1 && harness easy inject || true" }] }

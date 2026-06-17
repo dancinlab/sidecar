@@ -44,6 +44,7 @@ import { runDocs } from "../modules/docs.ts";
 import { runLockdown } from "../modules/lockdown-cmd.ts";
 import { runCommons } from "../modules/commons.ts";
 import { runArchitecture } from "../modules/architecture.ts";
+import { runClaudemd } from "../modules/claudemd.ts";
 
 const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
@@ -66,6 +67,7 @@ hook delegates (wire these into your agent's settings.json):
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
   commons {inject|show}    always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)
   architecture {inject|show}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart, like CLAUDE.md
+  claudemd {inject|show}   re-inject repo-root CLAUDE.md (project rules) EACH UserPromptSubmit so they stay enforced (optional <!-- enforce:start/end --> block)
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
@@ -225,6 +227,8 @@ async function main(): Promise<number> {
       return runCommons(rest);
     case "architecture":
       return runArchitecture(rest);
+    case "claudemd":
+      return runClaudemd(rest);
     case "handoff":
       return runHandoff(rest);
     case "end":

@@ -28,6 +28,7 @@ function hookSpec(): Record<string, unknown[]> {
     UserPromptSubmit: [
       entry('harness prompt "$CLAUDE_USER_PROMPT"'),
       entry("harness commons inject"),
+      entry("harness claudemd inject"),
       entry("harness recommend inject"),
       entry("harness prefs inject"),
       entry("harness easy inject"),

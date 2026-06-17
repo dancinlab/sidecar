@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## feat(claudemd): 프로젝트 규칙 매턴 재주입 — CLAUDE.md 를 commons 급으로 강제
+
+- 문제: repo-root `CLAUDE.md`(프로젝트 규칙)는 Claude Code 기본으로 **SessionStart 1회만** 주입돼, 대화가 길어지면 컨텍스트에서 묻혀 규칙이 약해진다. 반면 `commons inject` 는 매 UserPromptSubmit 재주입돼 강하다.
+- 신규 `modules/claudemd.ts` + `harness claudemd {inject|show}` — `commons inject` 와 같은 운반 장치로 repo-root CLAUDE.md 를 **매 UserPromptSubmit 재주입**(MUST-FOLLOW 헤더 prepend). 프로젝트 규칙을 commons 급 salience 로 유지.
+- 토큰 효율: 선택적 `<!-- enforce:start -->…<!-- enforce:end -->` 블록이 있으면 그 hard-rules 섹션만 재주입(전체 프로젝트 맵 재전송 회피), 없으면 전체. 80KB 초과 절단. CLAUDE.md 부재 시 무음.
+- 배선: `cli/index.ts` 등록 + help 라인 · `modules/setup.ts` hookSpec UserPromptSubmit(commons 다음) · `plugin/hooks/hooks.json` UserPromptSubmit 추가.
+- 검증(c2): help 로드 OK(import 정상) · `claudemd inject` UserPromptSubmit 모사 → 유효 envelope(MUST-FOLLOW 헤더) · `enforce` 마커 추출(맵 제외, RULE 블록만) 재현 · 이벤트/파일 부재 시 무음 확인.
+
 ## docs(commons): c18 신설 — 우회경로는 지시 전 작성 금지 (escape-hatch only on request)
 
 - 계기: G-RAW-GPU-CLOUD 차단을 만들 때 AI 가 임의로 `# cloud-ok` 탈출구를 끼워 넣어 "전면 금지" 가 안 됐던 사례 → 거버넌스 규칙으로 박제.

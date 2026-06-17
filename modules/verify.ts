@@ -2,7 +2,7 @@
 // (sidecar parity). Routes correctness/purity/grade/identity claims to a 6-tier
 // rubric instead of LLM self-judgement; the agent reports the badge verbatim.
 //   bare | rubric    → print the rubric + discipline (templates/verify.md)
-//   fence "<claim>"  → record a ⚪ SPECULATION-FENCED claim to .verdicts/claims.jsonl
+//   fence "<claim>"  → record a ⚪ SPECULATION-FENCED claim to state/claims.jsonl
 // Running build/test verification COMMANDS is `harness ci`; recording a
 // PASS/FAIL command verdict is `harness verdict record`.
 import { existsSync, readFileSync, mkdirSync } from "node:fs";
@@ -26,10 +26,10 @@ export async function runVerify(args: string[]): Promise<number> {
       loudFail('verify fence "<claim>" — record an unverified claim as ⚪ SPECULATION-FENCED');
       return 2;
     }
-    const dir = resolve(REPO_ROOT, ".verdicts");
+    const dir = resolve(REPO_ROOT, "state");
     mkdirSync(dir, { recursive: true });
     appendJsonl(resolve(dir, "claims.jsonl"), { kind: "claim", tier: "SPECULATION-FENCED", badge: "⚪", claim });
-    ok(`⚪ SPECULATION-FENCED 박제: "${claim.slice(0, 80)}" → .verdicts/claims.jsonl`);
+    ok(`⚪ SPECULATION-FENCED 박제: "${claim.slice(0, 80)}" → state/claims.jsonl`);
     info("  (검증되면 harness ci / harness verdict record 로 🟢/🔵 승격)");
     return 0;
   }

@@ -112,7 +112,8 @@
           { "이름": "lockdown.files", "역할": "L0 잠금 파일", "구분": "config", "상세": "opt-in, 기본 0개" },
           { "이름": "enforcementFile / keywordsFile / severityMapFile", "역할": "규칙 파일 위치", "구분": "config", "상세": "없으면 번들 기본 fallback" },
           { "이름": "verify.checks[]", "역할": "검증 명령 선언", "구분": "config", "상세": "{id,cmd,timeoutMs,slow}" },
-          { "이름": "lint.freshnessFiles[] · convergence · guides[] · ledger.staleSec", "역할": "기타 모듈별 대상 선언", "구분": "config", "상세": "" }
+          { "이름": "lint.freshnessFiles[] · convergence · guides[] · ledger.staleSec", "역할": "기타 모듈별 대상 선언", "구분": "config", "상세": "" },
+          { "이름": "docs.scratchDir = state", "역할": "산출물 단일 루트", "구분": "config", "상세": "실험·벤치·검증(verdict/claim)·스크래치 등 모든 작업 산출물을 repo-root `state/` 하나로 통일(c5). 하위 디렉토리 안 쪼갬 — `state/<id>` 평면(verdict 는 `state/<slug>/<id>.txt`). verdict/verify/atlas 가 이 경로를 공유. 재생성 가능 `build/` 만 .gitignore · 머신 자동로그는 `.harness/`" }
         ]
       },
       {

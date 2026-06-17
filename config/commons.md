@@ -29,9 +29,12 @@ SSOT quickref 1줄. 메인 CLAUDE.md = 프로젝트 설명 + 트리구조(노드
 `.json` 트리 채택 시: JSON 이 SSOT(AI·툴 파싱), 사람은 `.html` 뷰어로 본다 — 로컬은 `python3 serve.py`
 (정적 서버 + 브라우저 자동 오픈, `file://` fetch 차단 우회), 원격은 raw.githack.com / GitHub Pages.
 
-## c5 — preserve, don't discard
-진행/작업 데이터는 휘발 `/tmp` 가 아니라 git-tracked 경로(`scripts/scratch/`)에 쓰고 커밋한다
-(GitHub 보존). 임시물도 버리지 말 것.
+## c5 — preserve, don't discard · 산출물은 `state/` 하나로
+진행/작업 데이터는 휘발 `/tmp` 가 아니라 **git-tracked `state/`** 에 쓰고 커밋한다(GitHub 보존).
+실험·벤치마킹·검증기록(verdict/claim)·스크래치 등 **모든 작업 산출물은 repo-root `state/` 폴더 하나로
+통일**한다 — 하위 디렉토리로 쪼개지 말고 `state/<id>` 평면 보관(verdict 는 `state/<slug>/<id>.txt`).
+흩어진 산출물 디렉토리(`scripts/scratch/`·`.verdicts/`·`bench/`·`experiments/` 등) 신설 금지. 임시물도
+버리지 말 것. (재생성 가능한 빌드 결과 `build/` 만 `.gitignore` · 머신 자동로그는 `.harness/`.)
 
 ## c6 — handoff via registry, not scatter
 세션/크로스레포 인수인계는 repo-root **`handoff.jsonl`**(`harness handoff add`). `HANDOFF.md`·

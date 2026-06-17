@@ -257,16 +257,16 @@ export async function runInit(args: string[]): Promise<number> {
     );
     write(
       resolve(REPO_ROOT, "CLAUDE.md"),
-      `# ${proj}\n\n${proj} — (한 줄 프로젝트 설명을 여기에).\n\n## 구조\n\n\`\`\`\n${proj}/\n├─ src/         — 소스 코드\n├─ scripts/     — 빌드/운영 스크립트 (scratch/ = 임시 산출물 보관)\n├─ ARCHITECTURE.md — 최종 아키텍처 SSOT (업데이트형)\n└─ CHANGELOG.md  — 이력 (추가형)\n\`\`\`\n`,
+      `# ${proj}\n\n${proj} — (한 줄 프로젝트 설명을 여기에).\n\n## 구조\n\n\`\`\`\n${proj}/\n├─ src/         — 소스 코드\n├─ state/       — 실험·벤치·검증 등 모든 작업 산출물 단일 루트 (git-tracked)\n├─ ARCHITECTURE.md — 최종 아키텍처 SSOT (업데이트형)\n└─ CHANGELOG.md  — 이력 (추가형)\n\`\`\`\n`,
       "CLAUDE.md"
     );
-    const scratch = resolve(REPO_ROOT, "scripts", "scratch");
+    const scratch = resolve(REPO_ROOT, "state");
     if (!flags.dryRun) {
       mkdirSync(scratch, { recursive: true });
       const keep = resolve(scratch, ".gitkeep");
       if (!existsSync(keep)) writeFileSync(keep, "");
     }
-    actions.push({ path: "scripts/scratch/", how: flags.dryRun ? "would" : "create" });
+    actions.push({ path: "state/", how: flags.dryRun ? "would" : "create" });
   }
 
   // 3. .gitignore — ensure log/handoff dirs are ignored

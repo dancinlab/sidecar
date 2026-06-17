@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## docs(commons): consolidate — merge c6+c11 into one ING rule, add upstream-fix rule, renumber to c1–c17
+
+Two changes, one cleanup pass over the commons SSOT:
+
+1. **New rule (upstream-fix)** — when work is blocked by a bug/limit/gap in an **upstream**
+   dependency (esp. `hexa`/`hexa-lang`, or any dancinlab-owned repo), do NOT paper over it
+   locally with a wrapper/shadow/fork/monkey-patch — go fix the upstream repo directly and
+   land it via `harness pr-cycle` (proceed whenever needed; don't defer it as "someone
+   else's code"). Work shared checkouts in an isolated `git worktree` and STOP on
+   concurrent-session activity. Extends c1 (root cause) + the no-escape-hatch rule. This
+   session's hexa cloud → ING.jsonl upstream fix (hexa-lang PR #3531) is the canonical instance.
+
+2. **Merge (ING dedup)** — old c6 (인계/hand-off → ING) and old c11 (track in-progress → ING)
+   were two rules for the **same `ING.jsonl` board**; merged into a single c6 ("ING 단일 보드 —
+   진행추적 · 인계"), folding in the handoff/trail-retirement history. Removes the genuine duplicate.
+
+Net renumber **c1–c18 → c1–c17**: with c11 absorbed into c6 and the new upstream rule appended,
+the rules now read c6(ING) · c11(canonical CLI) · c12(docs+pr-cycle) · c13(papers) · c14(walls) ·
+c15(pool) · c16(no escape hatch) · c17(upstream-fix). Internal cross-refs + CLAUDE.md pointer
+(c1–c17) + README's two `commons c1x` refs all updated in lockstep.
+
 ## refactor(trail): retire the `trail` feature — ING is the sole progress tracker
 
 Drop `harness trail` (the main-flow return stack persisted to `TRAIL.md`) entirely,

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## fix(pr-cycle): 머지 후 로컬 base(main) 자동 ff-sync — 로컬 뒤처짐 방지
+
+- 문제: `gh pr merge` 가 origin/main 만 갱신하고 **로컬 main 은 그대로** 둬, pr-cycle 반복 시 로컬 main 이 origin 보다 한참 뒤처짐 → 다음 작업 브랜치가 stale base 에서 분기.
+- 수정(`modules/pr-cycle.ts`): 머지 검증(onBase) 직후 **step 4.5** 추가 — feature 브랜치에서 `git fetch origin <base>:<base>` 로 로컬 base ref 만 ff 갱신(checkout 전환·working tree 무변, non-ff 면 거부=안전). HEAD 가 base 면 `git pull --ff-only` 폴백.
+- slash command(`~/.claude/commands/pr-cycle.md`)에도 동일 base-sync 블록 추가(머지 직후, sweep 전).
+- commons **c14** 에 "항상 최신 base 유지 — 로컬 main 뒤처짐 금지 · 새 브랜치는 최신 base 에서 분기" 명문화.
+- 검증(c2): `help` 로드 OK · pr-cycle 자기 자신 머지 사이클에서 로컬 main behind 0 확인.
+
 ## feat(state): 작업 산출물을 `state/` 단일 폴더로 통일 (scratch·verdicts 흡수)
 
 - 요구: 실험·벤치마킹·검증 등 작업 산출물 보관을 일관화 — 흩어진 `scripts/scratch`·`.verdicts` 대신 **repo-root `state/` 폴더 하나만** 사용(하위 디렉토리 안 쪼갬).

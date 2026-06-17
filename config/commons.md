@@ -99,6 +99,11 @@ ARCHITECTURE·README·ING 미갱신이면 **거부**한다(`--no-doc` 는 진짜
 묵혀두기" 금지 — **미완성·WIP 여도 무방**: `wip:` 커밋으로라도 그 턴에 push 해 작업 유실·문서 drift 를
 막는다(미완성 코드 매턴 강제 OK — 이 repo 정책. c2 검증은 완성 시점에 닫되, 미완을 핑계로 push 를
 미루지 않는다). 파일 변동이 staged 인데 그 턴을 커밋 없이 끝내지 말 것.
+**항상 최신 base 유지(로컬 main 뒤처짐 금지)**: pr-cycle 은 머지 검증 직후 **로컬 base(main) 를
+origin/base 로 ff-sync** 한다 — feature 브랜치에서 `git fetch origin <base>:<base>` 로 checkout 전환 없이
+로컬 base ref 만 갱신(non-ff 면 거부=안전, working tree 무변). origin 만 갱신하고 로컬 main 을 방치해
+"로컬이 한참 뒤처지는" 사태를 만들지 말 것. 새 작업 브랜치는 **항상 최신 base 에서 분기**한다(작업 전
+`git fetch origin <base>:<base>` 권장).
 
 ## c15 — 논문은 지시 전 선제 언급 금지
 유저가 **명시적으로** 논문/arXiv/레퍼런스/선행연구를 요청하기 전에는 논문을 먼저 **언급·제시·추천·

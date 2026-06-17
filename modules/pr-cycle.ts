@@ -3,8 +3,10 @@
 // --no-doc to skip) → push current branch → open PR → self-merge (admin · delete-
 // branch; squash→merge→rebase fallback if a method is disallowed; retries while
 // CI is pending) → VERIFY the merge commit actually landed on origin/<base> and
-// print an unambiguous "✅ MERGED → <base> @ <sha> · verified" block → post-merge
-// worktree sweep. Refuses on main/master. Extra args pass through to gh pr create.
+// print an unambiguous "✅ MERGED → <base> @ <sha> · verified" block → SYNC the
+// local <base> branch to origin/<base> (ff, no checkout switch — keeps local main
+// from falling behind) → post-merge worktree sweep. Refuses on main/master.
+// Extra args pass through to gh pr create.
 import { execShell } from "../lib/exec.ts";
 import { info, ok, loudFail } from "../lib/log.ts";
 import { repoPath } from "../lib/config.ts";
@@ -184,6 +186,22 @@ export async function runPrCycle(args: string[]): Promise<number> {
     info(`   - 머지 커밋: ${shortSha} → origin/${base} 에서 확인 안 됨`);
     info(`   - origin/${base} 최신: ${baseTip || "?"}`);
     info(`   - PR: #${num || "?"}${url ? ` · ${url}` : ""}`);
+  }
+
+  // 4.5 local <base> sync — pull the just-merged commit into the LOCAL base branch so
+  //   it never falls behind origin/<base> (the "로컬 main 뒤처짐" leak). pr-cycle runs
+  //   on a FEATURE branch, so update the local base ref WITHOUT switching checkout:
+  //   `git fetch origin <base>:<base>` fast-forwards local <base> (refuses non-ff →
+  //   safe, never clobbers). Working tree untouched. Skip only if HEAD is the base.
+  if (onBase) {
+    const cur = (await git("git rev-parse --abbrev-ref HEAD")).out;
+    if (cur === base) {
+      await git("git pull --ff-only --no-verify");
+      info(`  ✓ 로컬 ${base} ← origin/${base} sync (pull --ff-only)`);
+    } else {
+      const ff = await git(`git fetch origin ${JSON.stringify(base + ":" + base)}`);
+      info(ff.code === 0 ? `  ✓ 로컬 ${base} ← origin/${base} sync (ff)` : `  ⚠ 로컬 ${base} sync 실패(non-ff?) — 수동 확인`);
+    }
   }
 
   // 5. post-merge worktree sweep — remove merged agent worktrees + local branches

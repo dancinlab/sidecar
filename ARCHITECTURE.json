@@ -62,6 +62,7 @@
               { "이름": "post", "역할": "exit/파일경로만 봄", "구분": "module", "상세": "도메인 지식 0" },
               { "이름": "prompt", "역할": "키워드→힌트 매핑", "구분": "module", "상세": "키워드는 외부 JSON" },
               { "이름": "lint", "역할": "staged-L0·신선도·수렴 + doc-gate", "구분": "module", "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ING.jsonl 현행화도 gate)" },
+              { "이름": "pr-cycle", "역할": "push→PR→검증머지→로컬 base sync", "구분": "module", "상세": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→**로컬 base ff-sync**(`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부)→merged worktree sweep. main/master 에선 거부" },
               { "이름": "verify", "역할": "검증 명령 병렬 실행", "구분": "module", "상세": "명령은 config 선언" },
               { "이름": "errors", "역할": "(kind,code)→severity 분류", "구분": "module", "상세": "맵은 외부 JSON" },
               { "이름": "ledger", "역할": "에이전트 작업 등록 (중복 방지)", "구분": "module", "상세": "도메인 무관" },

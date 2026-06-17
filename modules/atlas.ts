@@ -1,6 +1,6 @@
 // harness atlas {add <id> <claim...> | list | link <id> <slug>/<vid> | show}
 // Knowledge / claim registry (hexa atlas parity). Each atom = a verifiable claim
-// with a tier and an optional pointer to its verdict file (.verdicts/<slug>/<id>).
+// with a tier and an optional pointer to its verdict file (state/<slug>/<id>).
 // Atoms live in repo-root ATLAS.md (committable table) + a ledger; an atom is only
 // "verified" when it links a PASS verdict — never an LLM self-judgement.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -13,7 +13,7 @@ function atlasPath(): string {
 }
 const HEADER = `# ATLAS — claim registry
 
-> 📍 SSOT: [ARCHITECTURE.md](ARCHITECTURE.md) · verdicts in \`.verdicts/\`
+> 📍 SSOT: [ARCHITECTURE.md](ARCHITECTURE.md) · verdicts in \`state/\`
 > Each atom = a verifiable claim. An atom is VERIFIED only when it links a PASS verdict (\`harness verdict\`). Never LLM-judge.
 
 | id | claim | tier | verdict |
@@ -61,12 +61,12 @@ export async function runAtlas(args: string[]): Promise<number> {
       info("usage: harness atlas link <id> <slug>/<verdict-id>");
       return 1;
     }
-    const vfile = resolve(REPO_ROOT, ".verdicts", vid + ".txt");
+    const vfile = resolve(REPO_ROOT, "state", vid + ".txt");
     let tier = "🟠 unverified";
     if (existsSync(vfile)) tier = /# tier: PASS/.test(readFileSync(vfile, "utf8")) ? "🟢 PASS" : "🔴 FAIL";
     const lines = text.split("\n").map((l) =>
       new RegExp(`^\\|\\s*${id}\\s*\\|`).test(l)
-        ? l.replace(/\|[^|]*\|[^|]*\|$/, `| ${tier} | .verdicts/${vid}.txt |`)
+        ? l.replace(/\|[^|]*\|[^|]*\|$/, `| ${tier} | state/${vid}.txt |`)
         : l
     );
     writeFileSync(atlasPath(), lines.join("\n"), "utf8");

@@ -145,7 +145,7 @@ const DEFAULTS: HarnessConfig = {
   docs: {
     architecture: "ARCHITECTURE.md",
     log: "CHANGELOG.md",
-    scratchDir: "scripts/scratch",
+    scratchDir: "state",
     scatterPatterns: [
       "-(report|summary|notes|note|audit|status|plan|analysis|design|spec|overview|guide)\\.md$",
       "(REPORT|SUMMARY|NOTES|TODO|AUDIT|STATUS|ANALYSIS)\\.md$",

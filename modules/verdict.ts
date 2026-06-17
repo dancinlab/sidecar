@@ -1,6 +1,6 @@
 // harness verdict {record <slug>/<id> <cmd...> | list | show <slug>/<id>}
 // Verification-evidence ledger (hexa verify / g5 parity). `record` runs a verify
-// command, captures its stdout+stderr verbatim to .verdicts/<slug>/<id>.txt with
+// command, captures its stdout+stderr verbatim to state/<slug>/<id>.txt with
 // a tier header (PASS exit0 / FAIL else), and appends to a verdict ledger so you
 // can track what's been verified and what passed. Verdict files are committable
 // evidence; never LLM-judge correctness — the captured command output IS the proof.
@@ -14,7 +14,7 @@ import { readJsonl } from "../lib/json.ts";
 const LEDGER = resolve(LOG_DIR, "verdicts.jsonl");
 
 function vpath(rel: string): string {
-  return resolve(REPO_ROOT, ".verdicts", rel + ".txt");
+  return resolve(REPO_ROOT, "state", rel + ".txt");
 }
 
 export async function runVerdict(args: string[]): Promise<number> {
@@ -35,9 +35,9 @@ export async function runVerdict(args: string[]): Promise<number> {
     const p = vpath(id);
     mkdirSync(dirname(p), { recursive: true });
     writeFileSync(p, body, "utf8");
-    appendJsonl(LEDGER, { kind: "verdict", id, tier, exit: r.code, cmd: cmd.slice(0, 200), file: `.verdicts/${id}.txt` });
-    if (tier === "PASS") ok(`verdict ${id}: 🟢 PASS → .verdicts/${id}.txt`);
-    else loudFail(`verdict ${id}: 🔴 FAIL (exit ${r.code}) → .verdicts/${id}.txt`);
+    appendJsonl(LEDGER, { kind: "verdict", id, tier, exit: r.code, cmd: cmd.slice(0, 200), file: `state/${id}.txt` });
+    if (tier === "PASS") ok(`verdict ${id}: 🟢 PASS → state/${id}.txt`);
+    else loudFail(`verdict ${id}: 🔴 FAIL (exit ${r.code}) → state/${id}.txt`);
     return tier === "PASS" ? 0 : 1;
   }
 

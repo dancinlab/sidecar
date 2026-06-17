@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## feat(state): 작업 산출물을 `state/` 단일 폴더로 통일 (scratch·verdicts 흡수)
+
+- 요구: 실험·벤치마킹·검증 등 작업 산출물 보관을 일관화 — 흩어진 `scripts/scratch`·`.verdicts` 대신 **repo-root `state/` 폴더 하나만** 사용(하위 디렉토리 안 쪼갬).
+- 변경:
+  - `lib/config.ts` — `docs.scratchDir` 기본값 `scripts/scratch` → **`state`**.
+  - `modules/verdict.ts` · `modules/verify.ts` · `modules/atlas.ts` — verdict/claim 기록 경로 `.verdicts/` → **`state/`** (verdict 파일 `state/<slug>/<id>.txt` · `state/claims.jsonl`).
+  - `modules/init.ts` — 새 repo 스캐폴드가 `scripts/scratch/` 대신 `state/` 생성 + CLAUDE.md 템플릿 트리 갱신.
+  - `.gitignore` — `build/`(재생성 가능 컴파일 결과) 추가. `state/` 는 git-tracked(`.gitkeep`). 머신 자동로그는 기존대로 `.harness/`.
+- 명문화: commons **c5** 를 "산출물은 `state/` 하나로" 로 강화(흩어진 산출물 디렉토리 신설 금지) · `ARCHITECTURE.json` config 노드 + CLAUDE.md tree 에 `state/` 반영.
+- 검증(c2): `help` 로드 OK · `verdict record smoke/t1` → `state/smoke/t1.txt` 🟢 생성 재현 · `verify fence` → `state/claims.jsonl` 기록 재현 · `docs status` scratch=state/ 확인 · 스모크 산출물 정리.
+
 ## docs(commons): 헤더에 ARCHITECTURE.json 선참고 안내 추가 (.md fallback 미표기)
 
 - commons.md 헤더 문단에 `🏛️ 프로젝트 설계는 먼저 ARCHITECTURE.json 을 참고하라` 한 줄 추가 — `harness architecture inject`(SessionStart 주입) 의 설계 트리를 단일 출처로 읽고 lockstep 갱신(c4·c14)하라는 안내. 매 UserPromptSubmit 재주입되므로 매턴 상주.

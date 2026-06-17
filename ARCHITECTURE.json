@@ -84,9 +84,9 @@
             "구분": "layer · per-repo",
             "상세": "이 층만 프로젝트별로 달라짐",
             "children": [
-              { "이름": "enforcement.json", "역할": "pre 정규식 규칙", "구분": "data", "상세": "" },
+              { "이름": "enforcement.json", "역할": "pre 정규식 규칙", "구분": "data", "상세": "strict 기본(15룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음)." },
               { "이름": "keywords.json", "역할": "prompt 트리거 키워드", "구분": "data", "상세": "" },
-              { "이름": "severity-map.json", "역할": "errors 분류 맵", "구분": "data", "상세": "" },
+              { "이름": "severity-map.json", "역할": "errors 분류 맵", "구분": "data", "상세": "fallback=block · 낮은 unknown_threshold (strict 기본)." },
               { "이름": "harness.config.json", "역할": "repo 루트 설정", "구분": "data", "상세": "project·lockdown·verify.checks 등" }
             ]
           }

@@ -2,7 +2,7 @@
 // Language preferences on 3 axes (sidecar prefs parity):
 //   code authoring · doc authoring · response-to-user.
 // Stored per-repo at .harness/prefs.json. `inject` emits a UserPromptSubmit
-// additionalContext block so the agent is reminded every turn; the hardcore
+// additionalContext block so the agent is reminded every turn; the
 // post-edit guard additionally flags code that violates the code-authoring axis.
 import { existsSync, mkdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -38,7 +38,7 @@ function body(p: Prefs): string {
 
 const HANGUL = /[가-힣]/;
 
-// Used by the hardcore post-edit guard: a code file written in a non-Korean
+// Used by the post-edit guard: a code file written in a non-Korean
 // code-authoring repo that contains Hangul is almost always a stray comment /
 // string that should be English (or moved to a locale file).
 export function codeLangViolation(file: string, content: string): string | null {

@@ -40,7 +40,7 @@ export interface HarnessConfig {
     convergence?: { commitPattern: string; requiredFile: string };
     // staged code changes REQUIRE the changelog file to also be staged
     changelog?: { file: string; triggerPattern: string; ignore?: string[] };
-    // committing directly on one of these branches is a violation (hardcore)
+    // committing directly on one of these branches is a violation
     protectedBranches?: string[];
   };
   // optional incident/convergence tracking over a JSON file with

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## refactor(init): absorb the hardcore profile into the default + retire `--hardcore`
+
+- `harness init --hardcore` 폐기. 흡수 후 **기본 init 이 곧 (구)hardcore** — strict 가 디폴트: `protectedBranches:[main,master]` · pre-push(verify + errors drain) hook · single-doc scaffolds(ARCHITECTURE.md/CHANGELOG.md/CLAUDE.md/state/) · ledger staleSec 1800 · enforcement 15룰(block-everything; `--no-verify`·force-push·destructive-git·debug-leftover·hardcoded-secret 차단) · severity fallback=block 가 전부 기본값.
+- `profile` 키 제거(코드에서 읽지 않던 순수 표기). `config/enforcement.hardcore.json`·`severity-map.hardcore.json` → 기본 `enforcement.json`·`severity-map.json` 으로 승격 후 변종 삭제(8룰 → 15룰). `harness.config.hardcore.example.json`·`docs/hardcore.md` 폐기.
+- `modules/init.ts`: hardcore 분기 9곳 전부 흡수(Flags·starterConfig param·ruleSrc·prefs·single-doc·pre-push·로그). prefs 단일값 = code/docs english · response korean(현행 prefs 일치).
+- `cli/index.ts` help(strict by default), `README.md`(self-dogfooding), `CLAUDE.md`(tree), 코드 주석 `(hardcore)` 일반화. `harness-hardcore`(엔진 배포 브랜치명, update.ts)는 별개라 유지. self-dogfooding repo 자신은 `protectedBranches` 미설정(main 직접 push) 유지.
+- 검증: temp repo `harness init` → profile 0·protectedBranches·staleSec 1800·15룰·prefs docs english·pre-push·ARCHITECTURE.md scaffold 전부 기본 생성 · `tsx cli/index.ts help` 로드 OK · 전 JSON valid · 잔여 hardcore 0.
+
 ## chore(domain): retire the `harness domain` feature — full removal
 
 - `harness domain` (long-horizon goal/milestone tracker → `<NAME>.md` + `.tape` + `DOMAINS.tape` roster) is **fully retired**. It generated the very scattered domain `.md`/`.tape`/roster docs that c4 single-doc discipline now consolidates into a single `ARCHITECTURE.json` tree SSOT (cf. hexa-codex #161, anima #662) — keeping the scatter-generator contradicted that.

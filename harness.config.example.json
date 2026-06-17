@@ -29,7 +29,8 @@
       "file": "CHANGELOG.md",
       "triggerPattern": "\\.(ts|tsx|js|jsx|py|go|rs)$",
       "ignore": ["(^|/)(tests?|__tests__|spec)/", "\\.(test|spec)\\.[a-z]+$", "(^|/)\\.harness(-engine)?/"]
-    }
+    },
+    "protectedBranches": ["main", "master"]
   },
 
   "convergence": { "issuesFile": "issues.json" },
@@ -56,5 +57,5 @@
     "ext": [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs"]
   },
 
-  "ledger": { "staleSec": 3600 }
+  "ledger": { "staleSec": 1800 }
 }

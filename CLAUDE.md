@@ -22,10 +22,10 @@ harness/
 ├─ styles/             — easy.{md,ko,ja,zh,ru} friendly-response style
 ├─ plugin/             — Claude Code plugin (.claude-plugin/plugin.json + hooks/hooks.json)
 ├─ .claude-plugin/marketplace.json — local marketplace ("harness") for `claude plugin install`
-├─ docs/               — auxiliary guides (install · extending · languages · hardcore)
+├─ docs/               — auxiliary guides (install · extending · languages)
 ├─ scripts/            — helper scripts (운영/스캐폴드용)
 ├─ state/              — 실험·벤치·검증(verdict/claim)·스크래치 단일 산출물 루트 (c5 · git-tracked)
-├─ harness.config.json — this repo's harness config (+ .example / .hardcore.example)
+├─ harness.config.json — this repo's harness config (+ .example)
 ├─ ARCHITECTURE.md     — final-architecture SSOT (update-in-place)
 ├─ CHANGELOG.md        — change history (append-only)
 └─ handoff.jsonl       — open-work handoff queue (c6 · done=scrub)

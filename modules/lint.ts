@@ -96,7 +96,7 @@ export async function runLint(args: string[]): Promise<number> {
     }
   }
 
-  // 2b. protected branches: no direct commit on main/master (hardcore)
+  // 2b. protected branches: no direct commit on main/master
   if (cfg.lint.protectedBranches?.length && staged.length > 0) {
     // symbolic-ref reports the (even unborn) branch name; abbrev-ref returns "HEAD" before the first commit
     const branch = (await execShell("git symbolic-ref --short -q HEAD || git rev-parse --abbrev-ref HEAD", { cwd: repoPath(".") })).stdout.trim();

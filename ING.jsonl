@@ -4,4 +4,5 @@
 {"ts":"2026-06-17T18:08:49.069Z","kind":"next","id":"4","text":"풀 클린업(참조까지) 2개 repo 진행: hexa-codex(.verdicts·bench·experiments·scratch→state) · pool(scratch→state) — git mv + scratchDir/enforcement/ARCHITECTURE 참조 수정. 나머지 5 hexa-* 는 gitignore 해제로 완료. anima=load-bearing skip(c9), hexa-lang=다른세션 보류"}
 {"ts":"2026-06-17T18:13:52.032Z","kind":"work","id":"5","text":"anima 풀 클린업(참조까지) 진행 — .verdicts·bench·experiments·scripts/scratch → state/ + 529 코드참조 일괄수정 + 빌드검증/롤백 안전장치. worktree 격리 agent 위임"}
 {"ts":"2026-06-17T18:16:09.379Z","kind":"work","id":"6","text":"hexa-lang 풀 클린업(참조까지·안전) 진행 — state/* gitignore 해제 + .verdicts·bench·scratch→state/ + 180 코드참조 수정 + 빌드검증/롤백. worktree 격리 + 다른세션(브랜치변동) 활동감지시 중단"}
-{"ts":"2026-06-17T18:18:52.921Z","kind":"work","id":"7","text":"hexa-codex 도메인 .md/.log.md(41개) → ARCHITECTURE.json 단일 트리 SSOT 은퇴·통합 + serve.py/.html 뷰어 + harness.config docs.architecture→json + CLAUDE 포인터. anima #662 패턴. worktree 격리 agent"}
+{"ts":"2026-06-17T18:40:25.585Z","kind":"work","id":"8","text":"전 repo DOMAINS.tape scrub (domain 기능 폐기 연장) — 16 repo 코드참조 0 즉시 rm, demiurge(16)·hexa-codex(105) 참조 live검사 후 결정. hexa-lang-wt-* 3개는 state agent 진행중이라 제외"}
+{"ts":"2026-06-17T18:48:10.442Z","kind":"next","id":"10","text":"hexa-lang state 통일 완성 — chore/state-unify 브랜치(b94bafd) push됨. 다른 세션이 main rt-native 사이클 이동중이라 PR 머지 보류 → 그 세션 종료 후 gh pr create+merge 안전하게"}

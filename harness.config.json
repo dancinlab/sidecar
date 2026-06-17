@@ -1,7 +1,6 @@
 {
   "project": "harness",
-  "profile": "default",
-  "_note": "self-dogfooding \u2014 \uc5d4\uc9c4=repo \uc790\uc2e0(submodule \uc5c6\uc74c). hardcore \uac00 \uc544\ub2cc default: protectedBranches\u00b7no-verify \ucc28\ub2e8 \uc5c6\uc774 \uc790\uae30 \uac1c\ubc1c \ud750\ub984 \ubcf4\uc874. \ubc88\ub4e4 config/*.json \uc744 \uc9c1\uc811 \uaddc\uce59\uc73c\ub85c \uc0ac\uc6a9.",
+  "_note": "self-dogfooding \u2014 \uc5d4\uc9c4=repo \uc790\uc2e0(submodule \uc5c6\uc74c). protectedBranches \ubbf8\uc124\uc815\uc73c\ub85c \uc790\uae30 \uac1c\ubc1c \ud750\ub984(main \uc9c1\uc811 push) \ubcf4\uc874. \ubc88\ub4e4 config/*.json \uc744 \uc9c1\uc811 \uaddc\uce59\uc73c\ub85c \uc0ac\uc6a9.",
   "lockdown": {
     "files": [
       "cli/index.ts",
@@ -43,8 +42,7 @@
     "ARCHITECTURE.md",
     "docs/install.md",
     "docs/extending.md",
-    "docs/languages.md",
-    "docs/hardcore.md"
+    "docs/languages.md"
   ],
   "ledger": {
     "staleSec": 3600

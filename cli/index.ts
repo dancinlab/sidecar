@@ -50,8 +50,8 @@ const HELP = `dancinlab/harness — project-agnostic AI coding harness
 usage: harness <cmd> [args]
 
 setup:
-  init [--force] [--hooks] [--dry-run] [--hardcore]   scaffold config + .harness rules + gitignore + wrapper
-                                         (--hardcore = strict profile: block-everything + branch protection + pre-push verify)
+  init [--force] [--hooks] [--dry-run]   scaffold config + .harness rules + gitignore + wrapper + hooks
+                                         (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
   uninstall [--dry-run] [--keep-logs]   remove harness-injected files (config/.harness/hooks/wrapper); keeps user content
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
   install-hooks [--global|--repo]   merge harness hooks into ~/.claude/settings.json (global, like a plugin) or repo .claude (needs harness on PATH)

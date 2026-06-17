@@ -1,31 +1,30 @@
 {
-  "_doc": "Error signal → severity (block/defer/warn). block=fix now, defer=queue in errors.jsonl, warn=report only. Override per-repo via harness.config.json severityMapFile.",
-  "fallback": "defer",
-  "unknown_threshold": 30,
+  "_doc": "severity map — fallback escalated to block, low unknown_threshold. Installed by `harness init`.",
+  "fallback": "block",
+  "unknown_threshold": 5,
   "rules": {
     "lint_rule": {
-      "L0-LOCKDOWN": "warn",
-      "STALE": "warn",
+      "L0-LOCKDOWN": "block",
+      "STALE": "block",
       "CONVERGENCE-MISSING": "block",
       "CHANGELOG-MISSING": "block",
-      "ARCHITECTURE-MISSING": "block",
-      "README-MISSING": "block",
-      "DOC-SCATTER": "warn",
-      "DOC-NO-QUICKREF": "warn",
-      "CLAUDE-MD-MISSING": "warn",
-      "CLAUDE-MD-NO-DESC": "warn",
-      "CLAUDE-MD-NO-TREE": "warn",
+      "PROTECTED-BRANCH": "block",
+      "DOC-SCATTER": "block",
+      "DOC-NO-QUICKREF": "block",
+      "CLAUDE-MD-MISSING": "block",
+      "CLAUDE-MD-NO-DESC": "block",
+      "CLAUDE-MD-NO-TREE": "block",
       "CLAUDE-MD-TREE-NO-DESC": "warn"
     },
     "build_kind": {
-      "bash_nonzero": "defer",
+      "bash_nonzero": "block",
       "tsc_error": "block",
       "test_fail": "block",
       "lint_error": "block",
       "build_fail": "block"
     },
     "runtime_signal": {
-      "unknown": "defer"
+      "unknown": "block"
     }
   }
 }

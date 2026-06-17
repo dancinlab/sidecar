@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## docs(commons): c14 매턴 마감 강제 + c11 상태변동 ING 트리거 (미완성/WIP 매턴 push 허용)
+
+- 요구: ① 매 턴 파일이 바뀌면 그 턴에 즉시 닫기(미완성·WIP 여도 push, 다음 턴으로 미루지 않기) ② 파일이 안 바뀌어도 작업 상태가 바뀌면 ING 갱신.
+- c14 강화(`config/commons.md`): **매 턴 마감(turn-close)** 조항 추가 — staged/working 변동은 그 턴에 docs+commit+push(사이클 완료면 pr-cycle)로 닫고, "완성될 때까지 묵히기" 금지. **미완성·WIP 무방** — `wip:` 커밋으로라도 매턴 push 해 작업 유실·문서 drift 방지(이 repo 정책; c2 검증은 완성 시점에 닫되 push 를 미루지 않음).
+- c11 강화: **상태변동 트리거** 추가 — 파일 변동과 무관하게 작업 상태(시작·단계전환·블로커·완료·다음 한 수)가 바뀌면 그 턴에 ING add/next/done 으로 보드 현행화(ING 는 커밋 불필요).
+- salience: commons inject 가 매 UserPromptSubmit 재주입하므로 두 조항 모두 매턴 컨텍스트 상주.
+
 ## feat(claudemd): 프로젝트 규칙 매턴 재주입 — CLAUDE.md 를 commons 급으로 강제
 
 - 문제: repo-root `CLAUDE.md`(프로젝트 규칙)는 Claude Code 기본으로 **SessionStart 1회만** 주입돼, 대화가 길어지면 컨텍스트에서 묻혀 규칙이 약해진다. 반면 `commons inject` 는 매 UserPromptSubmit 재주입돼 강하다.

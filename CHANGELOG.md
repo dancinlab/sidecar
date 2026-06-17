@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## docs(commons): c18 신설 — 우회경로는 지시 전 작성 금지 (escape-hatch only on request)
+
+- 계기: G-RAW-GPU-CLOUD 차단을 만들 때 AI 가 임의로 `# cloud-ok` 탈출구를 끼워 넣어 "전면 금지" 가 안 됐던 사례 → 거버넌스 규칙으로 박제.
+- 신설(`config/commons.md` c18): 유저가 **명시적으로** 요청하기 전에는 구현 시 우회경로(exception/bypass 마커 · opt-out 플래그 · skip 조건 · fallback 분기 · 가드 무력화 탈출구)를 만들지 않는다. 금지·차단 요청은 글자 그대로 전면 차단으로 구현. c1(shadow 가드 금지)·c3(anti-punt)·c9(정직)의 연장선.
+- 기존 마커 탈출구(force-push `# force-ok` 등)는 유지, **새로** 만드는 차단·가드·정책에만 적용.
+
+## fix(enforcement): G-RAW-GPU-CLOUD 를 warn→block(전면차단) 승격 — runpod/vast 직접 사용 금지, hexa cloud 강제
+
+- 요구: runpod·vast 의 CLI·API 직접 사용을 **전면 금지**(예외 없음)하고 GPU 클라우드 작업을 `hexa cloud` 로 강제 (commons c12 의 mechanical teeth).
+- 변경(`config/enforcement.json` G-RAW-GPU-CLOUD): `action` warn→**block** 승격(이전엔 경고만 하고 통과) · `match` 패턴에 `pip install runpod|vastai` SDK 설치 경로 추가 · `exceptions` 를 **빈 배열로** 비워 `# cloud-ok` 탈출구 제거(마커가 있어도 차단) · `reason` 에 "전면 금지·예외 없음" 명시.
+- 커버: `runpodctl`·`runpod`·`vastai` CLI · `pip install runpod|vastai` · `curl|wget` 로 `runpod.io|vast.ai` API 엔드포인트 호출. 정책 변경은 이 규칙을 직접 수정해야만 가능(인라인 우회 불가).
+- 검증(c2): JSON valid · `pre bash` 로 runpodctl·vastai·`pip install runpod`·`curl api.runpod.io`·`runpodctl # cloud-ok` 5종 모두 `{"decision":"block"}` 재현 · `hexa cloud run …` 만 통과 확인.
+
 ## fix(pool): `status` 에 🔓 제한-해제 마커 추가 — 해제된 제한 호스트를 공용과 구분
 
 - 증상: anima 컨텍스트(cwd 에 `anima` 세그먼트)에서 `pool status` 를 돌리면 akida 가 진짜 공용 호스트(aiden·summer)와 똑같은 🟢 로 떠, "잠금인지 아닌지" 구분이 안 됨. `list` 는 이미 `🔓 허용(via)` 으로 구분하는데 `status` 만 누락.

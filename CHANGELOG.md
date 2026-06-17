@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## chore(domain): retire the `harness domain` feature — full removal
+
+- `harness domain` (long-horizon goal/milestone tracker → `<NAME>.md` + `.tape` + `DOMAINS.tape` roster) is **fully retired**. It generated the very scattered domain `.md`/`.tape`/roster docs that c4 single-doc discipline now consolidates into a single `ARCHITECTURE.json` tree SSOT (cf. hexa-codex #161, anima #662) — keeping the scatter-generator contradicted that.
+- Removed `modules/domain.ts` + its 3 wirings in `cli/index.ts` (import · help block · `case "domain"`). No other code references it.
+- Command count 44 → 43 (CLAUDE.md tree). hexa `dojo <domain>`/`deck <domain>` are unrelated (hexa builtins) and untouched.
+- Verified: `help` loads clean · `harness domain` → `unknown cmd` · zero residual references.
+
 ## fix(pr-cycle): 머지 후 로컬 base(main) 자동 ff-sync — 로컬 뒤처짐 방지
 
 - 문제: `gh pr merge` 가 origin/main 만 갱신하고 **로컬 main 은 그대로** 둬, pr-cycle 반복 시 로컬 main 이 origin 보다 한참 뒤처짐 → 다음 작업 브랜치가 stale base 에서 분기.

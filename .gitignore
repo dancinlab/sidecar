@@ -5,3 +5,8 @@ logs/
 .env
 .DS_Store
 build/
+
+# agent worktrees (transient · harness Agent isolation)
+.claude/worktrees/
+# npm lockfile (regenerable)
+package-lock.json

@@ -5,6 +5,11 @@ rules live in `.harness/enforcement.json` / `.harness/keywords.json`; a repo may
 file at `.harness/commons.md`. Most rules are also mechanically enforced by harness hooks — this
 block keeps them salient in context.
 
+> 🏛️ **프로젝트 설계는 먼저 `ARCHITECTURE.json` 을 참고하라** — repo-root 의 설계 SSOT(c4).
+> `harness architecture inject` 가 SessionStart 에 컨텍스트로 주입하니, 구조·모듈·데이터흐름을 추측하지
+> 말고 그 트리를 단일 출처로 읽고, 코드/설계 변경 시 lockstep 으로 갱신한다(c14). 사람이 볼 땐
+> `python3 serve.py`(HTML 뷰어). 부재 시에만 코드에서 직접 파악.
+
 ## c1 — root cause, not workaround
 원인을 고친다 (증상 아님). 금지: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만-남기기·
 shadow 가드. 정당하면 `@root-cause-ok <이유>` 마커 + 코멘트로 justify.

@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## docs(commons): 헤더에 ARCHITECTURE.json 선참고 안내 추가 (.md fallback 미표기)
+
+- commons.md 헤더 문단에 `🏛️ 프로젝트 설계는 먼저 ARCHITECTURE.json 을 참고하라` 한 줄 추가 — `harness architecture inject`(SessionStart 주입) 의 설계 트리를 단일 출처로 읽고 lockstep 갱신(c4·c14)하라는 안내. 매 UserPromptSubmit 재주입되므로 매턴 상주.
+- `.json` 만 명시(사용자 요청대로 `.md` fallback 은 표기하지 않음 — 이 repo 는 JSON 트리 채택).
+
 ## docs(commons): c14 매턴 마감 강제 + c11 상태변동 ING 트리거 (미완성/WIP 매턴 push 허용)
 
 - 요구: ① 매 턴 파일이 바뀌면 그 턴에 즉시 닫기(미완성·WIP 여도 push, 다음 턴으로 미루지 않기) ② 파일이 안 바뀌어도 작업 상태가 바뀌면 ING 갱신.

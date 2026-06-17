@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## fix(pool): `status` 에 🔓 제한-해제 마커 추가 — 해제된 제한 호스트를 공용과 구분
+
+- 증상: anima 컨텍스트(cwd 에 `anima` 세그먼트)에서 `pool status` 를 돌리면 akida 가 진짜 공용 호스트(aiden·summer)와 똑같은 🟢 로 떠, "잠금인지 아닌지" 구분이 안 됨. `list` 는 이미 `🔓 허용(via)` 으로 구분하는데 `status` 만 누락.
+- 근본 원인(c1): 게이트는 설계대로 동작(akida `shared:false`+`allow:["anima"]` → anima 경로면 in-context 해제) — 버그가 아니라 **status 출력 레이어의 정보 결손**. 해제된 제한 호스트를 bare 🟢 로 뭉갬.
+- 수정: `modules/pool.ts` status 출력부 — guard 통과한 제한 호스트(`isRestricted`)는 🔓 마커 + `— 제한 호스트 · 현재 해제(via)` 주석으로 표기. 도달 불가 시 ` · 도달 불가` 부기. roster·gate 로직 무변경(표시 레이어만).
+- 검증(c2): `help` 로드 OK · harness cwd → akida 🔒 차단 · anima cwd → `🔓 akida … 현재 해제(in-context)` 양쪽 재현.
+
 ## feat(architecture): SessionStart 에 ARCHITECTURE.json 자동 주입 (CLAUDE.md 처럼)
 
 - 신규 `modules/architecture.ts` + `harness architecture {inject|show}` — SessionStart 에서 repo-root `ARCHITECTURE.json`(우선)/`.md` 를 additionalContext 로 주입. CLAUDE.md 처럼 첫 턴부터 설계 SSOT(c4·c14)가 컨텍스트에 상주해, 매번 파일을 열지 않아도 최종 아키텍처를 참조·lockstep 갱신할 수 있음.

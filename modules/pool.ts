@@ -215,14 +215,23 @@ export async function runPool(args: string[]): Promise<number> {
     const out = await pmap(r.hosts, 8, async (h) => {
       // Restricted + blocked hosts are not pinged — they are not shared compute,
       // so we don't reach out to them outside their allowed project context.
-      if (!guard(h).ok) return { h, blocked: true, up: false };
+      const g = guard(h);
+      if (!g.ok) return { h, blocked: true, up: false, unlocked: false, via: g.via };
       const res = await execArgs("ssh", [...SSH_ARGS, h.target, "echo ok"], { timeoutMs: 15_000 });
-      return { h, blocked: false, up: res.code === 0 && res.stdout.includes("ok") };
+      // A restricted host that passes the guard is UNLOCKED, not shared — surface
+      // a 🔓 marker so `status` never conflates it with a genuinely shared host
+      // (parity with `list`, which already shows `🔓 허용(via)`).
+      return { h, blocked: false, up: res.code === 0 && res.stdout.includes("ok"), unlocked: isRestricted(h), via: g.via };
     });
-    for (const { h, blocked, up } of out) {
-      const dot = blocked ? "🔒" : up ? "🟢" : "🔴";
+    for (const { h, blocked, up, unlocked, via } of out) {
+      const dot = blocked ? "🔒" : unlocked ? "🔓" : up ? "🟢" : "🔴";
       const spec = h.specs ? `  〈${fmtSpecs(h.specs)}〉` : "";
-      info(`  ${dot} ${h.name}  (${h.target})${spec}${blocked ? "  — 차단(공용 아님)" : ""}`);
+      const note = blocked
+        ? "  — 차단(공용 아님)"
+        : unlocked
+          ? `  — 제한 호스트 · 현재 해제(${via})${up ? "" : " · 도달 불가"}`
+          : "";
+      info(`  ${dot} ${h.name}  (${h.target})${spec}${note}`);
     }
     return 0;
   }

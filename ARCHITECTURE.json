@@ -73,7 +73,7 @@
               { "이름": "architecture", "역할": "설계 SSOT SessionStart 주입", "구분": "module", "상세": "repo-root ARCHITECTURE.json(우선)/.md 를 SessionStart additionalContext 로 주입 — CLAUDE.md 처럼 첫 턴부터 설계 트리가 컨텍스트에 상주. 80KB 초과 시 head+포인터로 절단. 부재 시 무음" },
               { "이름": "convergence", "역할": "incident 집계", "구분": "module", "상세": "스키마만 맞으면 범용" },
               { "이름": "sync", "역할": "공유파일 sync 셸 스크립트 래퍼", "구분": "module", "상세": "" },
-              { "이름": "pool", "역할": "호스트 로스터 + 원격 실행 + 자원 프로브", "구분": "module", "상세": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단. ssh는 execArgs로 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브(Linux+macOS)해 로스터에 캐시 → list·status 에 인라인 표기. 제한 호스트는 프로브 제외" }
+              { "이름": "pool", "역할": "호스트 로스터 + 원격 실행 + 자원 프로브", "구분": "module", "상세": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단. allow 마커가 cwd 세그먼트와 일치하면 in-context 해제 — status 는 이때 🔓 마커+'제한 호스트·현재 해제(via)' 로 표기해 진짜 공용 호스트(🟢)와 구분(list 와 parity). ssh는 execArgs로 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브(Linux+macOS)해 로스터에 캐시 → list·status 에 인라인 표기. 제한 호스트는 프로브 제외" }
             ]
           },
           {

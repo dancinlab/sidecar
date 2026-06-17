@@ -151,7 +151,7 @@ const DEFAULTS: HarnessConfig = {
       "(REPORT|SUMMARY|NOTES|TODO|AUDIT|STATUS|ANALYSIS)\\.md$",
       "\\d{6,8}[-_].*\\.md$",
     ],
-    allow: ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "ING.md", "ATLAS.md", "CLAIMS.md", "TRAIL.md", "CLAUDE.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
+    allow: ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "ING.md", "ATLAS.md", "CLAIMS.md", "CLAUDE.md", "AGENTS.md", "LICENSE", "CONTRIBUTING.md", "SECURITY.md"],
     enforce: "warn",
   },
   lsp: {

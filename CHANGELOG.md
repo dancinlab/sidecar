@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## refactor(trail): retire the `trail` feature — ING is the sole progress tracker
+
+Drop `harness trail` (the main-flow return stack persisted to `TRAIL.md`) entirely,
+mirroring the earlier `handoff` retirement: progress/side-quest tracking now lives on
+the repo-root `ING.jsonl` board alone (c11 add/next/done). Removed `modules/trail.ts`,
+its `cli/index.ts` import + dispatch case + help line, and `TRAIL.md` from the lockdown
+allow-list (`lib/config.ts`). Renumbered `config/commons.md` — the old c13 (trail) is
+gone and c14–c18 shift up to **c13–c17** (now matching the long-standing `c1–c17`
+header), with the three internal cross-references (c14→c13 ×2, c17→c16) updated in
+lockstep. Command count 42 → 41. (Sibling repos' existing `TRAIL.md` files are their
+own data — untouched; they fall out of use as the feature is gone.)
+
 ## refactor(ing): retire the `handoff` feature — ING absorbs cross-repo hand-off
 
 - `harness handoff` (별도 `handoff.jsonl` 레지스트리 + add/ls/done/inject/snapshot) **완전 폐기**. cross-session/cross-repo 인계는 이제 ING 하나로 통합(c6 = c11 한 보드).

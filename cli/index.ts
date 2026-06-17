@@ -21,7 +21,6 @@ import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
 import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runTrail } from "../modules/trail.ts";
-import { runDomain } from "../modules/domain.ts";
 import { runPool } from "../modules/pool.ts";
 import { runIng } from "../modules/ing.ts";
 import { runUpstream } from "../modules/upstream.ts";
@@ -84,8 +83,6 @@ hook delegates (wire these into your agent's settings.json):
   go                       continue the most-recently proposed action without re-confirming
   brainstorm               iterative ideation rounds until depletion (breadth over selection)
   trail {push <note>|pop|show|drop <n>|clear}   main-flow return stack → git-tracked TRAIL.md (survives sessions)
-  domain {init <NAME> [dir]|set <NAME>|list [--sync]|goal <t>|ms <t>|title <t>|done <m>|absorb <f>|<task>}
-                           long-horizon goal/milestone tracker → <NAME>.md + .tape + DOMAINS.tape roster
   demi                     design-architecture program runbook (7-verb spine)
   gap [full|list|<scope>]   multi-axis gap exploration — 40 breakthrough lenses (8 families) · triage→deepen runbook
   pool {list|add|rm|on|status|specs}   host roster + remote exec + cores/mem/GPU probe (~/.harness/pool.json, global)
@@ -170,8 +167,6 @@ async function main(): Promise<number> {
       return runGap(rest);
     case "trail":
       return runTrail(rest);
-    case "domain":
-      return runDomain(rest);
     case "demi":
     case "demiurge":
       return runDemi(rest);

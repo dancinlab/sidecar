@@ -14,7 +14,7 @@ harness/
 ├─ bin/harness          — launcher (autodetects tsx; npx fallback)
 ├─ cli/index.ts         — command dispatcher (L0) — registers every module
 ├─ lib/                 — engine core: config · paths · exec · log · json · lockdown (L0)
-├─ modules/             — 44 commands: pre/post hooks · lint/verify · guards (git/tmp/handoff/docs)
+├─ modules/             — 43 commands: pre/post hooks · lint/verify · guards (git/tmp/handoff/docs)
 │                         · injects (commons/claudemd/recommend/prefs/easy) · pr-cycle · handoff · ing · trail
 │                         · imagine · research · watch · secret · lsp · worktree · pod/dojo/demi/micro-exp …
 ├─ config/             — bundled rule SSOTs: commons.md · recommend.tape · enforcement/keywords/severity.json

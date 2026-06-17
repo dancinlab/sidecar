@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## docs(commons): c18 신설 — 우회경로는 지시 전 작성 금지 (escape-hatch only on request)
+
+- 계기: G-RAW-GPU-CLOUD 차단을 만들 때 AI 가 임의로 `# cloud-ok` 탈출구를 끼워 넣어 "전면 금지" 가 안 됐던 사례 → 거버넌스 규칙으로 박제.
+- 신설(`config/commons.md` c18): 유저가 **명시적으로** 요청하기 전에는 구현 시 우회경로(exception/bypass 마커 · opt-out 플래그 · skip 조건 · fallback 분기 · 가드 무력화 탈출구)를 만들지 않는다. 금지·차단 요청은 글자 그대로 전면 차단으로 구현. c1(shadow 가드 금지)·c3(anti-punt)·c9(정직)의 연장선.
+- 기존 마커 탈출구(force-push `# force-ok` 등)는 유지, **새로** 만드는 차단·가드·정책에만 적용.
+
 ## fix(enforcement): G-RAW-GPU-CLOUD 를 warn→block(전면차단) 승격 — runpod/vast 직접 사용 금지, hexa cloud 강제
 
 - 요구: runpod·vast 의 CLI·API 직접 사용을 **전면 금지**(예외 없음)하고 GPU 클라우드 작업을 `hexa cloud` 로 강제 (commons c12 의 mechanical teeth).

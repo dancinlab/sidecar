@@ -13,6 +13,14 @@ import { resolve, basename } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { info, ok, warn, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
+import { config } from "../lib/config.ts";
+import { setLiveMarker, staleLongRunnerWarn } from "./heartbeat-guard.ts";
+
+// live long-runner labels (ing-board pods) for the c21 heartbeat guard.
+export async function liveLongRunnerLabels(cwd: string = REPO_ROOT): Promise<string[]> {
+  const rows = await readItems(cwd);
+  return rows.filter((r) => r.kind === "pod").map((r) => `pod ${r.id}(${r.gpu ?? "?"})`);
+}
 
 const ING_REF = "ing";
 const ING_FILE = "ING.jsonl";
@@ -165,7 +173,9 @@ export async function runIng(args: string[]): Promise<number> {
       toRemove = byText;
     }
     const drop = new Set(toRemove.map((r) => `${r.kind} ${r.id}`));
-    await writeItems(rows.filter((r) => !drop.has(`${r.kind} ${r.id}`)), `ing: done ${m}`); // scrub → CHANGELOG
+    const afterDone = rows.filter((r) => !drop.has(`${r.kind} ${r.id}`));
+    await writeItems(afterDone, `ing: done ${m}`); // scrub → CHANGELOG
+    setLiveMarker(afterDone.some((r) => r.kind === "pod")); // c21: clear marker when no pod remains
     ok(`ing: ✓ done "${m}" scrubbed (${toRemove.length}건) — 완료분은 CHANGELOG 로`);
     return 0;
   }
@@ -185,7 +195,14 @@ export async function runIng(args: string[]): Promise<number> {
       const parts: string[] = [];
       if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}${r.from ? ` 📥${r.from}` : ""} ${r.text}`).join(" · "));
       if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
-      const ctx = `🔵 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`harness ing show\` / done <id>`;
+      let ctx = `🔵 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`harness ing show\` / done <id>`;
+      // c21 heartbeat: flag live long-runners (pods) left unchecked past maxSilenceSec.
+      const hb = staleLongRunnerWarn(
+        pods.map((r) => `pod ${r.id}(${r.gpu ?? "?"})`),
+        config().poll.maxSilenceSec,
+        Date.now()
+      );
+      if (hb) ctx += `\n⏰ ${hb}`;
       process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: ctx } }) + "\n");
     } catch {
       return 0;
@@ -237,6 +254,7 @@ async function pod(args: string[]): Promise<number> {
     const kept = rows.filter((r) => !(r.kind === "pod" && r.id === id));
     kept.push({ kind: "pod", id, ts: nowIso(), provider: provider ?? "-", gpu: gpu ?? "-", purpose, cost });
     await writeItems(kept, `ing: pod + ${id}`);
+    setLiveMarker(true); // c21: a live long-runner now exists
     ok(`ing pod: + ${id} (${gpu ?? "-"} · ${purpose})`);
     return 0;
   }
@@ -246,7 +264,9 @@ async function pod(args: string[]): Promise<number> {
       info("usage: harness ing pod rm <id>");
       return 1;
     }
-    await writeItems(rows.filter((r) => !(r.kind === "pod" && r.id === id)), `ing: pod rm ${id}`);
+    const afterRm = rows.filter((r) => !(r.kind === "pod" && r.id === id));
+    await writeItems(afterRm, `ing: pod rm ${id}`);
+    setLiveMarker(afterRm.some((r) => r.kind === "pod")); // c21: clear marker when no pod remains
     info(`ing pod: removed ${id}`);
     return 0;
   }

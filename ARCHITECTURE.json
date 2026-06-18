@@ -58,7 +58,7 @@
             "이름": "PostToolUse",
             "역할": "도구 호출 직후 → post bash / edit",
             "구분": "surface",
-            "상세": "exit/파일경로로 실패 라우팅, L0 편집 경고. errors 큐 / stderr"
+            "상세": "exit/파일경로로 실패 라우팅, L0 편집 경고, c22 heartbeat(live 장기잡 미확인 warn). errors 큐 / stderr"
           },
           {
             "이름": "체크포인트",
@@ -342,6 +342,12 @@
             "역할": "기타 모듈별 대상 선언",
             "구분": "config",
             "상세": ""
+          },
+          {
+            "이름": "poll.maxSilenceSec = 600",
+            "역할": "c22 방치가드 임계 (live 장기잡 미확인 max 침묵)",
+            "구분": "config",
+            "상세": "heartbeat-guard: 상태확인 cmd 에 lastPoll 스탬프, post bash·ing inject 에서 초과 시 warn. c19(min 간격)의 반대"
           },
           {
             "이름": "dojo {defaultLang,stack,delegate}",

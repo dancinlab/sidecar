@@ -1,5 +1,31 @@
 # CHANGELOG
 
+## feat(heartbeat-guard): c22 — warn when a LIVE long-runner goes unchecked >10min (abandonment)
+
+c19 caps how OFTEN you may poll (anti-cache-bust); the OPPOSITE failure mode had no
+guard — firing a long-runner (GPU pod, background agent) then walking away, so it
+idle-burns and its result is never harvested. New c22 + `modules/heartbeat-guard.ts`:
+a live tracked long-runner must be CHECKED at least every `poll.maxSilenceSec`
+(default 600s = 10min). Covers ALL tracked runners, not just pods — ing-board pods +
+ledger background agents.
+
+- We can't intercept the ABSENCE of an action, so: `markPollActivity()` stamps a
+  `lastPoll` heartbeat (`.harness/logs/heartbeat.json`) whenever a status-check
+  command runs (`hexa cloud poll/tail/list/status/…`, `harness ing`, `harness ledger
+  list`, `harness check/lab`, `gh run watch`, `squeue/sacct`); `staleLongRunnerWarn()`
+  fires on agent activity (`post bash`) + session start (`ing inject`) if a live
+  runner exists and the heartbeat is older than maxSilenceSec. WARN (not block) —
+  abandonment is a nudge, the inverse of c19's hard cap.
+- Perf gate: `ing pod add` sets a cheap `.harness/logs/.live-runner` marker; `done`/
+  `pod rm` clears it when no pod remains. `post bash` skips the git-backed pod read
+  unless the marker is set OR a ledger agent is active — so the no-live-job common
+  case costs one stat. `post bash` reads the command from positional args OR the
+  PostToolUse tool-input env (fallback) so the stamp doesn't miss.
+- config: new `poll.maxSilenceSec` (default 600). `lib/config.ts` + DEFAULTS.
+- Verified: 5/5 heartbeat smoke (no-live → null; live+never-polled → warn 한 번도;
+  live+just-polled → null; live+700s-silent → warn; non-poll cmd doesn't stamp); CLI
+  loads. Convergence in-file (`NO_ABANDONED_LONGRUNNER`).
+
 ## feat(cloud/dojo): hand-rolled-fanout warn + config-carried dojo stack (flame+forge+hexa-cuda)
 
 Two gaps surfaced by the anima decode workflow, where a session hand-wrote `/tmp/h1305_launch.sh`

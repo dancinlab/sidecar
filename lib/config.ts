@@ -124,6 +124,12 @@ export interface HarnessConfig {
     stack?: string;
     delegate?: string;
   };
+  // poll heartbeat (c21) — a LIVE long-runner (GPU pod · ledger background agent)
+  // must be CHECKED at least every `maxSilenceSec` (default 600 = 10min). This is the
+  // INVERSE of the c19 over-poll floor: it catches NOT polling at all (fire-and-forget
+  // → idle-burn / unharvested result). heartbeat-guard stamps a lastPoll on status
+  // checks and warns past maxSilenceSec.
+  poll: { maxSilenceSec: number };
   ledger: { staleSec: number };
 }
 
@@ -193,6 +199,7 @@ const DEFAULTS: HarnessConfig = {
   tmpGuard: true,
   handoffGuard: true,
   askqText: true,
+  poll: { maxSilenceSec: 600 },
   ledger: { staleSec: 3600 },
 };
 

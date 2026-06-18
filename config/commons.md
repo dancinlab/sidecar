@@ -219,3 +219,13 @@ cross-repo 인계(`ing add --to <repo>`)는 **다른 세션/사람에게 진짜 
 - 규칙을 문서로만 두지 말고 **CI(release.yml)가 강제**하게 한다(doc↔mechanism lockstep).
 **왜**: hexa-lang v0.241.0/.1 에서 arm64 가 SIGSEGV 로 깨졌는데 x86+darwin 이 2/3 asset 으로 stable Latest 를
 발행 → 소비자(anima)가 OS 별로 부분 릴리즈를 물어 트러블슈팅 무한반복. 한 타깃 그린은 전체 그린이 아니다.
+
+## c22 — live 장기-진행건은 ≥10분마다 확인 (방치 금지 · c19 의 반대)
+긴 잡(**GPU pod**·백그라운드 **에이전트/ledger 작업**·기타 long-runner)을 **띄워놓고 안 보는 것**을 막는다 —
+fire-and-forget 는 idle-burn(비용) + 결과 미회수로 이어진다. c19 가 폴링을 **너무 자주** 하는 걸 막는다면
+(min 간격), c22 는 **아예 안 하는 것**을 막는다(max 침묵). live 한 tracked 진행건이 하나라도 있으면 **최소
+10분(`poll.maxSilenceSec`=600s)에 한 번**은 상태를 확인한다 — `hexa cloud poll/tail`·`harness ing show`·
+`harness check` 등. 끝났으면 즉시 `hexa cloud down`/`harness ing done` 으로 닫아 마커를 비운다.
+**기계적 강제(heartbeat-guard)**: 상태확인 명령을 돌리면 `lastPoll` 하트비트가 찍히고, `post bash`(에이전트
+활동)·`ing inject`(세션시작)에서 live 진행건이 있는데 마지막 확인이 `maxSilenceSec` 을 넘었으면 경고한다(warn).
+c19 와 짝: c19=과다폴링 차단(block), c22=미폴링/방치 경고(warn).

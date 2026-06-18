@@ -57,5 +57,12 @@
     "ext": [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs"]
   },
 
+  "dojo": {
+    "_note": "OPTIONAL — dojo scaffolder defaults. Engine stays domain-agnostic; the preferred training/kernel stack is carried HERE, never hardcoded. Absent → generic py stub. delegate: a `hexa dojo <domain>` (e.g. flame_forge | hexa_cuda) to emit REAL artifacts when hexa is on PATH.",
+    "defaultLang": "hexa",
+    "stack": "flame+forge+hexa-cuda",
+    "delegate": "flame_forge"
+  },
+
   "ledger": { "staleSec": 1800 }
 }

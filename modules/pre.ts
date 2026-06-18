@@ -13,7 +13,7 @@ import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
-import { detectRawCloudCli } from "./cloud-guard.ts";
+import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
 import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
@@ -109,6 +109,18 @@ export async function preBash(_args: string[]): Promise<number> {
     return emitBlock(
       "CLOUD-RAW-CLI",
       `${cloudLabel} — raw GPU-provider CLI/API direct use is blocked (commons c11). Use the hexa builtins: GPU/cloud → \`hexa cloud run <host> -- <argv...>\`, training jobs → \`hexa dojo <domain> <slug> '<spec>'\`, input decks → \`hexa deck …\`. Register running cloud work with \`harness ing pod add\`. No override — provider CLIs/APIs are not called directly from the agent.`
+    );
+  }
+
+  // hand-rolled shard-fanout launcher — WARN + redirect (c11 sibling). A local
+  // CPU-parallel loop is legitimate, so this never blocks; but the moment such a
+  // loop is copied to a pod the structured dispatch (register · cost · monitor) is
+  // lost, so we surface the canonical path every time the pattern appears.
+  const fanoutLabel = detectHandrolledShardFanout(cmd);
+  if (fanoutLabel) {
+    emitWarn(
+      "CLOUD-HANDROLLED-FANOUT",
+      `${fanoutLabel} — if this targets a GPU pod, hand-rolling the fanout (then \`hexa cloud copy-to\` + remote run) bypasses structured dispatch, \`pods.json\` registration, and cost accounting. Use \`hexa cloud fire-shards\` (splits the job list into N shards + stagger-launches each as a registered detached job). Local CPU-only batches are fine — ignore if not pod-bound.`
     );
   }
 

@@ -108,6 +108,22 @@ export interface HarnessConfig {
   // the agent to ask in plain CHAT text instead (options inline, mark the
   // recommended one, accept a free-form answer). A FORM redirect, not anti-punt.
   askqText: boolean;
+  // dojo scaffolder defaults. The harness engine is DOMAIN-AGNOSTIC, so the
+  // preferred training/kernel stack is carried HERE (per-repo config), never
+  // hardcoded in the engine. Absent → the generic py stub (back-compat).
+  //   defaultLang — driver language when `--lang` is not passed (default "py").
+  //   stack       — human label surfaced in the scaffold + pod/dojo runbook
+  //                 (e.g. "flame+forge+hexa-cuda" for the hexa-native GPU path).
+  //   delegate    — when set AND the `hexa` binary is on PATH, `harness dojo
+  //                 <slug>` shells out to `hexa dojo <delegate> <slug>` to emit
+  //                 the REAL domain artifacts (e.g. flame_forge → train.hexa over
+  //                 the flame/forge substrate; hexa_cuda → nvptx kernel) instead
+  //                 of the generic stub. Falls back to the stub if hexa is absent.
+  dojo?: {
+    defaultLang?: "py" | "hexa" | "both";
+    stack?: string;
+    delegate?: string;
+  };
   ledger: { staleSec: number };
 }
 

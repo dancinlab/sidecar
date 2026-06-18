@@ -6,6 +6,7 @@
 - **preflight** — closed-form GPU mem 예산 체크(파라미터·배치·옵티마이저 상태 → VRAM 추정). pod spinup 없이 OOM 사전 판정.
 - **rent** — pod 임대(provider·GPU·디스크 명시). **비용 발생 → 4축 박스로 surface 후 명시 `go` 대기**(자동 rent 금지).
 - **run / nohup / fire** — 잡 실행. fire/nohup = 백그라운드 fire + 모니터 핸들 emit. CPU-local 폴링 가능(detached nohup → /tmp log).
+- **fire-shards** — 잡 리스트를 N샤드로 line-split(원격 `split -n l/N`) 후 각 샤드를 stagger 로 detached 발사 = `hexa cloud fire-shards <host> --jobs <file> --shards <N> --cmd '<tmpl>' [--stagger S] [--register] [--dry-run]`. placeholder `{shard}`(필수)·`{i}`·`{out}`·`{log}`. **❌ 손수 `/tmp/<x>_launch.sh` 런처 루프 금지** — copy-to 는 통과돼도 그 안의 fanout 은 구조화 dispatch·`pods.json` 등록·비용계상을 통째로 우회한다(cloud-guard `CLOUD-HANDROLLED-FANOUT` warn). 다샤드 디코드/배치는 반드시 이 verb 로.
 - **poll / tail** — 결과 폴링 / 원격 로그 라이브 스트림.
 - **copy-to / copy-from** — 입력 업로드 / 산출물(ckpt·로그·결과) 회수.
 - **down** — 산출물 **전부 회수 + (해당 시) HF 업로드 후** teardown. (회수 전 teardown 금지)

@@ -8,7 +8,9 @@
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { HARNESS_ROOT, REPO_ROOT } from "../lib/paths.ts";
-import { info, ok } from "../lib/log.ts";
+import { info, ok, warn } from "../lib/log.ts";
+import { config } from "../lib/config.ts";
+import { execArgs } from "../lib/exec.ts";
 
 function printTemplate(name: string): number {
   const tpl = resolve(HARNESS_ROOT, "templates", `${name}.md`);
@@ -31,18 +33,60 @@ export async function runDemi(_args: string[]): Promise<number> {
 export async function runDojo(args: string[]): Promise<number> {
   const slug = args.find((a) => !a.startsWith("-"));
   const force = args.includes("--force");
+  // dojo defaults are CONFIG-carried (engine stays domain-agnostic): the preferred
+  // language, the human stack label, and an optional `hexa dojo` domain to delegate
+  // real artifact generation to. Absent config → the generic py stub (back-compat).
+  const dojoCfg = config().dojo ?? {};
+  const lang = args.find((a) => a.startsWith("--lang="))?.split("=")[1] ?? dojoCfg.defaultLang ?? "py";
+  const stack = dojoCfg.stack;
+
   printTemplate("dojo");
+  if (stack) info(`\n(default stack: ${stack}${dojoCfg.delegate ? ` · delegates to \`hexa dojo ${dojoCfg.delegate}\`` : ""})`);
   if (!slug) {
-    info("\n(scaffold: `harness dojo <slug> [--lang=hexa|py|both] [--force]`)");
+    info("(scaffold: `harness dojo <slug> [--lang=hexa|py|both] [--force]`)");
     return 0;
   }
+
+  // delegate to the real `hexa dojo <domain>` emitter when configured AND hexa is
+  // available — that yields the REAL stack artifacts (flame/forge train.hexa,
+  // hexa_cuda nvptx kernel) instead of the generic stub.
+  if (dojoCfg.delegate && (lang === "hexa" || lang === "both")) {
+    const probe = await execArgs("bash", ["-lc", "command -v hexa"]).catch(() => null);
+    if (probe && probe.code === 0) {
+      info(`\ndojo: delegating to \`hexa dojo ${dojoCfg.delegate} ${slug}\` (stack=${stack ?? dojoCfg.delegate})…`);
+      const r = await execArgs("hexa", ["dojo", dojoCfg.delegate, slug, "{}", `--lang=${lang}`], { cwd: REPO_ROOT });
+      if (r.stdout) process.stdout.write(r.stdout);
+      if (r.stderr) process.stderr.write(r.stderr);
+      if (r.code === 0) return 0;
+      warn(`\nhexa dojo delegate exited ${r.code} — falling back to the generic stub.`);
+    } else {
+      warn(`\nhexa not on PATH — config sets dojo.delegate=${dojoCfg.delegate} but cannot delegate; emitting the generic stub instead.`);
+    }
+  }
+
   const dir = resolve(REPO_ROOT, "exports", "dojo", slug);
-  const lang = (args.find((a) => a.startsWith("--lang="))?.split("=")[1] ?? "py");
-  const drvExt = lang === "hexa" || lang === "both" ? "hexa" : "py";
+  const hexaNative = lang === "hexa" || lang === "both";
+  const drvExt = hexaNative ? "hexa" : "py";
+  // run.sh glue calls the REAL canonical surfaces: `hexa cloud fire`/`fire-shards`
+  // for dispatch (NOT a hand-rolled launcher loop, NOT the non-existent `harness
+  // pod fire`), and — for the hexa-native stack — `hexa run` to drive the
+  // flame/forge trainer.
+  const driveCmd = hexaNative
+    ? `hexa run train.${drvExt}   # flame trainer over the forge substrate (CPU fallback · forge-GPU host accelerates unchanged)`
+    : `python3 train.py`;
   const files: Record<string, string> = {
-    [`job.${drvExt}`]: `// dojo job driver — ${slug}\n// config · hyperparams · data/model paths · checkpoint policy\n`,
-    "train.py": `# dojo trainer — ${slug}\n# loop · optimizer · logging · ckpt save\n`,
-    "run.sh": `#!/usr/bin/env bash\n# dojo glue — ${slug}: env → preflight → fire → poll → harvest → down\nset -e\n# harness pod preflight … ; harness pod fire … ; harness pod poll … ; harness pod down …\n`,
+    [`job.${drvExt}`]: `// dojo job driver — ${slug}${stack ? ` (stack: ${stack})` : ""}\n// config · hyperparams · data/model paths · checkpoint policy\n`,
+    [`train.${drvExt}`]: hexaNative
+      ? `// dojo flame trainer — ${slug}\n// deterministic data · forward · closed-form backward · optimizer step · descent gate\n`
+      : `# dojo trainer — ${slug}\n# loop · optimizer · logging · ckpt save\n`,
+    "run.sh":
+      `#!/usr/bin/env bash\n` +
+      `# dojo glue — ${slug}${stack ? ` · stack=${stack}` : ""}: env → preflight → fire → poll → harvest → down\n` +
+      `set -e\n` +
+      `# preflight (no spinup): hexa cloud preflight …\n` +
+      `# single job:    hexa cloud fire   <host> -- ${driveCmd}\n` +
+      `# sharded batch: hexa cloud fire-shards <host> --jobs jobs.tsv --shards N --stagger 8 --cmd '${driveCmd}'\n` +
+      `# poll/harvest:  hexa cloud poll <host> ; hexa cloud copy-from <host> … ; hexa cloud down <host>\n`,
   };
   mkdirSync(dir, { recursive: true });
   let created = 0;
@@ -52,7 +96,7 @@ export async function runDojo(args: string[]): Promise<number> {
     writeFileSync(p, body, f === "run.sh" ? { mode: 0o755 } : undefined);
     created++;
   }
-  ok(`\ndojo: scaffolded exports/dojo/${slug}/ (${created} file(s), lang=${lang}). fill spec + run.sh.`);
+  ok(`\ndojo: scaffolded exports/dojo/${slug}/ (${created} file(s), lang=${lang}${stack ? `, stack=${stack}` : ""}). fill spec + run.sh.`);
   return 0;
 }
 

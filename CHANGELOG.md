@@ -1,5 +1,39 @@
 # CHANGELOG
 
+## feat(cloud/dojo): hand-rolled-fanout warn + config-carried dojo stack (flame+forge+hexa-cuda)
+
+Two gaps surfaced by the anima decode workflow, where a session hand-wrote `/tmp/h1305_launch.sh`
+(a 12-shard staggered `hexa run` loop), `hexa cloud copy-to`'d it, and ran it remotely — bypassing
+`hexa cloud`'s structured dispatch / `pods.json` registration / cost accounting. `copy-to` is the
+sanctioned (whitelisted) path, so the existing raw-cloud block never saw the fanout.
+
+- **cloud-guard `detectHandrolledShardFanout()` (WARN + redirect)** — `pre bash`, sibling of the
+  `CLOUD-RAW-CLI` block. Catches the launcher LOOP itself via FOUR corroborating signals (loop /
+  `xargs -P` + `nohup`/`setsid` detach + backgrounding `&` + an engine/training launcher: `hexa
+  run`, torchrun/deepspeed/`accelerate launch`, or `python …`), so a benign local loop won't trip.
+  It is a WARN (not the no-override block): a local CPU-parallel batch is legitimate (pod.md allows
+  it); the moment it targets a pod the redirect points at `hexa cloud fire-shards`. Verified: 7/7
+  smoke (h1305 + xargs + torchrun POSITIVE; single-fire + wc-loop + http.server + bare-split
+  NEGATIVE) AND `detectRawCloudCli(h1305)=null` (warn-only, never the block). Convergence in-file
+  (`NO_HANDROLLED_SHARD_FANOUT`).
+- **config-carried dojo stack** — new optional `config.dojo {defaultLang, stack, delegate}`. The
+  engine stays domain-agnostic: the preferred training/kernel stack is carried in per-repo config,
+  never hardcoded. `runDojo` now reads it — defaults `--lang` from `defaultLang`, surfaces the
+  `stack` label, and when `delegate` is set AND `hexa` is on PATH it shells out to `hexa dojo
+  <delegate> <slug>` for the REAL artifacts (flame/forge `train.hexa`, `hexa_cuda` nvptx kernel),
+  else emits a hexa-native stub. The generic run.sh glue was also fixed: it referenced the
+  NON-EXISTENT `harness pod fire` — now `hexa cloud fire` / `fire-shards` (the real verbs).
+  anima/harness.config.json set to `defaultLang=hexa · stack="flame+forge+hexa-cuda" ·
+  delegate=flame_forge`; documented in harness.config.example.json. Verified: CLI loads; py stub
+  (back-compat) emits 0 `harness pod fire` + `hexa cloud fire`; hexa stub emits `train.hexa` +
+  `hexa run`.
+- **templates/pod.md** — adds the `fire-shards` sub-flow + an explicit "❌ 손수 launcher.sh 금지"
+  note pointing at the new guard.
+
+(The root-cause `hexa cloud fire-shards` verb itself lives in hexa-lang `feat/cloud-fire-shards`
+— implemented + `fire_shards_test PASS`, commit deferred there: that working tree is shared with
+other live sessions and its CHANGELOG is mid-edit, so a clean selective commit waits.)
+
 ## feat(poll-guard): code-level enforcement of c19 — block short-interval poll loops over external long-runners
 
 c19 ("poll external long-runners at ≥30min") was a hint; the main session's ScheduleWakeup interval

@@ -9,6 +9,7 @@
 //
 // @convergence state=ossified id=NO_RAW_CLOUD_CLI value="raw runpodctl/vastai/`cloud rent`/provider-API calls are blocked in code (pre bash), not just by an enforcement regex rule" threshold="a session ran `runpodctl pod create`/`cloud rent` directly because c11 was only a hint+warn; code guard runs before config rules with no override"
 // @convergence state=ossified id=NO_RAW_DOJO_DECK value="raw `python train.py`/`torchrun`/`accelerate launch`/`deepspeed` training launches AND hand-run run.sh in a dojo/decks tree are blocked in code — use `hexa dojo`/`hexa deck`" threshold="c11 named dojo/deck builtins but only cloud CLI was code-guarded; training launches and deck run.sh slipped through"
+// @convergence state=in_flight id=NO_HANDROLLED_SHARD_FANOUT value="a hand-rolled launcher loop (split -n l/N + a for/while loop that setsid/nohup-backgrounds repeated `hexa run`/training launches) is the exact bypass that defeated NO_RAW_CLOUD_CLI — copy-to is whitelisted so the .sh sails through, then the fanout runs remotely unseen. Detected as a WARN that redirects to `hexa cloud fire-shards`" threshold="a session wrote /tmp/h1305_launch.sh (12-shard staggered `hexa run` decode loop) + `hexa cloud copy-to` + remote run, bypassing structured dispatch/register/cost-accounting; the guard only saw the whitelisted copy-to"
 
 // strip ' and " so a quoted token still resolves to its bare form
 function stripQuotes(s: string): string {
@@ -94,4 +95,44 @@ function detectRawDojoDeck(cmd: string): string | null {
       return `hand-run dojo/deck script \`${runsh}\` — use \`hexa dojo\`/\`hexa deck\``;
   }
   return null;
+}
+
+// Hand-rolled SHARD-FANOUT launcher — the exact pattern that defeats the raw-cloud
+// block: instead of a sanctioned dispatch verb, a session writes a launcher loop
+// that splits an input into N shards and stagger-launches each as a detached job,
+// then `hexa cloud copy-to`s it (whitelisted) and runs it remotely — so the fanout
+// never crosses this guard. We catch the LOOP itself (wherever it is authored: a
+// bash heredoc, an inline `bash -c`, or a script body running in command position),
+// not the copy-to. This is HEURISTIC and a local CPU-parallel batch is legitimate
+// (pod.md allows CPU-local work) — so it is a WARN that REDIRECTS, never a block.
+//
+// Trigger requires FOUR corroborating signals so a benign loop won't trip it:
+//   1. a loop / parallel-spawn construct: `for`/`while … do`, or `xargs -P`
+//   2. a detach: `nohup` or `setsid`
+//   3. backgrounding: a trailing `&`
+//   4. an engine/training job launcher in the body: `hexa run`, torchrun/deepspeed/
+//      `accelerate launch`, or `python[3] …`
+// The line-balanced `split -n l/<N>` (the shard-split signature) raises confidence
+// but is not required — `xargs -P` fanouts skip it.
+export function detectHandrolledShardFanout(rawCmd: string): string | null {
+  const cmd = stripQuotes(rawCmd);
+
+  const hasLoop = /(^|[\s;&|])(for|while)\b[^\n]*?\bdo\b/.test(cmd) || /\bxargs\b[^\n]*-P\s*\d/.test(cmd);
+  if (!hasLoop) return null;
+
+  const hasDetach = /(^|[\s;&|])(nohup|setsid)\b/.test(cmd);
+  if (!hasDetach) return null;
+
+  const hasBackground = /&\s*($|[\n;)]|\bdone\b|\bsleep\b)/.test(cmd) || /&\s*$/m.test(cmd);
+  if (!hasBackground) return null;
+
+  const hasJobLauncher =
+    /(^|[\s;&|(])hexa\s+run\b/.test(cmd) ||
+    /(^|[\s;&|(])(torchrun|deepspeed)\b/.test(cmd) ||
+    /(^|[\s;&|(])accelerate\s+launch\b/.test(cmd) ||
+    /(^|[\s;&|(])python3?\s+[^\s|;&]*\.py\b/.test(cmd);
+  if (!hasJobLauncher) return null;
+
+  const sharded = /\bsplit\b[^\n]*-n\s+l?\/?\d/.test(cmd);
+  return `hand-rolled ${sharded ? "shard-fanout" : "fanout"} launcher loop (detached \`nohup\`/\`setsid\` job launches in a loop)`;
 }

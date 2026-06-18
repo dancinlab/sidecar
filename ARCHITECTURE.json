@@ -46,7 +46,7 @@
             "이름": "PreToolUse(Bash)",
             "역할": "도구 호출 직전 → pre bash",
             "구분": "surface",
-            "상세": "enforcement 정규식 매칭. block=stdout JSON / warn=stderr"
+            "상세": "코드레벨 가드(force-push·cloud-raw c11·poll c19·hand-rolled-fanout warn) → config enforcement 정규식 매칭. block=stdout JSON / warn=stderr"
           },
           {
             "이름": "PreToolUse(Write)",
@@ -342,6 +342,12 @@
             "역할": "기타 모듈별 대상 선언",
             "구분": "config",
             "상세": ""
+          },
+          {
+            "이름": "dojo {defaultLang,stack,delegate}",
+            "역할": "dojo 스캐폴더 기본 스택 (선택)",
+            "구분": "config",
+            "상세": "엔진 무하드코딩 — 선호 학습/커널 스택을 per-repo config 가 운반. delegate 설정+hexa 있으면 `hexa dojo <delegate>` 위임. 부재 시 제네릭 py stub"
           },
           {
             "이름": "docs.scratchDir = state",

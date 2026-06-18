@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## docs(arch): dogfood c4 — decompose harness ARCHITECTURE.json `ing` node into children
+
+Applied the c4 children-tree rule to harness's own ARCHITECTURE.json (the rule author should dogfood).
+The `ing` module node had a 391-char ` · `-joined dump in 상세; split it into child detail nodes (lead
+role line on the parent, each ` · ` item a child with verbatim text — lossless, lead+children == original).
+The other 3 long cells (`pr-cycle` 264 = coherent →-pipeline flow, `claudemd` 332 = coherent explanatory
+paragraph, `pool` 298 = coherent multi-sentence prose) were intentionally LEFT — per c4's anti-over-
+decomposition clause, coherent sentences/flows must not be shredded into orphan fragments. This closes
+the dancinlab-wide ARCHITECTURE.json tree pass: anima/edge/hexa-lang/demiurge/forge/phanes/hexa-codex/
+airgenome/drive/gamebox/pool/void all restructured to real children trees via parallel agents (each
+lossless-verified by non-whitespace char-multiset + JSON-valid + viewer-renderable), now harness itself.
+
 ## fix(lockdown): CLAUDE.md is never L0 — drop the self-capturing CLAUDE*.md regex alternation
 
 `lib/lockdown.ts`'s L0 path-parser (which reads the `🔴 L0` block of the guide named by

@@ -17,7 +17,7 @@ harness/
 ├─ modules/             — 41 commands: pre/post hooks · lint/verify · guards (git/tmp/scatter/docs)
 │                         · injects (commons/claudemd/recommend/prefs/easy) · pr-cycle · ing(+cross-repo --to)
 │                         · imagine · research · watch · secret · lsp · worktree · pod/dojo/demi/micro-exp …
-├─ config/             — bundled rule SSOTs: commons.md · recommend.tape · enforcement/keywords/severity.json
+├─ config/             — bundled rule SSOTs: commons.md · recommend.md · enforcement/keywords/severity.json
 ├─ templates/          — runbook bodies (sbs · bypass · go · brainstorm · pod · dojo · demi · micro-exp …)
 ├─ styles/             — easy.{md,ko,ja,zh,ru} friendly-response style
 ├─ plugin/             — Claude Code plugin (.claude-plugin/plugin.json + hooks/hooks.json)

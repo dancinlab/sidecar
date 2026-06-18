@@ -1,6 +1,7 @@
 // harness recommend {inject|show|set-default|clear-default|get-default|resolve-mode}
 // 4-axis recommendation rubric (sidecar recommend-axes parity). `inject` emits
-// config/recommend.tape (the SSOT rule carrier) + the active default-mode
+// config/recommend.md (the SSOT rule carrier — was recommend.tape; a plain
+// Markdown carrier now, the .tape DSL is retired) + the active default-mode
 // directive as additionalContext. `resolve-mode` is the deterministic mode
 // resolver consumed by `harness sbs` (LOCKED precedence in code, not prose).
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
@@ -62,15 +63,17 @@ function defaultDirective(): string {
 }
 
 function body(): string {
-  const tape = resolveRuleFile("recommend.tape", "recommend.tape");
+  // recommend.md carries the MUST-FOLLOW header itself (first line), so we just
+  // append the active default-mode directive. (per-repo .harness override honored.)
+  const md = resolveRuleFile("recommend.md", "recommend.md");
   let text = "";
   try {
-    text = readFileSync(tape, "utf8");
+    text = readFileSync(md, "utf8");
   } catch {
     text = "";
   }
-  if (!text) text = readFileSync(resolve(HARNESS_CONFIG_DIR, "recommend.tape"), "utf8");
-  return "# recommend-axes (MUST FOLLOW — hard rule, not a hint) · SSOT recommend.tape\n" + text + defaultDirective();
+  if (!text) text = readFileSync(resolve(HARNESS_CONFIG_DIR, "recommend.md"), "utf8");
+  return text + defaultDirective();
 }
 
 // ── resolve-mode: deterministic sbs mode resolver (LOCKED precedence) ─────────

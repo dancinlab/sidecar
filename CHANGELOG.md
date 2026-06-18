@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## refactor(recommend): retire `recommend.tape` DSL → `recommend.md` (plain Markdown carrier)
+
+The 4-axis recommend rubric lived in `config/recommend.tape`, but `recommend.ts` only ever read it as
+TEXT and injected it verbatim (no DSL parsing), so the `.tape` form added nothing. Moved the same
+rules to `config/recommend.md` (Markdown, like commons.md / easy.md); `body()` reads recommend.md and
+the MUST-FOLLOW header now lives in the file's first line. set-default / auto / fixed-axis directives,
+`resolve-mode` (the sbs dependency), and per-repo `.harness` override are all unchanged. QA: show /
+inject emit recommend.md, `resolve-mode auto:safe` + FIXED-axis directive verified, `recommend.tape`
+removed. This is step 1 of the dancinlab-wide `.tape` retirement — data-bearing `.tape` files
+(CLAIMS / PROMOTION / … across the other repos) are dropped outright in follow-up per-repo sweeps.
+
 ## docs(commons): add c19 — poll external long-runners (pod/r2/cloud) at ≥30min when not delegated
 
 New rule c19: when the main session itself polls an **external** long-running job — GPU `pod`

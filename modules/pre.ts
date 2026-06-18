@@ -13,6 +13,7 @@ import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
+import { detectRawCloudCli } from "./cloud-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
@@ -98,6 +99,16 @@ export async function preBash(_args: string[]): Promise<number> {
         `${label} — rewrites or bypasses shared history. No override; if a force-push is genuinely required, run it outside the agent.`
       );
     }
+  }
+
+  // built-in raw-cloud-CLI guard — code-level block (c11), runs before config
+  // rules, default-on, NO override. GPU/cloud must go through hexa builtins.
+  const cloudLabel = detectRawCloudCli(cmd);
+  if (cloudLabel) {
+    return emitBlock(
+      "CLOUD-RAW-CLI",
+      `${cloudLabel} — raw GPU-provider CLI/API direct use is blocked (commons c11). Use the hexa builtins: GPU/cloud → \`hexa cloud run <host> -- <argv...>\`, training jobs → \`hexa dojo <domain> <slug> '<spec>'\`, input decks → \`hexa deck …\`. Register running cloud work with \`harness ing pod add\`. No override — provider CLIs/APIs are not called directly from the agent.`
+    );
   }
 
   // worktree-add advisory — non-blocking (stranded-work + branch-reuse hygiene)

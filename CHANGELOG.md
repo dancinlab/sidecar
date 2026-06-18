@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## feat(cloud-guard): code-level block of raw runpod/vast CLI·API + raw dojo/deck launches (c11)
+
+A session ran `runpodctl pod create` / `cloud rent` directly because c11 ("use hexa builtins")
+was only a hint + keyword warn — nothing blocked it, and an enforcement.json regex rule can be
+silently weakened by a profile edit. Fix is CODE-level, mirroring the built-in force-push guard:
+new `modules/cloud-guard.ts` `detectRawCloudCli()` runs in `pre bash` BEFORE config rules,
+default-on, NO override. Two guard families:
+- **raw cloud CLI/API**: blocks `runpodctl …`, `vastai …`, `vast <verb> …`, `cloud rent`, and
+  `api.runpod.io`/`rest.runpod.io`/`console.vast.ai` endpoints → use `hexa cloud`.
+- **raw dojo/deck launches** (`detectRawDojoDeck`): blocks distributed/training launchers in
+  command position — `torchrun …`, `deepspeed …`, `accelerate launch …`, `python[3] …train|
+  finetune|sft|pretrain….py` — and hand-running a `run.sh` under a `dojo/`|`decks/` tree →
+  use `hexa dojo` / `hexa deck`.
+Sanctioned path (`hexa cloud`/`hexa dojo`/`hexa deck`) and innocents pass: `grep runpodctl logs`,
+`echo runpodctl`, `cat vast/notes.md`, `vast=3`, `python app.py`, `python serve.py`,
+`accelerate config`, `bash scripts/build.sh`. Segment-aware (splits on shell operators, strips
+`sudo `/env-assignments, inspects each segment's lead token) so it's command-position-precise,
+not substring. QA via the real `pre bash` hook (CLAUDE_TOOL_INPUT env, not stdin — cross-checked
+per c2): all block/pass cases correct, 0 false positives. Convergence ossified in-file
+(`NO_RAW_CLOUD_CLI`, `NO_RAW_DOJO_DECK`).
+
 ## docs(arch): dogfood c4 — decompose harness ARCHITECTURE.json `ing` node into children
 
 Applied the c4 children-tree rule to harness's own ARCHITECTURE.json (the rule author should dogfood).

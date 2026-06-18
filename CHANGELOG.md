@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## feat(c17): upstream 막힘 = 그 세션 직접 fix (현재작업 ING 박제 → resume 복원)
+
+c17 was a split — compiler/runtime core → ING hand-off, everything else → direct fix — and the
+split kept stalling (cores got punted rather than fixed). New policy: an upstream blocker is fixed
+**in that session, directly** (core or app), via the upstream repo + `harness pr-cycle`. High-risk
+substrate (codegen/runtime/byteeq/toolchain) just gets an isolated `git worktree` + STOP-on-
+concurrent-session (c7/c9) — conflicts are avoided by isolation, not by punting. Because a fix can
+run long, the interrupted task is first stashed on the board:
+`harness ing add "↩resume <task>: <where·why·next>"`. ing now sorts `↩`-prefixed resume items to the
+FRONT of `ing show` / SessionStart inject so the thing to return to surfaces first; after the fix
+merges, resume it and `ing done <id>`. cross-repo `--to` is now only for genuinely handing work to
+another session/person.
+
 ## feat(ing): board on a dedicated `ing` git ref + 수렴진화 → hexa `@convergence` attr
 
 The in-progress board is no longer a working-tree file — it lives on a dedicated `ing` git ref:

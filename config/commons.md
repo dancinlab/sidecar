@@ -161,20 +161,18 @@ exception/bypass 마커(`# *-ok` 류) · opt-out 플래그 · skip 조건 · fal
 연장선 — "혹시 몰라서" 남기는 뒷문이 곧 우회습관. 이미 있는 마커 탈출구(force-push `# force-ok` 등)는
 기존 규칙이라 유지하되, **새로** 만드는 차단·가드·정책에는 기본적으로 우회구멍을 두지 않는다.
 
-## c17 — upstream 막힘: 컴파일/런타임 코어는 ING 로, 그 외는 직접 fix
+## c17 — upstream 막힘: 그 세션에서 직접 fix (현재작업은 ING 박제 → 복원)
 작업이 의존하는 **upstream**(특히 `hexa`/`hexa-lang`, 그 외 dancinlab 소유 repo)의 버그·한계·미지원에
-막히면 — 막힘의 **종류로 갈라** 처리한다:
-- **컴파일러·런타임 코어**(compiler/codegen · runtime.a · gen3/gen4 byteeq · toolchain 빌드 실패 · OOM
-  등 substrate)는 **직접 고치지 말고 ING 로 인계**한다: `harness ing add <증상+재현> --to hexa-lang`(또는
-  해당 upstream). 이 영역은 **여러 세션이 동시에 깊게 파고드는 고위험 지대** — 함부로 손대면 충돌·회귀다
-  (이번 세션도 hexa-lang 컴파일러 코어는 건드리지 않고 cloud 레이어만 고쳤다). 인계로 남기고 본 작업은 진행.
-- **그 외**(응용 로직 · CLI · stdlib · cloud · 설정 · 문서 등 코어 밖)는 로컬에서 wrapper·shadow·fork·
-  monkey-patch 로 **덮지 말고** 그 upstream repo 를 **직접 고쳐 `harness pr-cycle` 로 정식 머지**한다
-  (**필요시 반드시 진행** · "남의 코드"라 미루지 말 것). 공유 checkout 은 **격리 worktree**(`git worktree
-  add`)에서 작업하고 동시 세션 활동 감지 시 STOP(c7·c9).
-dancinlab 생태계는 한 몸 — harness 가 hexa 빌트인(c11)에 의존하듯, 응용층 막힘의 진짜 원인이 upstream 에
-있으면 거기서 고치는 게 근본 수정(c1)이다. upstream 도 c12 대로 문서+검증 머지로 닫는다. c1·c16(우회금지)의
-연장 — 단, 컴파일/런타임 substrate 는 다세션 충돌 위험이 커 직접수정 대신 ING 인계가 안전한 정공법이다.
+막히면 — **인계로 미루지 말고 그 세션에서 직접 고친다**(코어든 응용이든). 로컬 wrapper·shadow·fork·
+monkey-patch 로 **덮지 말고** 그 upstream repo 를 **직접 고쳐 `harness pr-cycle` 로 정식 머지**한다 (c1·c16
+우회금지의 연장 · "남의 코드"라 미루지 말 것 · 진짜 원인이 upstream 이면 거기서 고치는 게 근본 수정).
+컴파일러·런타임 substrate(codegen · runtime.a · byteeq · toolchain 등) 같은 **다세션 고위험 지대는 격리
+worktree**(`git worktree add`)에서 작업하고 동시 세션 활동 감지 시 STOP(c7·c9) — 충돌은 **인계가 아니라 격리**로 피한다.
+**fix 가 길어질 수 있으니 중단되는 현재 작업을 먼저 ING 에 박제한다**: `harness ing add "↩resume <작업>:
+<어디까지·왜 멈췄나·다음 한 수>"`. ING 은 전용 `ing` ref(c6)라 fix 중 브랜치 전환·세션 경계를 넘어도
+보존되고, `↩` 로 시작하는 resume 항목은 `ing show`/SessionStart inject 에서 **맨 앞에 표면화**된다. upstream
+fix 머지 후 그 resume 항목을 보고 원래 작업을 재개하고 `harness ing done <id>` 로 닫는다(완료는 CHANGELOG).
+cross-repo 인계(`ing add --to <repo>`)는 **다른 세션/사람에게 진짜 넘길 때**만 — 내가 막힌 건 내가 고친다.
 
 ## c18 — 릴리즈는 semver 태그 → CI 자산 배포 (수동 빌드·업로드 금지)
 사용자에게 **배포되는 산출물**(컴파일러·바이너리·패키지·CLI·모델 등)이 있는 repo 는 릴리즈를 다음으로 통일한다:

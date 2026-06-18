@@ -66,7 +66,7 @@
               { "이름": "verify", "역할": "검증 명령 병렬 실행", "구분": "module", "상세": "명령은 config 선언" },
               { "이름": "errors", "역할": "(kind,code)→severity 분류", "구분": "module", "상세": "맵은 외부 JSON" },
               { "이름": "ledger", "역할": "에이전트 작업 등록 (중복 방지)", "구분": "module", "상세": "도메인 무관" },
-              { "이름": "ing", "역할": "진행보드 + cross-repo 인계 (전용 `ing` git ref)", "구분": "module", "상세": "work/next/pod · done=scrub. 보드는 worktree 가 아니라 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref)으로 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. `add --to <repo>`=형제 프로젝트 ing ref 에 from 태그 직접 전달(구 handoff 흡수). done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지)" },
+              { "이름": "ing", "역할": "진행보드 + cross-repo 인계 (전용 `ing` git ref)", "구분": "module", "상세": "work/next/pod · done=scrub. 보드는 worktree 가 아니라 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref)으로 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. `add --to <repo>`=형제 프로젝트 ing ref 에 from 태그 직접 전달(구 handoff 흡수). done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 로 중단된 작업 박제·복원)" },
               { "이름": "bitter-gate", "역할": "JSONL 빈도 분석", "구분": "module", "상세": "dormant 규칙 폐기 검토" },
               { "이름": "audit", "역할": "JSONL 카운트 기반 6축 스코어카드", "구분": "module", "상세": "" },
               { "이름": "gc", "역할": "마크다운 가이드 링크 drift 탐지", "구분": "module", "상세": "" },

@@ -91,6 +91,12 @@ function nextId(rows: Item[]): string {
   return String(rows.reduce((m, r) => Math.max(m, parseInt(r.id, 10) || 0), 0) + 1);
 }
 
+// c17 resume markers: a task stashed before a (possibly long) upstream fix carries a
+// leading `↩`; these sort to the FRONT so the thing to return to is surfaced first.
+function resumeRank(r: Item): number {
+  return (r.text ?? "").startsWith("↩") ? 0 : 1;
+}
+
 export async function runIng(args: string[]): Promise<number> {
   const sub = args[0] ?? "show";
 
@@ -173,6 +179,7 @@ export async function runIng(args: string[]): Promise<number> {
       if (!ev) return 0;
       const rows = await readItems();
       const work = rows.filter((r) => r.kind === "work");
+      work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
       const pods = rows.filter((r) => r.kind === "pod");
       if (!work.length && !pods.length) return 0; // silent when nothing active
       const parts: string[] = [];
@@ -193,6 +200,7 @@ export async function runIng(args: string[]): Promise<number> {
     return 0;
   }
   const work = rows.filter((r) => r.kind === "work");
+  work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
   const pods = rows.filter((r) => r.kind === "pod");
   const next = rows.filter((r) => r.kind === "next");
   info(`ING — 진행중 (ing ref · git show ing:ING.jsonl) · 완료→CHANGELOG · 최종설계→ARCHITECTURE`);

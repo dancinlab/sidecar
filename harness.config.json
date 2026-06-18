@@ -36,6 +36,9 @@
       ]
     }
   },
+  "docs": {
+    "scopeDirs": ["docs"]
+  },
   "guides": [
     "README.md",
     "CHANGELOG.md",

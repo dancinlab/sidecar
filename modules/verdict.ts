@@ -17,12 +17,23 @@ function vpath(rel: string): string {
   return resolve(REPO_ROOT, "state", rel + ".txt");
 }
 
+// shell-quote a single argv token so spaces/quotes/operators survive when the
+// argv is re-joined into a shell line (used only for `record … -- <argv>`).
+function shq(t: string): string {
+  return /^[A-Za-z0-9_@%+=:,.\/-]+$/.test(t) ? t : `'${t.replace(/'/g, "'\\''")}'`;
+}
+
 export async function runVerdict(args: string[]): Promise<number> {
   const sub = args[0] ?? "list";
 
   if (sub === "record") {
     const id = args[1];
-    const cmd = args.slice(2).join(" ").replace(/^--\s*/, "");
+    const rest = args.slice(2);
+    // `record id -- prog arg "a b"` = ARGV mode: shell-quote each token so spaces
+    // and quoting survive intact (fixes the silent flatten of quoted commands).
+    // Without `--`, args are one shell line so `record id "a && b"` still runs
+    // shell operators verbatim.
+    const cmd = rest[0] === "--" ? rest.slice(1).map(shq).join(" ") : rest.join(" ");
     if (!id || !cmd) {
       info("usage: harness verdict record <slug>/<id> <verify-cmd...>");
       return 1;

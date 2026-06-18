@@ -23,18 +23,26 @@ export function detectForcePush(rawCmd: string): string | null {
   const toks = tokens(stripQuotes(rawCmd));
   const n = toks.length;
 
-  // first `git push` adjacency
+  // find `git … push`, allowing git-level options (`-c key=val`, `--flag`)
+  // between `git` and the `push` subcommand — so `git -c x=y push --force` is
+  // not a blind spot. `gp` = index of the `push` token.
   let gp = -1;
-  for (let i = 0; i + 1 < n; i++) {
-    if (toks[i] === "git" && toks[i + 1] === "push") {
-      gp = i;
+  for (let i = 0; i < n; i++) {
+    if (toks[i] !== "git") continue;
+    let j = i + 1;
+    while (j < n && toks[j].startsWith("-")) {
+      if (toks[j] === "-c" || toks[j] === "--config") j++; // -c takes a value
+      j++;
+    }
+    if (j < n && toks[j] === "push") {
+      gp = j;
       break;
     }
   }
   if (gp < 0) return null;
 
   // flag-form force
-  for (let j = gp + 2; j < n; j++) {
+  for (let j = gp + 1; j < n; j++) {
     const t = toks[j];
     if (t === "-f" || t === "--force") return "git push --force / -f";
     if (t === "--force-with-lease" || t.startsWith("--force-with-lease=")) return "git push --force-with-lease";
@@ -42,7 +50,7 @@ export function detectForcePush(rawCmd: string): string | null {
 
   // refspec-level force — a positional (non-flag) token after `git push` whose
   // first char is `+` (e.g. `git push origin +main`, `+HEAD:refs/heads/x`).
-  for (let j = gp + 2; j < n; j++) {
+  for (let j = gp + 1; j < n; j++) {
     const t = toks[j];
     if (t.startsWith("-")) continue; // a flag, not a refspec
     if (t.length > 1 && t[0] === "+") return "git push <remote> +<refspec> (refspec-level force)";

@@ -1,5 +1,7 @@
 # 언어/플랫폼 범용성
 
+> 📍 SSOT: 설계 [ARCHITECTURE.json](../ARCHITECTURE.json) · 이력 [CHANGELOG.md](../CHANGELOG.md). 본 문서는 보조 언어 가이드.
+
 하네스 **엔진 로직은 언어 무관**이다 — git staged/commit, 파일 경로·내용 정규식, 명령 실행, JSONL 로그만 다룬다. 웹앱뿐 아니라 로컬 앱(Python·Rust·C/C++·Go·hexa)과 모바일(Swift)에 그대로 쓴다.
 
 ## 한 가지 호스트 요구사항: Node (tsx)

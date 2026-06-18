@@ -1,5 +1,7 @@
 # 확장 — 규칙 추가 · 도메인 모듈 끼우기
 
+> 📍 SSOT: 설계 [ARCHITECTURE.json](../ARCHITECTURE.json) · 이력 [CHANGELOG.md](../CHANGELOG.md). 본 문서는 보조 확장 가이드.
+
 ## 1. enforcement 규칙 추가 (가장 흔한 확장)
 
 엔진 코드는 건드리지 않는다. `.harness/enforcement.json` 에 규칙만 append.

@@ -18,8 +18,14 @@ export interface DocViolation {
   msg: string;
 }
 
+// architecture SSOT filename — prefer the .json tree if present, else the
+// configured (.md prose) name. Mirrors lint's auto-detect so docs discipline and
+// lint agree (a repo on ARCHITECTURE.json no longer reads as docs-inactive).
+function archName(): string {
+  return existsSync(repoPath("ARCHITECTURE.json")) ? "ARCHITECTURE.json" : config().docs.architecture;
+}
 export function docsActive(): boolean {
-  return existsSync(repoPath(config().docs.architecture));
+  return existsSync(repoPath(archName()));
 }
 
 function isAllowed(rel: string): boolean {
@@ -34,7 +40,7 @@ function isScatter(rel: string): boolean {
 // A separate doc must point back to the SSOT in its first ~12 lines:
 //   a link to the architecture file, OR the tokens SSOT / quickref / 단일 문서.
 function hasQuickref(absFile: string): boolean {
-  const arch = basename(config().docs.architecture);
+  const arch = basename(archName());
   let head = "";
   try {
     head = readFileSync(absFile, "utf8").split("\n").slice(0, 12).join("\n");
@@ -48,7 +54,7 @@ function hasQuickref(absFile: string): boolean {
 // content-based quickref (for write-time, before the file exists on disk):
 // a separate doc must point back to the SSOT in its first ~12 lines.
 function contentHasQuickref(content: string): boolean {
-  const arch = basename(config().docs.architecture);
+  const arch = basename(archName());
   const head = content.split("\n").slice(0, 12).join("\n");
   if (head.includes(arch)) return true;
   return /\b(SSOT|quickref|단일\s*문서|↩|→\s*\[)/i.test(head);
@@ -72,7 +78,7 @@ export function docWriteViolation(absOrRelPath: string, content: string): DocVio
   if (!rel.endsWith(".md")) return null;
   // single-SSOT: the architecture doc lives ONLY at the root canonical path —
   // no docs/architecture.md, no nested ARCHITECTURE.md (둘 다 쓰면 안 됨, 루트에만).
-  const archRel = config().docs.architecture;
+  const archRel = archName();
   const base = basename(rel).toLowerCase();
   if ((base === basename(archRel).toLowerCase() || base === "architecture.md") && rel !== archRel) {
     return {

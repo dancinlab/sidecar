@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## qa(harness): fix the 3 deferred QA findings + commons rules (수렴진화 3-state · QA → c2)
+
+Resolved the 3 items the full-module QA sweep had deferred:
+- **verdict arg-flatten (⑥)** — `record id -- <argv>` now shell-quotes each token (`shq`), so
+  `record id -- sh -c 'exit 3'` correctly FAILs instead of silently mis-tiering. Without `--`,
+  args stay one shell line so `record id "a && b"` keeps shell operators (no regression).
+- **git -c push --force bypass (⑧)** — detectForcePush now walks past git-level options
+  (`-c key=val`, `--flag`) between `git` and `push`, so `git -c x=y push --force` blocks; refspec
+  `+main` still blocks; `git push origin main` / `git log` still pass.
+- **docsActive .json mismatch (⑨)** — docs.ts now uses an `archName()` auto-detect (prefer
+  ARCHITECTURE.json, mirroring lint), so a .json-SSOT repo no longer reads as docs-inactive.
+  Set `docs.scopeDirs:["docs"]` in harness.config (templates/styles runbooks are not separate
+  SSOT docs → quickref-exempt) + added quickref to docs/extending·languages → `docs check` rc 0.
+
+commons rules:
+- **c1 수렴진화 (재발방지)** — a recurring defect's lesson is recorded as an inline comment IN the
+  offending file, classified by **verification state** (not a running log): `// ✅ 수렴[필수]`
+  (must, verified) · `// 🔄 수렴[진행]` (doing/done) · `// 🚫 수렴[금지]` (tried→proven-not-to-do).
+  No scattered `*-incident.md`.
+- **c2 post-impl QA** — moved the "full QA after every feature/bugfix" rule from CLAUDE.md into
+  commons c2 (cross-project), with the parallel-agent + test-harness-artifact cross-check note.
+
 ## qa(harness): full-module QA sweep — fix 7 bugs (atlas · enforcement · folders · worktree)
 
 Ran a QA sweep across all ~55 commands (4 parallel agents, throwaway repos). Runbook/util

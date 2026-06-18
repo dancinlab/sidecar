@@ -35,4 +35,3 @@ harness/
 - 매 사이클: 문서(CHANGELOG + 설계변경 시 ARCHITECTURE) → `harness pr-cycle` 검증 머지 (commons c14).
 - 새 명령: `modules/<name>.ts` + `cli/index.ts` 등록 + help 라인 + CHANGELOG. 런북형이면 `templates/<name>.md`.
 - 엔진 변경 후 검증: `npx tsx cli/index.ts help` 로드 + 관련 스모크. 전역 반영: `harness self-update`.
-- **기능 구현/버그픽스 후 전체 QA**: 그 기능을 임시 repo 에서 **전 서브커맨드·엣지케이스 전수 실행 → PASS/FAIL 집계**(c2)하고, 발견 버그를 fix 한 뒤 닫는다 (테스트 하네스 아티팩트 — zsh `$var` word-split 미적용 등 — 으로 보이면 직접 인자로 교차확인해 코드/테스트 책임을 가른다). 예: `ing` = show·add·next·done(단일/다중id·텍스트·pod·모호·없는id)·pod(add/rm/list)·inject·`--to` 전수.

@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## feat(ing): board on a dedicated `ing` git ref + 수렴진화 → hexa `@convergence` attr
+
+The in-progress board is no longer a working-tree file — it lives on a dedicated `ing` git ref:
+- `ing add/done/pod/next/show/inject` read via `git show ing:ING.jsonl` and write via plumbing
+  (`hash-object` → `mktree` → `commit-tree` → `update-ref` on `refs/heads/ing`), then best-effort
+  `push origin ing`. So the board is **branch-switch-proof** (never in the worktree, so checkout/
+  `reset --hard` can't clobber it — the bug that kept eating it), **committed + shared** (push), and
+  **protected-main-safe** (its own ref, not main). Offline / no-push-perm → the local ref still
+  advances and warns to sync later.
+- `readItems` falls back to a legacy working-tree ING.jsonl when the ref is absent (one-time
+  migration); the first write graduates those items onto the ref. `--to <repo>` writes the sibling's
+  `ing` ref the same way.
+- QA (throwaway repo + bare remote): add×2 → ref created · feat branch + `reset --hard` → board
+  preserved · done → scrub · push → reached bare remote · remote removed → local ref advances + warn.
+  All PASS.
+
+commons c1 — 수렴진화 (recurring-defect learning) now uses hexa-lang's `@convergence` attr format
+verbatim instead of the ad-hoc ✅/🔄/🚫 labels (SSOT: hexa-lang `self/convergence_scan.hexa`;
+`hexa convergence dump <file>` scans/aggregates it): `// @convergence state=<state> id=<ID>
+value="…" threshold="…"` with the canonical state enum (ossified | stable | in_flight | pending |
+completed | completed_gap | failed | blocked). ing.ts carries the first two real entries
+(`ING_BOARD_DEDICATED_REF`=ossified, `ING_NO_DIRECT_MAIN_PUSH`=failed).
+
 ## fix(ing): untrack ING.jsonl (gitignore) — branch-switch/reset no longer clobbers the board
 
 ING.jsonl was git-tracked, so a `git checkout`/`reset --hard` (e.g. switching branches, or a

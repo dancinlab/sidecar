@@ -13,12 +13,13 @@ block keeps them salient in context.
 ## c1 — root cause, not workaround
 원인을 고친다 (증상 아님). 금지: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만-남기기·
 shadow 가드. 정당하면 `@root-cause-ok <이유>` 마커 + 코멘트로 justify.
-**수렴진화(재발방지 · 검증 상태로 구분)**: 같은 결함·실수가 **재발**하면 그 학습을 별도 incident 트래커로
-흩지 말고 **결함난 그 코드 파일의 인라인 주석**으로 남긴다 — 단순 누적이 아니라 **검증 상태 3구분**으로 분류:
-- `// ✅ 수렴[필수]: <반드시 있어야/해야 하는 것 — 검증됨>`
-- `// 🔄 수렴[진행]: <지금 하는 중 / 이미 한 것>`
-- `// 🚫 수렴[금지]: <시도→실패로 검증된, 하면 안 되는 것 + 왜 안 되는지>`
-코드 읽는 그 자리에서 "반드시 할 것 / 진행·완료 / 절대 금지" 가 구분돼 보이게 — 흩어진 `*-incident.md`/별도 레지스트리 금지.
+**수렴진화(재발방지 · hexa `@convergence` attr 양식)**: 같은 결함·실수가 **재발**하면 그 학습을 별도
+incident 트래커로 흩지 말고 **결함난 그 코드 파일의 인라인 주석**에 hexa-lang `@convergence` 양식으로 남긴다
+(SSOT: hexa-lang `self/convergence_scan.hexa` · `hexa convergence dump <file>` 로 스캔·집계). 단일행 형식:
+`// @convergence state=<state> id=<ID> value="<핵심>" threshold="<재발조건/해결>"` — 필수 키 `state`·`id`,
+선택 `value`·`threshold`·`rationale`·`ref_commit`·`date` 등. **state**(허용값): `ossified`(굳음·재발방지 확정)·
+`stable`·`in_flight`·`pending`(진행)·`completed`·`completed_gap`·`failed`·`blocked`(시도→실패/막힘으로 검증).
+`.hexa` 소스는 attr 형식 `@convergence(state="...", id="...", ...)`. 흩어진 `*-incident.md`/별도 레지스트리 금지.
 
 ## c2 — verify before "done"
 "됐다" 전에 실제 검증을 돌리고 **출력으로** 확인한다 (`harness ci`/build/test). 실패는 실패라고
@@ -52,9 +53,10 @@ SSOT quickref 1줄. 메인 CLAUDE.md = 프로젝트 설명 + 트리구조(노드
   `harness ing done <id>` = **scrub**(제거 → 완료는 CHANGELOG 로). SessionStart 에 자동 표면화되니 "지금
   뭐 하던 중" 을 남겨라. **상태변동 트리거(파일 변동과 무관)**: 파일이 하나도 안 바뀌어도 작업 **상태**가
   바뀌면(시작·진행단계 전환·블로커·완료·다음 한 수 결정) 그 턴에 보드를 현행화한다(add/next/done).
-  **`ING.jsonl` 은 gitignore(untrack)** — 진행보드는 **로컬 세션 상태**라 브랜치 전환·`reset`/`checkout` 에
-  덮이지 않아야 한다(tracked 면 그 함정에 빠진다). 빠른 갱신·커밋 불필요. 의미있는 코드 변동은 c12 로 닫고,
-  완료·인계 내용은 CHANGELOG/대상 repo 보드에 남아 보존된다.
+  **진행보드는 전용 `ing` git ref 에 저장**(`refs/heads/ing` · worktree 파일 아님) — `harness ing` 이
+  plumbing 으로 read/write 하고 best-effort `push origin ing` 으로 **공유**한다. worktree 에 없으니 브랜치
+  전환·`reset`/`checkout` 에 안 덮이고(전 함정 해소), protected main 도 우회한다. 완료·인계는 CHANGELOG/
+  대상 repo 의 `ing` ref 로 보존된다.
 - **인계**: 같은 repo 는 `harness ing add <text>`, **타 프로젝트로는 `harness ing add <text> --to <repo>`**
   — 대상 repo 의 `ING.jsonl` 에 `from` 태그를 달아 직접 남기고, 그 repo SessionStart 에 `📥<from>` 으로
   표면화된다. `HANDOFF.md`·`INBOX.md`·`inbox/*.md` 흩뿌리기 금지(handoff-guard 차단).

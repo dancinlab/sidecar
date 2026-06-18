@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## docs(commons): c4 — ARCHITECTURE.json must use a real `children` tree (no one-cell dump)
+
+Strengthened c4: when authoring ARCHITECTURE.json, express hierarchy as a `children` tree — do NOT
+cram many facts into one column (esp. `상세`/`detail`) joined by ` · `/newlines. Many items piling
+into one cell is the signal to decompose them into child nodes (a module's subcommands · fields ·
+failure modes each become a child). Column values hold only the node's own short attributes
+(one-line role, kind tag); deeper content drops one level into `children`. Goal: scanning the tree
+reveals structure and detail unfolds with depth — a real hierarchy, not a flat table padded with
+long prose. A node that grows bulky without children is a refactor target.
+
 ## docs(commons): add c20 — Pi5-Akida is anima neuromorphic-only (no shared-resource use)
 
 New rule c20: the Raspberry Pi 5 + Akida neuromorphic chip (`pi5-akida`) is reserved for anima's

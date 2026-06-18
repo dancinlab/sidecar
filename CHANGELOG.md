@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## fix(lockdown): CLAUDE.md is never L0 — drop the self-capturing CLAUDE*.md regex alternation
+
+`lib/lockdown.ts`'s L0 path-parser (which reads the `🔴 L0` block of the guide named by
+`lockdown.fromMarkdown`, normally CLAUDE.md) included `CLAUDE(?:-…)?\.md` as a path-like token — so
+whenever the parser scanned CLAUDE.md and the text mentioned `CLAUDE.md`, it added the guide to its
+OWN L0 list. That's why harness kept treating CLAUDE.md as L0 even though it's the project map /
+re-injected guide, not protected engine core. Removed the `|CLAUDE…\.md` alternation; the regex now
+captures only real source paths (`src/… lib/… modules/…` etc). Verified in a throwaway repo:
+`isL0("CLAUDE.md")=false`, `isL0("lib/core.ts")=true`. `fromMarkdown: "CLAUDE.md"` (CLAUDE.md as the
+*declaration site* of the L0 list) is unchanged and correct. Convergence note ossified in-file
+(`CLAUDEMD_NOT_L0`).
+
 ## docs(commons): c4 — ARCHITECTURE.json must use a real `children` tree (no one-cell dump)
 
 Strengthened c4: when authoring ARCHITECTURE.json, express hierarchy as a `children` tree — do NOT

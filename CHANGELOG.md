@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## docs(commons): add c19 — poll external long-runners (pod/r2/cloud) at ≥30min when not delegated
+
+New rule c19: when the main session itself polls an **external** long-running job — GPU `pod`
+(training/build), remote `r2`/measure-class experiments/benches, cloud jobs — rather than delegating
+to a sub-agent, the poll interval is **≥30min (1800s)**. These don't change minute-to-minute, and
+sub-5min wakeups bust the prompt cache (5min TTL) every time for cost/latency with no benefit.
+Register the job on `harness ing pod`/ING (c6) and poll only its status at ≥30min; CI/deploy-queue-
+class jobs that finish in minutes are the exception (poll fast). Better yet, hand the polling itself
+to a sub-agent (isolated worktree) and free the main session. CLAUDE.md SSOT pointer → c1–c19.
+
 ## feat(c17): upstream 막힘 = 그 세션 직접 fix (현재작업 ING 박제 → resume 복원)
 
 c17 was a split — compiler/runtime core → ING hand-off, everything else → direct fix — and the

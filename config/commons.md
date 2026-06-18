@@ -206,3 +206,16 @@ cross-repo 인계(`ing add --to <repo>`)는 **다른 세션/사람에게 진짜 
 외 어떤 용도로도 **공유·재할당 금지**. 공용 `pool` 자원·일반 빌드/벤치/CI 러너·GPU 대체 등으로 쓰지 말고,
 `harness pool` 로스터 등 **공유 풀에 등록하지 말 것**. anima 뉴로모픽 실험 컨텍스트가 아니면 이 장치를
 건드리지 않는다(뉴로모픽 워크로드의 전용 실험 환경 보존 — 공용화하면 그 실험 재현성이 깨진다).
+
+## c21 — 멀티타깃 릴리즈 = all-green 승격 게이트 (부분 릴리즈 = stable 금지)
+여러 타깃(OS·arch)으로 배포하는 repo 의 **stable 승격**은 **전 타깃이 GREEN 일 때만** 한다(c18 의 다음 단계).
+- **채널 분리**: 실험(self-host·byteeq·measure·리팩터)은 `main` push → **edge prerelease**(`HEXA_VERSION=edge`
+  류)로 상시 흘린다. 소비자 기본 경로(`install.sh` → 최신 **stable** `vX.Y.Z`)는 **전 타깃 릴리즈 잡 GREEN +
+  설치 스모크 GREEN** 일 때만 새 stable 로 승격한다. "실험은 edge 에서 soak, stable 은 전타깃 green 승격."
+- **"한 타깃 green = 승격 불가"**: 타깃별 잡이 **각자 독립적으로** `make_latest`/publish 하면, 한 타깃이 깨져도
+  먼저 끝난 잡이 부분 릴리즈를 Latest 로 마킹한다. **기계적 강제**: 플랫폼 잡은 asset 을 **prerelease 로만**
+  올리고, `needs:` 전 타깃을 건 **`finalize` 잡이 전부 성공 시에만** stable Latest 로 flip 한다(한 타깃 실패 →
+  finalize skip → 릴리즈가 prerelease 로 남아 `install.sh` stable 해석이 부분 릴리즈를 건너뜀).
+- 규칙을 문서로만 두지 말고 **CI(release.yml)가 강제**하게 한다(doc↔mechanism lockstep).
+**왜**: hexa-lang v0.241.0/.1 에서 arm64 가 SIGSEGV 로 깨졌는데 x86+darwin 이 2/3 asset 으로 stable Latest 를
+발행 → 소비자(anima)가 OS 별로 부분 릴리즈를 물어 트러블슈팅 무한반복. 한 타깃 그린은 전체 그린이 아니다.

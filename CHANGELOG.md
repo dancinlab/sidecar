@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## docs(commons): add c20 — Pi5-Akida is anima neuromorphic-only (no shared-resource use)
+
+New rule c20: the Raspberry Pi 5 + Akida neuromorphic chip (`pi5-akida`) is reserved for anima's
+neuromorphic experiments only — never share/reallocate it for anything else (no common `pool`
+roster, no general build/bench/CI runner, no GPU substitute). Sharing it would break the dedicated
+neuromorphic experiment environment's reproducibility. CLAUDE.md SSOT pointer → c1–c20.
+
 ## refactor(recommend): retire `recommend.tape` DSL → `recommend.md` (plain Markdown carrier)
 
 The 4-axis recommend rubric lived in `config/recommend.tape`, but `recommend.ts` only ever read it as

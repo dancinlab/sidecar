@@ -161,3 +161,16 @@ exception/bypass 마커(`# *-ok` 류) · opt-out 플래그 · skip 조건 · fal
 dancinlab 생태계는 한 몸 — harness 가 hexa 빌트인(c11)에 의존하듯, 응용층 막힘의 진짜 원인이 upstream 에
 있으면 거기서 고치는 게 근본 수정(c1)이다. upstream 도 c12 대로 문서+검증 머지로 닫는다. c1·c16(우회금지)의
 연장 — 단, 컴파일/런타임 substrate 는 다세션 충돌 위험이 커 직접수정 대신 ING 인계가 안전한 정공법이다.
+
+## c18 — 릴리즈는 semver 태그 → CI 자산 배포 (수동 빌드·업로드 금지)
+사용자에게 **배포되는 산출물**(컴파일러·바이너리·패키지·CLI·모델 등)이 있는 repo 는 릴리즈를 다음으로 통일한다:
+- **semver 태그**(`vMAJOR.MINOR.PATCH`)를 검증된 main 에 끊는 것이 릴리즈의 **단일 진입점**(태그 = SSOT).
+  버전 bump·태그를 손으로 중구난방 만들지 말고, 머지된 main 에서만 태그를 끊는다(미검증 커밋에 태그 금지).
+- 태그 push 를 **`.github/workflows/release.yml`(CI)** 가 받아 타깃별 빌드 자산을 만들고 **GitHub release 로
+  업로드**한다 — `install.sh`/패키지매니저가 그 자산을 verbatim 으로 받는다. 로컬 수동 빌드→수동 업로드 금지.
+  릴리즈 게이트(예: hexa-lang `release-runtime-compile-gate.yml` 의 byteeq/compile 검증)를 통과해야 배포된다.
+- (선택) main push 마다 **롤링 `edge` prerelease** 로 최신 빌드를 흘려보낼 수 있다(예: `HEXA_VERSION=edge` 설치).
+- 릴리즈는 c12(매 사이클 머지)와 **별개 단계** — 코드 머지가 끝난 뒤 버전을 끊는다(커밋만 쌓고 릴리즈 안 하기 금지).
+**표준 예시**: `hexa-lang`(`v0.240.x` · release.yml + compile-gate + edge) · `anima`(`v3.54.x` 잦은 patch 태그).
+버전·배포는 사람 손이 아니라 **태그 + CI** 로 — 재현 가능성·자산 일관성·설치 경로(install.sh) 안정성을 위해서다.
+(학술 아카이브/DOI·논문 릴리즈 류는 이 규칙 밖 — 여기서 말하는 릴리즈는 **실제 배포 산출물**만 가리킨다.)

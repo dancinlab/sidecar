@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## docs(commons): add c18 — releases = semver tag → CI asset publish (no manual build/upload)
+
+New always-on rule c18: repos that ship a user-facing artifact (compiler/binary/package/CLI/model)
+unify releases on a single entry point — cut a **semver tag** (`vX.Y.Z`) on verified main, and let
+`.github/workflows/release.yml` (CI) build per-target assets and upload them to the GitHub release
+(install.sh / package managers fetch those verbatim); no local manual build→upload. A release gate
+(e.g. hexa-lang's `release-runtime-compile-gate.yml` byteeq/compile check) must pass before publish.
+Optional rolling `edge` prerelease on each main push. Release is a step SEPARATE from c12 (merge):
+cut the version AFTER the merge lands. Derived from observing the actual deploy releases of
+**hexa-lang** (`v0.240.x` · release.yml + compile-gate + edge) and **anima** (`v3.54.x` frequent
+patch tags). Scope note: academic-archive/DOI/paper "releases" are explicitly OUT — c18 means real
+shipped artifacts only. CLAUDE pointer c1–c17 → c1–c18.
+
 ## docs(commons): split c17 by blocker type — compiler/runtime core → ING, the rest → direct fix
 
 c17 (upstream-fix) was "fix any upstream block directly". Split it by the kind of blocker:

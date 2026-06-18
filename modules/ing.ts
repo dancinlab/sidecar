@@ -8,6 +8,7 @@
 // → branch-switch-proof (never in worktree) · committed · shared (push) · protected-safe.
 // `done` SCRUBS (completed work graduates to CHANGELOG; ING holds only what's ACTIVE).
 // SessionStart `inject` surfaces open work + running pods so the board is seen.
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve, basename } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
@@ -16,6 +17,31 @@ import { readStdin, execArgs } from "../lib/exec.ts";
 
 const ING_REF = "ing";
 const ING_FILE = "ING.jsonl";
+
+// Worktree-aware board root. The `ing` ref lives in the SHARED common git dir, so a
+// linked worktree's git ops must run with the CURRENT worktree as cwd — otherwise the
+// ancestry-walked REPO_ROOT (from $PWD, which can be stale or in a mismatched realpath
+// namespace, or which walks past a config-less worktree) silently points the write at
+// the wrong checkout and the board edit lands nowhere the worktree can see (repro:
+// `harness ing add` in a linked worktree, then `git add ING.jsonl` = nothing to commit).
+// `git rev-parse --show-toplevel` is git's OWN authoritative answer for the worktree
+// containing cwd, so it's correct in linked worktrees, nested subdirs, and the
+// /tmp↔/private/tmp namespace. Falls back to REPO_ROOT (current behavior) when git
+// can't answer (no repo / git missing).
+function boardRoot(): string {
+  try {
+    const top = execFileSync("git", ["rev-parse", "--show-toplevel"], {
+      encoding: "utf8",
+      timeout: 10_000,
+    }).trim();
+    if (top) return top;
+  } catch {
+    /* not a git repo / git unavailable → fall back */
+  }
+  return REPO_ROOT;
+}
+
+const BOARD_ROOT = boardRoot();
 
 interface Item {
   kind: "work" | "next" | "pod";
@@ -52,7 +78,7 @@ function parseJsonl(raw: string): Item[] {
 // (one-time migration — the pre-ref local file) when the ref doesn't exist yet, so
 // existing items survive the switch to ref-backed storage; the first write graduates
 // them onto the ref and the fallback is never read again.
-async function readItems(cwd: string = REPO_ROOT): Promise<Item[]> {
+async function readItems(cwd: string = BOARD_ROOT): Promise<Item[]> {
   const r = await git(["show", `${ING_REF}:${ING_FILE}`], cwd);
   if (r.code === 0) return parseJsonl(r.stdout);
   const legacy = resolve(cwd, ING_FILE);
@@ -68,7 +94,7 @@ async function readItems(cwd: string = REPO_ROOT): Promise<Item[]> {
 
 // Write the board to the `ing` ref via plumbing (no working-tree touch) + best-effort
 // push. Offline / no-push-perm → the local ref still advances and we warn once.
-async function writeItems(rows: Item[], msg: string, cwd: string = REPO_ROOT): Promise<boolean> {
+async function writeItems(rows: Item[], msg: string, cwd: string = BOARD_ROOT): Promise<boolean> {
   const content = rows.length ? rows.map((r) => JSON.stringify(r)).join("\n") + "\n" : "";
   const blob = (await git(["hash-object", "-w", "--stdin"], cwd, content)).stdout.trim();
   if (!blob) {

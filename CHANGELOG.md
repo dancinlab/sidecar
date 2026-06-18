@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## fix(ing): worktree-aware board root — `harness ing` writes to the CURRENT worktree's repo
+
+`harness ing {add|show|done}` resolved the board's git cwd from the ancestry-walked
+`REPO_ROOT` (`lib/paths.ts` `findRepoRoot`: nearest `harness.config.json`, else nearest
+`.git`, from `$PWD`). In a git **linked worktree** that walk can miss: when the worktree
+root has no `harness.config.json` checked out, the walk climbs PAST it and binds to an
+enclosing/sibling repo's `.git` instead — so `ing add` wrote the board onto the WRONG
+repo's `ing` ref and the edit landed nowhere the worktree could see (the original symptom:
+`ing add` in a worktree, then a manual `git add ING.jsonl` = "nothing to commit", forcing
+a hand-appended JSONL line).
+
+- **`boardRoot()` shared resolver** (`modules/ing.ts`) — resolves the board root via
+  `git rev-parse --show-toplevel` (git's OWN authoritative answer for the worktree
+  containing cwd), falling back to `REPO_ROOT` (prior behavior) when git can't answer
+  (no repo / git unavailable). Computed once as `BOARD_ROOT` and used as the default cwd
+  for both `readItems` and `writeItems`, so `add`/`show`/`done` share ONE path resolution.
+- Also fixes the `/private/tmp`↔`/tmp` realpath-namespace and stale-`$PWD` cases for free
+  (git reports the canonical worktree root regardless).
+- Verified: from a linked worktree whose checkout lacks `harness.config.json` (nested
+  inside an enclosing repo), OLD wrote `TESTMARKER` to the enclosing repo's ref while the
+  worktree's own repo had no `ing` ref at all; NEW writes to the worktree's own repo ref
+  and never leaks to the enclosing one. Regression: plain non-worktree repo + standard
+  config-carrying linked worktree (add/show/done parity) both unchanged.
+
 ## feat(cloud/dojo): hand-rolled-fanout warn + config-carried dojo stack (flame+forge+hexa-cuda)
 
 Two gaps surfaced by the anima decode workflow, where a session hand-wrote `/tmp/h1305_launch.sh`

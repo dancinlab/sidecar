@@ -6,6 +6,7 @@ import { config } from "./config.ts";
 // L0 (lockdown) file list = explicit config.lockdown.files
 //   + (optionally) paths parsed from a "🔴 L0" block in a markdown guide.
 // Editing an L0 file is allowed but flagged, so the agent treats it deliberately.
+// @convergence state=ossified id=CLAUDEMD_NOT_L0 value="CLAUDE.md must never be classified L0 — it DECLARES the L0 list (fromMarkdown) and is re-injected each turn, it is not protected engine core" threshold="the L0 path-parser regex must NOT include a CLAUDE*.md alternation, or the guide captures itself"
 
 let _cache: string[] | null = null;
 
@@ -20,9 +21,11 @@ export function l0Files(): string[] {
       const text = readFileSync(md, "utf8");
       // grab each "🔴 L0 ... " block up to the next 🟡 / fence / end
       const blocks = [...text.matchAll(/🔴\s*L0[\s\S]*?(?=🟡|```|$)/g)];
-      // path-like tokens: src/… scripts/… lib/… app/… or a CLAUDE*.md
+      // path-like tokens: src/… scripts/… lib/… app/… (engine/source files only).
+      // CLAUDE.md is NOT L0 — it's the guide that DECLARES the L0 list (and is
+      // re-injected each turn), so it must never be captured as an L0 entry itself.
       const re =
-        /\b((?:src|scripts|lib|app|packages|cli|modules|crates|cmd|internal|pkg|sources|core)\/[^\s—|]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|rb|php|go|rs|java|kt|kts|scala|c|h|cpp|cc|cxx|hpp|m|mm|swift|dart|hexa|sh)|CLAUDE(?:-[a-z0-9-]+)?\.md)\s*(?:—|\||$)/gim;
+        /\b((?:src|scripts|lib|app|packages|cli|modules|crates|cmd|internal|pkg|sources|core)\/[^\s—|]+\.(?:ts|tsx|js|jsx|mjs|cjs|py|rb|php|go|rs|java|kt|kts|scala|c|h|cpp|cc|cxx|hpp|m|mm|swift|dart|hexa|sh))\s*(?:—|\||$)/gim;
       for (const b of blocks) {
         let m: RegExpExecArray | null;
         re.lastIndex = 0;

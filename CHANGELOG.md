@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## fix(ing): `harness ing done <id>` now scrubs pods too (was work/next only)
+
+Root cause: the `done` handler filtered with `r.kind !== "pod"` in BOTH the id match
+and the open-id listing, so `harness ing done <pod-id>` always failed with "no work/next
+item matching …" — a finished GPU pod could only be removed via the separate
+`ing pod rm`. Now `done` matches ANY kind by exact id, so it is the single "this is
+finished" verb for work · next · pod alike (id is a pod's only handle since pods carry
+no text). The open-id usage hint also lists pods (tagged `(pod)`). Text fallback stays
+work/next-only and single-match-guarded (a loose term still can't mass-scrub the board).
+
 ## docs(commons): add c18 — releases = semver tag → CI asset publish (no manual build/upload)
 
 New always-on rule c18: repos that ship a user-facing artifact (compiler/binary/package/CLI/model)

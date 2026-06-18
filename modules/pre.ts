@@ -14,6 +14,7 @@ import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { detectRawCloudCli } from "./cloud-guard.ts";
+import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
@@ -108,6 +109,17 @@ export async function preBash(_args: string[]): Promise<number> {
     return emitBlock(
       "CLOUD-RAW-CLI",
       `${cloudLabel} — raw GPU-provider CLI/API direct use is blocked (commons c11). Use the hexa builtins: GPU/cloud → \`hexa cloud run <host> -- <argv...>\`, training jobs → \`hexa dojo <domain> <slug> '<spec>'\`, input decks → \`hexa deck …\`. Register running cloud work with \`harness ing pod add\`. No override — provider CLIs/APIs are not called directly from the agent.`
+    );
+  }
+
+  // built-in poll-interval guard — code-level block (c19), runs before config
+  // rules, default-on. A short-interval bash poll loop over an external long-runner
+  // (pod/r2/cloud/training) must poll at ≥30min or be delegated to a sub-agent.
+  const pollLabel = detectShortPollLoop(cmd);
+  if (pollLabel) {
+    return emitBlock(
+      "POLL-INTERVAL",
+      `${pollLabel} — external long-running jobs (GPU pod · remote r2/measure · cloud) must be polled at ≥30min (1800s), not minute-by-minute (commons c19): short intervals bust the prompt cache (5min TTL) for no gain. Lengthen the sleep to ≥1800, or delegate the polling to a sub-agent (worktree-isolated), or register the job with \`harness ing pod add\` and check it ≥30min apart. (Fast local/CI waits are exempt — this only fires on external long-runners.)`
     );
   }
 

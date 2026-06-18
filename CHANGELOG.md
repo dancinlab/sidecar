@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## feat(poll-guard): code-level enforcement of c19 — block short-interval poll loops over external long-runners
+
+c19 ("poll external long-runners at ≥30min") was a hint; the main session's ScheduleWakeup interval
+can't be intercepted by harness (runtime tool, not bash). But the OTHER way sessions poll — a bash
+`while …; do <status>; sleep <N>; done` loop — IS a bash command, so it's now code-guarded. New
+`modules/poll-guard.ts` `detectShortPollLoop()` runs in `pre bash` before config rules, default-on:
+blocks a poll LOOP (`while`/`until`/`for … do … done`, or `watch -n <N>`) that (a) references an
+external long-runner (runpod/vast/pod/gpu/nvidia-smi/r2/measure/dojo/train/torchrun/deepspeed/squeue
+/sacct/cloud) AND (b) has a smallest `sleep` (or `watch` interval) < 1800s. It parses sleep units
+(`60`, `90s`, `5m`, `1h`). Fast LOCAL/CI waits are c19-exempt and pass — the external-long-runner
+term gates it, so `while ! curl -sf localhost:8080; do sleep 2; done` is fine. Compliant ≥1800s
+loops, single sleeps, and plain loops without sleep all pass. QA via the real `pre bash` hook
+(CLAUDE_TOOL_INPUT env per c2): 5 block / 5 pass, 0 false positives. Convergence ossified in-file
+(`NO_SHORT_POLL_LOOP`).
+
 ## feat(cloud-guard): code-level block of raw runpod/vast CLI·API + raw dojo/deck launches (c11)
 
 A session ran `runpodctl pod create` / `cloud rent` directly because c11 ("use hexa builtins")

@@ -72,6 +72,91 @@ export async function runArchitecture(args: string[]): Promise<number> {
     return 0;
   }
 
-  process.stdout.write("usage: harness architecture {inject|show}\n");
+  if (sub === "lint") {
+    if (!found) {
+      process.stdout.write("architecture: no ARCHITECTURE.json at repo root\n");
+      return 0;
+    }
+    const hits = lintArchitectureTree();
+    if (hits.length === 0) {
+      process.stdout.write("architecture lint: ok (no oversized / piled / history nodes)\n");
+      return 0;
+    }
+    for (const h of hits) process.stdout.write(`  [${h.rule}] ${h.path} - ${h.msg}\n`);
+    process.stdout.write(
+      `architecture lint: ${hits.length} warning(s) - c4 split-piled-cells-into-children` +
+        (args.includes("--strict") ? " (--strict: fail)" : " (warn, non-blocking)") + "\n",
+    );
+    return args.includes("--strict") ? 1 : 0;
+  }
+
+  process.stdout.write("usage: harness architecture {inject|show|lint [--strict]}\n");
   return 1;
+}
+
+// architecture lint - c4 tree_convention enforcement.
+// A design tree drifts when one node piles many claims into a single giant
+// string instead of splitting into children (c4: "split piled-up cells into one
+// child per logical item"). These checks flag that mechanically so the JSON tree
+// stays navigable - not a wall of text - and the snapshot never accretes history.
+export interface ArchLintHit {
+  rule: string;
+  path: string;
+  msg: string;
+}
+
+// A single leaf string past this should be decomposed into child nodes. Normal
+// cells run a few hundred chars; past ~1.5 KB a cell is a subsection in disguise.
+const MAX_CELL_CHARS = 1500;
+// A leaf gluing more than this many dot-joined items is a child list flattened
+// into one string - it belongs in a list block or nested nodes, not one cell.
+const MAX_PILED_ITEMS = 10;
+// Keys that smuggle change-history into a current-state snapshot tree.
+const HISTORY_KEYS = new Set(["previous", "deprecated", "history", "changelog", "이전"]);
+const PILE_SEP = " · ";
+
+export function lintArchitectureTree(): ArchLintHit[] {
+  const found = pick();
+  if (!found || !found.rel.endsWith(".json")) return []; // JSON tree only
+  let tree: unknown;
+  try {
+    tree = JSON.parse(readFileSync(found.path, "utf8"));
+  } catch {
+    return [];
+  }
+  const hits: ArchLintHit[] = [];
+  const walk = (node: unknown, path: string): void => {
+    if (typeof node === "string") {
+      if (node.length > MAX_CELL_CHARS) {
+        hits.push({
+          rule: "ARCH-BIG-CELL",
+          path,
+          msg: `${node.length}-char leaf - split into child nodes (c4: one logical item per node)`,
+        });
+      }
+      const items = node.split(PILE_SEP).length;
+      if (items > MAX_PILED_ITEMS) {
+        hits.push({
+          rule: "ARCH-PILED",
+          path,
+          msg: `${items} piled items in one leaf - split into a list/children (c4)`,
+        });
+      }
+    } else if (Array.isArray(node)) {
+      node.forEach((v, i) => walk(v, `${path}[${i}]`));
+    } else if (node && typeof node === "object") {
+      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        if (HISTORY_KEYS.has(k.toLowerCase())) {
+          hits.push({
+            rule: "ARCH-HISTORY",
+            path: `${path}.${k}`,
+            msg: `history-flavored key "${k}" - snapshot tree, history goes to CHANGELOG (c4)`,
+          });
+        }
+        walk(v, `${path}.${k}`);
+      }
+    }
+  };
+  walk(tree, "root");
+  return hits;
 }

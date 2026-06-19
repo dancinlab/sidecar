@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## feat(paper): demiurge-house scientific-paper command (scaffold · cover · build · g51 gate)
+
+`harness paper` 신설 — demiurge 하우스 페이퍼 규율을 도구로 박제(self-improving tool). 매 캠페인마다 손으로 재조립하던 LaTeX 프리앰블·표지·빌드·페이지 게이트를 한 명령으로 통일.
+
+- **modules/paper.ts** + cli/index.ts 디스패치/도움말 배선.
+- **`paper new <slug>`**: `PAPERS/<slug>/{main.tex,references.bib,PAPER.md,figures/}` 스캐폴드 — 하우스 프리앰블(이모지 제목 · 🔵🟢🟡🟠🔴 g5 tier-badge 디스크 · TikZ+pgfplots(+calc) · natbib unsrtnat · fal.ai 표지 include · §hypothesis/method/measurement/finding/ledger/limitations). 표지를 `harness imagine`(fal)로 생성 후 빌드.
+- **`paper build <slug|dir>`**: xelatex→bibtex→xelatex×2 → pages+refs 보고 + g51 ≥10p 게이트(기본 10). 유효성 강화: 깨진/빈 PDF(pdfinfo 0p 또는 <1KB)는 실패 처리하고 컴파일 에러 줄 출력.
+- **`paper cover <slug|dir>`**: `harness imagine` 위임으로 figures/cover.png 재생성(키는 `secret get fal.api_key`, 본 모듈은 키 미취급).
+- **`paper list`**.
+- **QA(c2)**: help·메인help 노출·new(--no-cover)·list·end-to-end(new→fal 표지 851KB→build 2p 717KB·g51 PASS)·실패경로(표지없음→exit 2+원인/해결 줄) 전수 PASS.
+- xref: `imagine`(secret 경유 fal/openai) 재사용 — 표지 백엔드/키 로직 중복 0.
+
 ## docs(architecture): ARCHITECTURE = current-state snapshot, not a history log
 
 Sessions kept accreting history into ARCHITECTURE.json — version/dated/`이전엔…`/`deprecated`

@@ -29,6 +29,7 @@ import { runSecret } from "../modules/secret.ts";
 import { runLsp } from "../modules/lsp.ts";
 import { runWorktree } from "../modules/worktree.ts";
 import { runImagine } from "../modules/imagine.ts";
+import { runPaper } from "../modules/paper.ts";
 import { runResearch } from "../modules/research.ts";
 import { runWatch } from "../modules/watch.ts";
 import { runFolders } from "../modules/folders.ts";
@@ -91,6 +92,8 @@ hook delegates (wire these into your agent's settings.json):
   watch <url|path> [question] [flags]   download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
+  paper <new|build|cover|list> [slug] [flags]   demiurge-house scientific paper: scaffold (emoji title · g5 tier badges ·
+                           TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate
                            history [-b][-m][--start][--limit][--status][--local][--json] — past prompts (fal API / local ledger)
 
 gates & ledgers:
@@ -227,6 +230,8 @@ async function main(): Promise<number> {
       return runWorktree(rest);
     case "imagine":
       return runImagine(rest);
+    case "paper":
+      return runPaper(rest);
     case "research":
       return runResearch(rest);
     case "watch":

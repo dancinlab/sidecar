@@ -1,0 +1,393 @@
+// harness paper <new|build|cover|list|help>
+//
+// Demiurge-house-style scientific-paper tool. Bakes the hard-won paper
+// discipline into the harness so it is never hand-rolled per campaign:
+//   • new   — scaffold PAPERS/<slug>/ with the house arxiv template
+//             (emoji title · g5 tier-badge discs · TikZ+pgfplots · fal.ai cover
+//              include · references.bib · PAPER.md), generate the cover via
+//              `harness imagine` (fal), then build.
+//   • build — xelatex → bibtex → xelatex → xelatex, report pages + refs, and
+//             enforce the g51 page floor (default 10 pages).
+//   • cover — (re)generate figures/cover.png via `harness imagine`.
+//   • list  — list papers under the papers dir.
+//
+// Rationale (commons "self-improving tool" principle): every paper this repo
+// family ships used the same template, the same xelatex+bibtex×3 build, the same
+// ≥10-page g51 gate, and a fal.ai cover. Encoding that once here removes the
+// per-paper hand-assembly that kept regressing (missing calc lib, emoji glyph
+// warnings, bbl deleted before page-count, etc.).
+import { execShell } from "../lib/exec.ts";
+import { runImagine } from "./imagine.ts";
+import { info, ok, loudFail, warn } from "../lib/log.ts";
+import { REPO_ROOT } from "../lib/paths.ts";
+import { writeFileSync, mkdirSync, existsSync, readFileSync, statSync, rmSync } from "node:fs";
+import { resolve, basename, isAbsolute } from "node:path";
+import { readdirSync } from "node:fs";
+import { tmpdir } from "node:os";
+
+const DEFAULT_DIR = "PAPERS";
+const DEFAULT_MIN_PAGES = 10; // commons g51
+
+// ── demiurge house template (xelatex; emoji-native) ─────────────────────────
+// Mirrors the SENOLYX/HERPES/NUMB/ANIMA preamble verbatim so every paper shares
+// one look: emoji title, tier-badge discs, TikZ (+calc), pgfplots, natbib.
+function mainTexTemplate(slug: string, title: string, subtitle: string): string {
+  return String.raw`\documentclass[11pt,a4paper]{article}
+
+% ---------- arxiv-style preamble (xelatex; emoji-native) — demiurge house style ----------
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta,fit,backgrounds,calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{fillbetween}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf}
+\usepackage{array}
+
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black}
+
+% ---------- g5 tier badges (engine-agnostic colored discs) ----------
+\newcommand{\tierdisc}[1]{\textcolor{#1}{\rule[0.05ex]{1.0ex}{1.0ex}}}
+\newcommand{\tierBlue}{\tierdisc{blue!70!black}}   % closed-form / constant
+\newcommand{\tierGreen}{\tierdisc{green!60!black}} % model-verified
+\newcommand{\tierYellow}{\tierdisc{yellow!85!black}} % citation/sibling-locked
+\newcommand{\tierOrange}{\tierdisc{orange!90!black}} % inconclusive
+\newcommand{\tierRed}{\tierdisc{red!80!black}}     % closed-negative
+
+\title{
+  \textbf{` + title + String.raw`} \\[6pt]
+  \large ` + subtitle + String.raw`
+}
+\author{
+  \texttt{` + slug + String.raw`} maintainers\\
+  \normalsize\textit{dancinlab}
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% Cover (generate via: harness paper cover ` + slug + String.raw`)
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\textwidth]{figures/cover.png}
+\caption{TODO cover caption.}
+\label{fig:cover}
+\end{figure}
+
+\begin{abstract}
+TODO abstract. State the falsifiable hypothesis, the measurement, and the finding
+(a $\Delta$ vs baseline OR a closed-negative ruling out an axis). Copy verdict
+numbers verbatim; show a closed-negative as a closed-negative.
+\end{abstract}
+
+\section{Introduction}
+TODO. End with a \textbf{Contributions} paragraph.
+
+\section{Hypothesis}
+TODO pre-registered falsifier(s).
+
+\section{Method}
+TODO.
+
+\section{Measurement}
+TODO. Include $\ge 1$ TikZ or pgfplots figure.
+
+\section{Finding}
+TODO ($\Delta$ vs baseline OR ruled-out axis).
+
+\section{Tier ledger}
+Every headline claim carries a g5 tier verdict (\tierBlue{} closed-form ·
+\tierGreen{} model-verified · \tierYellow{} citation-locked · \tierOrange{}
+inconclusive · \tierRed{} closed-negative).
+\begin{table}[h]
+\centering\small
+\caption{Headline verdicts.}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Claim & Evidence & Tier \\
+\midrule
+TODO & TODO & \tierGreen{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Limitations}
+TODO. Be explicit about scope; do not over-claim.
+
+\section{Conclusion}
+TODO.
+
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
+`;
+}
+
+function refsTemplate(): string {
+  return String.raw`@misc{placeholder2026,
+  title={TODO replace with real references}, author={{dancinlab}}, year={2026},
+  note={\url{https://github.com/dancinlab}}
+}
+`;
+}
+
+function paperMd(slug: string, title: string): string {
+  return `# ${slug} — paper status\n\n@title: ${title}\n@goal: TODO.\n\n- [ ] draft v1\n- [ ] cover (harness paper cover ${slug})\n- [ ] references (≥10)\n- [ ] compile clean (harness paper build ${slug} — ≥10 pages, g51)\n\nprovenance: TODO. 검증 수치는 verbatim 복사(c9), closed-negative는 그대로 표기.\n`;
+}
+
+// ── path helpers ────────────────────────────────────────────────────────────
+function paperDir(target: string, dir: string): string {
+  // accept either a slug (→ <dir>/<slug>) or an explicit path containing a sep
+  if (target.includes("/") || isAbsolute(target)) {
+    return isAbsolute(target) ? target : resolve(REPO_ROOT, target);
+  }
+  return resolve(REPO_ROOT, dir, target);
+}
+
+function bytes(p: string): number {
+  try {
+    return statSync(p).size;
+  } catch {
+    return 0;
+  }
+}
+
+// ── tool availability ────────────────────────────────────────────────────────
+async function have(bin: string): Promise<boolean> {
+  const r = await execShell(`command -v ${bin}`);
+  return r.code === 0 && r.stdout.trim().length > 0;
+}
+
+// ── build: xelatex → bibtex → xelatex → xelatex ─────────────────────────────
+async function build(dir: string, minPages: number): Promise<number> {
+  if (!existsSync(resolve(dir, "main.tex"))) {
+    loudFail(`paper build: no main.tex in ${dir}`);
+    return 1;
+  }
+  if (!(await have("xelatex"))) {
+    loudFail("paper build: xelatex not found — install a TeX distribution (e.g. MacTeX / TeX Live).");
+    return 1;
+  }
+  const q = (s: string) => JSON.stringify(s);
+  const xe = `xelatex -interaction=nonstopmode -halt-on-error=false main.tex`;
+  const run = (cmd: string) => execShell(`cd ${q(dir)} && ${cmd} >/dev/null 2>&1; true`, { timeoutMs: 180000 });
+  info(`paper build: ${basename(dir)} — xelatex → bibtex → xelatex ×2 ...`);
+  await run(xe);
+  if (await have("bibtex")) await run(`bibtex main`);
+  await run(xe);
+  // last pass: keep the log for error reporting
+  const last = await execShell(`cd ${q(dir)} && ${xe} 2>&1 | tail -200; true`, { timeoutMs: 180000 });
+
+  const pdf = resolve(dir, "main.pdf");
+  const reportErrors = () => {
+    const errs = last.stdout.split("\n").filter((l) => /^! |Error:|Undefined control|tikz Error|cannot find|not found/.test(l)).slice(0, 12);
+    for (const e of errs) info(`  ${e}`);
+  };
+  if (!existsSync(pdf) || bytes(pdf) < 1000) {
+    // a few-byte stub is xelatex's failure residue, not a real PDF
+    loudFail("paper build: main.pdf not produced (or empty) — compile failed. Errors:");
+    reportErrors();
+    if (!existsSync(resolve(dir, "figures", "cover.png"))) info("  (no figures/cover.png — run `harness paper cover <slug>` first)");
+    return 2;
+  }
+
+  const hasPdfinfo = await have("pdfinfo");
+  let pages = 0;
+  if (hasPdfinfo) {
+    const pi = await execShell(`pdfinfo ${q(pdf)} 2>/dev/null | awk '/Pages/{print $2}'`);
+    pages = parseInt(pi.stdout.trim(), 10) || 0;
+    if (pages === 0) {
+      loudFail("paper build: pdfinfo could not read main.pdf (corrupt output) — compile failed. Errors:");
+      reportErrors();
+      if (!existsSync(resolve(dir, "figures", "cover.png"))) info("  (no figures/cover.png — run `harness paper cover <slug>` first)");
+      return 2;
+    }
+  }
+  let refs = 0;
+  const bbl = resolve(dir, "main.bbl");
+  if (existsSync(bbl)) {
+    refs = (readFileSync(bbl, "utf8").match(/\\bibitem/g) || []).length;
+  }
+
+  const fatal = last.stdout.split("\n").filter((l) => /^! LaTeX Error|^! Package .*Error|tikz Error/.test(l));
+  const sizeKb = Math.round(bytes(pdf) / 1024);
+  ok(`paper build: ${basename(dir)} → ${pages || "?"} pages · ${refs} refs · ${sizeKb}KB`);
+  if (fatal.length) {
+    warn(`paper build: ${fatal.length} LaTeX/tikz error line(s) survived (PDF still produced):`);
+    for (const e of fatal.slice(0, 8)) info(`  ${e}`);
+  }
+  if (pages && pages < minPages) {
+    warn(`paper build: ${pages} pages < g51 floor of ${minPages} — expand before shipping (or pass --min-pages ${pages}).`);
+    return 0; // compiled OK; page floor is a warning, not a hard build failure
+  }
+  if (pages >= minPages) info(`paper build: g51 page floor (≥${minPages}) PASS.`);
+  return 0;
+}
+
+// ── cover: generate figures/cover.png via harness imagine (fal) ──────────────
+async function cover(dir: string, promptText: string, size: string): Promise<number> {
+  mkdirSync(resolve(dir, "figures"), { recursive: true });
+  const out = resolve(dir, "figures", "cover.png");
+  const pf = resolve(tmpdir(), `harness-paper-cover-${process.pid}.txt`);
+  writeFileSync(pf, promptText, "utf8");
+  try {
+    // delegate to `harness imagine` (fal backend, key via secret) — no key handling here
+    const rc = await runImagine([pf, out, "-s", size]);
+    if (rc !== 0) {
+      loudFail("paper cover: imagine failed (see above). Need `secret set fal.api_key`.");
+      return rc;
+    }
+  } finally {
+    rmSync(pf, { force: true });
+  }
+  ok(`paper cover: wrote ${out} (${bytes(out)} bytes)`);
+  return 0;
+}
+
+function defaultCoverPrompt(title: string): string {
+  return `Abstract conceptual cover art for a scientific paper. Minimal, elegant, museum-poster aesthetic, dark background, fine technical line-work and subtle data-visualization motifs, deep indigo and teal palette, high detail, no text, no letters. Theme: ${title.replace(/[{}\\]/g, "")}.`;
+}
+
+// ── new: scaffold + cover + build ───────────────────────────────────────────
+async function scaffold(slug: string, opts: { dir: string; title: string; subtitle: string; minPages: number; doCover: boolean; coverPrompt?: string; coverSize: string }): Promise<number> {
+  const dir = paperDir(slug, opts.dir);
+  if (existsSync(resolve(dir, "main.tex"))) {
+    loudFail(`paper new: ${dir}/main.tex already exists — use 'harness paper build ${slug}' or pick another slug.`);
+    return 1;
+  }
+  mkdirSync(resolve(dir, "figures"), { recursive: true });
+  writeFileSync(resolve(dir, "main.tex"), mainTexTemplate(slug, opts.title, opts.subtitle), "utf8");
+  writeFileSync(resolve(dir, "references.bib"), refsTemplate(), "utf8");
+  writeFileSync(resolve(dir, "PAPER.md"), paperMd(slug, opts.title), "utf8");
+  ok(`paper new: scaffolded ${dir} (main.tex · references.bib · PAPER.md · figures/)`);
+
+  if (opts.doCover) {
+    const rc = await cover(dir, opts.coverPrompt || defaultCoverPrompt(opts.title), opts.coverSize);
+    if (rc !== 0) warn("paper new: cover generation failed — placeholder include left; run `harness paper cover` later.");
+  } else {
+    info("paper new: --no-cover — add figures/cover.png or run `harness paper cover` before build.");
+  }
+  // only build if a cover exists (the template \includegraphics would otherwise fail)
+  if (existsSync(resolve(dir, "figures", "cover.png"))) return build(dir, opts.minPages);
+  info(`paper new: skip build (no cover yet). After adding one: harness paper build ${slug}`);
+  return 0;
+}
+
+function listPapers(dir: string): number {
+  const base = resolve(REPO_ROOT, dir);
+  if (!existsSync(base)) {
+    info(`paper list: no ${dir}/ under ${REPO_ROOT}`);
+    return 0;
+  }
+  const rows = readdirSync(base, { withFileTypes: true })
+    .filter((d) => d.isDirectory() && existsSync(resolve(base, d.name, "main.tex")))
+    .map((d) => {
+      const pdf = resolve(base, d.name, "main.pdf");
+      return `  ${d.name}${existsSync(pdf) ? `  (${Math.round(bytes(pdf) / 1024)}KB pdf)` : "  (no pdf)"}`;
+    });
+  if (!rows.length) {
+    info(`paper list: no papers under ${dir}/`);
+    return 0;
+  }
+  info(`papers under ${dir}/:`);
+  for (const r of rows) info(r);
+  return 0;
+}
+
+function usage(): void {
+  info("harness paper <new|build|cover|list|help>");
+  info("  new <slug> [--title T] [--subtitle S] [--dir D] [--min-pages N] [--no-cover] [--cover-prompt-file F] [-s size]");
+  info("            scaffold demiurge-house template (emoji title · g5 tier badges · TikZ+pgfplots · fal.ai cover) → cover → build");
+  info("  build <slug|dir> [--min-pages N] [--dir D]   xelatex → bibtex → xelatex×2; report pages+refs; g51 ≥N gate (default 10)");
+  info("  cover <slug|dir> [--cover-prompt-file F] [-p \"prompt\"] [-s size] [--dir D]   (re)generate figures/cover.png via `harness imagine`");
+  info("  list [--dir D]");
+  info(`  defaults: dir=${DEFAULT_DIR} · min-pages=${DEFAULT_MIN_PAGES} (g51) · cover size=landscape_16_9 · cover backend=fal (secret get fal.api_key)`);
+}
+
+function parseFlags(args: string[]): { pos: string[]; flags: Record<string, string>; bools: Set<string> } {
+  const pos: string[] = [];
+  const flags: Record<string, string> = {};
+  const bools = new Set<string>();
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i];
+    if (a === "--no-cover") bools.add("no-cover");
+    else if ((a === "--title" || a === "--subtitle" || a === "--dir" || a === "--min-pages" || a === "--cover-prompt-file" || a === "-p" || a === "--prompt" || a === "-s" || a === "--size") && i + 1 < args.length) {
+      const key = a.replace(/^-+/, "").replace("prompt", "p") === "p" ? "p" : a.replace(/^-+/, "");
+      flags[key === "size" ? "s" : key] = args[++i];
+    } else pos.push(a);
+  }
+  return { pos, flags, bools };
+}
+
+export async function runPaper(args: string[]): Promise<number> {
+  const sub = args[0];
+  if (!sub || sub === "help" || sub === "-h" || sub === "--help") {
+    usage();
+    return 0;
+  }
+  const { pos, flags, bools } = parseFlags(args.slice(1));
+  const dir = flags["dir"] || DEFAULT_DIR;
+  const minPages = flags["min-pages"] ? parseInt(flags["min-pages"], 10) || DEFAULT_MIN_PAGES : DEFAULT_MIN_PAGES;
+  const size = flags["s"] || "landscape_16_9";
+
+  if (sub === "list") return listPapers(dir);
+
+  if (sub === "new") {
+    const slug = pos[0];
+    if (!slug) {
+      loudFail("paper new: usage: harness paper new <slug> [--title T] [--subtitle S]");
+      return 1;
+    }
+    const title = flags["title"] || `\u{1F4C4} ${slug}`; // 📄 default emoji title
+    const subtitle = flags["subtitle"] || "TODO subtitle";
+    let coverPrompt: string | undefined;
+    if (flags["cover-prompt-file"]) {
+      const pf = isAbsolute(flags["cover-prompt-file"]) ? flags["cover-prompt-file"] : resolve(process.env.PWD ?? process.cwd(), flags["cover-prompt-file"]);
+      if (existsSync(pf)) coverPrompt = readFileSync(pf, "utf8");
+      else warn(`paper new: cover-prompt-file not found: ${pf} — using default prompt.`);
+    }
+    return scaffold(slug, { dir, title, subtitle, minPages, doCover: !bools.has("no-cover"), coverPrompt, coverSize: size });
+  }
+
+  if (sub === "build") {
+    const target = pos[0];
+    if (!target) {
+      loudFail("paper build: usage: harness paper build <slug|dir> [--min-pages N]");
+      return 1;
+    }
+    return build(paperDir(target, dir), minPages);
+  }
+
+  if (sub === "cover") {
+    const target = pos[0];
+    if (!target) {
+      loudFail("paper cover: usage: harness paper cover <slug|dir> [--cover-prompt-file F] [-p \"prompt\"]");
+      return 1;
+    }
+    const pdir = paperDir(target, dir);
+    if (!existsSync(pdir)) {
+      loudFail(`paper cover: dir not found: ${pdir}`);
+      return 1;
+    }
+    let prompt = flags["p"] || "";
+    if (!prompt && flags["cover-prompt-file"]) {
+      const pf = isAbsolute(flags["cover-prompt-file"]) ? flags["cover-prompt-file"] : resolve(process.env.PWD ?? process.cwd(), flags["cover-prompt-file"]);
+      if (existsSync(pf)) prompt = readFileSync(pf, "utf8");
+    }
+    if (!prompt) prompt = defaultCoverPrompt(basename(pdir));
+    return cover(pdir, prompt, size);
+  }
+
+  loudFail(`paper: unknown subcommand '${sub}' — one of: new · build · cover · list · help`);
+  return 1;
+}

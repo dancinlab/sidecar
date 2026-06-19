@@ -173,6 +173,12 @@
                 "상세": "명령은 config 선언"
               },
               {
+                "이름": "paper",
+                "역할": "demiurge 하우스 논문 스캐폴드·표지·빌드",
+                "구분": "module",
+                "상세": "new=PAPERS/<slug>/{main.tex(이모지 제목·g5 tier-badge·TikZ+pgfplots·fal.ai 표지 include)·references.bib·PAPER.md} → cover(imagine 위임) → build(xelatex+bibtex×3·pages/refs 보고·g51 ≥10p 게이트·깨진/빈 PDF 실패처리). 손 조립 규율을 도구로 박제(self-improving)"
+              },
+              {
                 "이름": "errors",
                 "역할": "(kind,code)→severity 분류",
                 "구분": "module",

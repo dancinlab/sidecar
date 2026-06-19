@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## fix(recommend): default-mode path doc was stale `~/.sidecar`, code reads `~/.harness`
+
+The recommend-axes rule carrier (`config/recommend.md`, injected EVERY turn) still documented
+the standing default mode as living in `$HOME/.sidecar/recommend-default` — a leftover from the
+old sidecar harness. But the implementation (`modules/recommend.ts`) has long read the two-tier
+`.harness/recommend-default` (per-repo) → `~/.harness/recommend-default` (global). The map
+pointed at a road the code doesn't walk: anyone following the injected rule set the mode in the
+wrong file and it silently never took effect. The harness now documents the path it actually uses
+(self-hosting, not sidecar host-state).
+
+- `config/recommend.md` r4 — path corrected to per-repo `.harness/recommend-default` (committed,
+  wins) → host-wide `~/.harness/recommend-default` (`set-default --global`), matching code precedence.
+- `modules/recommend.ts` — dropped the stale `sidecar uses ~/.sidecar host-state` comparison comment.
+- harness repo `.sidecar` reference count: 2 → 0 (verified by grep + inject-body scan).
+
 ## feat(plugin): global slash-command set — every harness command recognized as /cmd (sidecar pattern)
 
 `plugin/commands/*.md` 50개 신설 — 하네스의 전체 사용자-대면 명령을 sidecar식 슬래시 명령으로 노출. 각 `.md`는 프런트매터(rich `description` + **Triggers** 자연어구 + `argument-hint` + `allowed-tools: Bash`) + `!`harness <cmd> $ARGUMENTS`` 본문의 얇은 위임자. Claude Code가 description/Triggers로 인지 → `/paper`·`/imagine`·`/pr-cycle`·`/sbs`·`/fleet`·`/ing`·`/verify`… 한국어("논문 만들어"·"PR 돌려"·"진행보드") + 영어 트리거 양쪽.

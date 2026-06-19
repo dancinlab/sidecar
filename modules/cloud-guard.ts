@@ -78,6 +78,8 @@ const DOJO_LAUNCHERS = new Set(["torchrun", "deepspeed"]);
 //   • `python[3] …train….py` / `…finetune….py` / `…sft….py` in command position
 //   • executing a `run.sh` that lives in a `dojo/` or `decks/` tree (the builtin's
 //     own output — running it by hand skips the builtin's dispatch + ing-pod reg)
+//
+// @convergence state=ossified id=DOJO_TRAIN_NAME_BROAD value="the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)" threshold="someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP."
 function detectRawDojoDeck(cmd: string): string | null {
   for (const seg of cmd.split(/[\n;|&()]+/)) {
     const { head, rest } = leadToken(seg);

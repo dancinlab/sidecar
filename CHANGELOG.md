@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## feat(architecture): `architecture lint` — mechanical c4 tree-hygiene gate
+
+The architecture module could only `inject`/`show` the design SSOT — nothing guarded the JSON
+tree's *shape*. In practice a node drifts: instead of splitting into children, a single leaf
+accretes a wall of ` · `-joined claims until one cell holds thousands of characters (commons c4
+explicitly forbids this — "split piled-up cells into one child per logical item"). That drift was
+only ever caught by a human eyeballing the rendered viewer, repo by repo, after the fact.
+
+`harness architecture lint` now flags it mechanically, walking the repo-root `ARCHITECTURE.json`
+and emitting one warning per offending leaf:
+
+- `ARCH-BIG-CELL` — a string leaf past ~1.5 KB (a subsection masquerading as one cell).
+- `ARCH-PILED` — a leaf gluing more than 10 ` · `-joined items (a child list flattened into text).
+- `ARCH-HISTORY` — a `previous`/`deprecated`/`history`/`changelog`/`이전` key smuggling
+  change-history into a current-state snapshot tree (history belongs in CHANGELOG + git, c4).
+
+Wired into `harness lint` as a **warn-only** check (step 4c): violations are reported and logged
+to the lint JSONL but never block — `classify()`'s `defer` fallback keeps pre-existing oversized
+trees from failing CI on day one, while making the drift visible every run. `--strict` flips the
+standalone `architecture lint` to exit 1 for repos that want a hard gate. Verified against the
+hexa-lang tree (25 real warnings surfaced, incl. a 4563-char / 41-item domain cell); the harness's
+own tree is clean.
+
+- `modules/architecture.ts` — new `lint` subcommand + exported `lintArchitectureTree()` walker.
+- `modules/lint.ts` — step 4c folds the walker's hits into the violation stream (warn-only).
+- `cli/index.ts` — usage line documents the new `lint` verb.
+
 ## fix(recommend): default-mode path doc was stale `~/.sidecar`, code reads `~/.harness`
 
 The recommend-axes rule carrier (`config/recommend.md`, injected EVERY turn) still documented

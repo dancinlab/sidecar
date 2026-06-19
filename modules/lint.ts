@@ -14,6 +14,7 @@ import { isL0 } from "../lib/lockdown.ts";
 import { config, repoPath } from "../lib/config.ts";
 import { routeError, classify } from "./errors.ts";
 import { docViolations } from "./docs.ts";
+import { lintArchitectureTree } from "./architecture.ts";
 
 interface Violation {
   rule: string;
@@ -129,6 +130,12 @@ export async function runLint(args: string[]): Promise<number> {
   // the architecture SSOT file exists (opt-in by presence).
   for (const d of docViolations(staged)) {
     violations.push({ rule: d.rule, file: d.file, msg: d.msg });
+  }
+
+  // 4c. architecture tree hygiene (c4) — oversized / piled / history leaf nodes
+  // drift the design SSOT from a navigable tree into a wall of text. warn-only.
+  for (const h of lintArchitectureTree()) {
+    violations.push({ rule: h.rule, file: "ARCHITECTURE.json", msg: `${h.path} — ${h.msg}` });
   }
 
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });

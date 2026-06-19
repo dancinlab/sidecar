@@ -17,7 +17,7 @@ import { info } from "../lib/log.ts";
 //   > global ~/.harness/recommend-default (host-wide — `set-default --global`)
 //   > "present" (the original 4-axis-box behavior)
 // The global tier is what makes a host-wide "공용 완성도" default actually
-// inherit across every repo on the machine (sidecar uses ~/.sidecar host-state).
+// inherit across every repo on the machine.
 function defaultFile(): string {
   return resolve(REPO_ROOT, ".harness", "recommend-default");
 }

@@ -32,7 +32,7 @@ spec v2.0 · `harness recommend inject` emits this verbatim each turn as additio
 - ✗ Do NOT render four identical champion lines when the axes converge — collapse to the single 전축 합의 line instead.
 
 ## r4 — default mode (present · auto · fixed-axis · optional standing pick)
-- An optional default MODE MAY be set in `$HOME/.sidecar/recommend-default` (one token: present · auto · complete · simple · safe · std; absent = present). The inject hook surfaces the active mode as a `# default mode:` directive.
+- An optional default MODE MAY be set in `.harness/recommend-default` (per-repo, committed = team-shared, wins) or `~/.harness/recommend-default` (host-wide, via `set-default --global`) — one token: present · auto · complete · simple · safe · std; absent = present. The inject hook surfaces the active mode as a `# default mode:` directive.
 - **PRESENT** (absent file = this) = the original behavior — render the r2 four-axis box, the user picks each time; NO auto-decision, NO ★.
 - **AUTO** = score the candidate options on ALL four axes (완성도·단순·안전·표준, 1–5, weighted avg default 1:1:1:1, tie→안전 wins), auto-pick the consensus winner, render the r2 box THEN one conclusion line `🤖 4축 auto-pick: <안> (완성도=X 단순=Y 안전=Z 표준=W · weighted=<sum>)` — decide for the user instead of waiting (the box above keeps the trade-offs visible).
 - **FIXED-AXIS** (complete · simple · safe · std) = ★-mark that axis line IN PLACE in the r2 box (numbering ①②③④ unchanged) + append `  ← 기본값`, STILL render all four lines, THEN AUTO-PROCEED with that axis's champion as the decision (decide, do NOT wait) + one conclusion line `🤖 고정축 auto-pick: <안> (<axis> 기준)`.

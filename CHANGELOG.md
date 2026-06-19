@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## docs(architecture): ARCHITECTURE = current-state snapshot, not a history log
+
+Sessions kept accreting history into ARCHITECTURE.json — version/dated/`이전엔…`/`deprecated`
+nodes — because the guidance called it a "갱신형 SSOT"(updatable SSOT), which a model reads
+as "add an update entry" rather than "replace the affected node in place". The tree should
+show only the final/current structure; history belongs in CHANGELOG + git.
+
+- `modules/architecture.ts` — the SessionStart inject note (surfaced EVERY turn) now spells
+  out: 현재상태 스냅샷이지 이력 로그 아님 — update-in-place + delete old wording; NO
+  history/version/dated/previous/deprecated nodes. `@convergence ARCH_SNAPSHOT_NOT_HISTORY`
+  ossified in the module header.
+- `config/commons.md` c4 — added the same rule to the governance SSOT: "갱신" = replace the
+  node in-place, not append; tree = this-moment final structure only; history → CHANGELOG + git.
+- ARCHITECTURE.json itself was already clean (no real history nodes) — this is a recurrence-
+  prevention hardening, not a cleanup.
+
 ## fix(pre): PreToolUse block schema — every code-level guard was a silent no-op
 
 Root cause for "직접 CLI 막았는데 `vastai destroy` 가 그냥 실행됨": `emitBlock` emitted the

@@ -4,6 +4,7 @@ import { postBash, postEdit } from "../modules/post.ts";
 import { runPromptScan } from "../modules/prompt-scan.ts";
 import { runLint } from "../modules/lint.ts";
 import { runCi } from "../modules/ci.ts";
+import { runCiTrack } from "../modules/ci-track.ts";
 import { runVerify } from "../modules/verify.ts";
 import { runErrors } from "../modules/errors.ts";
 import { runLedger } from "../modules/ledger.ts";
@@ -101,6 +102,7 @@ hook delegates (wire these into your agent's settings.json):
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
   ci [all|fast|list]       run configured verification commands in parallel (was verify; config key stays verify.checks)
+  ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop · c19)
   verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge · sidecar parity)
   errors {route|list|drain_check|mark_fixed}
   ledger {register|complete|list|gc|dup_check}
@@ -200,6 +202,8 @@ async function main(): Promise<number> {
       return runLint(rest);
     case "ci":
       return runCi(rest);
+    case "ci-track":
+      return runCiTrack(rest);
     case "verify":
       return runVerify(rest);
     case "errors":

@@ -173,6 +173,12 @@
                 "상세": "명령은 config 선언"
               },
               {
+                "이름": "ci-track",
+                "역할": "원격 PR/CI 체크 추적 (gh)",
+                "구분": "module",
+                "상세": "gh pr checks --json → pass/fail/pending 집계 + 🟢/🔴/🟡/⚪ verdict(exit 0/2/1/0). --watch=CLI-내부 폴링(c19 — bash sleep 루프 대체) · --merge-on-green=GREEN시 자동 squash-merge. 손수 짠 gh-poll/monitor 루프를 대체"
+              },
+              {
                 "이름": "paper",
                 "역할": "demiurge 하우스 논문 스캐폴드·표지·빌드",
                 "구분": "module",

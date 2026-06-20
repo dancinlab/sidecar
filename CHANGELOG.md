@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## feat(ci-track): remote PR/CI tracker — replaces hand-rolled gh-poll + merge-on-green loops (plugin 0.4.1 → 0.5.0)
+
+Long merge-on-green campaigns repeatedly hand-rolled CI polling — `gh pr checks <pr> | grep`,
+`/tmp/pr_mon.sh` watch loops, manual pass/fail/pending counting — because harness had no command
+to track a PR's remote CI. `harness ci-track` centralizes it.
+
+- `modules/ci-track.ts` + `cli/index.ts` registration + `commands/ci-track.md` + help line.
+- `harness ci-track <pr#|branch|url> [-R owner/repo]` — wraps `gh pr checks --json name,state,bucket`
+  into an aggregate (pass/fail/pending counts + failing/pending check names) and a verdict:
+  🟢 GREEN (exit 0) · 🔴 RED (exit 2) · 🟡 PENDING (exit 1) · ⚪ NONE (exit 0).
+- `--watch [--interval=60] [--timeout=1800]` polls IN-PROCESS until terminal — the sanctioned
+  replacement for a bash sleep loop (c19: the poll lives inside the CLI, not in agent-authored bash).
+- `--merge-on-green` auto `gh pr merge --squash --admin --delete-branch` once all checks pass.
+- `@convergence(ossified) CI_TRACK_NATIVE`. Verified against live GitHub CI: aggregate + verdict +
+  pending-name listing + exit-code propagation all correct (NONE/PENDING/GREEN observed on real PRs).
+
 ## feat(hooks): inject ARCHITECTURE.json + ING.jsonl every turn (UserPromptSubmit), not just SessionStart (plugin 0.4.0 → 0.4.1)
 
 `architecture inject` and `ing inject` were wired ONLY into SessionStart — surfaced once per

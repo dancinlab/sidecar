@@ -197,6 +197,12 @@
                 "상세": "new=PAPERS/<slug>/{main.tex(이모지 제목·g5 tier-badge·TikZ+pgfplots·fal.ai 표지 include)·references.bib·PAPER.md} → cover(imagine 위임) → build(xelatex+bibtex×3·pages/refs 보고·g51 ≥10p 게이트·깨진/빈 PDF 실패처리). 손 조립 규율을 도구로 박제(self-improving)"
               },
               {
+                "이름": "imagine",
+                "역할": "AI 이미지+영상 생성 (fal/openai · 키 secret 경유)",
+                "구분": "module",
+                "상세": "출력 확장자로 분기: 이미지(.png/.jpg)=fal queue `openai/gpt-image-2`(image2·핀) 또는 -b openai `gpt-image-1`; 영상(.mp4/.mov/.webm)=fal queue Seedance 2.0(핀·fast 티어=…/fast/…) — `-i <image>` 없으면 `bytedance/seedance-2.0/text-to-video`, 있으면 `bytedance/seedance-2.0/image-to-video`(이미지 애니메이트·로컬파일은 base64 data-URI, http URL은 그대로 image_url). 동일 queue+poll(영상은 폴링 길게)·결과 URL은 images[].url|video.url 추출. 프롬프트는 FILE·키는 secret get fal/openai.api_key·-K curl config로 argv 누출 방지. -m 로 모델 override"
+              },
+              {
                 "이름": "kick (alias drill)",
                 "역할": "hexa-lang gap-breakthrough/discovery 엔진 패스스루",
                 "구분": "module",

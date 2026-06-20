@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## feat(imagine): video generation — Seedance 2.0 text-to-video + image-to-video (plugin 0.8.0 → 0.9.0)
+
+`imagine` was image-only. It now generates video too, routed by the output extension, with exact pinned
+model versions. Image default stays `openai/gpt-image-2` ("image2").
+
+- VIDEO by output extension (`.mp4/.mov/.webm/.m4v/.gif`) → fal queue, pinned **Seedance 2.0**
+  (exact fal endpoints, verified): text-to-video `bytedance/seedance-2.0/text-to-video`; with `-i <image>`
+  → image-to-video `bytedance/seedance-2.0/image-to-video` (the input image animates). Fast tier =
+  `…/fast/…`; override any with `-m`.
+- `-i <image-file|url>` (image-to-video input): http(s) URL passed through as `image_url`; a local file is
+  inlined as a base64 data-URI (fal accepts data: URIs). `-i` with a non-video output is rejected.
+- `backendFal` generalized to image+video (kind param + optional imageUrl): video payload is prompt
+  (+ image_url for i2v), longer poll budget, result URL from `video.url`/`videos[].url`.
+- header/usage/list + README + ARCHITECTURE imagine node document image2 + Seedance 2.0 t2v/i2v.
+- plugin.json 0.8.0 → 0.9.0.
+
 ## feat(poll): `harness poll` — self-paced ≥10-min polling runbook (c19-sanctioned · plugin 0.7.1 → 0.8.0)
 
 Codifies the "10분 폴링" pattern: watch slow background state (fleet lanes · pods · CI · queues) by waking

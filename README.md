@@ -72,7 +72,7 @@ harness/
 | `sync {run\|diff}` | (선택) repo 자체 공유파일 sync 스크립트 실행 | 공유파일 변경 후 |
 | `pool {list\|add\|rm\|on <h> <cmd>\|status\|specs [h]}` | 호스트 로스터 + 원격 실행. `shared:false` 호스트는 **제한 호스트** — `allow` 프로젝트 컨텍스트 밖에선 `on` 차단(공용 컴퓨트로 못 씀). `on` 은 ssh 를 직접 spawn(argv)해 `cmd` 의 `$`/`$(...)` 가 로컬이 아니라 **원격 셸**에서 전개됨. `specs` 는 호스트별 코어/메모리/GPU 를 ssh 프로브해 로스터에 캐시(`list`·`status` 에 `〈12c · 30G · GPU:…〉` 인라인 표기) — 제한 호스트는 프로브하지 않음 | 원격 실행 · 자원 확인 시 |
 | `pod` / `dojo [<slug>]` | GPU 클라우드 런북 + dojo 학습잡 스캐폴더. dojo 기본 스택은 `config.dojo`(엔진 무하드코딩)가 운반 — 설정 시 `hexa dojo <delegate>` 위임. 다샤드 배치는 `hexa cloud fire-shards` (손수 launcher.sh 는 `CLOUD-HANDROLLED-FANOUT` warn 으로 리다이렉트) | GPU 디스패치 · 학습 스캐폴드 |
-| `imagine <prompt-file> <out.png>` | AI 이미지 생성 (fal/openai · 키는 `secret get` 경유 · 프롬프트는 FILE 로 · canonical 사이즈) | 표지·figure 생성 시 |
+| `imagine <prompt-file> <out.{png\|mp4}> [-i img]` | AI 이미지+영상 생성 — 출력 확장자로 분기: 이미지(.png)=fal `openai/gpt-image-2`(image2 핀) · 영상(.mp4/.mov)=fal Seedance 2.0 핀 — `-i` 없으면 `…/text-to-video`, `-i <이미지>` 면 `…/image-to-video`(이미지 애니메이트). 키는 `secret get` 경유 · 프롬프트는 FILE 로 · `-m` 로 override | 표지·figure·영상 생성 시 |
 | `paper {new\|build\|cover\|list}` | demiurge 하우스 논문 도구 — `new` 스캐폴드(이모지 제목 · g5 tier-badge 디스크 · TikZ+pgfplots · fal.ai 표지 include) → `imagine` 표지 → `build`(xelatex+bibtex×3 · g51 ≥10p 게이트). 손 조립 규율을 도구로 박제 | 논문 작성·컴파일 시 |
 | heartbeat (c22) | live 장기-진행건(pod·백그라운드 에이전트)을 `poll.maxSilenceSec`(기본 10분) 넘게 안 보면 `post bash`/`ing inject` 에서 방치 경고. c19(과다폴링 차단)의 반대 — 미폴링/idle-burn 방지 | PostToolUse · SessionStart |
 

@@ -1,8 +1,12 @@
-// harness imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]
-//                  | list | help
-// Generic AI image generator (sidecar /imagine parity). Backends:
-//   fal     (default) fal.ai queue+poll · default model openai/gpt-image-2
-//   openai  api.openai.com /v1/images/generations · default model gpt-image-1
+// harness imagine <prompt-file> <out.{png|mp4}> [-s size] [-b backend] [-m model] [-i image]
+//                  | list | help | history
+// Generic AI image+video generator (sidecar /imagine parity + video). Defaults:
+//   IMAGE (out=.png/.jpg/…)        → fal queue · openai/gpt-image-2 ("image2", pinned)
+//   VIDEO text-to-video (out=.mp4) → fal queue · bytedance/seedance-2.0/text-to-video ("시댄스 2.0", pinned)
+//   VIDEO image-to-video (+ -i img)→ fal queue · bytedance/seedance-2.0/image-to-video (the -i image animates)
+// Backends:
+//   fal     (default) fal.ai queue+poll · image openai/gpt-image-2 · video Seedance 2.0
+//   openai  api.openai.com /v1/images/generations · default model gpt-image-1 (images only)
 // API keys come from the `secret` CLI (secret get fal.api_key / openai.api_key)
 // — never inline, never logged. The PROMPT is read from a FILE (provenance, no
 // argv leak) and POSTed via a mktemp JSON payload. The auth header is passed to
@@ -25,6 +29,17 @@ const BACKENDS: Record<string, { keyName: string; defaultModel: string }> = {
   fal: { keyName: "fal.api_key", defaultModel: "openai/gpt-image-2" },
   openai: { keyName: "openai.api_key", defaultModel: "gpt-image-1" },
 };
+// VIDEO: when the output path is a video file, imagine routes to the fal queue
+// with the pinned Seedance 2.0 default model (user-pinned, like gpt-image-2 for
+// images — override only via `-m <fal-endpoint>`). Same queue+poll mechanism;
+// only the payload and result-URL field differ (video.url / videos[].url).
+const VIDEO_EXT = /\.(mp4|mov|webm|m4v|gif)$/i;
+// 시댄스(Seedance) 2.0 — exact fal endpoints (standard tier, max quality). Fast tier:
+// …/fast/{text|image}-to-video. Pinned defaults; override via `-m`.
+//   no -i  → text-to-video · with -i <image> → image-to-video (the image animates).
+const VIDEO_T2V_MODEL = "bytedance/seedance-2.0/text-to-video";
+const VIDEO_I2V_MODEL = "bytedance/seedance-2.0/image-to-video";
+const isVideoOut = (out: string): boolean => VIDEO_EXT.test(out);
 
 let _tmpSeq = 0;
 function tmp(content: string): string {
@@ -81,16 +96,51 @@ function recordImagine(e: { backend: string; model: string; size: string; out: s
   appendJsonl(LEDGER, { kind: "imagine", ts: nowIso(), ...e, prompt: e.prompt.slice(0, 280) });
 }
 
-// ── fal.ai queue+poll ──────────────────────────────────────────────────────
-async function backendFal(promptFile: string, out: string, size: string, model: string): Promise<number> {
+// resolve an image-to-video input to a URL fal accepts: http(s) passed through;
+// a local file is inlined as a base64 data URI (fal accepts data: URIs for image_url).
+function resolveImageInput(ref: string, cwd: string): string {
+  if (/^https?:\/\//i.test(ref) || ref.startsWith("data:")) return ref;
+  const p = resolve(cwd, ref);
+  if (!existsSync(p)) {
+    loudFail(`imagine: -i image not found: ${p} (pass an http(s) URL or a local image file)`);
+    return "";
+  }
+  const ext = (p.split(".").pop() ?? "png").toLowerCase();
+  const mime = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : ext === "webp" ? "image/webp" : "image/png";
+  return `data:${mime};base64,${readFileSync(p).toString("base64")}`;
+}
+
+// extract the asset URL from a fal result — image (images[].url) or video (video.url / videos[].url)
+function falAssetUrl(resOut: string, kind: "image" | "video"): string {
+  const direct = field(resOut, "url");
+  if (direct) return direct;
+  try {
+    const j = JSON.parse(resOut);
+    if (kind === "video") return j?.video?.url ?? j?.videos?.[0]?.url ?? "";
+    return j?.images?.[0]?.url ?? "";
+  } catch {
+    return "";
+  }
+}
+
+// ── fal.ai queue+poll (image + video; video supports image-to-video via imageUrl) ──
+async function backendFal(promptFile: string, out: string, size: string, model: string, kind: "image" | "video" = "image", imageUrl = ""): Promise<number> {
   const key = await secretGet("fal.api_key");
   if (!key) {
     loudFail("imagine[fal]: `secret get fal.api_key` empty — set with `secret set fal.api_key`");
     return 1;
   }
   const promptText = readFileSync(promptFile, "utf8");
-  const payload = tmp(JSON.stringify({ prompt: promptText, image_size: size, num_images: 1, output_format: "png", quality: "high" }));
+  // image payload pins size/format/quality; video (Seedance 2.0) needs the prompt
+  // (+ image_url for image-to-video); fal applies endpoint defaults for the rest.
+  const body = kind === "video"
+    ? (imageUrl ? { prompt: promptText, image_url: imageUrl } : { prompt: promptText })
+    : { prompt: promptText, image_size: size, num_images: 1, output_format: "png", quality: "high" };
+  const payload = tmp(JSON.stringify(body));
   const auth = `Authorization: Key ${key}`;
+  // video generation is much slower — poll longer.
+  const maxPolls = kind === "video" ? 240 : 80;
+  const sleepSec = kind === "video" ? 5 : 3;
   try {
     const submit = await curl({ method: "POST", url: `https://queue.fal.run/${model}`, headers: [auth, "Content-Type: application/json"], dataFile: payload, maxTime: 60 });
     if (submit.code !== 0) {
@@ -104,45 +154,39 @@ async function backendFal(promptFile: string, out: string, size: string, model: 
       loudFail(`imagine[fal]: submit response missing fields: ${submit.out.slice(0, 300)}`);
       return 1;
     }
-    info(`imagine[fal]: queued ${basename(out)} model=${model} size=${size} request_id=${rid}`);
+    info(`imagine[fal]: queued ${basename(out)} (${kind}) model=${model}${kind === "image" ? ` size=${size}` : ""} request_id=${rid}`);
 
     let done = false;
-    for (let k = 0; k < 80 && !done; k++) {
+    for (let k = 0; k < maxPolls && !done; k++) {
       const st = await curl({ url: statusUrl, headers: [auth], maxTime: 30 });
       const status = field(st.out, "status");
       if (status === "COMPLETED") done = true;
       else if (status === "FAILED" || status === "ERROR") {
         loudFail(`imagine[fal]: ${basename(out)} ${status} — ${st.out.slice(0, 300)}`);
         return 2;
-      } else await execShell("sleep 3");
+      } else await execShell(`sleep ${sleepSec}`);
     }
     if (!done) {
-      loudFail(`imagine[fal]: ${basename(out)} timed out after 80 polls`);
+      loudFail(`imagine[fal]: ${basename(out)} timed out after ${maxPolls} polls`);
       return 2;
     }
 
     const res = await curl({ url: resultUrl, headers: [auth], maxTime: 30 });
-    const url = field(res.out, "url") || (() => {
-      try {
-        return JSON.parse(res.out)?.images?.[0]?.url ?? "";
-      } catch {
-        return "";
-      }
-    })();
+    const url = falAssetUrl(res.out, kind);
     if (!url) {
-      loudFail(`imagine[fal]: no image URL in result: ${res.out.slice(0, 300)}`);
+      loudFail(`imagine[fal]: no ${kind} URL in result: ${res.out.slice(0, 300)}`);
       return 3;
     }
-    const dl = await curl({ url, headers: [], output: out, location: true, maxTime: 60 });
+    const dl = await curl({ url, headers: [], output: out, location: true, maxTime: kind === "video" ? 300 : 60 });
     if (dl.code !== 0 || bytes(out) === 0) {
       loudFail(`imagine[fal]: download failed (curl ${dl.code})`);
       return 3;
     }
-    recordImagine({ backend: "fal", model, size, out, prompt: promptText, request_id: rid, status: "ok", bytes: bytes(out) });
+    recordImagine({ backend: "fal", model, size: kind === "video" ? "-" : size, out, prompt: promptText, request_id: rid, status: "ok", bytes: bytes(out) });
   } finally {
     rmSync(payload, { force: true });
   }
-  ok(`imagine[fal]: wrote ${out} (${bytes(out)} bytes)`);
+  ok(`imagine[fal]: wrote ${out} (${kind} · ${bytes(out)} bytes)`);
   return 0;
 }
 
@@ -284,12 +328,14 @@ async function history(args: string[]): Promise<number> {
 }
 
 function usage(): void {
-  info("harness imagine <prompt-file> <out.png> [-s size] [-b backend] [-m model]");
+  info("harness imagine <prompt-file> <out.{png|mp4}> [-s size] [-b backend] [-m model] [-i image]");
   info("  list · help");
   info("  history [-b fal|openai] [-m endpoint_id,…] [--start <iso>] [--limit N] [--status success|error] [--local] [--json]");
   info("          fal: provider request history w/ prompts (GET /v1/models/requests/by-endpoint) · openai/--local: local ledger");
-  info(`  sizes:    ${SIZES.join(" · ")}   (default square_hd)`);
-  info("  backend:  fal (default, openai/gpt-image-2) · openai (gpt-image-1)");
+  info(`  image:    out=.png/.jpg → fal · default openai/gpt-image-2 (image2)   sizes: ${SIZES.join(" · ")} (default square_hd)`);
+  info("  video t2v: out=.mp4/.mov/.webm → fal · default bytedance/seedance-2.0/text-to-video (시댄스 2.0)");
+  info("  video i2v: + -i <image-file|url> → fal · default bytedance/seedance-2.0/image-to-video (the image animates)");
+  info("  backend:  fal (default — image openai/gpt-image-2 · video Seedance 2.0) · openai (gpt-image-1, images only)");
   info("  keys:     secret get fal.api_key · secret get openai.api_key");
   info("  prompt is read from a FILE (provenance, no argv leak); model -m overrides the pinned default");
 }
@@ -303,7 +349,8 @@ export async function runImagine(args: string[]): Promise<number> {
   if (sub === "history" || sub === "hist") return history(args.slice(1));
   if (sub === "list") {
     info("imagine backends:");
-    for (const [name, b] of Object.entries(BACKENDS)) info(`  ${name}  default model ${b.defaultModel}  key: secret get ${b.keyName}`);
+    for (const [name, b] of Object.entries(BACKENDS)) info(`  ${name}  default image model ${b.defaultModel}  key: secret get ${b.keyName}`);
+    info(`imagine video (out=.mp4/.mov/.webm): fal · t2v ${VIDEO_T2V_MODEL} · i2v(+ -i) ${VIDEO_I2V_MODEL} (시댄스 2.0 · fast tier: …/fast/…)`);
     info(`imagine sizes: ${SIZES.join(" · ")}`);
     return 0;
   }
@@ -312,20 +359,32 @@ export async function runImagine(args: string[]): Promise<number> {
   let size = "square_hd";
   let backend = "fal";
   let model = "";
+  let imageRef = ""; // -i <image>: input image → image-to-video (Seedance 2.0)
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if ((a === "-s" || a === "--size") && i + 1 < args.length) size = args[++i];
     else if ((a === "-b" || a === "--backend") && i + 1 < args.length) backend = args[++i];
     else if ((a === "-m" || a === "--model") && i + 1 < args.length) model = args[++i];
+    else if ((a === "-i" || a === "--image") && i + 1 < args.length) imageRef = args[++i];
     else pos.push(a);
   }
   const [promptArg, outArg] = pos;
   if (!promptArg || !outArg) {
-    loudFail("imagine: usage: <prompt-file> <out.png> [-s size] [-b backend] [-m model]");
+    loudFail("imagine: usage: <prompt-file> <out.{png|mp4}> [-s size] [-b backend] [-m model]");
     return 1;
   }
-  if (!SIZES.includes(size)) {
+  // VIDEO path: out is a video file → fal queue + Seedance 2.0 default (no image-size).
+  const video = isVideoOut(outArg);
+  if (!video && !SIZES.includes(size)) {
     loudFail(`imagine: unknown size '${size}' — one of: ${SIZES.join(" · ")}`);
+    return 1;
+  }
+  if (video && backend === "openai") {
+    loudFail("imagine: video output is fal-only (openai backend is images) — drop `-b openai` for video.");
+    return 1;
+  }
+  if (imageRef && !video) {
+    loudFail("imagine: -i <image> is for image-to-video — give a video output (e.g. out.mp4).");
     return 1;
   }
   if (!BACKENDS[backend]) {
@@ -345,9 +404,15 @@ export async function runImagine(args: string[]): Promise<number> {
   }
   const out = resolve(cwd, outArg);
   mkdirSync(dirname(out), { recursive: true });
-  const resolvedModel = model || BACKENDS[backend].defaultModel;
 
+  if (video) {
+    const imageUrl = imageRef ? resolveImageInput(imageRef, cwd) : "";
+    if (imageRef && !imageUrl) return 1; // resolveImageInput already reported
+    const resolvedModel = model || (imageUrl ? VIDEO_I2V_MODEL : VIDEO_T2V_MODEL);
+    return backendFal(promptFile, out, size, resolvedModel, "video", imageUrl);
+  }
+  const resolvedModel = model || BACKENDS[backend].defaultModel;
   return backend === "openai"
     ? backendOpenai(promptFile, out, size, resolvedModel)
-    : backendFal(promptFile, out, size, resolvedModel);
+    : backendFal(promptFile, out, size, resolvedModel, "image");
 }

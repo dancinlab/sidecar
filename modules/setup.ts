@@ -39,6 +39,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("harness commons inject"),
       entry("harness recommend inject"),
       entry("harness architecture inject"),
+      entry("harness git-context inject"),
       entry("harness worktree gc"),
       entry("harness ing inject"),
     ],

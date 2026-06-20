@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## feat(git-context): SessionStart stale-branch guard — warn when HEAD is behind origin/<default> (plugin 0.9.5 → 0.9.6)
+
+A recurring, expensive failure: a session starts on a stale branch (HEAD behind origin/main after a merge),
+the agent reads the pre-merge code, believes it is current, and re-implements already-merged work. Real
+incident — a duplicate fix PR (#3736) was built for work already merged (#3734) because the session began on
+an old feature branch and never noticed HEAD ≠ the merged tip. Nothing flagged the staleness.
+
+- `modules/git-context.ts` (new) — `git-context inject` (SessionStart) computes HEAD vs origin/<default>
+  (main|master) from LOCAL refs (no network fetch): `rev-list --left-right --count <ref>...HEAD`. When HEAD
+  is BEHIND (or detached-stale) it injects a loud ⚠️ block with the exact remedy — `git log origin/<default>
+  -- <file>` before trusting any file as current, and checkout/rebase before starting new work. On a clean
+  default branch it stays SILENT (no context noise). `git-context show` prints the position on demand.
+- Wired into SessionStart in both `hooks/hooks.json` (plugin) and `modules/setup.ts` (settings.json install).
+  Registered in `cli/index.ts` + help line.
+- Verified: clean `main` → silent (0-char inject); synthetic branch 2-behind origin/main → ⚠️ STALE block
+  fires (show + inject both). `@convergence in_flight STALE_BRANCH_TRAP`.
+- plugin.json 0.9.5 → 0.9.6.
+
 ## feat(ing): c6 ing-staleness nudge — warn at Stop when code edited but board untouched (plugin 0.9.4 → 0.9.5)
 
 The every-turn `ing inject` only ever SHOWED the board; nothing nudged the agent to UPDATE it as work

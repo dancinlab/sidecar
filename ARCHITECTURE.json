@@ -270,6 +270,12 @@
                 "상세": "repo-root ARCHITECTURE.json(우선)/.md 를 additionalContext 로 주입 — SessionStart 1회 + claudemd 처럼 매 UserPromptSubmit 재주입으로 설계 트리를 commons급 salience 로 상주. 80KB 초과 시 head+포인터로 절단. 부재 시 무음. (이벤트 게이트 없음 — 받은 hook_event_name 을 그대로 echo)"
               },
               {
+                "이름": "git-context",
+                "역할": "stale-branch 함정 가드 (SessionStart inject)",
+                "구분": "module",
+                "상세": "HEAD vs origin/<default>(main|master) 를 LOCAL ref 로 비교(fetch 없음) → BEHIND 이거나 detached-stale 이면 ⚠️ 경고 주입: '이 위치 파일은 최신이 아닐 수 있다 · git log origin/<default> -- <file> 로 이미 머지됐는지 확인 후 코드 믿어라'. clean 한 default 브랜치면 무음(노이즈 0). 재발방지: 옛 feature 브랜치에서 옛 코드를 보고 이미 머지된 작업을 중복 구현한 사고(#3736 dup #3734) 차단"
+              },
+              {
                 "이름": "claudemd",
                 "역할": "프로젝트 규칙 매턴 재주입",
                 "구분": "module",

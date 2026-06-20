@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(convergence): broaden recurrence-trigger patterns (user-curated + memory-frequency)
+
+Expanded the `convergence-recurrence` keyword trigger so it fires on far more recurrence phrasings,
+prompting the inline `@convergence` marker (c1). Patterns now include bare high-signal tokens curated
+with the user + drawn from cross-repo memory frequency: `또`·`다시`·`실수`·`원인`·`⚠️`·`OOM`
+(+`out of memory`·`oom-kill`·`메모리 부족`)·`재발`·`stale`·`낡은`·`구버전`·`회귀`·`regression`·
+`recurr`·`broke again`·`keeps breaking`·`reintroduced`·`reopened`… (39 patterns). Bare `또`/`다시`/
+`실수`/`원인` over-fire by design — the user opted for broad recall (the hint is an advisory reminder,
+not a block). JSON validated; trigger fires on `또 OOM 으로 죽었어`.
+
 ## feat(convergence): mechanically ENFORCE inline @convergence markers (c1) — scan gate + recurrence trigger
 
 @convergence recurrence-prevention markers (c1) were a guideline only — nothing validated them and

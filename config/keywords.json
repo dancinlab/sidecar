@@ -20,7 +20,7 @@
     },
     {
       "id": "convergence-recurrence",
-      "patterns": ["재발", "또 깨", "또 터", "또 발생", "또 같은", "또 실패", "또 났", "또 떴", "다시 깨", "다시 터", "다시 발생", "두 번째", "두번째", "똑같은 버그", "예전 버그", "예전 실수", "전에도", "지난번에도", "낡은", "구버전", "옛 버전", "스테일", "회귀", "재현됐", "broke again", "again broke", "back again", "yet again", "same bug", "same defect", "same mistake", "same issue", "keeps breaking", "keeps failing", "reintroduc", "reopened", "previously fixed", "already fixed", "regression", "recurr", "stale"],
+      "patterns": ["또", "다시", "실수", "원인", "⚠️", "OOM", "oom-kill", "out of memory", "메모리 부족", "재발", "두 번째", "두번째", "똑같은", "예전 버그", "전에도", "지난번에도", "낡은", "구버전", "옛 버전", "스테일", "회귀", "재현됐", "broke again", "again broke", "back again", "yet again", "same bug", "same defect", "same mistake", "same issue", "keeps breaking", "keeps failing", "reintroduc", "reopened", "previously fixed", "already fixed", "regression", "recurr", "stale"],
       "tool": "harness convergence scan",
       "hint": "재발 감지 (c1) — 같은 결함/실수가 또 났다. 별도 incident 파일이 아니라 결함난 그 코드 파일의 인라인 주석에 재발방지 마커를 남겨라: `// @convergence state=ossified id=<ID> value=\"<핵심>\" threshold=\"<재발조건/해결>\"` (필수 키 state·id · state∈ossified·stable·in_flight·pending·completed·completed_gap·failed·blocked). 형식 강제: `harness convergence scan` — state+id 누락/잘못된 state 는 CONVERGENCE-MALFORMED 로 `harness lint` 커밋 게이트가 차단한다."
     },

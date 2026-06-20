@@ -1,6 +1,6 @@
 // harness kick <seed…> | <hexa-kick flags> — thin wrapper over `hexa kick`,
 // the hexa-lang gap-breakthrough / discovery engine (aliased to `hexa drill`).
-// Mirrors sidecar's /kick (skills/kick): bare natural-language args join into
+// The /kick wrapper: bare natural-language args join into
 // `--seed "<seed>"`; if the first token is a flag (e.g. --rounds N, --engine
 // mk9|mk10) the args pass through verbatim so advanced invocations still work.
 //

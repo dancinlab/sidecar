@@ -1,5 +1,5 @@
 // harness research {arxiv <query|id> [--n N] | yt <url|id> [lang]}
-// Fetch external research material (sidecar research-skill parity), no API key:
+// Fetch external research material, no API key:
 //   arxiv  search the official arXiv API by free-text, or fetch by id — returns
 //          title / authors / date / categories / pdf link / abstract.
 //   yt     extract a YouTube caption transcript via the InnerTube `player` API

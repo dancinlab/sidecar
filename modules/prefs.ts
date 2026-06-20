@@ -1,5 +1,5 @@
 // harness prefs {show|code <lang>|docs <lang>|response <lang>|inject}
-// Language preferences on 3 axes (sidecar prefs parity):
+// Language preferences on 3 axes:
 //   code authoring · doc authoring · response-to-user.
 // Stored per-repo at .harness/prefs.json. `inject` emits a UserPromptSubmit
 // additionalContext block so the agent is reminded every turn; the

@@ -1,5 +1,5 @@
-// harness verify [rubric | fence "<claim>"]  — tier-rubric claim verification
-// (sidecar parity). Routes correctness/purity/grade/identity claims to a 6-tier
+// harness verify [rubric | fence "<claim>"]  — tier-rubric claim verification.
+// Routes correctness/purity/grade/identity claims to a 6-tier
 // rubric instead of LLM self-judgement; the agent reports the badge verbatim.
 //   bare | rubric    → print the rubric + discipline (templates/verify.md)
 //   fence "<claim>"  → record a ⚪ SPECULATION-FENCED claim to state/claims.jsonl

@@ -1,5 +1,5 @@
 // harness recommend {inject|show|set-default|clear-default|get-default|resolve-mode}
-// 4-axis recommendation rubric (sidecar recommend-axes parity). `inject` emits
+// 4-axis recommendation rubric. `inject` emits
 // config/recommend.md (the SSOT rule carrier — was recommend.tape; a plain
 // Markdown carrier now, the .tape DSL is retired) + the active default-mode
 // directive as additionalContext. `resolve-mode` is the deterministic mode

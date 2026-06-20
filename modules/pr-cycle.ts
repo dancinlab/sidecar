@@ -16,7 +16,7 @@ async function git(cmd: string, cwd?: string): Promise<{ code: number; out: stri
   return { code: r.code, out: (r.stdout + r.stderr).trim() };
 }
 
-// Post-merge worktree sweep (sidecar pr-cycle 0.5.0 parity). After a squash-merge
+// Post-merge worktree sweep. After a squash-merge
 // with --delete-branch, the merged branch's upstream becomes [gone] (squash-safe:
 // --is-ancestor can't detect a squash, but a deleted upstream reliably can). cd to
 // the MAIN worktree first so even the just-merged CURRENT worktree (if pr-cycle ran

@@ -1,5 +1,5 @@
 // harness easy {show|inject}
-// Auto-inject the "easy" (friendly) response style (sidecar easy-auto parity).
+// Auto-inject the "easy" (friendly) response style.
 // `inject` reads styles/easy.<lang>.md for the prefs response language and emits
 // it as UserPromptSubmit/SessionStart additionalContext so the 7-element pattern
 // is active from turn 0. The NL substrings 설명 / 쉽게 prepend an activation banner.

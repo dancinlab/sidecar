@@ -1,5 +1,5 @@
 // harness watch <url|path> [question…] [flags]
-// Give the agent the ability to WATCH a video (sidecar /watch parity): download
+// Give the agent the ability to WATCH a video: download
 // with yt-dlp (any platform it supports + local files), extract auto-scaled
 // frames with ffmpeg, and pull a timestamped transcript (native captions first,
 // optional Whisper via Groq/OpenAI). Prints the frame paths + transcript so the

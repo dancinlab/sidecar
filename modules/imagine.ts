@@ -1,6 +1,6 @@
 // harness imagine <prompt-file> <out.{png|mp4}> [-s size] [-b backend] [-m model] [-i image]
 //                  | list | help | history
-// Generic AI image+video generator (sidecar /imagine parity + video). Defaults:
+// Generic AI image+video generator. Defaults:
 //   IMAGE (out=.png/.jpg/…)        → fal queue · openai/gpt-image-2 ("image2", pinned)
 //   VIDEO text-to-video (out=.mp4) → fal queue · bytedance/seedance-2.0/text-to-video ("시댄스 2.0", pinned)
 //   VIDEO image-to-video (+ -i img)→ fal queue · bytedance/seedance-2.0/image-to-video (the -i image animates)

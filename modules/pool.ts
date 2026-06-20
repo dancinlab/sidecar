@@ -1,5 +1,5 @@
-// harness pool {list|add|rm|on|status|specs} — host roster + remote exec (sidecar
-// pool parity). The host roster is machine-level, so it lives GLOBALLY at
+// harness pool {list|add|rm|on|status|specs} — host roster + remote exec.
+// The host roster is machine-level, so it lives GLOBALLY at
 // ~/.harness/pool.json (shared across repos), not per-repo.
 //   list                 show roster (cached cores/mem/GPU + LIVE CPU/GPU load)
 //   add <name> [target]  add host (target = ssh alias or user@host; default = name)

@@ -1,4 +1,4 @@
-// harness end — session-closure safety check (sidecar /end parity). Read-only
+// harness end — session-closure safety check. Read-only
 // dashboard of dangling residue in the current repo with per-item ✓/⚠/○ marks +
 // recommended actions, and a closing ✅/⚠ verdict. Never mutates anything.
 import { execShell } from "../lib/exec.ts";

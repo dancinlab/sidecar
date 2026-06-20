@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## fix(shadow): marker AFTER frontmatter — picker shows command descriptions, not the marker comment
+
+`harness shadow` PREPENDED `SHADOW_MARKER` (`<!-- harness-shadow … -->`) to each generated
+`~/.claude/commands/*.md`, pushing the YAML frontmatter to line 2. Claude Code only parses
+`description:` when the `---` fence is on line 1, so all 35 shadow-generated commands rendered the
+marker comment as their slash-picker description (e.g. `/architecture  <!-- harness-shadow: …`).
+Root cause (c1): marker placement broke frontmatter position. Fix: `withMarker()` inserts the marker
+AFTER the closing `---` of the frontmatter (frontmatter stays on line 1 → description renders);
+no-frontmatter files still prepend. Marker still present → `isHarnessShadow()` / `shadow remove`
+tracking unchanged (35/35 retain it). `@convergence SHADOW_MARKER_AFTER_FRONTMATTER` records the
+recurrence guard. Verified: regenerated shadows have `---` on line 1 + description intact.
+
 ## fix(plugin): `commands: []` — kill duplicate slash entries (`/fleet` + `/harness:fleet` → bare `/fleet` only)
 
 The picker showed EVERY command twice: a bare `/fleet` (from `harness shadow`'s user-scope

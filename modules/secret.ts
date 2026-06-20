@@ -1,5 +1,5 @@
 // harness secret <args...> — thin wrapper over the `secret` CLI (dancinlab/secret:
-// encrypted-file/Keychain credential store · sidecar /secret parity). Verbs pass
+// encrypted-file/Keychain credential store). Verbs pass
 // through: get · set · rotate · check · delete · list · service · init · backup ·
 // sync · migrate. Credentials belong in the secret store, never hardcoded
 // (enforcement G-SECRET-LITERAL). `get` exposes the value in output — for tool

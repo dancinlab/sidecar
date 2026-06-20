@@ -63,7 +63,7 @@ setup:
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
   install-hooks [--global|--repo]   merge harness hooks into ~/.claude/settings.json (global, like a plugin) or repo .claude (needs harness on PATH)
   self-update              git-pull the harness CLI clone this binary runs from (e.g. ~/.harness/cli) to latest main
-  shadow [plan|remove]     mirror harness's own commands/ into ~/.claude/commands/ as bare /cmd delegators (sidecar-free · marker-tracked · regenerable)
+  shadow [plan|remove]     mirror harness's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable)
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -84,6 +84,7 @@ hook delegates (wire these into your agent's settings.json):
   abg [labels]             all-bg-go — fan out prior-turn branches as parallel background Agents (runbook)
   afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)
   fleet [name:goal,…|go|stop|status]   perpetual multi-lane orchestrator (runbook + roster)
+  fleet lab [frontier:wall,…|go|…]      research-driven frontier lab (research-gate→implement→measure→SSOT→re-research; walls measured + reopenable)
   pr-cycle [gh flags]      push branch → open PR → self-merge (squash·admin·delete-branch)
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
@@ -113,7 +114,7 @@ gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
   ci [all|fast|list]       run configured verification commands in parallel (was verify; config key stays verify.checks)
   ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop · c19)
-  verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge · sidecar parity)
+  verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge)
   errors {route|list|drain_check|mark_fixed}
   ledger {register|complete|list|gc|dup_check}
   bitter-gate audit [window]   rule-hit frequency → retire dormant rules

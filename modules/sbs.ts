@@ -1,8 +1,8 @@
 // harness sbs [auto[:<axis>]|manual] [<task>]
 // Print the resolved mode (deterministic, via recommend resolve-mode) + the
 // plan-first step-by-step runbook for the agent to follow. The disambiguation
-// itself is performed by the agent reading the printed runbook (sidecar /sbs
-// parity); the harness supplies the authoritative mode + the runbook body.
+// itself is performed by the agent reading the printed runbook;
+// the harness supplies the authoritative mode + the runbook body.
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { HARNESS_ROOT } from "../lib/paths.ts";

@@ -1,5 +1,5 @@
 // harness abg|afg [labels]  (aliases: all-bg-go | all-fg-go)
-// Print the fan-out runbook (sidecar all-bg-go / all-fg-go parity): enumerate the
+// Print the fan-out runbook: enumerate the
 // branches the previous assistant turn offered, then bg = parallel background
 // Agents / fg = sequential in-session execution. The harness emits the runbook +
 // any label restriction; the agent performs the fan-out by following it.

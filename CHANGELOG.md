@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## feat(fleet): `fleet lab` — research-driven perpetual frontier lab (a `fleet` subcommand)
+
+A research-specialized variant of `/fleet`. Each lane is a BLOCKING FRONTIER (a wall); every round
+gates CHEAP research (web/arxiv/code-census, mini-safe) BEFORE expensive implement/measure
+(pool/GPU/build), then records the measured result to SSOT, then re-researches or walls. Walls (🧱)
+are declared only by MEASUREMENT and are REOPENABLE by new research. Codifies the manual
+"research-first → measure → SSOT → repeat" loop (reference-first / implement-to-wall) so a frontier
+gets peeled one researched lever at a time instead of being declared a wall on shallow grounds.
+
+- `templates/fleet-lab.md` (NEW) — the lab runbook: research-gate lifecycle, wall discipline
+  (measured + reopenable), 🔬 lab report shape, SSOT-record step (ARCHITECTURE.json
+  `blocking-frontiers` + memory), cost/destructive halts inherited from fleet.
+- `modules/fleet.ts` — leading `lab` token branches to a SEPARATE roster `.harness/fleet/lab`
+  (so a research-lab run and a build-fleet run coexist without clobbering) + prints `fleet-lab.md`.
+  Reached via the existing `/fleet` sidecar (`/fleet lab …` → `harness fleet lab …`) — NO new
+  command/module/slash needed since `lab` is a `fleet` subcommand, not a top-level command.
+- `cli/index.ts` — help line for `fleet lab`.
+
+## chore: scrub dead `sidecar` provenance refs from live code/docs (history + convergence preserved)
+
+`sidecar` was harness's RETIRED predecessor package; harness was ported from it, leaving
+"(sidecar X parity)" provenance markers scattered through comments/docs/ARCHITECTURE. The package is
+long gone, so these are dead references — zero function, only confusion. Removed all LIVE refs (25
+files: `modules/*.ts` except shadow, `lib/config.ts`, `cli/index.ts`, `ARCHITECTURE.json`,
+`CLAUDE.md`, `README.md`, `commands/verify.md`) with grammar preserved (`(sidecar X parity)` dropped;
+prose forms rewritten; `(sidecar 패턴)` → `(슬래시-명령 패턴)`). PRESERVED: `CHANGELOG.md` (append-only
+history — "ported from sidecar" was true when written, c4) and `modules/shadow.ts` (its
+`@convergence SHADOW_GEN_NATIVE` record is the dead-sidecar-cache-path recurrence guard — the word is
+load-bearing there, c1). Residual `sidecar` outside those two = 0 (grep-verified); `harness help`
+loads + `ARCHITECTURE.json` valid.
+
 ## feat(danger-guard): rm-rf-root block is now opt-in (config dangerGuard.rmRfRoot, default OFF)
 
 Per user request — `rm -rf` should not be guarded. The catastrophic-delete block (`rm -rf /` · `/*` · `~` ·

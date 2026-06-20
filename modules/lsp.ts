@@ -1,5 +1,5 @@
 // harness lsp {wire|status|rebuild <file>}
-// LSP wiring for the agent's editor (sidecar hexa-lsp + lsp-rebuild parity).
+// LSP wiring for the agent's editor.
 //
 //   wire           write a Claude-Code `.lsp.json` (canonical filename) at repo
 //                  root mapping configured extensions → language servers. The

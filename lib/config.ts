@@ -85,7 +85,7 @@ export interface HarnessConfig {
   // LSP wiring for the agent's editor. `wire` writes a Claude-Code `.lsp.json`
   // (canonical filename) mapping file extensions → a language server. `rebuild`
   // (default true) auto-recompiles a prebuilt hexa-native LSP binary in the
-  // background when its grammar source is edited (sidecar lsp-rebuild parity).
+  // background when its grammar source is edited.
   lsp: {
     servers: { lang: string; extensions: string[]; command: string; args: string[] }[];
     rebuild: boolean;
@@ -189,7 +189,7 @@ const DEFAULTS: HarnessConfig = {
     enforce: "warn",
   },
   lsp: {
-    // hexa-lang LSP (sidecar hexa-lsp parity): cd into the FIRST candidate dir
+    // hexa-lang LSP: cd into the FIRST candidate dir
     // that actually contains self/lsp.hexa, then `exec hexa lsp`. A `-f` presence
     // guard (not bare `cd … 2>/dev/null`) avoids booting from the wrong cwd.
     servers: [
@@ -202,7 +202,7 @@ const DEFAULTS: HarnessConfig = {
           'for d in "$HEXA_LANG" "$HOME/.hx/packages/hexa" "$HOME/.hx/packages/hexa-lang" "$HOME/.hx/src"; do [ -n "$d" ] && [ -f "$d/self/lsp.hexa" ] && cd "$d" && break; done; exec hexa lsp',
         ],
       },
-      // kosmos-lsp (sidecar parity): prebuilt `kosmos-lsp` on PATH for `.kosmos`.
+      // kosmos-lsp: prebuilt `kosmos-lsp` on PATH for `.kosmos`.
       { lang: "kosmos", extensions: [".kosmos"], command: "kosmos-lsp", args: [] },
     ],
     rebuild: true,

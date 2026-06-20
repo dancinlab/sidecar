@@ -1,4 +1,4 @@
-// harness pod | demi | dojo | micro-exp — sidecar parity as harness runbooks.
+// harness pod | demi | dojo | micro-exp — harness runbooks.
 //   pod       — GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down)
 //   demi      — design-architecture program runbook (7-verb spine)
 //   dojo      — cloud training-job scaffolder: prints runbook + (with a slug) emits

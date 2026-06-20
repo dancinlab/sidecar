@@ -1,6 +1,5 @@
 // harness worktree {scan|gc|guard <cmd>}
-// Enforces the no-pileup / no-stranded-work principle (sidecar worktree-gc +
-// worktree-guard parity):
+// Enforces the no-pileup / no-stranded-work principle:
 //   scan         classify every linked worktree (clean/dirty/unpushed/[gone]) and
 //                LOUDLY flag STRANDED ones — uncommitted or unpushed work left in a
 //                worktree. Exit 1 when any are stranded (usable as a gate).

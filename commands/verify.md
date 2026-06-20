@@ -1,5 +1,5 @@
 ---
-description: /verify [rubric | fence "<claim>"] — tier-rubric claim verification — colored g5 badges, no LLM self-judge (sidecar parity). Triggers — "검증", "claim 검증", "verify claim", "tier 판정", "/verify", "팩트체크".
+description: /verify [rubric | fence "<claim>"] — tier-rubric claim verification — colored g5 badges, no LLM self-judge. Triggers — "검증", "claim 검증", "verify claim", "tier 판정", "/verify", "팩트체크".
 argument-hint: "[rubric | fence "<claim>"]"
 allowed-tools: Bash
 ---

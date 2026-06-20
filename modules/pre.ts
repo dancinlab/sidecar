@@ -14,6 +14,8 @@ import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { detectForcePush } from "./git-guard.ts";
+import { detectDangerousBash } from "./danger-guard.ts";
+import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
 import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
@@ -139,6 +141,12 @@ export async function preBash(_args: string[]): Promise<number> {
     }
   }
 
+  // built-in destructive / gate-bypass guard — code-level block, runs before
+  // config rules, default-on. Mirrors H-NO-VERIFY/H-RESET-HARD/H-RM-RF-ROOT/
+  // H-CURL-PIPE-SH so a profile edit can't disable them; honors inline `# ...-ok`.
+  const danger = detectDangerousBash(cmd);
+  if (danger) return emitBlock(danger.id, danger.reason);
+
   // built-in raw-cloud-CLI guard — code-level block (c11), runs before config
   // rules, default-on, NO override. GPU/cloud must go through hexa builtins.
   const cloudLabel = detectRawCloudCli(cmd);
@@ -222,6 +230,11 @@ export async function preWrite(_args: string[]): Promise<number> {
     const hs = detectHandoffScatter(filePath);
     if (hs) return emitBlock("HANDOFF-SCATTER", hs);
   }
+
+  // built-in secret-literal guard — code-level block (c1), runs before config
+  // rules, default-on. A committed credential is an irreversible git-history leak.
+  const secret = detectSecretLiteral(filePath, content);
+  if (secret) return emitBlock("SECRET-LITERAL", secret);
 
   // tmp-guard — writing a file into a volatile tmp dir loses it; steer to scratch.
   if (config().tmpGuard && isTmpPath(filePath)) {

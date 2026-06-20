@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## feat(guards): code-level enforcement for the irreversible / gate-bypass commands (were regex-only)
+
+Five `block`-policy rules lived ONLY in the `enforcement.json` regex layer — overridable by a
+profile edit, and (until the STDIN fix earlier) silently dead when the whole pre-hook layer broke.
+Per the repo's own `NO_RAW_CLOUD_CLI` principle ("hard rules belong in code, not a regex a profile
+edit can weaken"), the genuinely irreversible / gate-bypassing ones are now mirrored into CODE
+guards that run before the config layer, default-on:
+
+- `modules/danger-guard.ts` (`pre bash`) — blocks `git --no-verify`/`-n` (bypasses the c14 lint+doc
+  commit gate), `git reset --hard` / `clean -fd` / `checkout -- .` (working-tree destroy), `rm -rf`
+  on `/` `~` `$HOME` or bare `*` (catastrophic), and `curl|wget … | sh` (remote code exec).
+- `modules/secret-guard.ts` (`pre write`) — blocks hardcoded credential literals (AWS keys, private
+  keys, `gh*_`/`sk-` tokens, `key/secret/password/token = "…"`) in code/config files (a committed
+  secret is an irreversible git-history leak, commons c1).
+- Each honors its INLINE escape marker (`# no-verify-ok` · `# reset-ok` · `# rm-ok` ·
+  `# curl-pipe-ok` · `// @secret-ok`) — an explicit, per-command, visible opt-out (c16-compatible) —
+  but is NOT a config toggle. The regex rules stay as a backup layer.
+- Wired in `modules/pre.ts`; `@convergence(ossified)` markers in both guards. ARCHITECTURE PreToolUse
+  node updated. Verified: each pattern denies via the real hook; inline markers + benign + non-code
+  files pass.
+
 ## feat(shadow): `harness shadow` — native bare-/cmd generator (retires sidecar `shadow`)
 
 Claude Code namespaces plugin commands as `/harness:cmd`; the bare `/cmd` form users actually type

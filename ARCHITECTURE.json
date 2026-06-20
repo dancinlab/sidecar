@@ -46,7 +46,7 @@
             "이름": "PreToolUse(Bash)",
             "역할": "도구 호출 직전 → pre bash",
             "구분": "surface",
-            "상세": "코드레벨 가드(force-push·cloud-raw c11·poll c19·hand-rolled-fanout warn) → config enforcement 정규식 매칭. block=stdout JSON / warn=stderr"
+            "상세": "코드레벨 가드(force-push·cloud-raw c11·poll c19·danger{no-verify·reset-hard·rm-rf-root·curl|sh}·hand-rolled-fanout warn) → config enforcement 정규식 매칭(backup). 코드 가드는 config보다 먼저·끌 수 없음(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr"
           },
           {
             "이름": "PreToolUse(Write)",

@@ -54,7 +54,7 @@ harness/
 
 | 명령 | 역할 | hook 단계 |
 |------|------|-----------|
-| `pre bash` / `pre write` | enforcement 규칙 매칭 → block/warn | PreToolUse |
+| `pre bash` / `pre write` | **코드레벨 가드**(force-push · cloud-raw c11 · poll c19 · danger{`--no-verify`·`reset --hard`·`rm -rf /`·`curl\|sh`} · secret-literal c1 · handoff-scatter) → 그다음 config enforcement 정규식. 코드 가드는 config보다 먼저·끌 수 없음(profile 편집 무력화 방지) · 인라인 `# …-ok`/`// @secret-ok` 마커만 예외 | PreToolUse |
 | `post bash <exit>` / `post edit <file>` | 결과 기록, 0≠exit 라우팅, L0 편집 경고 | PostToolUse |
 | `prompt <text>` | 키워드 트리거 + 프롬프트 힌트 주입 | UserPromptSubmit |
 | `architecture {inject\|show}` | repo-root `ARCHITECTURE.json`(우선)/`.md` 를 컨텍스트로 주입 — CLAUDE.md 처럼 첫 턴부터 설계 SSOT 상주 (80KB 초과 시 절단, 부재 시 무음) | SessionStart |

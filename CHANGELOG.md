@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## feat(commands): bare `/arxiv` + `/yt` delegators (research-skill parity, sidecar-free)
+
+The host had a layer of user-scope shadow commands (`~/.claude/commands/*.md`) left over from the
+retired `sidecar` package: they invoked `hexa run "$CLAUDE_PLUGIN_ROOT/bin/_*.hexa"` with a fallback
+to a `~/.claude/plugins/cache/sidecar/...` path that no longer exists — so `/arxiv` and friends died
+with "source file not found". harness already implements arxiv + youtube-transcript natively
+(`modules/research.ts`, no API key, no sidecar), exposed as `/research arxiv|yt`.
+
+- `commands/arxiv.md`, `commands/yt.md` — bare convenience commands delegating to `harness research
+  arxiv|yt`, so the names users type resolve to harness's own implementation (sidecar dependency 0).
+- Host cleanup (not in repo): the 43 broken sidecar shadows under `~/.claude/commands/` were
+  triaged — 11 that harness backs were repointed to `harness <cmd>`, 32 sidecar-only ones (cycle
+  family · mem · walkie · hf · quota · master · skillopt · sidecar · lab · inject · todo · trail …)
+  were removed per the user's "제거" directive. Backup at `~/.harness-migration-backup/`.
+
 ## feat(plugin): SELF-CONTAINED plugin — CLI ships inside it, `/plugin update`+reload = everything latest (sidecar parity)
 
 The harness shipped as TWO decoupled clones: the CLI lived at `~/.harness/cli` (refreshed only by

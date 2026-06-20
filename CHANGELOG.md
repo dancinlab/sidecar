@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## fix(recommend): direct-execute commands (pr-cycle · ci · lint · ship …) run immediately — no 4-axis box / no confirmation (plugin 0.5.0 → 0.5.1)
+
+When the user named a deterministic command to run — "pr cycle" / "머지해줘" — the every-turn
+recommend-axes rule (FIXED ① complete) treated it as a recommendation moment and rendered the
+4-axis box + waited for a pick, instead of just running the command. Executing a command the user
+explicitly asked for is not a decision; the box is for genuine "which approach / what to build"
+choices.
+
+- `config/recommend.md` r1 — added an EXEMPT carve-out: direct-execute commands
+  (`pr-cycle`·`ci`·`lint`·`ship`·`ci-track`·`self-update` …) run immediately, no box, no
+  "진행할까요?" confirmation. A real branch/strategy choice INSIDE a command still uses the box.
+- `commands/pr-cycle.md` — description marked ⚡ DIRECT-EXECUTE (run on request; doc-gate +
+  branch-guard still protect, so "just do it" stays safe).
+- plugin.json 0.5.0 → 0.5.1 so `/plugin update` re-copies the rule carrier.
+
 ## feat(ci-track): remote PR/CI tracker — replaces hand-rolled gh-poll + merge-on-green loops (plugin 0.4.1 → 0.5.0)
 
 Long merge-on-green campaigns repeatedly hand-rolled CI polling — `gh pr checks <pr> | grep`,

@@ -12,6 +12,7 @@ spec v2.0 · `harness recommend inject` emits this verbatim each turn as additio
 - ④ 표준(std) = the convention-fit option — matches the established pattern in this repo/domain · least surprise to a future reader.
 - ✗ Do NOT collapse the four axes into ONE weighted-sum winner — surface all four so the user picks the axis THEY weight highest.
 - ✗ Do NOT skip an axis · merge two axes · silently drop the box when the recommendation seems "obvious" (the user still sees the trade-offs).
+- ⚡ EXEMPT — direct-execute commands are NOT recommendations: when the user NAMES a deterministic command to run (`pr-cycle`/"pr cycle"/"머지해줘" · `ci` · `lint` · `ship` · `ci-track` · `self-update` · `pr-cycle --no-doc` …), just RUN it immediately — NO 4-axis box, NO "진행할까요?" confirmation. The box is for genuine decisions (which approach / what to build), never for executing a command the user already asked for. (A real branch/strategy choice INSIDE the command still uses the box.)
 
 ## r2 — fixed output box (render this shape verbatim for every recommendation)
 

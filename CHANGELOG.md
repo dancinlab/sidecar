@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## feat(install): `harness install` — one-shot COMMON/global setup (clone + wrapper + global hooks · plugin 0.5.2 → 0.6.0)
+
+There was no bootstrap for the GLOBAL command: README/`self-update` referenced `~/.harness/cli` +
+`~/.local/bin/harness` as the install, but nothing CREATED it — first-time setup was manual, and the
+`install` verb was just an undocumented alias of `init` (per-repo scaffold). `harness install` now means
+"install harness on this machine as a common command," distinct from `init` (scaffold THIS repo).
+
+- `scripts/install.sh` (NEW · SSOT) — curl-able bootstrap: clone `dancinlab/harness` → `~/.harness/cli`
+  (ff-update if present) · write a `harness` exec-wrapper to `~/.local/bin/harness` (a script, NOT a
+  symlink — `bin/harness` resolves its dir via `BASH_SOURCE` without readlink, so a symlink would
+  mis-resolve the install dir) · PATH check · `install-hooks --global`. Idempotent. Flags
+  `--no-hooks` · `--ref=` · `--dir=` · `--bin=` · `--dry-run`; env `HARNESS_DIR`/`HARNESS_BIN`/`HARNESS_REF`.
+  One-liner: `curl -fsSL https://raw.githubusercontent.com/dancinlab/harness/main/scripts/install.sh | bash`.
+- `modules/setup.ts` `runInstall` — `harness install` delegates to the SSOT script (same logic from the
+  curl bootstrap and the CLI verb).
+- `cli/index.ts` — `install` split from `init` (was an alias); registered + help line. `init` stays the
+  per-repo scaffold.
+- docs: README "0. 공용(전역) 설치" section + docs/install.md "공용(전역) 설치" table; ARCHITECTURE install node.
+
 ## fix(qa): full-command QA sweep — `--force-with-lease` dual-SSOT contradiction + 3 init/uninstall cosmetics (plugin 0.5.1 → 0.5.2)
 
 Ran a 5-family parallel QA sweep over the whole CLI (~125 cases: setup/lifecycle · guards · gates/ledgers ·

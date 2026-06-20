@@ -14,7 +14,7 @@ import { runGc } from "../modules/gc.ts";
 import { runConvergence } from "../modules/convergence.ts";
 import { runSync } from "../modules/sync.ts";
 import { runInit } from "../modules/init.ts";
-import { runInstallHooks, runSelfUpdate } from "../modules/setup.ts";
+import { runInstall, runInstallHooks, runSelfUpdate } from "../modules/setup.ts";
 import { runShadow } from "../modules/shadow.ts";
 import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
@@ -51,7 +51,10 @@ const HELP = `dancinlab/harness — project-agnostic AI coding harness
 usage: harness <cmd> [args]
 
 setup:
-  init [--force] [--hooks] [--dry-run]   scaffold config + .harness rules + gitignore + wrapper + hooks
+  install [--no-hooks] [--ref main] [--dry-run]   COMMON/global setup — clone dancinlab/harness → ~/.harness/cli +
+                                         a harness wrapper on ~/.local/bin + global hooks (idempotent). NOT a per-repo scaffold (that's init).
+                                         curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/harness/main/scripts/install.sh | bash
+  init [--force] [--hooks] [--dry-run]   scaffold THIS repo: config + .harness rules + gitignore + wrapper + hooks
                                          (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
   uninstall [--dry-run] [--keep-logs]   remove harness-injected files (config/.harness/hooks/wrapper); keeps user content
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
@@ -137,8 +140,9 @@ async function main(): Promise<number> {
   }
   const [cmd, ...rest] = argv;
   switch (cmd) {
-    case "init":
     case "install":
+      return runInstall(rest);
+    case "init":
       return runInit(rest);
     case "uninstall":
       return runUninstall(rest);

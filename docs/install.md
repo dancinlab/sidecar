@@ -2,7 +2,30 @@
 
 > 📍 SSOT: 설계 [ARCHITECTURE.json](../ARCHITECTURE.json) · 이력 [CHANGELOG.md](../CHANGELOG.md). 본 문서는 보조 설치 가이드.
 
-## 배치 옵션
+## 공용(전역) 설치 — `harness install`
+
+머신 전역에 하네스를 깔아 **어느 repo 에서든** `harness` 명령을 쓰고, 모든 Claude Code 세션에 가드/주입 훅을 배선한다 (per-repo 스캐폴드인 `init` 과 별개 — 이쪽은 머신 1벌 공용 세팅).
+
+```bash
+# 하네스가 아직 없을 때 (curl 부트스트랩)
+curl -fsSL https://raw.githubusercontent.com/dancinlab/harness/main/scripts/install.sh | bash
+
+# 이미 하네스가 깔려 있으면 동일 동작
+harness install
+```
+
+| 단계 | 한 일 | 기본 경로 |
+|------|-------|-----------|
+| clone | `dancinlab/harness` 클론(있으면 ff 갱신) | `~/.harness/cli` (`--dir`/`HARNESS_DIR`) |
+| link | `harness` 실행 래퍼 작성 (심볼릭 아님 — 런처 dir 오인 방지) | `~/.local/bin/harness` (`--bin`/`HARNESS_BIN`) |
+| hooks | `harness install-hooks --global` (모든 세션 가드/주입) | `~/.claude/settings.json` |
+
+- 멱등 — 재실행하면 클론을 최신으로 fast-forward + 래퍼/훅 재확인.
+- 플래그: `--no-hooks`(클론·래퍼만) · `--ref=<branch|tag>`(기본 main) · `--dir=`/`--bin=` · `--dry-run`.
+- `~/.local/bin` 이 PATH 에 없으면 안내 줄을 출력한다 (`export PATH="$HOME/.local/bin:$PATH"`).
+- 갱신: `harness self-update` (또는 `harness install` 재실행). SSOT 부트스트랩: [`scripts/install.sh`](../scripts/install.sh) — `harness install` 이 이를 위임 실행.
+
+## 배치 옵션 (per-repo — 엔진 벤더링)
 
 하네스 엔진은 repo 안 어디에 두든 동작한다(`lib/paths.ts` 가 repo 루트를 상향 탐색). 세 가지 권장 배치:
 

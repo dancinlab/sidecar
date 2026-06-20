@@ -127,6 +127,25 @@ async function selfUpdate(): Promise<number> {
   return 0;
 }
 
+// install — one-shot COMMON/GLOBAL setup: clone dancinlab/harness → ~/.harness/cli
+// + a `harness` wrapper on ~/.local/bin + global hook wiring. This is NOT a
+// per-repo scaffold (that's `init`). Delegates to the SSOT bootstrap shipped in
+// this engine/bundle (scripts/install.sh) so the curl one-liner and the CLI verb
+// run identical logic. Idempotent.
+export async function runInstall(args: string[]): Promise<number> {
+  const script = resolve(HARNESS_ROOT, "scripts", "install.sh");
+  if (!existsSync(script)) {
+    warn(`install: bootstrap script missing at ${script}`);
+    info("  curl -fsSL https://raw.githubusercontent.com/dancinlab/harness/main/scripts/install.sh | bash");
+    return 1;
+  }
+  const passthru = args.map((a) => JSON.stringify(a)).join(" ");
+  const r = await execShell(`bash ${JSON.stringify(script)} ${passthru}`, { timeoutMs: 300_000 });
+  if (r.stdout) process.stdout.write(r.stdout);
+  if (r.stderr) process.stderr.write(r.stderr);
+  return r.code;
+}
+
 export async function runInstallHooks(args: string[]): Promise<number> {
   return installHooks(args);
 }

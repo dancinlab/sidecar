@@ -161,6 +161,12 @@
                 "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate)"
               },
               {
+                "이름": "install",
+                "역할": "공용(전역) 부트스트랩 — clone+래퍼+전역훅 (init=per-repo 와 별개)",
+                "구분": "module",
+                "상세": "SSOT=scripts/install.sh(curl 가능); `harness install`은 이를 위임. clone dancinlab/harness→~/.harness/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/harness · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
+              },
+              {
                 "이름": "pr-cycle",
                 "역할": "push→PR→검증머지→로컬 base sync",
                 "구분": "module",

@@ -134,6 +134,11 @@ export interface HarnessConfig {
   // ing staleness (c6) — warn at session Stop when ≥ `editThreshold` code files were
   // edited since the ing board was last touched (add/next/done). 0 disables the nudge.
   ing: { editThreshold: number };
+  // mem-guard — OOM prevention. PreToolUse preflight warns (warnPct) / blocks
+  // (blockPct) a background-spawn (`&`/nohup) when system available RAM is low; the
+  // opt-in launchd watchdog (`harness mem-guard install`) notifies every
+  // watchdogIntervalSec. blockPct=0 = warn-only (never block). enabled=false off.
+  memGuard: { enabled: boolean; warnPct: number; blockPct: number; watchdogIntervalSec: number };
 }
 
 const DEFAULTS: HarnessConfig = {
@@ -205,6 +210,7 @@ const DEFAULTS: HarnessConfig = {
   poll: { maxSilenceSec: 600 },
   ledger: { staleSec: 3600 },
   ing: { editThreshold: 5 },
+  memGuard: { enabled: true, warnPct: 15, blockPct: 0, watchdogIntervalSec: 45 },
 };
 
 function deepMerge<T>(base: T, over: Partial<T>): T {

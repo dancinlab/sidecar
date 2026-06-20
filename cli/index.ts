@@ -41,6 +41,7 @@ import { runEasy } from "../modules/easy.ts";
 import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
 import { runFanout } from "../modules/fanout.ts";
+import { runMemGuard } from "../modules/mem-guard.ts";
 import { runDocs } from "../modules/docs.ts";
 import { runLockdown } from "../modules/lockdown-cmd.ts";
 import { runCommons } from "../modules/commons.ts";
@@ -95,6 +96,7 @@ hook delegates (wire these into your agent's settings.json):
   kick <seed…> | <flags>   wrap hexa kick --seed "<seed>" — hexa-lang gap-breakthrough/discovery engine (alias: drill; bare args→seed, leading flag→passthrough)
   poll [interval=1200] [target]   self-paced ≥10-min polling runbook (c19-sanctioned) — wake on a timer, check once, fire-on-arrival; interval clamped to ≥600s. NO bash sleep loop
   pool {list|add|rm|on|status|specs}   host roster + remote exec + cores/mem/GPU probe (~/.harness/pool.json, global)
+  mem-guard {status|check|install|uninstall}   OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
                            ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
   lsp {wire|status|rebuild <file>}   editor LSP wiring (.lsp.json; hexa-lang \`hexa lsp\` for .hexa by default)
@@ -165,6 +167,9 @@ async function main(): Promise<number> {
       return runPrCycle(rest);
     case "pod":
       return runPod(rest);
+    case "mem-guard":
+    case "mem":
+      return runMemGuard(rest);
     case "dojo":
       return runDojo(rest);
     case "micro-exp":

@@ -1,5 +1,27 @@
 # CHANGELOG
 
+## feat(mem-guard): OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog
+
+A recurring, expensive failure on a 16GB Mac: parallel fan-out (cycle-all / all-bg-go / fleet) accumulates
+6+ detached `claude` agent processes (~400-490MB each) across sessions until macOS jetsam force-quits apps —
+"the Mac keeps dying." Diagnosed from real `JetsamEvent-*.ips` reports (6/13–6/18) + a kernel panic (6/17):
+the six top memory holders at OOM time were all `2.1.179` (claude) processes. Nothing throttled the spawn.
+
+- `modules/mem-guard.ts` (new) — two layers:
+  - **PreToolUse preflight** (always-on, `config.memGuard.enabled`): before a background-spawn bash command
+    (`… &` / nohup / disown / setsid), `memInfo()` reads system available RAM from `vm_stat`+`sysctl`
+    (free+inactive+speculative+purgeable). Below `warnPct` (15) → WARN; below `blockPct` (0 = off by default)
+    → BLOCK the spawn. Wired into `modules/pre.ts` as `MEM-LOW`/`MEM-OOM`, before the config rules.
+  - **launchd watchdog** (OPT-IN via `harness mem-guard install`): a LaunchAgent runs `mem-guard tick` every
+    `watchdogIntervalSec` (45) and posts a macOS notification when available RAM is low — throttled to once
+    per 5 min. NOTIFY-ONLY (never kills, never changes a setting). The only layer that sees ACROSS separate
+    Claude sessions (each session's preflight is blind to the others — the actual accumulation that OOMs).
+- Verbs: `status` (snapshot + top holders), `check` (exit 1 if low · scriptable), `tick`, `install`/`uninstall`.
+  Registered in `cli/index.ts` (+ `mem` alias) + help line. Config `memGuard{enabled,warnPct,blockPct,watchdogIntervalSec}`.
+- Verified: detection 11/11 (`&` matched, `&&` not); block path → `permissionDecision:deny`; warn-only path
+  (blockPct=0) → stderr only, exit 0; non-spawn → no-op; `status`/`check`/`tick`/usage all pass.
+  `@convergence in_flight MAC_OOM_FANOUT_JETSAM`.
+
 ## feat(git-context): SessionStart stale-branch guard — warn when HEAD is behind origin/<default> (plugin 0.9.5 → 0.9.6)
 
 A recurring, expensive failure: a session starts on a stale branch (HEAD behind origin/main after a merge),

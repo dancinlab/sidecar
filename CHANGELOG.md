@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## feat(shadow): `harness shadow` — native bare-/cmd generator (retires sidecar `shadow`)
+
+Claude Code namespaces plugin commands as `/harness:cmd`; the bare `/cmd` form users actually type
+needs a user-scope `~/.claude/commands/<name>.md`. The retired `sidecar` package generated those —
+and when sidecar was removed, the generated shadows still pointed at a dead
+`$CLAUDE_PLUGIN_ROOT` / `~/.claude/plugins/cache/sidecar/...` path, so `/arxiv` and friends died.
+`harness shadow` is the harness-native, sidecar-free replacement: it mirrors harness's OWN
+`commands/*.md` into `~/.claude/commands/` as bare delegators that always call `harness <cmd>`.
+
+- `modules/shadow.ts` + `cli/index.ts` registration + `commands/shadow.md` + help line.
+- Verbs — `shadow` (write/refresh), `shadow plan` (dry-run), `shadow remove` (delete only
+  harness-generated shadows). Every generated file carries a `<!-- harness-shadow -->` marker, so
+  `remove` never deletes a hand-authored same-name command and `apply` never clobbers one (skips + warns).
+- `@convergence(ossified) SHADOW_GEN_NATIVE` — records the dead-sidecar-path recurrence this prevents.
+
 ## feat(commands): bare `/arxiv` + `/yt` delegators (research-skill parity, sidecar-free)
 
 The host had a layer of user-scope shadow commands (`~/.claude/commands/*.md`) left over from the

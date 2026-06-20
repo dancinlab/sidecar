@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## fix(qa): full-command QA sweep — `--force-with-lease` dual-SSOT contradiction + 3 init/uninstall cosmetics (plugin 0.5.1 → 0.5.2)
+
+Ran a 5-family parallel QA sweep over the whole CLI (~125 cases: setup/lifecycle · guards · gates/ledgers ·
+runbooks · utility). One REAL bug + three cosmetic inconsistencies found and fixed; everything else PASS
+(the inject commands' "0 output" on a bare call is by-design — they require a hook JSON envelope on stdin).
+
+- **REAL — `git push --force-with-lease` was hard-blocked with no override** (`modules/git-guard.ts`): the
+  code guard ran first and denied `--force-with-lease`, but `config/enforcement.json` H-FORCE-PUSH *exempts*
+  it (it's the safe form — refuses to overwrite if the remote moved). The two SSOTs disagreed, breaking the
+  standard rebase→lease-push workflow. Aligned the code guard to config intent: blind `--force`/`-f`/`+refspec`
+  still blocked, `--force-with-lease` allowed, and a `# force-ok <reason>` inline marker overrides a bare-force
+  block (escape parity with config). `@convergence ossified FORCE_LEASE_DUAL_SSOT`.
+- cosmetic — `init` reported `state/` as "create" even when it already existed (`modules/init.ts`): now `skip`.
+- cosmetic — `init --hooks` warned "Snippet below:" when an existing `.claude/settings.json` blocked the
+  auto-merge but never printed the snippet: now prints it ("merge these hooks into your existing …").
+- cosmetic — `uninstall` `.gitignore` drop-set was out of sync with `init`'s appended lines (dropped a dead
+  `.harness/handoff/`, orphaned the `ING.jsonl*` lines): now drops exactly what `init` adds.
+- plugin.json 0.5.1 → 0.5.2.
+
 ## fix(recommend): direct-execute commands (pr-cycle · ci · lint · ship …) run immediately — no 4-axis box / no confirmation (plugin 0.5.0 → 0.5.1)
 
 When the user named a deterministic command to run — "pr cycle" / "머지해줘" — the every-turn

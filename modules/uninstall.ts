@@ -87,15 +87,15 @@ export async function runUninstall(args: string[]): Promise<number> {
     else if (existsSync(abs)) acts.push({ path: `.git/hooks/${hook}`, how: "keep" });
   }
 
-  // 5. .gitignore — drop the two lines harness appended
+  // 5. .gitignore — drop exactly the lines `init` appends (keep in sync with init.ts needLines)
   {
     const abs = resolve(REPO_ROOT, ".gitignore");
     if (existsSync(abs)) {
-      const drop = new Set([".harness/logs/", ".harness/handoff/"]);
+      const drop = new Set([".harness/logs/", "ING.jsonl", "ING.jsonl.bak", "ING.jsonl.tmp.*"]);
       const orig = readFileSync(abs, "utf8");
       const kept = orig.split("\n").filter((l) => !drop.has(l.trim()));
       if (kept.join("\n") !== orig) {
-        if (flags.dryRun) acts.push({ path: ".gitignore (−2)", how: "would" });
+        if (flags.dryRun) acts.push({ path: ".gitignore (−n)", how: "would" });
         else {
           writeFileSync(abs, kept.join("\n"), "utf8");
           acts.push({ path: ".gitignore", how: "edit" });

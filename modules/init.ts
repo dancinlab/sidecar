@@ -254,12 +254,14 @@ export async function runInit(args: string[]): Promise<number> {
       "CLAUDE.md"
     );
     const scratch = resolve(REPO_ROOT, "state");
+    const scratchExisted = existsSync(scratch);
     if (!flags.dryRun) {
       mkdirSync(scratch, { recursive: true });
       const keep = resolve(scratch, ".gitkeep");
       if (!existsSync(keep)) writeFileSync(keep, "");
     }
-    actions.push({ path: "state/", how: flags.dryRun ? "would" : "create" });
+    if (scratchExisted) actions.push({ path: "state/", how: "skip" });
+    else actions.push({ path: "state/", how: flags.dryRun ? "would" : "create" });
   }
 
   // 3. .gitignore — ensure machine log dir is ignored
@@ -327,11 +329,13 @@ export async function runInit(args: string[]): Promise<number> {
   }
 
   // 6. agent hooks
+  let hooksNeedSnippet = false; // hooks mode but an existing settings.json blocked the auto-merge → print snippet to merge by hand
   if (flags.hooks) {
     const settingsPath = resolve(REPO_ROOT, ".claude", "settings.json");
     if (existsSync(settingsPath) && !flags.force) {
       actions.push({ path: ".claude/settings.json", how: "skip" });
       warn(".claude/settings.json exists — not merging automatically. Snippet below:");
+      hooksNeedSnippet = true;
     } else if (!flags.dryRun) {
       mkdirSync(dirname(settingsPath), { recursive: true });
       writeFileSync(settingsPath, hookSnippet(engineRel) + "\n", "utf8");
@@ -349,9 +353,9 @@ export async function runInit(args: string[]): Promise<number> {
     info(`  ${mark} ${a.how.padEnd(6)} ${a.path}`);
   }
 
-  if (!flags.hooks) {
+  if (!flags.hooks || hooksNeedSnippet) {
     info("");
-    info("next: add these hooks to .claude/settings.json (or re-run with --hooks):");
+    info(hooksNeedSnippet ? "merge these hooks into your existing .claude/settings.json:" : "next: add these hooks to .claude/settings.json (or re-run with --hooks):");
     process.stdout.write(hookSnippet(engineRel) + "\n");
   }
   info("");

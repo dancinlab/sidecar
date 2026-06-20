@@ -22,6 +22,7 @@ import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
+import { memPreflight } from "./mem-guard.ts";
 
 interface BashRule {
   id: string;
@@ -183,6 +184,15 @@ export async function preBash(_args: string[]): Promise<number> {
   // worktree-add advisory — non-blocking (stranded-work + branch-reuse hygiene)
   const wtAdv = await worktreeAddAdvisory(cmd).catch(() => "");
   if (wtAdv) emitWarn("WORKTREE-HYGIENE", wtAdv);
+
+  // mem-guard — OOM preflight: a background-spawn (`&`/nohup) under low system RAM
+  // risks a macOS jetsam kill (the fan-out accumulation that OOM-dies a 16GB Mac).
+  // warn by default; block only when available RAM < blockPct (config, default 0 = off).
+  const mem = memPreflight(cmd);
+  if (mem) {
+    if (mem.action === "block") return emitBlock("MEM-OOM", mem.reason);
+    emitWarn("MEM-LOW", mem.reason);
+  }
 
   // tmp-guard — progress/working data written to volatile tmp is discarded.
   if (config().tmpGuard) {

@@ -15,7 +15,7 @@ harness/
 ├─ bin/harness          — launcher (autodetects tsx; npx fallback)
 ├─ cli/index.ts         — command dispatcher (L0) — registers every module
 ├─ lib/                 — engine core: config · paths · exec · log · json · lockdown (L0)
-├─ modules/             — 44 commands: pre/post hooks · lint/ci(+ci-track remote-CI verdict) · guards (git/tmp/scatter/docs)
+├─ modules/             — 45 commands: pre/post hooks · lint/ci(+ci-track remote-CI verdict) · guards (git/tmp/scatter/docs/mem-OOM)
 │                         · injects (commons/claudemd/recommend/prefs/easy) · pr-cycle · ing(+cross-repo --to)
 │                         · install(global bootstrap)/init/self-update/install-hooks/shadow
 │                         · imagine · research · watch · secret · lsp · worktree · pod/dojo/demi/micro-exp …

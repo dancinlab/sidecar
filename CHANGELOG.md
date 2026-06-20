@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## chore(plugin): bump 0.3.0 → 0.4.0 so `/plugin update` re-copies the bundled CLI
+
+`claude plugin update` only re-copies the installed plugin cache when plugin.json's VERSION
+changes — a same-version commit (CLI/command-only change) is reported "already at latest" and the
+bundle goes stale, so hooks running `${CLAUDE_PLUGIN_ROOT}/bin/harness` keep the old CLI. The
+self-contained-plugin commits since 0.3.0 (bare /arxiv·/yt #91, `harness shadow` #92, the
+code-level danger+secret guards #93) only reached the global `~/.harness/cli` via `self-update`,
+not the plugin bundle. Bumping the version makes `/plugin update` + reload pull all of them into
+the bundle as one unit. Going forward: bump plugin.json on every shipped change that touches the
+plugin payload (the whole repo is the payload now).
+
 ## feat(guards): code-level enforcement for the irreversible / gate-bypass commands (were regex-only)
 
 Five `block`-policy rules lived ONLY in the `enforcement.json` regex layer — overridable by a

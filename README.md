@@ -83,7 +83,7 @@ harness/
 `commands/*.md` — 전체 사용자-대면 명령이 **Claude Code 슬래시 명령**으로 노출된다(sidecar 패턴).
 각 `.md` 는 프런트매터(`description` + **Triggers** 자연어구 + `argument-hint` + `allowed-tools: Bash`)와
 `!`harness <cmd> $ARGUMENTS`` 본문의 얇은 위임자 — Claude Code 가 description/Triggers 로 인지해
-`/paper`·`/imagine`·`/pr-cycle`·`/sbs`·`/fleet`·`/ing`·`/ci`·`/kick`(=`hexa kick` 발견엔진·alias `drill`) 등을 띄운다(한국어·영어 트리거 양쪽).
+`/paper`·`/imagine`·`/pr-cycle`·`/sbs`·`/fleet`·`/ing`·`/ci`·`/kick`(=`hexa kick` 발견엔진·alias `drill`)·`/poll`(≥10분 자가폴링 런북) 등을 띄운다(한국어·영어 트리거 양쪽).
 
 **자기완결(self-contained) 플러그인 · 프로젝트 무관**: marketplace `source: "."` 라 **repo 루트가 곧 플러그인** —
 훅·명령뿐 아니라 `harness` CLI 본체(`bin/`·`cli/`·`lib/`·`modules/`·`config/`)까지 한 덩어리로 실린다.

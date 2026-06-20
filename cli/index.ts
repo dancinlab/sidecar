@@ -20,7 +20,7 @@ import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
-import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
+import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap, runPoll } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runKick } from "../modules/kick.ts";
 import { runIng } from "../modules/ing.ts";
@@ -91,6 +91,7 @@ hook delegates (wire these into your agent's settings.json):
   demi                     design-architecture program runbook (7-verb spine)
   gap [full|list|<scope>]   multi-axis gap exploration — 40 breakthrough lenses (8 families) · triage→deepen runbook
   kick <seed…> | <flags>   wrap hexa kick --seed "<seed>" — hexa-lang gap-breakthrough/discovery engine (alias: drill; bare args→seed, leading flag→passthrough)
+  poll [interval=1200] [target]   self-paced ≥10-min polling runbook (c19-sanctioned) — wake on a timer, check once, fire-on-arrival; interval clamped to ≥600s. NO bash sleep loop
   pool {list|add|rm|on|status|specs}   host roster + remote exec + cores/mem/GPU probe (~/.harness/pool.json, global)
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
                            ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
@@ -178,6 +179,8 @@ async function main(): Promise<number> {
     case "kick":
     case "drill":
       return runKick(rest);
+    case "poll":
+      return runPoll(rest);
     case "demi":
     case "demiurge":
       return runDemi(rest);

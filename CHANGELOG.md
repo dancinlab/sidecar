@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## docs: sync CLAUDE.md/README/ARCHITECTURE with install·shadow·ci-track (no code change)
+
+Project map / design SSOT had drifted from the commands shipped this session.
+
+- `CLAUDE.md` — intro notes the global command is bootstrapped by `harness install`; modules tree line
+  adds install(global bootstrap)/self-update/install-hooks/shadow + ci-track; scripts/ line names install.sh (SSOT).
+- `ARCHITECTURE.json` — added the `shadow` module node (install·ci-track nodes already present).
+- `README.md` — added the `harness shadow` plugin-less fallback note; renamed the `verify` command row to
+  `ci` (verify kept as a legacy alias; config key stays `verify.checks`).
+
 ## feat(install): `harness install` — one-shot COMMON/global setup (clone + wrapper + global hooks · plugin 0.5.2 → 0.6.0)
 
 There was no bootstrap for the GLOBAL command: README/`self-update` referenced `~/.harness/cli` +

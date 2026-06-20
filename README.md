@@ -60,7 +60,7 @@ harness/
 | `architecture {inject\|show}` | repo-root `ARCHITECTURE.json`(우선)/`.md` 를 컨텍스트로 주입 — CLAUDE.md 처럼 설계 SSOT 상주 (80KB 초과 시 절단, 부재 시 무음) | SessionStart + 매 UserPromptSubmit |
 | `claudemd {inject\|show}` | repo-root `CLAUDE.md`(프로젝트 규칙)를 **매 턴** 재주입 — commons 처럼 salience 유지해 규칙이 묻히지 않게 (선택적 `<!-- enforce:start/end -->` 블록만, 80KB 절단, 부재 시 무음) | UserPromptSubmit |
 | `lint [all\|fast]` | staged-L0 + 신선도 + **CHANGELOG 누락** + 수렴 누락 체크 | commit 전 (git pre-commit hook) |
-| `verify [all\|fast\|list]` | config 의 검증 명령 병렬 실행 (실패 1개라도 → exit 1) | commit/push 전 |
+| `ci [all\|fast\|list]` | config 의 검증 명령 병렬 실행 (실패 1개라도 → exit 1; 옛 이름 `verify` 별칭 유지, config 키도 `verify.checks`) | commit/push 전 |
 | `ci-track <pr\|branch> [--watch] [--merge-on-green] [-R owner/repo]` | 원격 PR/CI 체크 추적 — `gh pr checks --json` → pass/fail/pending 집계 + 🟢GREEN/🔴RED/🟡PENDING/⚪NONE verdict(exit 0/2/1/0). `--watch` = CLI-내부 폴링으로 terminal 까지 대기(손수 짠 `gh pr checks\|grep` + /tmp monitor sleep 루프 대체 · c19), `--merge-on-green` = 그린이면 자동 squash-merge | merge-on-green · CI 대기 시 |
 | `errors {route\|list\|drain_check\|mark_fixed}` | 오류 severity 분류 + 큐 | 상시 |
 | `ledger {register\|complete\|list\|gc\|dup_check}` | 백그라운드 에이전트 작업 등록(중복 방지) | Agent 전/후 |
@@ -91,6 +91,8 @@ harness/
 CLI·hooks·commands 가 동시에 최신화**된다 — 프로젝트마다 복사·갱신도, 별도 `harness self-update` 도 불필요.
 (전역 `harness` on PATH 는 폴백으로 유지 — 번들이 없으면 그걸 쓴다.) 재생성기 = `_tools/gen_commands.py`
 (데이터테이블 → `.md` 일괄 생성). hook-내부 전용(`pre`/`post`/`prompt`)은 슬래시로 노출하지 않는다.
+
+> 플러그인을 안 쓰는 환경 폴백: `harness shadow plan` 이 `commands/*.md` 를 `~/.claude/commands/` 에 얇은 `/cmd` 위임자로 미러한다(마커 추적 · 손수 작성한 동명 파일은 보존 · `shadow remove` 로 정리). 사이드카 의존 0.
 
 ---
 

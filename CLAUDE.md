@@ -2,7 +2,8 @@
 
 Project-agnostic AI coding harness — guards, injects, and runbooks that wire a single `harness`
 CLI into any agent (Claude Code, etc.) via hooks. Config-driven, zero domain hardcoding; ships as a
-global command (`~/.harness/cli` + `~/.local/bin/harness`) and as a Claude Code plugin (`/plugin`).
+global command (`~/.harness/cli` + `~/.local/bin/harness`, bootstrapped by `harness install`) and as a
+Claude Code plugin (`/plugin`).
 
 > 📍 거버넌스/규칙 SSOT: [config/commons.md](config/commons.md) (always-on c1–c20) · 설계 SSOT:
 > [ARCHITECTURE.md](ARCHITECTURE.md) · 이력: [CHANGELOG.md](CHANGELOG.md). This file = project map only.
@@ -14,8 +15,9 @@ harness/
 ├─ bin/harness          — launcher (autodetects tsx; npx fallback)
 ├─ cli/index.ts         — command dispatcher (L0) — registers every module
 ├─ lib/                 — engine core: config · paths · exec · log · json · lockdown (L0)
-├─ modules/             — 41 commands: pre/post hooks · lint/verify · guards (git/tmp/scatter/docs)
+├─ modules/             — 44 commands: pre/post hooks · lint/ci(+ci-track remote-CI verdict) · guards (git/tmp/scatter/docs)
 │                         · injects (commons/claudemd/recommend/prefs/easy) · pr-cycle · ing(+cross-repo --to)
+│                         · install(global bootstrap)/init/self-update/install-hooks/shadow
 │                         · imagine · research · watch · secret · lsp · worktree · pod/dojo/demi/micro-exp …
 ├─ config/             — bundled rule SSOTs: commons.md · recommend.md · enforcement/keywords/severity.json
 ├─ templates/          — runbook bodies (sbs · bypass · go · brainstorm · pod · dojo · demi · micro-exp …)
@@ -24,7 +26,7 @@ harness/
 ├─ hooks/              — plugin hooks (hooks.json → run.sh dispatcher → bundled CLI via ${CLAUDE_PLUGIN_ROOT})
 ├─ .claude-plugin/     — plugin.json + marketplace.json. SELF-CONTAINED plugin: marketplace source=`.` (repo root IS the plugin), so bin/cli/lib/modules ship inside it → `/plugin update`+reload refreshes CLI+hooks+commands as one unit (no separate self-update)
 ├─ docs/               — auxiliary guides (install · extending · languages)
-├─ scripts/            — helper scripts (운영/스캐폴드용)
+├─ scripts/            — helper scripts · install.sh (전역 부트스트랩 SSOT — `harness install`/curl 가 위임)
 ├─ state/              — 실험·벤치·검증(verdict/claim)·스크래치 단일 산출물 루트 (c5 · git-tracked)
 ├─ harness.config.json — this repo's harness config (+ .example)
 ├─ ARCHITECTURE.md     — final-architecture SSOT (update-in-place)

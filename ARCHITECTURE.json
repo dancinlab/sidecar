@@ -167,6 +167,12 @@
                 "상세": "SSOT=scripts/install.sh(curl 가능); `harness install`은 이를 위임. clone dancinlab/harness→~/.harness/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/harness · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
               },
               {
+                "이름": "shadow",
+                "역할": "harness commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
+                "구분": "module",
+                "상세": "plan|remove. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수 작성한 동명 파일은 skip. 사이드카 무의존 · 재생성 가능(플러그인 미설치 환경용 폴백)"
+              },
+              {
                 "이름": "pr-cycle",
                 "역할": "push→PR→검증머지→로컬 base sync",
                 "구분": "module",

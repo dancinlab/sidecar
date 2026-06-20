@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## feat(poll): `harness poll` — self-paced ≥10-min polling runbook (c19-sanctioned · plugin 0.7.1 → 0.8.0)
+
+Codifies the "10분 폴링" pattern: watch slow background state (fleet lanes · pods · CI · queues) by waking
+on a timer and checking ONCE per wake — not by reacting to every idle ping, and not via a hand-rolled bash
+`sleep` loop (the c19 poll-interval guard blocks sub-30-min loops). `harness poll` is the sanctioned
+alternative, sibling to `ci-track --watch` (which it points at for CI specifically).
+
+- `templates/poll.md` (NEW) — the loop (wake→check once→fire-on-arrival→report→reschedule), the ≥10-min
+  floor + why (prompt-cache 5-min TTL · default 1200–1800s), how to wait without bash sleep (ScheduleWakeup
+  ≥600s / `/loop`), "don't poll what the harness already notifies you about," and stop conditions.
+- `modules/runbooks.ts` `runPoll` — emits the runbook + echoes a `# interval:` (first numeric arg, clamped
+  to a ≥600s floor, default 1200s) and `# target:` (remaining args).
+- `cli/index.ts` — `poll` registered + help line. `commands/poll.md` (NEW) — `/poll [interval] [target]`
+  slash delegator (triggers "10분 폴링"·"주기적으로 확인"·"poll every"·"watch loop").
+- ARCHITECTURE poll node. plugin.json 0.7.1 → 0.8.0.
+
 ## fix(ing): `ing add/next --stdin` — register free text with shell-special chars safely (plugin 0.7.0 → 0.7.1)
 
 `/ing add <free text>` broke when the text held shell-special chars (parens, quotes, `$`, `→`): the slash

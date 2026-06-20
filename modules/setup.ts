@@ -47,7 +47,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("harness worktree gc"),
       entry("harness ing inject"),
     ],
-    Stop: [entry("harness ing staleness-check")],
+    Stop: [entry("harness ing staleness-check"), entry("harness convergence due-check")],
   };
 }
 

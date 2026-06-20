@@ -10,6 +10,7 @@ import { appendJsonl, info } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { matchPromptHints } from "./pre.ts";
 import { strandedWorktrees } from "./worktree.ts";
+import { markCaptureDebt } from "./convergence.ts";
 
 interface KeywordRule {
   id: string;
@@ -22,6 +23,9 @@ interface KeywordRule {
   steps?: string[];
   required_inputs?: string[];
   post?: string;
+  // capture-token enforcement (c1): when set, a match EMITS a ⟦<capture> id=…⟧ token
+  // and records a debt that the Stop hook nags about until resolved (e.g. a marker write).
+  capture?: string;
 }
 
 interface KeywordsConfig {
@@ -97,6 +101,11 @@ export async function runPromptScan(args: string[]): Promise<number> {
     if (m.rule.rule) lines.push(`    rule:     ${m.rule.rule}`);
     if (m.rule.warn) lines.push(`    ⚠ warn:   ${m.rule.warn}`);
     if (m.rule.tool) lines.push(`    tool:     ${m.rule.tool}`);
+    if (m.rule.capture) {
+      // EMIT the capture token + record a debt — the Stop hook nags until it's resolved.
+      const token = markCaptureDebt(m.rule.capture, m.matched);
+      lines.push(`    capture:  ${token}  (해소: well-formed @convergence 마커 작성 → 자동 / 미해소 시 Stop 경고)`);
+    }
     if (m.rule.required_inputs) lines.push(`    inputs:   ${m.rule.required_inputs.join(", ")}`);
     if (m.rule.steps) {
       lines.push(`    steps:`);

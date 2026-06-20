@@ -18,6 +18,7 @@ import {
 } from "./heartbeat-guard.ts";
 import { liveLongRunnerLabels } from "./ing.ts";
 import { bumpEditIfCode } from "./ing-staleness.ts";
+import { resolveConvergenceDebtOnEdit } from "./convergence.ts";
 import { existsSync, statSync, readFileSync } from "node:fs";
 
 export async function postBash(args: string[]): Promise<number> {
@@ -71,6 +72,9 @@ export async function postEdit(args: string[]): Promise<number> {
   appendJsonl(LOGS.observations, { kind: "post_edit", file });
   // c6 ing-staleness: a code edit bumps the "work moved, board untouched" counter.
   bumpEditIfCode(file);
+  // c1 capture-token: an edit landing a well-formed @convergence marker resolves an
+  // open recurrence debt (so the Stop hook stops nagging).
+  resolveConvergenceDebtOnEdit(file);
   if (isL0(file)) {
     const reminder = config().lockdown.onEditReminder ?? "L0 file edited — handle deliberately.";
     process.stderr.write(`\x1b[31m⚠ L0 LOCKDOWN: ${file} — ${reminder}\x1b[0m\n`);

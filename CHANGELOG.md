@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## feat(convergence): capture-token enforcement loop (emit → resolve → Stop nudge)
+
+The recurrence trigger no longer just prints an advisory hint — it now closes a
+mechanical loop so a "detected a recurrence but never wrote the marker" gap can't
+slip silently past (c1).
+
+🎟️ 캡처 토큰 — "놓치면 안 되는 일에 번호표 붙이기"
+
+- EMIT — a `convergence-recurrence` keyword match (rule gains `capture:CONVERGENCE-DUE`)
+  prints a unique `⟦CONVERGENCE-DUE id=… matched="…"⟧` token AND records a debt to
+  `logs/convergence-debt.json` (`markCaptureDebt`).
+- RESOLVE — a post-edit that lands a *well-formed* `@convergence` marker in a code file
+  clears the debt synchronously (`resolveConvergenceDebtOnEdit` → `scanFileMarkers`,
+  reusing the same validator so a malformed marker does NOT count).
+- ENFORCE — at session Stop, `harness convergence due-check` warns once if the debt is
+  still open, then resets (`convergenceDueWarn`) — the same warn-only soft-nudge shape
+  as `ing-staleness` (the recurrence keyword can false-positive, so no hard block).
+
+Data-driven: the engine reads a generic `capture` field on the keyword rule (no trigger
+id hardcoded). Wired into both the plugin Stop hook (`hooks.json`) and `harness init`
+setup (`setup.ts`). Verified end-to-end: emit → token+debt, due-check → warn+reset,
+marker edit → auto-resolve, malformed marker → does NOT resolve; `convergence scan`
+stays clean (24/24 well-formed).
+
 ## feat(convergence): broaden recurrence-trigger patterns (user-curated + memory-frequency)
 
 Expanded the `convergence-recurrence` keyword trigger so it fires on far more recurrence phrasings,

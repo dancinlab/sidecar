@@ -62,9 +62,9 @@
           },
           {
             "이름": "Stop",
-            "역할": "에이전트 응답 종료 → ing staleness-check",
+            "역할": "에이전트 응답 종료 → ing staleness-check + convergence due-check",
             "구분": "surface",
-            "상세": "c6 ing-staleness warn: 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. warn-only(강제 불가 — '이 편집이 ing 갱신 대상'의 ground truth 없음). stderr"
+            "상세": "c6 ing-staleness warn: 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. warn-only(강제 불가 — '이 편집이 ing 갱신 대상'의 ground truth 없음). + c1 convergence due-check: 재발 캡처-토큰 부채가 미해소(세션 중 재발 신호는 떴는데 @convergence 마커 미작성)면 1회 환기 후 reset. 둘 다 warn-only · stderr"
           },
           {
             "이름": "체크포인트",
@@ -289,9 +289,9 @@
               },
               {
                 "이름": "convergence",
-                "역할": "incident 집계 + 인라인 @convergence 마커 검증 게이트",
+                "역할": "incident 집계 + 인라인 @convergence 마커 검증 게이트 + 캡처-토큰 강제 루프",
                 "구분": "module",
-                "상세": "status|recompute|by-category 는 JSON incident 파일 집계(스키마만 맞으면 범용). **scan** = 재발방지 인라인 마커(c1) 기계 강제: git-tracked 코드(ts/hexa/py/sh…)를 스캔해 각 `@convergence` 마커가 필수키 state·id 보유 + state∈enum 인지 검증, 불량 시 exit 1. `harness lint` 가 이를 호출해 CONVERGENCE-MALFORMED(block)로 커밋 게이트. 태그 뒤 `key=` 가 없는 산문 언급은 마커 아님으로 skip(오탐 방지). 재발 신호(재발·stale·regression·again…)는 keywords convergence-recurrence 트리거가 마커 작성 환기"
+                "상세": "status|recompute|by-category 는 JSON incident 파일 집계(스키마만 맞으면 범용). **scan** = 재발방지 인라인 마커(c1) 기계 강제: git-tracked 코드(ts/hexa/py/sh…)를 스캔해 각 `@convergence` 마커가 필수키 state·id 보유 + state∈enum 인지 검증, 불량 시 exit 1. `harness lint` 가 이를 호출해 CONVERGENCE-MALFORMED(block)로 커밋 게이트. 태그 뒤 `key=` 가 없는 산문 언급은 마커 아님으로 skip(오탐 방지). **캡처-토큰 루프**: 재발 신호(재발·stale·regression·again…)에 keywords convergence-recurrence 트리거(`capture:CONVERGENCE-DUE`)가 `⟦CONVERGENCE-DUE id=… matched=…⟧` 토큰 출력 + 부채 기록(markCaptureDebt→logs/convergence-debt.json) → post-edit 가 well-formed 마커 추가를 감지하면 부채 동기 해소(resolveConvergenceDebtOnEdit·scanFileMarkers) → 미해소면 Stop 훅 **due-check** 가 1회 warn 후 reset(convergenceDueWarn · ing-staleness 와 동형 soft-nudge · warn-only)"
               },
               {
                 "이름": "sync",

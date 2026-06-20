@@ -91,7 +91,8 @@ harness/
 **2줄로 중복**된다. 그래서 `.claude-plugin/plugin.json` 이 **`commands: []`** (기본 `commands/` 스캔을 빈 목록으로
 대체)로 플러그인 명령 등록을 끄고, 슬래시 노출은 `harness shadow` 가 `commands/*.md` 를 `~/.claude/commands/` 에
 bare `/cmd` 위임자로 미러하는 단일 경로만 쓴다(마커 추적 · 손수 작성한 동명 파일은 보존 · `shadow remove` 로 정리)
-→ picker 에 bare 1줄.
+→ picker 에 bare 1줄. SHADOW_MARKER 추적 주석은 frontmatter 닫는 `---` **뒤**에 삽입한다 — Claude Code 는 `---` 가
+1행일 때만 `description:` 을 읽으므로, 앞에 붙이면 picker 가 마커 주석을 설명으로 표시한다.
 
 **자기완결(self-contained) 플러그인 · 프로젝트 무관**: marketplace `source: "."` 라 **repo 루트가 곧 플러그인** —
 훅뿐 아니라 `harness` CLI 본체(`bin/`·`cli/`·`lib/`·`modules/`·`config/`·`commands/`)까지 한 덩어리로 실린다

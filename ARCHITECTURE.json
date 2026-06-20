@@ -176,7 +176,7 @@
                 "이름": "shadow",
                 "역할": "harness commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
                 "구분": "module",
-                "상세": "plan|remove. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수 작성한 동명 파일은 skip. 사이드카 무의존 · 재생성 가능(플러그인 미설치 환경용 폴백)"
+                "상세": "plan|remove. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수 작성한 동명 파일은 skip. ⚠️ 마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로, 마커를 앞에 붙이면 picker 가 마커 주석을 명령 설명으로 표시한다(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). 사이드카 무의존 · 재생성 가능(플러그인 미설치 환경용 폴백)"
               },
               {
                 "이름": "pr-cycle",

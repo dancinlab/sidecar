@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## fix(pre): code-level guards (cloud-raw c11 · force-push · poll c19) read tool input from STDIN, not an unset env var
+
+The `pre bash`/`pre write` hooks resolved their tool input ONLY from `$CLAUDE_TOOL_INPUT` /
+`$CODEX_TOOL_INPUT` env vars. Current Claude Code does not set those — it pipes the PreToolUse
+payload (`{tool_name, tool_input:{command|file_path|content}, …}`) on STDIN. So `parseToolInput()`
+always saw an empty command, `if (!cmd) return 0` fired, and EVERY code-level guard silently
+passed: raw `vastai`/`runpodctl`/`vast` provider CLIs (the ossified `NO_RAW_CLOUD_CLI` block),
+git force-push, and the c19 poll-interval guard all no-op'd. The block logic was never wrong —
+the input carrier was. (The 5 inject modules — commons·recommend·prefs·ing·architecture — already
+read stdin via `readStdin()`; `pre.ts` was the lone hold-out on the dead env path.)
+
+- `modules/pre.ts` — `parseToolInput()` now tries env FIRST (Codex back-compat), then STDIN
+  (current CC), and unwraps a full payload's `.tool_input` or accepts a bare input object.
+  New `@convergence(ossified) PRETOOLUSE_INPUT_FROM_STDIN` marks the recurrence guard.
+- Verified via the real hook: stdin `{tool_input:{command:"vastai …"}}` → `permissionDecision:deny`;
+  `hexa cloud …`/`ls` → pass; env legacy form still blocks; `pre write` unwraps `file_path` from stdin.
+- ⚠ Live effect requires `harness self-update` (propagates to `~/.harness/cli`); the plugin copy
+  updates on next plugin sync.
+
 ## feat(architecture): `architecture lint` — mechanical c4 tree-hygiene gate
 
 The architecture module could only `inject`/`show` the design SSOT — nothing guarded the JSON

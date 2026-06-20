@@ -9,6 +9,7 @@
 //
 // CLAUDE_TOOL_INPUT / CODEX_TOOL_INPUT is JSON: {"command":"...","file_path":"...","content":"..."}
 import { readJson } from "../lib/json.ts";
+import { readStdin } from "../lib/exec.ts";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
@@ -64,14 +65,36 @@ function loadConfig(): EnforcementConfig {
   }
 }
 
+// Resolve the tool-input object from EITHER carrier, in priority order:
+//   1. CLAUDE_TOOL_INPUT / CODEX_TOOL_INPUT env (Codex, or a wrapper that exports it)
+//   2. the hook payload piped on STDIN — how current Claude Code passes PreToolUse
+//      input ({session_id, tool_name, tool_input:{command|file_path|content}, …})
+// Each carrier may hold the full payload (unwrap `.tool_input`) OR the bare input
+// object directly (use as-is). The env path was the ONLY carrier read before, but
+// current CC does not populate that env var — it pipes JSON on stdin — so every
+// code-level guard (cloud-raw c11 · force-push · poll c19) silently no-op'd on an
+// empty command. Read stdin as the working carrier; keep env as back-compat.
+//
+// @convergence state=ossified id=PRETOOLUSE_INPUT_FROM_STDIN value="PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push, poll) a silent pass" threshold="a session ran raw `vastai`/`runpodctl` despite the ossified NO_RAW_CLOUD_CLI code guard because parseToolInput read an env var CC never set; verified by piping the real {tool_input:{command}} payload on stdin"
+function unwrapToolInput(j: unknown): Record<string, unknown> | null {
+  if (!j || typeof j !== "object") return null;
+  const obj = j as Record<string, unknown>;
+  if (obj.tool_input && typeof obj.tool_input === "object") return obj.tool_input as Record<string, unknown>;
+  return obj;
+}
+
 function parseToolInput(): Record<string, unknown> {
-  const raw = process.env.CLAUDE_TOOL_INPUT ?? process.env.CODEX_TOOL_INPUT ?? "";
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return {};
+  const env = process.env.CLAUDE_TOOL_INPUT ?? process.env.CODEX_TOOL_INPUT ?? "";
+  for (const raw of [env, readStdin()]) {
+    if (!raw || !raw.trim()) continue;
+    try {
+      const got = unwrapToolInput(JSON.parse(raw));
+      if (got) return got;
+    } catch {
+      /* try next carrier */
+    }
   }
+  return {};
 }
 
 // PreToolUse deny. Current Claude Code honors ONLY `hookSpecificOutput.permissionDecision`

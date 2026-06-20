@@ -15,6 +15,7 @@ import { config, repoPath } from "../lib/config.ts";
 import { routeError, classify } from "./errors.ts";
 import { docViolations } from "./docs.ts";
 import { lintArchitectureTree } from "./architecture.ts";
+import { scanConvergenceMarkers } from "./convergence.ts";
 
 interface Violation {
   rule: string;
@@ -136,6 +137,13 @@ export async function runLint(args: string[]): Promise<number> {
   // drift the design SSOT from a navigable tree into a wall of text. warn-only.
   for (const h of lintArchitectureTree()) {
     violations.push({ rule: h.rule, file: "ARCHITECTURE.json", msg: `${h.path} — ${h.msg}` });
+  }
+
+  // 4d. convergence inline-marker hygiene (c1) — every recurrence-prevention marker
+  // must carry the required keys (state·id) + a valid state, else it can't be
+  // aggregated and the learning is silently lost. Mechanically enforces @convergence.
+  for (const it of (await scanConvergenceMarkers([])).issues) {
+    violations.push({ rule: "CONVERGENCE-MALFORMED", file: it.file, msg: `${it.reason} (line ${it.line})` });
   }
 
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });

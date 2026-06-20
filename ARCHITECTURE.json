@@ -289,9 +289,9 @@
               },
               {
                 "이름": "convergence",
-                "역할": "incident 집계",
+                "역할": "incident 집계 + 인라인 @convergence 마커 검증 게이트",
                 "구분": "module",
-                "상세": "스키마만 맞으면 범용"
+                "상세": "status|recompute|by-category 는 JSON incident 파일 집계(스키마만 맞으면 범용). **scan** = 재발방지 인라인 마커(c1) 기계 강제: git-tracked 코드(ts/hexa/py/sh…)를 스캔해 각 `@convergence` 마커가 필수키 state·id 보유 + state∈enum 인지 검증, 불량 시 exit 1. `harness lint` 가 이를 호출해 CONVERGENCE-MALFORMED(block)로 커밋 게이트. 태그 뒤 `key=` 가 없는 산문 언급은 마커 아님으로 skip(오탐 방지). 재발 신호(재발·stale·regression·again…)는 keywords convergence-recurrence 트리거가 마커 작성 환기"
               },
               {
                 "이름": "sync",

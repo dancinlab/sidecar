@@ -6,11 +6,65 @@
 // "Convergence" = the share of incident categories that are verified+permanent —
 // a running measure of "have we actually stopped this class of bug recurring".
 import { LOGS } from "../lib/paths.ts";
-import { info, warn } from "../lib/log.ts";
+import { info, warn, ok, loudFail } from "../lib/log.ts";
 import { readJson, writeJson } from "../lib/json.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, repoPath } from "../lib/config.ts";
-import { existsSync } from "node:fs";
+import { execShell } from "../lib/exec.ts";
+import { existsSync, readFileSync } from "node:fs";
+
+// --- inline @convergence marker validation (c1) ---------------------------
+// The recurrence-prevention markers live as inline code comments. To MECHANICALLY
+// enforce them, `scan` validates every marker carries the required keys (state·id)
+// and a state from the allowed enum — a malformed marker can't be aggregated, so
+// the learning is silently lost. `harness lint` calls this so commits gate on it.
+// MARKER_TAG is split so THIS scanner never flags its own source as a marker.
+const MARKER_TAG = "@con" + "vergence";
+const ALLOWED_STATES = new Set([
+  "ossified", "stable", "in_flight", "pending",
+  "completed", "completed_gap", "failed", "blocked",
+]);
+const SCAN_EXT = /\.(ts|tsx|js|mjs|cjs|hexa|py|sh|go|rs|c|cc|cpp|h|hpp|swift|mm)$/;
+
+export interface MarkerIssue {
+  file: string;
+  line: number;
+  reason: string;
+}
+
+export async function scanConvergenceMarkers(paths: string[]): Promise<{ total: number; issues: MarkerIssue[] }> {
+  let files: string[];
+  if (paths.length) {
+    files = paths;
+  } else {
+    const r = await execShell("git ls-files", { cwd: repoPath(".") });
+    files = r.stdout.split("\n").map((s) => s.trim()).filter((f) => f && SCAN_EXT.test(f));
+  }
+  const issues: MarkerIssue[] = [];
+  let total = 0;
+  for (const f of files) {
+    const abs = repoPath(f);
+    if (!existsSync(abs)) continue;
+    const lines = readFileSync(abs, "utf8").split("\n");
+    lines.forEach((ln, i) => {
+      if (!ln.includes(MARKER_TAG)) return;
+      const seg = ln.slice(ln.indexOf(MARKER_TAG) + MARKER_TAG.length);
+      // A real marker has the tag followed by ≥1 `<key>=` pair; a bare prose mention
+      // of the tag in a comment ("inline @con·vergence validation") has none → skip,
+      // don't validate it as a malformed marker.
+      if (!/\b(state|id|value|threshold|rationale|ref_commit|date)\s*=/.test(seg)) return;
+      total++;
+      const stateM = seg.match(/state\s*=\s*"?([A-Za-z_]+)"?/);
+      const idM = seg.match(/id\s*=\s*"?([A-Za-z0-9_]+)"?/);
+      if (!stateM) issues.push({ file: f, line: i + 1, reason: "missing required key: state" });
+      else if (!ALLOWED_STATES.has(stateM[1])) {
+        issues.push({ file: f, line: i + 1, reason: `invalid state '${stateM[1]}' (allowed: ${[...ALLOWED_STATES].join("·")})` });
+      }
+      if (!idM) issues.push({ file: f, line: i + 1, reason: "missing required key: id" });
+    });
+  }
+  return { total, issues };
+}
 
 interface Record_ {
   category?: string;
@@ -57,6 +111,18 @@ function aggregate(recs: Record_[]) {
 }
 
 export async function runConvergence(args: string[]): Promise<number> {
+  // `scan` validates inline markers (no issues file needed) — the enforcement gate.
+  if ((args[0] ?? "") === "scan") {
+    const { total, issues } = await scanConvergenceMarkers(args.slice(1));
+    if (issues.length === 0) {
+      ok(`convergence scan: ${total} ${MARKER_TAG} marker(s) — all well-formed (state+id present, valid state)`);
+      return 0;
+    }
+    for (const it of issues) warn(`  ${it.file}:${it.line} — ${it.reason}`);
+    loudFail(`convergence scan: ${issues.length} malformed of ${total} ${MARKER_TAG} marker(s)`);
+    return 1;
+  }
+
   const file = issuesFile();
   if (!file) {
     info("convergence: no issues file configured (harness.config.json → convergence.issuesFile)");

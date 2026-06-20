@@ -134,7 +134,7 @@ reports:
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
   upstream {list|fix <name|repo>}   in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)
-  convergence {status|recompute|by-category}   optional incident tracker
+  convergence {status|recompute|by-category|scan}   incident tracker + scan = inline @convergence marker validator (state·id required; lint gates malformed)
   sync {run|diff}              run configured shared-file sync script
 
 principles: quiet on success / loud on failure / never auto-fix / config-driven / AI-native JSONL

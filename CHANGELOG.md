@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## feat(convergence): mechanically ENFORCE inline @convergence markers (c1) — scan gate + recurrence trigger
+
+@convergence recurrence-prevention markers (c1) were a guideline only — nothing validated them and
+nothing fired when a defect actually recurred. Now hardened to a gate:
+- **`harness convergence scan`** (NEW) — scans git-tracked code (ts/hexa/py/sh/go/rs/c…) and validates
+  every `@convergence` marker carries the required keys `state`·`id` + a state in the allowed enum;
+  exit 1 on any malformed. Detection requires a `<key>=` after the tag, so prose mentions of the tag
+  in comments are skipped (no false positives). MARKER_TAG is split in-source so the scanner never
+  flags its own file.
+- **`harness lint` gate** — calls the scanner; malformed markers raise `CONVERGENCE-MALFORMED`
+  (severity-map → block), so a commit can't ship a half-written marker.
+- **recurrence keyword trigger** (`config/keywords.json` convergence-recurrence) — fires on recurrence
+  signals and injects a reminder to write the inline marker. Patterns DIVERSIFIED from cross-repo
+  memory frequency (top signals: stale·regression·again·재발·recurrence·repeat) — 재발·stale·낡은·
+  구버전·회귀·"또 깨/터/났"·regression·recurr·"broke again"·"keeps breaking"·reintroduced·reopened…
+- commons c1 + ARCHITECTURE convergence node + cli help reworded: marker is mechanically gated, not
+  advisory. Verified: 22 existing markers pass scan (exit 0); a missing-state marker → exit 1.
+
 ## fix(shadow): marker AFTER frontmatter — picker shows command descriptions, not the marker comment
 
 `harness shadow` PREPENDED `SHADOW_MARKER` (`<!-- harness-shadow … -->`) to each generated

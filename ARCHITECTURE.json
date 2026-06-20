@@ -223,7 +223,7 @@
                   {
                     "이름": "done=scrub.",
                     "구분": "detail",
-                    "상세": " · done=scrub. 보드는 worktree 가 아니라 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref)으로 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. `add --to <repo>`=형제 프로젝트 ing ref 에 from 태그 직접 전달(구 handoff 흡수). done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 로 중단된 작업 박제·복원)"
+                    "상세": " · done=scrub. 보드는 worktree 가 아니라 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref)으로 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. `add --to <repo>`=형제 프로젝트 ing ref 에 from 태그 직접 전달(구 handoff 흡수). done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 로 중단된 작업 박제·복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피(`printf '%s' \"<text>\" | harness ing add --stdin`)"
                   }
                 ]
               },

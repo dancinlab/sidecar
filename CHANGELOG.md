@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## fix(ing): `ing add/next --stdin` — register free text with shell-special chars safely (plugin 0.7.0 → 0.7.1)
+
+`/ing add <free text>` broke when the text held shell-special chars (parens, quotes, `$`, `→`): the slash
+command's unquoted `$ARGUMENTS` mis-parsed in bash, so agents fell back to hand-editing ING.jsonl. (The
+companion "harness CLI not found" failure is resolved separately by `harness install` putting the global
+command on PATH.)
+
+- `modules/ing.ts` — `add`/`next` accept a STDIN text path: `--stdin` flag (or a lone `-`) reads the entry
+  text from stdin instead of argv. Opt-in only, so an interactive no-text call still shows usage and never
+  blocks on a TTY. Agent-safe form: `printf '%s' "<text>" | harness ing add --stdin` (works with `--to` too).
+- `usage()` + `commands/ing.md` description document the STDIN-safe form.
+- plugin.json 0.7.0 → 0.7.1.
+
 ## feat(kick): `harness kick` (alias `drill`) — hexa-lang gap-breakthrough/discovery passthrough (plugin 0.6.0 → 0.7.0)
 
 Ports sidecar's `/kick` (skills/kick) into harness: a thin wrapper over `hexa kick --seed "<seed>"`

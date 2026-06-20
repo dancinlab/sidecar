@@ -1,6 +1,6 @@
 {
   "name": "harness",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Project-agnostic AI coding harness — SELF-CONTAINED Claude Code plugin: governance hooks (guards + injects) + a GLOBAL slash-command set (commands/) AND the harness CLI itself (bin/ · cli/ · lib/ · modules/ · config/ · templates/ · styles/) ship as ONE unit. Hooks run the plugin's own bundled CLI via ${CLAUDE_PLUGIN_ROOT}, so `/plugin update` + reload refreshes everything together — no per-project copy, no separate `harness self-update`. Falls back to a global `harness` on PATH when present.",
   "author": { "name": "dancinlab" },
   "repository": "https://github.com/dancinlab/harness",

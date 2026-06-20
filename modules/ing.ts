@@ -118,7 +118,14 @@ export async function runIng(args: string[]): Promise<number> {
       to = args[toIdx + 1] ?? "";
       parts = args.slice(1).filter((_, i) => i + 1 !== toIdx && i + 1 !== toIdx + 1);
     }
-    const text = parts.join(" ").trim();
+    // STDIN text path — robust for ANY characters (parens·quotes·$·→ …) that break
+    // unquoted argv via the slash command's `$ARGUMENTS`. Opt-in only (`--stdin` flag
+    // or a lone `-`) so an interactive no-text call still shows usage, never blocks on
+    // a TTY. Agent-safe form: `printf '%s' "<free text>" | harness ing add --stdin`.
+    const wantStdin = parts.includes("--stdin") || (parts.length === 1 && parts[0] === "-");
+    const text = wantStdin
+      ? readStdin().trim()
+      : parts.filter((a) => a !== "--stdin").join(" ").trim();
     if (!text) return usage();
     if (to) {
       const destRoot = resolve(REPO_ROOT, "..", to);
@@ -276,5 +283,7 @@ async function pod(args: string[]): Promise<number> {
 
 function usage(): number {
   info("usage: harness ing {show|add <text> [--to <repo>]|done <id|match>|next <text>|pod {add|rm|list}|inject}");
+  info("  free text with shell-special chars (parens·quotes·$·→): pipe via --stdin —");
+  info("    printf '%s' \"<text>\" | harness ing add --stdin   (or: ... add --to <repo> --stdin)");
   return 1;
 }

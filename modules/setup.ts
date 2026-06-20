@@ -4,8 +4,12 @@
 //                    session/repo (like a global plugin), or into the repo's
 //                    .claude/settings.json (--repo). Existing non-harness hooks
 //                    are preserved; old harness entries are de-duped.
-//   self-update    — git pull the harness CLI clone this binary runs from
-//                    (e.g. ~/.harness/cli) to the latest main.
+//   self-update    — refresh the GLOBAL install clone (~/.harness/cli, what the
+//                    `harness` on PATH actually runs) to latest origin/main, and
+//                    print its path even when already current. ONLY ever touches the
+//                    global clone: a `reset --hard` against a dev checkout would
+//                    discard local commits/uncommitted work, so a dev clone (run via
+//                    `npx tsx`) is updated by the developer's own git, never here.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { homedir } from "node:os";
@@ -112,20 +116,47 @@ function installHooks(args: string[]): number {
   return 0;
 }
 
+// The global install clone the `harness` wrapper on PATH actually runs (install.sh
+// SSOT: clone → ~/.harness/cli). self-update must refresh THIS regardless of where
+// the running binary lives, else a dev-clone invocation silently leaves PATH stale.
+const GLOBAL_CLI = resolve(homedir(), ".harness", "cli");
+
+// Fast-forward one clone to origin/main. Returns the outcome (for the caller to
+// report) or null when `dir` is not a git clone. before===after ⇒ already current.
+async function updateClone(dir: string): Promise<{ before: string; after: string } | null> {
+  const inside = await execShell("git rev-parse --is-inside-work-tree 2>/dev/null", { cwd: dir });
+  if (inside.stdout.trim() !== "true") return null;
+  const before = (await execShell("git rev-parse --short HEAD", { cwd: dir })).stdout.trim();
+  const up = await execShell("git fetch -q origin && git reset -q --hard origin/main", { cwd: dir });
+  if (up.code !== 0) throw new Error(up.stderr.slice(0, 200));
+  const after = (await execShell("git rev-parse --short HEAD", { cwd: dir })).stdout.trim();
+  return { before, after };
+}
+
 async function selfUpdate(): Promise<number> {
-  const r = await execShell("git rev-parse --is-inside-work-tree 2>/dev/null", { cwd: HARNESS_ROOT });
-  if (r.stdout.trim() !== "true") {
-    warn(`self-update: ${HARNESS_ROOT} is not a git clone — update manually.`);
+  if (!existsSync(GLOBAL_CLI)) {
+    warn(`self-update: global install ${GLOBAL_CLI} not found — run \`harness install\` first.`);
     return 1;
   }
-  const before = (await execShell("git rev-parse --short HEAD", { cwd: HARNESS_ROOT })).stdout.trim();
-  const up = await execShell("git fetch -q origin && git reset -q --hard origin/main", { cwd: HARNESS_ROOT });
-  if (up.code !== 0) {
-    warn(`self-update: failed — ${up.stderr.slice(0, 200)}`);
+  let res: { before: string; after: string } | null;
+  try {
+    res = await updateClone(GLOBAL_CLI);
+  } catch (e) {
+    warn(`self-update: failed — ${(e as Error).message}`);
     return 1;
   }
-  const after = (await execShell("git rev-parse --short HEAD", { cwd: HARNESS_ROOT })).stdout.trim();
-  ok(before === after ? `self-update: already current (${after})` : `self-update: ${before} → ${after} (${HARNESS_ROOT})`);
+  if (res === null) {
+    warn(`self-update: ${GLOBAL_CLI} is not a git clone — update manually.`);
+    return 1;
+  }
+  ok(res.before === res.after
+    ? `self-update: already current (${res.after}) — global ${GLOBAL_CLI}`
+    : `self-update: ${res.before} → ${res.after} — global ${GLOBAL_CLI}`);
+  // Flag the silent-no-op trap: a dev-clone invocation updated the global install,
+  // NOT the clone you ran from. Make that explicit so "already current" is unambiguous.
+  if (resolve(HARNESS_ROOT) !== GLOBAL_CLI) {
+    info(`  (ran from dev clone ${HARNESS_ROOT} — updated the GLOBAL install above, not this clone; use git here.)`);
+  }
   return 0;
 }
 

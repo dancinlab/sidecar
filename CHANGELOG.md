@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## fix(self-update): always target the GLOBAL install (~/.harness/cli), never reset a dev clone
+
+`self-update` updated `HARNESS_ROOT` — whichever clone the running binary lives in. Run via `npx tsx`
+from a dev checkout it updated THAT clone and reported `already current` **without the path**, so it
+looked like the global install on PATH had refreshed when it hadn't (the global `~/.harness/cli` stayed
+stale). Worse, `git reset --hard origin/main` against a dev clone silently discards local commits/work.
+
+- `modules/setup.ts` — `selfUpdate()` now ONLY ever refreshes `GLOBAL_CLI` (`~/.harness/cli`, what the
+  `harness` wrapper on PATH runs) via the extracted `updateClone(dir)` helper. The path is printed even
+  on `already current`, so it is never ambiguous which clone was checked. When invoked from a different
+  (dev) clone it prints a note that the GLOBAL install was updated — not the running clone — and never
+  touches the dev clone (no destructive `reset --hard` on hand-edited work; use git there).
+- Verified: global behind → `318c5d3 → 6a65fc0 — global …` advance; already-current → path shown;
+  dev-clone uncommitted changes preserved across the run.
+
+
 ## feat(mem-guard): OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog
 
 A recurring, expensive failure on a 16GB Mac: parallel fan-out (cycle-all / all-bg-go / fleet) accumulates

@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## fix(exec): spawn `error` event was unhandled → a SessionStart hook crash (plugin 0.9.1 → 0.9.2)
+
+`/reload-plugins` in a repo with a stale linked worktree (its dir deleted) crashed the SessionStart hook
+(`node:events` — "Emitted 'error' event on ChildProcess"): `worktree gc` ran `git status` with `cwd` set to
+the gone worktree path, `spawn` raised ENOENT, and `lib/exec.ts execArgs` had NO `'error'` listener — so the
+unhandled event killed the whole hook (and the promise would also have hung, never hitting `close`). Every
+`execShell`/`execArgs` caller was exposed to this (any spawn ENOENT/EACCES, e.g. a minimal-PATH hook env).
+
+- `lib/exec.ts` — `execArgs` now handles the child `'error'` event: degrade to a non-zero `ExecResult`
+  (`code 127` + the spawn error in stderr) via a single-resolve guard, so a spawn failure never crashes the
+  process or hangs. The stdin write/end is wrapped too (child may already be gone). `@convergence ossified
+  EXEC_SPAWN_ERROR_UNHANDLED`.
+- Effect: `worktree gc` (and all hooks) tolerate stale/dead worktree dirs — they degrade and get pruned
+  instead of crashing SessionStart. Verified: `worktree gc` in the affected repo swept 42 items, exit 0;
+  `execShell` on a nonexistent cwd returns code 127 (no crash).
+- plugin.json 0.9.1 → 0.9.2.
+
 ## fix(guard): rm -rf guard was over-blocking — now matches the root ITSELF, not every absolute path (plugin 0.9.0 → 0.9.1)
 
 `DANGER-RM-RF-ROOT` / `H-RM-RF-ROOT` matched any target starting with `/` (or `~`/`$HOME`), so legitimate

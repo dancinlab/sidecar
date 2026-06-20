@@ -32,6 +32,7 @@ export function execArgs(bin: string, args: string[], opts: ExecOpts = {}): Prom
     let stdout = "";
     let stderr = "";
     let killed = false;
+    let settled = false;
 
     const timer = opts.timeoutMs
       ? setTimeout(() => {
@@ -39,6 +40,13 @@ export function execArgs(bin: string, args: string[], opts: ExecOpts = {}): Prom
           child.kill("SIGKILL");
         }, opts.timeoutMs)
       : null;
+    // single-resolve guard so neither `error` nor `close` can double-fire / hang.
+    const settle = (r: ExecResult) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(r);
+    };
 
     child.stdout?.on("data", (b: Buffer) => {
       stdout += b.toString();
@@ -46,15 +54,19 @@ export function execArgs(bin: string, args: string[], opts: ExecOpts = {}): Prom
     child.stderr?.on("data", (b: Buffer) => {
       stderr += b.toString();
     });
-    child.on("close", (code) => {
-      if (timer) clearTimeout(timer);
-      resolve({ code: code ?? -1, stdout, stderr, ms: Date.now() - t0, killed });
+    // @convergence state=ossified id=EXEC_SPAWN_ERROR_UNHANDLED value="execArgs must handle the child's `error` event (spawn ENOENT / EACCES) — degrade to a non-zero ExecResult, never let an unhandled `error` crash the process" threshold="a minimal-PATH hook env (SessionStart) couldn't spawn `bash` → unhandled 'error' event killed the whole SessionStart hook (node:events crash); every execShell caller was exposed"
+    child.on("error", (e: Error) => {
+      settle({ code: 127, stdout, stderr: stderr + `spawn ${bin} failed: ${e?.message ?? String(e)}`, ms: Date.now() - t0, killed });
     });
-    if (opts.input !== undefined) {
-      child.stdin?.write(opts.input);
+    child.on("close", (code) => {
+      settle({ code: code ?? -1, stdout, stderr, ms: Date.now() - t0, killed });
+    });
+    // stdin may already be gone if spawn errored — guard the write/end.
+    try {
+      if (opts.input !== undefined) child.stdin?.write(opts.input);
       child.stdin?.end();
-    } else {
-      child.stdin?.end();
+    } catch {
+      /* child failed to spawn — the `error` handler settles the promise */
     }
   });
 }

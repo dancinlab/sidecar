@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## docs(commons): c14 (d) — 게으른 천장(lazy ceiling) 금지 · research census + 측정이 천장의 심판
+
+c14 의 벽 분류 (d) "진짜 천장" 에 **lazy-ceiling 금지** 규칙을 추가했다. 그동안 (d) 는 MULTI-LENS
++ ABLATION 으로만 천장을 확정하라 했지, **성능/하드웨어 천장 특유의 함정**은 명시하지 않았다.
+실증 사고: forge GPU TF32 미달(512–3072 `~0.87×`)을 1-pass 직관으로 "consumer Blackwell FP32-accum
+하드웨어 천장"이라 박제 → deep research census 가 게으른 프레임을 깼다(FP16-accum 분할보상
+[Ozaki/3xTF32, arxiv 2203.03341] 우회 후보 = 잘못된 축 가능성).
+
+**단 — research 가설은 확정이 아니다(c2)**: GPU 측정이 그 우회로를 정밀화했다 — 정확도는 ~400×
+향상(FP32-equiv·deterministic moat)이나 속도는 1.5–1.8× **더 느림**. 측정 root-cause = 그 카드
+FP16:TF32 비가 ~1.8× 뿐(datacenter 2–4× 가정이 consumer 5070 미적용) → MMA-multiplier(2–3×) >
+rate-advantage → 속도-우회는 hardware-dependent, **5070 에선 closed**. r-sched(LDS cadence) 변종도
+byte-eq PASS(max|Δ|=0)이나 perf flat — ptxas 가 이미 near-optimal(CloudRift 5090 finding 미전이).
+
+규칙: ⓐ 알고리즘 cite-census(파라미터 sweep 아님) → ⓑ 레버를 측정(c2)으로 검증 → ⓒ 인용 레버를
+전부 시도/falsify 한 뒤에만 terminal 🧱. 1-pass 직관 박제 = 게으른 천장. 흔한 함정 = wrong-axis.
+research 는 게으른 프레임을 깨고 미시도 레버를 드러내되 **측정이 최종 심판** — 남은 레버(Ozaki-INT8
+n≥8K, INT8 이 ~4× rate 라 multiplier 초과) 시도 전엔 미완. 진짜 천장도 흔히 양쪽 공유 캡 →
+"parity 도달, 너머는 구조 레버(fusion·결정성)" 가 정직한 종착이지 "미달"이 아니다.
+
 ## fix(worktree): age backstop in gc — stop squash/no-push agent worktrees piling up
 
 `worktree gc` (and pr-cycle's sweep) reaped ONLY worktrees whose upstream is `[gone]`

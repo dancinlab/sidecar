@@ -22,6 +22,7 @@ import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
+import { detectVersionedName } from "./naming-guard.ts";
 import { memPreflight } from "./mem-guard.ts";
 
 interface BashRule {
@@ -249,6 +250,12 @@ export async function preWrite(_args: string[]): Promise<number> {
   // tmp-guard — writing a file into a volatile tmp dir loses it; steer to scratch.
   if (config().tmpGuard && isTmpPath(filePath)) {
     emitWarn("TMP-VOLATILE", `${filePath} is in a volatile tmp dir (lost on reboot/reaper). Write progress/working data to ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
+  }
+
+  // naming-guard — steer away from version/copy-suffixed names; history is git's job.
+  if (config().namingGuard) {
+    const nv = detectVersionedName(filePath, content);
+    if (nv) emitWarn("NAMING-VERSION-SUFFIX", nv);
   }
 
   // built-in single-doc discipline (write-time) — fires when a scattered or

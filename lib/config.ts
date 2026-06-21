@@ -104,6 +104,11 @@ export interface HarnessConfig {
   // inbox/*.md at any depth) on Write/Edit — hand-offs route through the
   // repo-root ING.jsonl board (`harness ing add [--to <repo>]`), not ad-hoc files.
   handoffGuard: boolean;
+  // namingGuard WARNS (pre write) when a new file/dir name carries a version/copy
+  // suffix (`_v2` · `_final` · `_copy` · `_old` · `foo 2` …) instead of a canonical
+  // native name. Versioned siblings ARE the history — and history belongs to git,
+  // not the filename. Steer to one canonical file updated in place. Warn-only (guide).
+  namingGuard: boolean;
   // askqText DENIES the AskUserQuestion option-box tool (PreToolUse) and tells
   // the agent to ask in plain CHAT text instead (options inline, mark the
   // recommended one, accept a free-form answer). A FORM redirect, not anti-punt.
@@ -215,6 +220,7 @@ const DEFAULTS: HarnessConfig = {
   git: { guardForcePush: true },
   tmpGuard: true,
   handoffGuard: true,
+  namingGuard: true,
   askqText: true,
   poll: { maxSilenceSec: 600 },
   ledger: { staleSec: 3600 },

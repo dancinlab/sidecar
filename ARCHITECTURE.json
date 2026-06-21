@@ -46,7 +46,7 @@
             "이름": "PreToolUse(Bash)",
             "역할": "도구 호출 직전 → pre bash",
             "구분": "surface",
-            "상세": "코드레벨 가드(force-push{blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH와 동일 정책}·cloud-raw c11·poll c19·danger{no-verify·reset-hard·curl|sh 는 상시 always-on · rm-rf-root(루트 자체 / · /* · ~ · $HOME · *)는 config `dangerGuard.rmRfRoot` 토글 · 기본 false=OFF(opt-out)}·hand-rolled-fanout warn·mem-guard{background-spawn(`&`/nohup/disown) 직전 free-RAM 체크 → warnPct 이하 warn·blockPct 이하 block · OOM jetsam 예방}) → config enforcement 정규식 매칭(backup). 코드 가드는 config보다 먼저·끌 수 없음(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr"
+            "상세": "코드레벨 가드(force-push{blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH와 동일 정책}·cloud-raw c11·poll c19·danger{no-verify·reset-hard·curl|sh 는 상시 always-on · rm-rf-root(루트 자체 / · /* · ~ · $HOME · *)는 config `dangerGuard.rmRfRoot` 토글 · 기본 false=OFF(opt-out)}·hand-rolled-fanout warn·mem-guard{background-spawn(`&`/nohup/disown) 직전 free-RAM 체크 → warnPct 이하 warn·blockPct 이하 block · OOM jetsam 예방}·naming-guard{버전/복사 접미사 파일·폴더명(`_v2`·`_final`·`_copy`·`foo 2`…) warn → canonical 단일파일 update-in-place 유도 · c25 · `@canonical-ok` 면제 · test/spec 제외}) → config enforcement 정규식 매칭(backup). 코드 가드는 config보다 먼저·끌 수 없음(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr"
           },
           {
             "이름": "PreToolUse(Write)",

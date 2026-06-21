@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## feat(naming-guard): canonical-name discipline — warn on version/copy-suffixed file·folder names (commons c25)
+
+New cross-project rule + mechanical guard: file/dir names should be canonical native names, NOT
+carry version/copy suffixes (`_v2` · `_v12` · `_final` · `_copy` · `_old` · `_new` · `_bak` ·
+`foo 2` · `foo(1)` …). Those bake history into the filename, which is git's job — the result is a
+pile of stale siblings nobody dares delete. The rule: ONE canonical file, updated in place; old
+versions live in git history (generalizes c4's update-in-place from docs to all files).
+
+`pre write` now runs `naming-guard` (default-on, WARN-only — it guides, never blocks): on a Write/Edit
+to a versioned name it emits `NAMING-VERSION-SUFFIX` steering to a canonical name + in-place update.
+Checks the filename AND its immediate parent folder. Deliberately excludes `test`/`spec` (`_test.go`·
+`.spec.ts` are canonical test naming, not version suffixes — flagging them would warn on every edit).
+A genuinely intentional name (real public API versioning) is exempted with a `@canonical-ok` marker.
+Rule is c25 (c23·c24 are reserved by in-flight PRs #80·#82).
+
+- `modules/naming-guard.ts` (new) + `modules/pre.ts` wiring · `lib/config.ts` `namingGuard` flag (default true)
+- `config/commons.md` c25 · `ARCHITECTURE.json` + `README.md` + `CLAUDE.md` guard inventory
+
 ## feat(pr-cycle): stale-PR reaper — abandoned open PRs no longer rot, reconciled every cycle
 
 pr-cycle only ever handled ITS OWN branch's PR, so a single interrupted or failed merge left a PR

@@ -54,7 +54,7 @@ harness/
 
 | 명령 | 역할 | hook 단계 |
 |------|------|-----------|
-| `pre bash` / `pre write` | **코드레벨 가드**(force-push{blind `--force`/`-f`/`+refspec` 차단 · `--force-with-lease`는 허용 · `# force-ok` 예외} · cloud-raw c11 · poll c19 · danger{`--no-verify`·`reset --hard`·`curl\|sh` 는 상시 always-on · `rm -rf` 루트(`/`·`/*`·`~`·`$HOME`·`*`)는 config `dangerGuard.rmRfRoot` 토글 · **기본 OFF**(opt-out)} · secret-literal c1 · handoff-scatter) → 그다음 config enforcement 정규식. 코드 가드는 config보다 먼저 실행(profile 편집 무력화 방지) · 인라인 `# …-ok`/`// @secret-ok` 마커 + `dangerGuard.rmRfRoot` 토글만 예외 | PreToolUse |
+| `pre bash` / `pre write` | **코드레벨 가드**(force-push{blind `--force`/`-f`/`+refspec` 차단 · `--force-with-lease`는 허용 · `# force-ok` 예외} · cloud-raw c11 · poll c19 · danger{`--no-verify`·`reset --hard`·`curl\|sh` 는 상시 always-on · `rm -rf` 루트(`/`·`/*`·`~`·`$HOME`·`*`)는 config `dangerGuard.rmRfRoot` 토글 · **기본 OFF**(opt-out)} · secret-literal c1 · handoff-scatter · naming{버전/복사 접미사 파일·폴더명 `_v2`·`_final`·`_copy`·`foo 2` warn → canonical 단일파일 update-in-place 유도 · c25 · `@canonical-ok` 면제}) → 그다음 config enforcement 정규식. 코드 가드는 config보다 먼저 실행(profile 편집 무력화 방지) · 인라인 `# …-ok`/`// @secret-ok` 마커 + `dangerGuard.rmRfRoot` 토글만 예외 | PreToolUse |
 | `post bash <exit>` / `post edit <file>` | 결과 기록, 0≠exit 라우팅, L0 편집 경고 | PostToolUse |
 | `prompt <text>` | 키워드 트리거 + 프롬프트 힌트 주입 | UserPromptSubmit |
 | `architecture {inject\|show}` | repo-root `ARCHITECTURE.json`(우선)/`.md` 를 컨텍스트로 주입 — CLAUDE.md 처럼 설계 SSOT 상주 (80KB 초과 시 절단, 부재 시 무음) | SessionStart + 매 UserPromptSubmit |

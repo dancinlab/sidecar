@@ -87,7 +87,7 @@ export async function runPrCycle(args: string[]): Promise<number> {
     const missing: string[] = [];
     if (meaningful.length && !hasChangelog) missing.push("CHANGELOG.md (append)");
     if (meaningful.length && archDoc && !hasArch) missing.push(`${archDoc} (갱신형 SSOT 현행화)`);
-    if (meaningful.length && readmeExists && !hasReadme) missing.push("README.md (최신 정보 유지)");
+    if (meaningful.length && readmeExists && !hasReadme) missing.push("README.md (현재상태 SSOT 현행화 · 이력 아님 = 제자리 덮어쓰기)");
     if (meaningful.length && ingExists && !hasIng) missing.push("ING.jsonl (진행상황 현행화 · 완료분 harness ing done)");
     if (missing.length) {
       loudFail(`pr-cycle: 문서 업데이트 필수 — 이 사이클 변경(${meaningful.length}개)에 누락: ${missing.join(" · ")}`);

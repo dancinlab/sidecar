@@ -152,6 +152,19 @@ origin/base 로 ff-sync** 한다 — feature 브랜치에서 `git fetch origin <
   **통제(shuffle/ablation/negative-control)**로 기각된 뒤에야 천장 확정. 단일 렌즈 한 번 막힘은 미완
   (다음 렌즈를 시도). **ABLATION** 이 천장-확정의 결정적 도구 — 그 메커니즘만 OFF 했을 때 결과가
   동일하면 그 메커니즘은 INERT(기여 없음) = 천장의 강한 증거.
+  **★ 게으른 천장(lazy ceiling) 금지 — 특히 성능/하드웨어 천장**: "하드웨어 한계라 끝"은 ⓐ deep
+  research(arxiv/문헌 census)로 미시도 **알고리즘** 레버를 cite 로 census(파라미터 sweep 아님) → ⓑ
+  그 레버를 **측정(c2)으로 검증** → ⓒ 인용된 레버를 전부 시도/falsify 한 뒤에만 terminal 🧱. 1-pass
+  직관 "하드웨어 천장" 박제 = 게으른 천장(c2 자가판정 금지의 한 형태). 흔한 함정 = **잘못된 축
+  (wrong-axis)** — 캡이 가정한 축이 아닐 수 있어 research 가 우회 후보를 드러낸다. **단, research 가
+  찾은 우회로도 측정이 최종 심판이다(연구 가설 ≠ 확정 · c2)**: 실증(forge sm_120 TF32 "0.87×
+  FP32-accum 천장") — research 가 FP16-accum 분할보상[Ozaki/3xTF32, arxiv 2203.03341] 우회를 제시
+  → GPU 측정이 정밀화: **정확도 ~400× 향상**(FP32-equiv·deterministic moat)이나 **속도 1.5–1.8×
+  더 느림** = 그 카드 FP16:TF32 비가 ~1.8× 뿐(datacenter 2–4× 가정이 consumer 미적용) → 속도-우회는
+  **hardware-dependent, 5070 에선 closed**(measured root-cause). 즉 research 는 게으른 프레임을 깨고
+  미시도 레버를 드러내되, terminal 은 측정-falsify 후에만(남은 레버 = Ozaki-INT8 n≥8K). 진짜 천장도
+  흔히 **양쪽이 같은 캡 공유** → "parity 도달, 너머는 구조 레버(fusion·결정성)" 가 정직한 종착이지
+  "미달"이 아니다.
 - **(e) 투자 부족** — 스케일업(compute/data). 무거운 작업은 c15 대로 pool/`hexa cloud` 로 분산.
 
 벽은 흔히 (1) 틀린 방법 (2) 틀린 방향 (3) 부족한 투자이지 진짜 천장이 아니다 — 표면 처방을 바꾸기

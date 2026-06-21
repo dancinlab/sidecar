@@ -144,6 +144,18 @@ origin/base 로 ff-sync** 한다 — feature 브랜치에서 `git fetch origin <
   **통제(shuffle/ablation/negative-control)**로 기각된 뒤에야 천장 확정. 단일 렌즈 한 번 막힘은 미완
   (다음 렌즈를 시도). **ABLATION** 이 천장-확정의 결정적 도구 — 그 메커니즘만 OFF 했을 때 결과가
   동일하면 그 메커니즘은 INERT(기여 없음) = 천장의 강한 증거.
+  **★ 게으른 천장(lazy ceiling) 금지 — 특히 성능/하드웨어 천장**: "하드웨어 한계라 끝"은 **deep
+  research(arxiv/문헌/레퍼런스 census)로 미시도 알고리즘 레버를 고갈시킨 뒤에만** 유효하다. 1-pass
+  직관으로 "하드웨어 천장" 박제 금지 — 그건 게으른 천장이다(c2 자가판정 금지의 한 형태). **흔한
+  함정 = 잘못된 축(wrong-axis)**: 캡이 가정한 축이 아니라 다른 데이터패스에 있어 우회 가능한 경우가
+  많다(실증: forge sm_120 TF32 "FP32-accum 반속 하드웨어 천장"은 → FP16-accum 전속 경로를 저정밀
+  분할+오차보상[Ozaki/3xTF32, arxiv 2203.03341]으로 우회 가능 = 다른 축이었음 · BF16 "메모리대역
+  천장"은 → ldmatrix.x4+swizzle+128×128 레시피로 회복가능[WingEdge가 같은 sm_120서 cuBLAS 추월
+  실증] = 알고리즘 적층이지 하드웨어 아님 — 둘 다 1-pass 직관이 틀렸고 research가 뒤집음). 절차:
+  ⓐ 레퍼런스/문헌서 미시도 레버를 cite 로 census(파라미터 sweep 아닌 알고리즘 census) ⓑ 고신뢰
+  레버는 측정으로 검증(c2) ⓒ **진짜 dry**(인용된 모든 레버 시도/falsify 후)일 때만 terminal 🧱.
+  진짜 천장도 흔히 **양쪽이 같은 천장을 공유**(own==reference 둘 다 같은 캡)라 "동등(parity)은
+  도달, 그 너머는 구조 레버[fusion·결정성]" 가 정직한 종착이지 "미달"이 아니다.
 - **(e) 투자 부족** — 스케일업(compute/data). 무거운 작업은 c15 대로 pool/`hexa cloud` 로 분산.
 
 벽은 흔히 (1) 틀린 방법 (2) 틀린 방향 (3) 부족한 투자이지 진짜 천장이 아니다 — 표면 처방을 바꾸기

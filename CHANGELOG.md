@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## docs(commons): c14 (d) — 게으른 천장(lazy ceiling) 금지 · 성능/하드웨어 천장은 research 고갈 후에만
+
+c14 의 벽 분류 (d) "진짜 천장" 항목에 **lazy-ceiling 금지** 규칙을 추가했다. 그동안 (d) 는
+MULTI-LENS + ABLATION 으로 천장을 확정하라고만 했지, **성능/하드웨어 천장 특유의 함정**은
+명시하지 않았다. 실증 사고: forge GPU 의 두 성능 미달(TF32 512–3072 `~0.87×`, BF16 raw `~2×`)을
+1-pass 직관으로 "consumer Blackwell 하드웨어 천장"이라 박제했는데, deep research(arxiv/문헌
+census)가 **둘 다 뒤집었다** — TF32 캡은 FP32-accumulate 축에 있어 FP16-accum 전속 경로 +
+저정밀 분할·오차보상(Ozaki/3xTF32, arxiv 2203.03341)으로 **우회 가능**(잘못된 축), BF16 2× 는
+ldmatrix.x4 + 128B XOR swizzle + 128×128 타일로 **회복가능**(WingEdge 가 같은 sm_120 에서
+cuBLAS 추월 실증 — 알고리즘 적층이지 하드웨어 아님).
+
+규칙: "하드웨어 한계라 끝"은 ⓐ 레퍼런스/문헌서 미시도 알고리즘 레버를 cite 로 census(파라미터
+sweep 아닌 **알고리즘 census**) → ⓑ 고신뢰 레버 측정검증(c2) → ⓒ 인용된 모든 레버 시도/falsify
+후 **진짜 dry** 일 때만 terminal 🧱. 1-pass 직관 박제 금지(c2 자가판정 금지의 한 형태). 흔한
+함정 = **잘못된 축(wrong-axis)** — 캡이 가정한 축이 아니라 다른 데이터패스라 우회 가능. 진짜
+천장도 흔히 **양쪽이 같은 캡 공유** → "parity 도달, 그 너머는 구조 레버(fusion·결정성)" 가 정직한
+종착이지 "미달"이 아니다.
+
 ## feat(architecture): `architecture lint` — mechanical c4 tree-hygiene gate
 
 The architecture module could only `inject`/`show` the design SSOT — nothing guarded the JSON

@@ -1,5 +1,30 @@
 # CHANGELOG
 
+## feat(fleet): abstract + full modes — abstraction-driven dive & full-stack auto-phasing campaign
+
+`fleet` was a 2-mode engine (generic build lanes + `fleet lab` research frontier). Empirical
+search (`lab`) stops at tool/cost ceilings, and there was no codified counterpart for the
+*abstraction* direction — stepping back from accumulated laws to derive a meta-law and design
+an escape principle by thought when the instruments are exhausted. Two new modes close that gap.
+
+- `modules/fleet.ts`: refactored the `lab: boolean` flag into a `Mode` map (fleet · lab ·
+  abstract · full) — one engine, per-mode roster file + runbook + vocabulary so a build-fleet,
+  research-lab, abstraction-dive, and full-stack campaign coexist in one repo without clobbering
+  each other's roster.
+- `fleet abstract` (`templates/fleet-abstract.md`, roster `.harness/fleet/abstract`):
+  abstraction-driven layer dive. Each lane = an accumulated law-set / ceiling empirical search
+  couldn't break. Rounds: census LAWS → peel one layer to the shared trade-off (meta-law) →
+  invent an escape principle (orthogonal lever) → cast as a falsifiable prediction + cheapest
+  refutation, handed to compute/research. Meta-laws (🌌) reopenable by a new lens; all output
+  flagged abstract/unverified (d6 — coordinates, not discovery); lazy-ceiling forbidden (c14 d).
+- `fleet full` (`templates/fleet-full.md`, roster `.harness/fleet/full`): full-stack campaign
+  that auto-phases research→implement→abstract→falsify per frontier — cheap research finds
+  levers → justified implement+measure → empirical wall → auto-promote to abstraction → escape
+  becomes a falsifiable prediction → descend back to experiment. Depletion needs BOTH axes dry.
+- `commands/fleet-abstract.md` + `commands/fleet-full.md` slash delegators (bare `/fleet-abstract`
+  · `/fleet-full`, KO/EN triggers); HELP lines + ARCHITECTURE fleet node + README list updated;
+  TOOLKIT catalog 65 → 67 (in sync, coverage gate green).
+
 ## fix(toolkit): catalog truncation — 6 commands were silently dropped (+ coverage gate)
 
 The HELP-body extraction searched for a bare `` `; `` close delimiter, but the HELP text

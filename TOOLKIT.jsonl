@@ -24,6 +24,8 @@
 {"id":"afg","kind":"hook","usage":"afg [labels]","use":"all-fg-go — run prior-turn branches sequentially in-session (runbook)"}
 {"id":"fleet","kind":"hook","usage":"fleet [name:goal,…|go|stop|status]","use":"perpetual multi-lane orchestrator (runbook + roster)"}
 {"id":"fleet-lab","kind":"hook","usage":"fleet lab [frontier:wall,…|go|…]","use":"research-driven frontier lab (research-gate→implement→measure→SSOT→re-research; walls measured + reopenable)"}
+{"id":"fleet-abstract","kind":"hook","usage":"fleet abstract [layer:seed,…|go|…]","use":"abstraction-driven layer dive (census LAWS→peel to shared trade-off/meta-law→invent escape→cast as falsifiable prediction; meta-laws reopenable · d6 honest)"}
+{"id":"fleet-full","kind":"hook","usage":"fleet full [frontier:goal,…|go|…]","use":"full-stack campaign — auto-phases research→implement→abstract→falsify per frontier (empirical wall → abstract escape → back to experiment; both axes must dry · c14)"}
 {"id":"pr-cycle","kind":"hook","usage":"pr-cycle [gh flags]","use":"push branch → open PR → self-merge (squash·admin·delete-branch)"}
 {"id":"pod","kind":"hook","usage":"pod","use":"GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)"}
 {"id":"dojo","kind":"hook","usage":"dojo [<slug>] [--lang]","use":"cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)"}

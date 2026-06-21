@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## fix(research): arXiv search ignored the query — date-sort + OR-joined terms → relevance default + per-term AND
+
+`harness research arxiv "<free text>"` returned the *newest* arXiv uploads regardless of the query
+(a "DiffusionGemma" paper for an "inhibitory plasticity continual learning" search) because the URL
+hardcoded `sortBy=submittedDate&sortOrder=descending`. A free-text query wants the best-MATCHING
+papers, not the latest — so the default is now `sortBy=relevance`, with `--sort date|updated` to
+restore recency ordering when the caller genuinely wants it. A second bug compounded it: the query
+was built as `all:<whole string>`, which arXiv expands to `all:a OR all:b OR all:c …` (so the
+results matched ANY term — noisy). Each whitespace term is now prefixed `all:` and joined with `AND`
+for a precise conjunctive search; a `"quoted phrase"` is kept as one `all:"…"` term. by-id lookups
+are unchanged. The `arxiv`/`research` slash commands delegate to this module so both surfaces inherit
+the fix. Verified against the live API: the relevance default now returns on-topic neuroscience
+papers (spiking-neuron sequence learning, dendritic backprop), `--sort date` returns the latest, and
+`research arxiv 1706.03762` still resolves "Attention Is All You Need".
+
+- `modules/research.ts` — `--sort` flag + per-term AND query builder
+- `cli/index.ts` help line · `commands/research.md` + `commands/arxiv.md` arg-hints/descriptions
+
 ## fix(ing): `resetIngStaleness` missing from import — `ing add`/`done` crashed with ReferenceError
 
 `modules/ing.ts` called `resetIngStaleness()` at two sites (after a board write — `add` and `done`,

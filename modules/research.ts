@@ -1,7 +1,7 @@
-// harness research {arxiv <query|id> [--n N] | yt <url|id> [lang]}
+// harness research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang]}
 // Fetch external research material, no API key:
-//   arxiv  search the official arXiv API by free-text, or fetch by id — returns
-//          title / authors / date / categories / pdf link / abstract.
+//   arxiv  search the official arXiv API by free-text (relevance-ranked, per-term AND),
+//          or fetch by id — returns title / authors / date / categories / pdf / abstract.
 //   yt     extract a YouTube caption transcript via the InnerTube `player` API
 //          (ANDROID client; the watch-page baseUrl serves empty timedtext, the
 //          ANDROID client's caption-track baseUrls still serve content).
@@ -39,19 +39,38 @@ function looksLikeArxivId(s: string): boolean {
 
 async function arxiv(args: string[]): Promise<number> {
   let n = 5;
+  // Default sort = relevance. A free-text query wants the BEST-matching papers, not
+  // the newest — sortBy=submittedDate returned the latest arXiv uploads regardless of
+  // the query terms (a "DiffusionGemma" paper for an "inhibitory plasticity" query).
+  // --sort date|updated restores recency ordering when the caller genuinely wants it.
+  let sort = "relevance";
   const rest: string[] = [];
   for (let i = 0; i < args.length; i++) {
     if ((args[i] === "--n" || args[i] === "-n") && i + 1 < args.length) n = parseInt(args[++i], 10) || 5;
-    else rest.push(args[i]);
+    else if ((args[i] === "--sort" || args[i] === "-s") && i + 1 < args.length) {
+      const v = args[++i].toLowerCase();
+      sort = v === "date" || v === "submitteddate" ? "submittedDate"
+        : v === "updated" || v === "lastupdateddate" ? "lastUpdatedDate"
+        : "relevance";
+    } else rest.push(args[i]);
   }
   const q = rest.join(" ").trim();
   if (!q) {
-    info("usage: harness research arxiv <query | arxiv-id> [--n N]");
+    info("usage: harness research arxiv <query | arxiv-id> [--n N] [--sort relevance|date|updated]");
     return 1;
   }
-  const query = looksLikeArxivId(q)
-    ? `id_list=${encodeURIComponent(q)}`
-    : `search_query=${encodeURIComponent("all:" + q)}&sortBy=submittedDate&sortOrder=descending`;
+  let query: string;
+  if (looksLikeArxivId(q)) {
+    query = `id_list=${encodeURIComponent(q)}`;
+  } else {
+    // arXiv joins bare space-separated terms with OR (so "a b c" matches a OR b OR c —
+    // noisy). Prefix each term with the all: field and join with AND for a precise
+    // conjunctive search; a "quoted phrase" is kept as one all:"…" term.
+    const terms = q.match(/"[^"]+"|\S+/g) ?? [q];
+    const searchExpr = terms.map((t) => `all:${t}`).join(" AND ");
+    const sortPart = sort === "relevance" ? "sortBy=relevance" : `sortBy=${sort}&sortOrder=descending`;
+    query = `search_query=${encodeURIComponent(searchExpr)}&${sortPart}`;
+  }
   const url = `https://export.arxiv.org/api/query?${query}&max_results=${Math.max(1, Math.min(50, n))}`;
   // arXiv throttles bursts (>~1 req / 3s) with a bare "Rate exceeded." body — which
   // is NOT an empty result set. Two-part handling so an AI agent recognizes + recovers:
@@ -192,6 +211,6 @@ export async function runResearch(args: string[]): Promise<number> {
   const sub = args[0];
   if (sub === "arxiv") return arxiv(args.slice(1));
   if (sub === "yt" || sub === "youtube") return yt(args.slice(1));
-  info("usage: harness research {arxiv <query|id> [--n N] | yt <url|id> [lang]}");
+  info("usage: harness research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang]}");
   return 1;
 }

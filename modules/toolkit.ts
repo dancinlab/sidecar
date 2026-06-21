@@ -42,15 +42,36 @@ function sectionKind(header: string): string {
 }
 
 // Extract the HELP template literal body from cli/index.ts source as plain text.
+// @convergence state=ossified id=HELP_CLOSE_DELIM_NEWLINE value="the closing delimiter search must be the line-start `\\n\\`;`, NOT a bare `\\`;` — the HELP body contains escaped backticks (e.g. `worktree gc\\`;`) and a bare-`\\`;` search truncated there, silently dropping every command after worktree (atlas/convergence/ing/sync/upstream/verdict)" threshold="bare backtick-semicolon search matched an escaped inline backtick mid-body and cut the catalog short"
 function helpText(): string {
   const src = readFileSync(CLI_SRC, "utf8");
   const start = src.indexOf("HELP = `");
   if (start < 0) return "";
   const from = start + "HELP = `".length;
-  const end = src.indexOf("`;", from);
+  // the template closes with a line-start `;  — match THAT, not an escaped inline `\`;`.
+  const end = src.indexOf("\n`;", from);
   const body = src.slice(from, end < 0 ? undefined : end);
   // un-escape the backtick-template escapes used inside the literal
   return body.replace(/\\`/g, "`").replace(/\\\$/g, "$");
+}
+
+// Dispatch command ids that are ALIASES of a canonical entry already in the catalog
+// (they share the canonical's HELP line, so they don't get their own catalog row).
+const ALIASES: Record<string, string> = {
+  "all-bg-go": "abg", "all-fg-go": "afg", drill: "kick", demiurge: "demi",
+  micro: "micro-exp", "step-by-step": "sbs", mem: "mem-guard",
+};
+
+// Every dispatch `case "x"` id, parsed from the CLI source (authoritative surface).
+function dispatchIds(): string[] {
+  const src = readFileSync(CLI_SRC, "utf8");
+  return [...new Set([...src.matchAll(/case "([^"]+)":/g)].map((m) => m[1]))];
+}
+
+// Coverage gap: dispatch commands NOT present in the catalog and NOT a known alias.
+export function toolkitCoverageGaps(): string[] {
+  const ids = new Set(parseToolkit().map((e) => e.id));
+  return dispatchIds().filter((c) => !ids.has(c) && !(c in ALIASES));
 }
 
 // keyword triggers → command id, so the catalog shows which user phrasings route here.
@@ -114,6 +135,8 @@ function toJsonl(entries: ToolkitEntry[]): string {
 // catalog, else a one-line drift reason. Never throws.
 export function toolkitDrift(): string | null {
   try {
+    const gaps = toolkitCoverageGaps();
+    if (gaps.length) return `${gaps.length} command(s) missing from catalog (${gaps.join(", ")}) — document in HELP`;
     const generated = toJsonl(parseToolkit());
     const committed = existsSync(TOOLKIT_FILE) ? readFileSync(TOOLKIT_FILE, "utf8") : "";
     if (committed === generated) return null;
@@ -170,10 +193,16 @@ export async function runToolkit(args: string[]): Promise<number> {
     return 0;
   }
   if (sub === "check") {
+    const gaps = toolkitCoverageGaps();
+    if (gaps.length) {
+      for (const g of gaps) warn(`  uncatalogued command: ${g} (in cli dispatch, missing from HELP/catalog)`);
+      loudFail(`toolkit: ${gaps.length} command(s) NOT in the catalog — every command must be documented in HELP`);
+      return 1;
+    }
     const generated = toJsonl(entries);
     const committed = existsSync(TOOLKIT_FILE) ? readFileSync(TOOLKIT_FILE, "utf8") : "";
     if (committed === generated) {
-      ok(`toolkit: ${entries.length} entries — TOOLKIT.jsonl in sync with HELP`);
+      ok(`toolkit: ${entries.length} entries — TOOLKIT.jsonl in sync with HELP · all dispatch commands catalogued`);
       return 0;
     }
     if (!committed) loudFail("toolkit: TOOLKIT.jsonl missing — run 'harness toolkit write'");

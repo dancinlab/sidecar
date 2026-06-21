@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## fix(toolkit): catalog truncation — 6 commands were silently dropped (+ coverage gate)
+
+The HELP-body extraction searched for a bare `` `; `` close delimiter, but the HELP text
+contains an ESCAPED inline backtick (`worktree gc\`;` on the worktree line) — so extraction
+truncated THERE, silently dropping every command after worktree from the catalog
+(atlas · convergence · ing · sync · upstream · verdict). The agent-facing catalog (and
+TOOLKIT.jsonl) was missing 6 commands.
+
+- Fix: close on the line-start `` \n`; `` (the real template terminator), not an escaped
+  inline `` \`; ``. Catalog 59 → 65 entries (all dispatch commands now present).
+- New coverage gate: `toolkit check` asserts EVERY `cli/index.ts` dispatch `case` is in the
+  catalog (alias map excepted) → exit 1 on any uncatalogued command, so a new command can
+  never silently miss the catalog again. `harness lint` surfaces it as TOOLKIT-DRIFT (warn).
+- `@convergence HELP_CLOSE_DELIM_NEWLINE`.
+
 ## fix(research): robust arXiv rate-limit handling — backoff retry + agent-recognizable notice
 
 Extends the prior rate-limit fix: arXiv throttles a burst with MULTIPLE signals —

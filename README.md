@@ -230,6 +230,8 @@ bash .harness-engine/bin/harness ci list
 
 `harness pr-cycle` 은 검증된 머지 직후 **로컬 base(main) 를 origin/base 로 ff-sync** 한다(feature 브랜치에서 `git fetch origin <base>:<base>` — checkout 전환 없이 로컬 main 뒤처짐 방지, non-ff 거부=안전). origin 만 갱신하고 로컬 main 을 방치하지 않으므로, 다음 작업 브랜치는 항상 최신 base 에서 분기된다. (commons c12)
 
+이어서 **stale-PR reaper** 가 돈다 — pr-cycle 은 원래 *자기 브랜치 PR* 만 다뤄, 한 번 중단·실패한 머지는 PR 이 열린 채 영구 방치되고 시간이 지나면 머지가능하던 것도 충돌로 썩었다. reaper 는 검증 머지 직후 **내 다른 열린 PR 을 전수 점검**해 머지가능(MERGEABLE)은 자동 squash-머지(자기 PR · admin · delete-branch — 메인 흐름과 동일 신뢰모델), 기계가 안전하게 못 닿는 것(CONFLICTING/blocked)은 다음 조치(rebase 또는 `gh pr close`)와 함께 **큰소리로 보고**한다. 즉 만들어졌지만 안 머지된 PR 은 매 사이클 **반드시 처리되거나 경보**되어 조용히 잊히지 않는다. `--no-reap` 으로 끈다.
+
 같은 doc-gate 가 **pre-commit `harness lint` 에서도 발화한다** — pr-cycle 을 거치지 않는 작업이라도, 의미있는 코드 변경이 staged 인데 CHANGELOG / (존재 시) ARCHITECTURE·README 가 같이 staged 안 됐으면 **commit 을 차단**한다(`CHANGELOG-MISSING`·`ARCHITECTURE-MISSING`·`README-MISSING`, 모두 block). 즉 "모든 작업 이후" 문서 현행화가 강제된다. 진짜 문서 불필요한 변경만 `git commit --no-verify`.
 
 ## 라이선스

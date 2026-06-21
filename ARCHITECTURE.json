@@ -182,7 +182,7 @@
                 "이름": "pr-cycle",
                 "역할": "push→PR→검증머지→로컬 base sync",
                 "구분": "module",
-                "상세": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→**로컬 base ff-sync**(`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부)→merged worktree sweep([gone] 업스트림). main/master 에선 거부. ⚠️ pr-cycle sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 가 isolation:worktree 로 만든 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적된다. 그건 SessionStart `worktree gc` 의 age 백스톱(HEAD>worktree.maxAgeDays 기본 3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거"
+                "상세": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→**로컬 base ff-sync**(`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부)→merged worktree sweep([gone] 업스트림)→**stale-PR reaper**(내 다른 열린 PR 전수: MERGEABLE=자동 squash머지 · CONFLICTING/blocked=rebase/`gh pr close` 안내와 함께 큰소리 보고 · `--no-reap` 차단). main/master 에선 거부. ⚠️ pr-cycle sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 가 isolation:worktree 로 만든 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적된다. 그건 SessionStart `worktree gc` 의 age 백스톱(HEAD>worktree.maxAgeDays 기본 3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거. reaper 는 pr-cycle 이 자기 브랜치 PR 만 보던 탓에 중단/실패한 머지가 영구 방치(→충돌로 썩음)되던 누수를 막음"
               },
               {
                 "이름": "ship",

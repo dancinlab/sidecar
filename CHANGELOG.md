@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## feat(pr-cycle): stale-PR reaper — abandoned open PRs no longer rot, reconciled every cycle
+
+pr-cycle only ever handled ITS OWN branch's PR, so a single interrupted or failed merge left a PR
+open forever — and no later run revisited it. Over days a once-MERGEABLE PR rots into CONFLICTING.
+(Found 4 such abandoned PRs on this repo: 2 still cleanly mergeable, 2 rotted into conflicts.) New
+step 6 runs after a verified merge: enumerate MY other open PRs and reconcile each — auto squash-merge
+the MERGEABLE ones (same trust model as the main flow: own PR · `--admin` · `--delete-branch`) and
+LOUDLY report the ones a machine can't safely land (CONFLICTING / blocked) with the exact next step
+(rebase or `gh pr close`). GitHub computes `mergeable` asynchronously, so UNKNOWN is re-polled. The
+reaper never fails the cycle (the primary merge is already done) and is opt-out via `--no-reap`
+(threaded through `harness ship` too). Net effect: a created-but-unmerged PR can never be silently
+forgotten — every subsequent cycle either lands it or shouts about it.
+
+- `modules/pr-cycle.ts` — `reapStalePrs()` + step 6 call · `--no-reap` added to `OWN_FLAGS`
+- `cli/index.ts` help line · `commands/pr-cycle.md` description/arg-hint
+
 ## docs(commons): README is a current-state SSOT (update-in-place), not a history log — same discipline as ARCHITECTURE
 
 The doc-gate already demanded README refresh alongside meaningful changes, but only ARCHITECTURE

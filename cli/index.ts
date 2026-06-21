@@ -87,6 +87,8 @@ hook delegates (wire these into your agent's settings.json):
   afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)
   fleet [name:goal,…|go|stop|status]   perpetual multi-lane orchestrator (runbook + roster)
   fleet lab [frontier:wall,…|go|…]      research-driven frontier lab (research-gate→implement→measure→SSOT→re-research; walls measured + reopenable)
+  fleet abstract [layer:seed,…|go|…]    abstraction-driven layer dive (census LAWS→peel to shared trade-off/meta-law→invent escape→cast as falsifiable prediction; meta-laws reopenable · d6 honest)
+  fleet full [frontier:goal,…|go|…]     full-stack campaign — auto-phases research→implement→abstract→falsify per frontier (empirical wall → abstract escape → back to experiment; both axes must dry · c14)
   pr-cycle [gh flags]      push branch → open PR → self-merge (squash·admin·delete-branch)
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)

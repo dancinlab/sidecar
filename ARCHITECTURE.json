@@ -221,10 +221,10 @@
                 "상세": "templates/poll.md 방출. 매 idle 반응/손수 짠 bash sleep 루프(c19 차단) 대신 타이머로 자가 wake → 1회 체크 → fire-on-arrival → 보고 → 재예약. interval 인자는 ≥600s floor 로 클램프(기본 1200s), 숫자 아닌 인자=watch target. CI는 ci-track --watch 우선·하네스가 알림 주는 건 폴링 금지"
               },
               {
-                "이름": "fleet (+ fleet lab)",
-                "역할": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival)",
+                "이름": "fleet (+ lab/abstract/full)",
+                "역할": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
                 "구분": "module",
-                "상세": "roster `.harness/fleet/active` + templates/fleet.md 방출. N개 독립 레인을 background Agent로 돌리고 각 레인은 착륙 즉시 다음 라운드를 스스로 발사(barrier 없음). 서브커맨드 `fleet lab` = research 특화 변종(별도 roster `.harness/fleet/lab` + templates/fleet-lab.md): 각 레인=막힌 프론티어(벽), 매 라운드 싼 research(web/arxiv·census, mini-safe) gate → 정당화 시만 비싼 implement/measure(pool/GPU) → 측정(c2) → SSOT 박제(blocking-frontiers + 메모리) → 재-research/벽. 벽(🧱)은 측정으로만 선언·새 research로 reopen. `/fleet lab …`는 기존 fleet sidecar가 `$ARGUMENTS` forward(별도 명령 불필요). go/stop/status 공통"
+                "상세": "MODES 맵(fleet·lab·abstract·full)이 엔진 1개를 공유하고 roster 파일·런북·어휘만 다르다 — 빌드/리서치/추상/풀스택 캠페인이 한 repo 에서 roster 충돌 없이 공존. 기본 `fleet` = roster `.harness/fleet/active` + templates/fleet.md, N개 독립 레인을 background Agent로 돌리고 각 레인은 착륙 즉시 다음 라운드를 스스로 발사(barrier 없음). `fleet lab` = research 특화(roster `lab` + fleet-lab.md): 레인=막힌 프론티어(벽), 싼 research gate → 정당화 시만 비싼 implement/measure → 측정(c2) → SSOT(blocking-frontiers) → 재-research/벽(🧱 reopenable). `fleet abstract` = 추상화 특화(roster `abstract` + fleet-abstract.md): 레인=누적 법칙군/천장, census LAWS → 한 겹 peel 해 공유 trade-off(메타법칙) 도출 → escape 원리 발명 → 반증가능 예측으로 캐스팅해 compute/research 핸드오프. 메타법칙(🌌)은 새 lens 로 reopen, 산출은 전부 미검증(d6 좌표≠발견), lazy-ceiling 금지(c14 d). `fleet full` = 풀스택(roster `full` + fleet-full.md): 프론티어가 스스로 페이즈 전환 research→implement→(벽)→abstract→(escape)→falsify→research 순환, depletion 은 경험·추상 양축 모두 dry 일 때만. 4모드 모두 go/stop/status 공통, `/fleet <mode> …`는 sidecar 가 `$ARGUMENTS` forward"
               },
               {
                 "이름": "errors",

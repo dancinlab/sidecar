@@ -49,6 +49,10 @@ SSOT quickref 1줄. 메인 CLAUDE.md = 프로젝트 설명 + 트리구조(노드
 하라는 뜻이지 *항목 추가*가 아니다. 트리에 변경이력·버전·날짜·`previous`/`기존엔`/`이전엔…`·`deprecated`
 노드를 **남기지 마라** — 트리는 *지금 이 순간의 최종 구조*만 보여야 한다(미래 독자가 "이게 현재다"로 읽음).
 이력은 **CHANGELOG.md(append) + git** 이 SSOT. 노드를 바꾸면 옛 서술은 **지우고** 새 서술로 덮어쓴다.
+**README 도 같은 규율(현재상태 SSOT · 이력 아님)**: README 는 *지금의* 기능·사용법·구조만 담는 갱신형
+문서다 — ARCHITECTURE 처럼 **update-in-place** 하고, 바뀐 서술은 제자리 교체한다. README 에 변경이력·
+버전 로그·날짜·`이전엔…`/`deprecated`/"v0.x 에서 추가" 식 누적을 **남기지 마라**(그건 CHANGELOG+git 몫).
+즉 doc-gate 가 README 현행화를 요구할 때 "이력 한 줄 덧붙이기"가 아니라 **해당 절을 최종 상태로 덮어쓰기**다.
 `.json` 트리 채택 시: JSON 이 SSOT(AI·툴 파싱), 사람은 `.html` 뷰어로 본다 — 로컬은 `python3 serve.py`
 (정적 서버 + 브라우저 자동 오픈, `file://` fetch 차단 우회), 원격은 raw.githack.com / GitHub Pages.
 **트리로 실제 체계화(한 셀 덤프 금지)**: ARCHITECTURE.json 은 **위계를 `children` 트리로** 표현한다 — 한

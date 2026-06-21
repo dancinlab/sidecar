@@ -1,5 +1,19 @@
 # CHANGELOG
 
+## docs(commons): README is a current-state SSOT (update-in-place), not a history log — same discipline as ARCHITECTURE
+
+The doc-gate already demanded README refresh alongside meaningful changes, but only ARCHITECTURE
+carried the explicit "현재상태 스냅샷, 이력 로그 아님 / update-in-place / no version·date·`이전엔…`"
+discipline (commons c4). README was labelled merely "최신 정보 유지", which read as license to *append*
+a history line each cycle. Per user direction, README now sits in the same class as ARCHITECTURE: a
+current-state SSOT that is overwritten in place, with history living in CHANGELOG + git.
+
+- `config/commons.md` c4 — added the README clause (current-state · update-in-place · no version/date/
+  `이전엔`/`deprecated` accumulation; refreshing README = overwriting the affected section, not appending)
+- `modules/pr-cycle.ts` · `modules/lint.ts` — the README doc-gate message now states "현재상태 SSOT ·
+  이력 아님 = 제자리 덮어쓰기" instead of the ambiguous "최신 정보 유지"
+- `README.md` — added a 📌 note declaring README a current-state SSOT (no history accumulation)
+
 ## fix(research): arXiv search ignored the query — date-sort + OR-joined terms → relevance default + per-term AND
 
 `harness research arxiv "<free text>"` returned the *newest* arXiv uploads regardless of the query

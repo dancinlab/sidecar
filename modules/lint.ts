@@ -78,7 +78,7 @@ export async function runLint(args: string[]): Promise<number> {
           violations.push({
             rule: doc === "README.md" ? "README-MISSING" : "ARCHITECTURE-MISSING",
             file: doc,
-            msg: `${codeChanges.length} code file(s) staged without ${doc} 현행화 (pr-cycle parity · --no-verify if truly N/A)`,
+            msg: `${codeChanges.length} code file(s) staged without ${doc} 현행화 (현재상태 SSOT — 제자리 덮어쓰기, 이력 아님 · pr-cycle parity · --no-verify if truly N/A)`,
           });
         }
       }

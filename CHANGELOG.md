@@ -42,7 +42,6 @@ byte-eq PASS(max|Δ|=0)이나 perf flat — ptxas 가 이미 near-optimal(CloudR
 research 는 게으른 프레임을 깨고 미시도 레버를 드러내되 **측정이 최종 심판** — 남은 레버(Ozaki-INT8
 n≥8K, INT8 이 ~4× rate 라 multiplier 초과) 시도 전엔 미완. 진짜 천장도 흔히 양쪽 공유 캡 →
 "parity 도달, 너머는 구조 레버(fusion·결정성)" 가 정직한 종착이지 "미달"이 아니다.
->>>>>>> origin/main
 
 ## fix(worktree): age backstop in gc — stop squash/no-push agent worktrees piling up
 

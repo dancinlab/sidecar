@@ -26,6 +26,36 @@
       "hint": "재발 감지 (c1) — 같은 결함/실수가 또 났다. 별도 incident 파일이 아니라 결함난 그 코드 파일의 인라인 주석에 재발방지 마커를 남겨라: `// @convergence state=ossified id=<ID> value=\"<핵심>\" threshold=\"<재발조건/해결>\"` (필수 키 state·id · state∈ossified·stable·in_flight·pending·completed·completed_gap·failed·blocked). 형식 강제: `harness convergence scan` — state+id 누락/잘못된 state 는 CONVERGENCE-MALFORMED 로 `harness lint` 커밋 게이트가 차단한다."
     },
     {
+      "id": "research-fetch",
+      "patterns": ["arxiv", "arXiv", "논문 찾", "논문 검색", "선행연구", "관련 연구", "related work", "survey 논문", "서베이", "SOTA", "최신 연구", "preprint", "literature review", "유튜브 자막", "youtube transcript", "영상 자막", "transcript 추출"],
+      "tool": "harness research",
+      "hint": "외부 연구자료는 키 없이 `harness research`: `research arxiv <query|id> [--n N]`(arXiv 검색/ID — 제목·저자·PDF·초록 · rate-limit 자동 백오프) · `research yt <url|id> [lang]`(YouTube 자막). 새 연구 추격/벽 측정 전 research-first."
+    },
+    {
+      "id": "credentials",
+      "patterns": ["api key", "API 키", "api 키", "키가 필요", "키 필요", "credential", "자격증명", "access token", "비밀키", "인증 정보", "토큰 저장", "secret get", "secret set", "키 저장"],
+      "tool": "harness secret",
+      "hint": "크리덴셜은 하드코딩 금지 — `harness secret`(Keychain/암호화 저장소): list·get·set·rotate. 누락 주장 전 `harness secret list`로 별칭 포함 존재 확인. 값은 인라인 `$(secret get <key>)`로 주입(get 은 값이 컨텍스트 노출)."
+    },
+    {
+      "id": "media-analyze",
+      "patterns": ["영상 분석", "비디오 분석", "동영상 분석", "영상 요약", "프레임 추출", "영상에서 추출", "유튜브 영상 보", "video frames"],
+      "tool": "harness watch",
+      "hint": "영상/오디오를 agent 가 보게 하려면 `harness watch <url|path> [question]`: yt-dlp 다운로드 → ffmpeg 프레임 + 자막/Whisper 전사 추출."
+    },
+    {
+      "id": "image-gen",
+      "patterns": ["이미지 생성", "그림 생성", "이미지 만들", "그림 그려줘", "generate image", "image generation", "일러스트 생성", "썸네일 생성", "커버 이미지", "dall-e"],
+      "tool": "harness imagine",
+      "hint": "AI 이미지 생성은 `harness imagine <prompt-file> <out.png> [-s size] [-b fal|openai]` — 프롬프트는 FILE 에서, 키는 secret 로. `imagine list|history`."
+    },
+    {
+      "id": "paper-writing",
+      "patterns": ["논문 작성", "논문 빌드", "논문 써", "scientific paper", "페이퍼 작성", "논문 스캐폴", "latex 논문", "논문 초안"],
+      "tool": "harness paper",
+      "hint": "과학 논문(demiurge-house)은 `harness paper new|build|cover|list <slug>`: 이모지 타이틀·g5 tier 배지·TikZ/pgfplots·fal 커버 → xelatex+bibtex×3 빌드 → ≥10페이지 게이트. (연구자료 수집은 `harness research`)"
+    },
+    {
       "id": "in-progress-board",
       "patterns": ["진행중", "지금 뭐", "작업 현황", "in progress", "pod 관리", "돌고 있는", "ING.md"],
       "tool": "harness ing",

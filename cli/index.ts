@@ -20,6 +20,7 @@ import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
+import { runShip } from "../modules/ship.ts";
 import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap, runPoll } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runKick } from "../modules/kick.ts";
@@ -65,6 +66,7 @@ setup:
   install-hooks [--global|--repo]   merge harness hooks into ~/.claude/settings.json (global, like a plugin) or repo .claude (needs harness on PATH)
   self-update              git-pull the harness CLI clone this binary runs from (e.g. ~/.harness/cli) to latest main
   shadow [plan|remove]     mirror harness's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable)
+  ship [--no-doc]          one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -170,6 +172,8 @@ async function main(): Promise<number> {
       return runFleet(rest);
     case "pr-cycle":
       return runPrCycle(rest);
+    case "ship":
+      return runShip(rest);
     case "pod":
       return runPod(rest);
     case "mem-guard":

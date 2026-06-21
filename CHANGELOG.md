@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## feat(ship): one-shot propagate to ALL surfaces — pr-cycle → self-update → shadow
+
+A harness change lives on three surfaces — the merged repo, the global CLI clone
+(`~/.harness/cli`), and the shadow mirror (`~/.claude/commands/`, the source of bare `/cmd`
+slash commands since plugin.json ships `commands: []`). The standard cycle ran `pr-cycle` +
+`self-update` but NOT `shadow`, so a newly added slash command (`/fleet-abstract`, `/fleet-full`)
+merged and worked from the terminal yet stayed **invisible in the picker** — reloading the
+plugin couldn't help, because the plugin doesn't serve commands at all. Root cause: the three
+propagation steps were separate and one was routinely forgotten.
+
+- `harness ship [--no-doc]` (`modules/ship.ts`): runs the three in the one correct order —
+  pr-cycle (verified merge) → self-update (global CLI) → shadow (re-mirror slash commands) —
+  and STOPS on the first failure (a failed merge never touches CLI/shadow). `--no-doc` forwards
+  to pr-cycle for config/data-only changes. `@convergence SHIP_PROPAGATE_ALL_SURFACES`.
+- `commands/ship.md` slash delegator (bare `/ship`, KO/EN triggers); HELP line + ARCHITECTURE
+  node + README list; TOOLKIT catalog 67 → 68 (in sync).
+- `CLAUDE.md` 작업 규칙: **구현 후에는 항상 `harness ship`** — codified so the shadow step can
+  never be dropped again.
+
 ## feat(fleet): abstract + full modes — abstraction-driven dive & full-stack auto-phasing campaign
 
 `fleet` was a 2-mode engine (generic build lanes + `fleet lab` research frontier). Empirical

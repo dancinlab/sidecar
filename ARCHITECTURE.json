@@ -185,6 +185,12 @@
                 "상세": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→**로컬 base ff-sync**(`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부)→merged worktree sweep([gone] 업스트림). main/master 에선 거부. ⚠️ pr-cycle sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 가 isolation:worktree 로 만든 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적된다. 그건 SessionStart `worktree gc` 의 age 백스톱(HEAD>worktree.maxAgeDays 기본 3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거"
               },
               {
+                "이름": "ship",
+                "역할": "구현 후 모든 설치 surface 에 한 번에 전파 (orchestrator)",
+                "구분": "module",
+                "상세": "pr-cycle(검증 머지) → self-update(전역 CLI ~/.harness/cli git-pull) → shadow(commands/ → ~/.claude/commands/ 재미러) 를 한 명령으로 묶어 올바른 순서로 실행, 단계 실패 시 즉시 중단(머지 실패 → CLI·shadow 미실행). @convergence SHIP_PROPAGATE_ALL_SURFACES: pr-cycle+self-update 만 돌리고 shadow 를 빠뜨리면 새 슬래시 명령이 picker 에 안 떠 '반영 안됨' 이 재발 → 셋을 ship 으로 묶어 락스텝. CLAUDE.md 작업규칙='구현 후 항상 ship'. 플러그인(/plugin) 설치본은 별도 surface 라 버전 bump + `/plugin update` 로 갱신(ship 범위 밖, 메시지로 안내). `--no-doc` 는 pr-cycle 로 forward"
+              },
+              {
                 "이름": "verify",
                 "역할": "검증 명령 병렬 실행",
                 "구분": "module",

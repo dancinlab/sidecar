@@ -35,6 +35,6 @@ harness/
 ```
 
 ## 작업 규칙 (this repo)
-- 매 사이클: 문서(CHANGELOG + 설계변경 시 ARCHITECTURE) → `harness pr-cycle` 검증 머지 (commons c14).
-- 새 명령: `modules/<name>.ts` + `cli/index.ts` 등록 + help 라인 + CHANGELOG. 런북형이면 `templates/<name>.md`.
-- 엔진 변경 후 검증: `npx tsx cli/index.ts help` 로드 + 관련 스모크. 전역 반영: `harness self-update`.
+- 매 사이클: 문서(CHANGELOG + 설계변경 시 ARCHITECTURE) → 검증 → **구현 후에는 항상 `harness ship`** (commons c14).
+- **`harness ship` = 모든 설치 surface 에 한 번에 전파**: pr-cycle(검증 머지) → self-update(전역 CLI) → shadow(슬래시 미러). `pr-cycle`+`self-update` 만 돌리고 `shadow` 를 빠뜨리면 새 슬래시 명령이 picker 에 안 떠 "반영 안됨" 이 재발한다 — 그래서 셋을 한 명령으로 묶었다. config/data-only 변경은 `harness ship --no-doc`.
+- 새 명령: `modules/<name>.ts` + `cli/index.ts` 등록 + help 라인 + CHANGELOG (+ 런북형이면 `templates/<name>.md`, 슬래시 노출이면 `commands/<name>.md`). 검증: `npx tsx cli/index.ts help` 로드 + `harness toolkit write`(카탈로그 100% 유지) + 관련 스모크 → `harness ship`.

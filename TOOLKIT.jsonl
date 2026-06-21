@@ -5,6 +5,7 @@
 {"id":"install-hooks","kind":"setup","usage":"install-hooks [--global|--repo]","use":"merge harness hooks into ~/.claude/settings.json (global, like a plugin) or repo .claude (needs harness on PATH)"}
 {"id":"self-update","kind":"setup","usage":"self-update","use":"git-pull the harness CLI clone this binary runs from (e.g. ~/.harness/cli) to latest main"}
 {"id":"shadow","kind":"setup","usage":"shadow [plan|remove]","use":"mirror harness's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable)"}
+{"id":"ship","kind":"setup","usage":"ship [--no-doc]","use":"one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation"}
 {"id":"pre","kind":"hook","usage":"pre bash","use":"PreToolUse(Bash)  — enforcement match → block/warn"}
 {"id":"pre-write","kind":"hook","usage":"pre write","use":"PreToolUse(Write/Edit) — path/content rules"}
 {"id":"pre-askq","kind":"hook","usage":"pre askq","use":"PreToolUse(AskUserQuestion) — deny option-box → ask in plain chat (config.askqText)"}

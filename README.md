@@ -84,7 +84,7 @@ harness/
 ## 슬래시 명령 (플러그인 · 공용셋)
 
 `commands/*.md` — 전체 사용자-대면 명령이 **bare `/cmd` 슬래시 명령**으로 노출된다(`/paper`·`/imagine`·
-`/pr-cycle`·`/sbs`·`/fleet`·`/fleet-lab`·`/fleet-abstract`·`/fleet-full`·`/ing`·`/ci`·`/kick`·`/poll` …). 각 `.md` 는 프런트매터(`description` +
+`/pr-cycle`·`/ship`·`/sbs`·`/fleet`·`/fleet-lab`·`/fleet-abstract`·`/fleet-full`·`/ing`·`/ci`·`/kick`·`/poll` …). 각 `.md` 는 프런트매터(`description` +
 **Triggers** 자연어구 + `argument-hint` + `allowed-tools: Bash`)와 `!`harness <cmd> $ARGUMENTS`` 본문의 얇은
 위임자 — Claude Code 가 description/Triggers 로 인지한다(한국어·영어 트리거 양쪽).
 

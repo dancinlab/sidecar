@@ -1,0 +1,59 @@
+{"id":"install","kind":"setup","usage":"install [--no-hooks] [--ref main] [--dry-run]","use":"COMMON/global setup — clone dancinlab/harness → ~/.harness/cli + a harness wrapper on ~/.local/bin + global hooks (idempotent). NOT a per-repo scaffold (that's init). curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/harness/main/scripts/install.sh | bash"}
+{"id":"init","kind":"setup","usage":"init [--force] [--hooks] [--dry-run]","use":"scaffold THIS repo: config + .harness rules + gitignore + wrapper + hooks (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)"}
+{"id":"uninstall","kind":"setup","usage":"uninstall [--dry-run] [--keep-logs]","use":"remove harness-injected files (config/.harness/hooks/wrapper); keeps user content"}
+{"id":"update","kind":"setup","usage":"update [--hooks]","use":"bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh"}
+{"id":"install-hooks","kind":"setup","usage":"install-hooks [--global|--repo]","use":"merge harness hooks into ~/.claude/settings.json (global, like a plugin) or repo .claude (needs harness on PATH)"}
+{"id":"self-update","kind":"setup","usage":"self-update","use":"git-pull the harness CLI clone this binary runs from (e.g. ~/.harness/cli) to latest main"}
+{"id":"shadow","kind":"setup","usage":"shadow [plan|remove]","use":"mirror harness's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable)"}
+{"id":"pre","kind":"hook","usage":"pre bash","use":"PreToolUse(Bash)  — enforcement match → block/warn"}
+{"id":"pre-write","kind":"hook","usage":"pre write","use":"PreToolUse(Write/Edit) — path/content rules"}
+{"id":"pre-askq","kind":"hook","usage":"pre askq","use":"PreToolUse(AskUserQuestion) — deny option-box → ask in plain chat (config.askqText)"}
+{"id":"post","kind":"hook","usage":"post bash <exit> [cmd]","use":"PostToolUse(Bash) — record + route non-zero exits"}
+{"id":"post-edit","kind":"hook","usage":"post edit <file>","use":"PostToolUse(Write/Edit) — flag L0 edits"}
+{"id":"prompt","kind":"hook","usage":"prompt <text>","use":"UserPromptSubmit  — keyword triggers + prompt hints"}
+{"id":"commons","kind":"hook","usage":"commons {inject|show}","use":"always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)"}
+{"id":"architecture","kind":"hook","usage":"architecture {inject|show|lint}","use":"surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart; lint = c4 tree hygiene (oversized/piled/history nodes)"}
+{"id":"git-context","kind":"hook","usage":"git-context {inject|show}","use":"SessionStart: warn when HEAD is BEHIND origin/<default> (stale-branch trap — reading pre-merge code as current)"}
+{"id":"claudemd","kind":"hook","usage":"claudemd {inject|show}","use":"re-inject repo-root CLAUDE.md (project rules) EACH UserPromptSubmit so they stay enforced (optional <!-- enforce:start/end --> block)"}
+{"id":"toolkit","kind":"hook","usage":"toolkit {list|inject|json|write|check}","use":"command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift"}
+{"id":"prefs","kind":"hook","usage":"prefs {show|code|docs|response <lang>|inject}","use":"language prefs (3 axes) + UserPromptSubmit inject"}
+{"id":"easy","kind":"hook","usage":"easy {show|inject}","use":"inject the \"easy\" friendly-response style (lang from prefs.response)"}
+{"id":"recommend","kind":"hook","usage":"recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}","use":"4-axis rubric + default mode (repo .harness > global ~/.harness > present; fixed axis = auto-pick)"}
+{"id":"sbs","kind":"hook","usage":"sbs [auto[:<axis>]|manual] [<task>]","use":"step-by-step plan-first runbook (mode via recommend resolve-mode)"}
+{"id":"abg","kind":"hook","usage":"abg [labels]","use":"all-bg-go — fan out prior-turn branches as parallel background Agents (runbook)"}
+{"id":"afg","kind":"hook","usage":"afg [labels]","use":"all-fg-go — run prior-turn branches sequentially in-session (runbook)"}
+{"id":"fleet","kind":"hook","usage":"fleet [name:goal,…|go|stop|status]","use":"perpetual multi-lane orchestrator (runbook + roster)"}
+{"id":"fleet-lab","kind":"hook","usage":"fleet lab [frontier:wall,…|go|…]","use":"research-driven frontier lab (research-gate→implement→measure→SSOT→re-research; walls measured + reopenable)"}
+{"id":"pr-cycle","kind":"hook","usage":"pr-cycle [gh flags]","use":"push branch → open PR → self-merge (squash·admin·delete-branch)"}
+{"id":"pod","kind":"hook","usage":"pod","use":"GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)"}
+{"id":"dojo","kind":"hook","usage":"dojo [<slug>] [--lang]","use":"cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)"}
+{"id":"micro-exp","kind":"hook","usage":"micro-exp [<scope>]","use":"context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)"}
+{"id":"bypass","kind":"hook","usage":"bypass","use":"anti-punt self-check runbook (proceed on local+reversible; ask only when outward/decision)"}
+{"id":"go","kind":"hook","usage":"go","use":"continue the most-recently proposed action without re-confirming"}
+{"id":"brainstorm","kind":"hook","usage":"brainstorm","use":"iterative ideation rounds until depletion (breadth over selection)"}
+{"id":"demi","kind":"hook","usage":"demi","use":"design-architecture program runbook (7-verb spine)"}
+{"id":"gap","kind":"hook","usage":"gap [full|list|<scope>]","use":"multi-axis gap exploration — 40 breakthrough lenses (8 families) · triage→deepen runbook"}
+{"id":"kick","kind":"hook","usage":"kick <seed…> | <flags>","use":"wrap hexa kick --seed \"<seed>\" — hexa-lang gap-breakthrough/discovery engine (alias: drill; bare args→seed, leading flag→passthrough)"}
+{"id":"poll","kind":"hook","usage":"poll [interval=1200] [target]","use":"self-paced ≥10-min polling runbook (c19-sanctioned) — wake on a timer, check once, fire-on-arrival; interval clamped to ≥600s. NO bash sleep loop"}
+{"id":"pool","kind":"hook","usage":"pool {list|add|rm|on|status|specs}","use":"host roster + remote exec + cores/mem/GPU probe (~/.harness/pool.json, global)"}
+{"id":"mem-guard","kind":"hook","usage":"mem-guard {status|check|install|uninstall}","use":"OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog"}
+{"id":"secret","kind":"hook","usage":"secret <verb> [args]","use":"passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync) ⚠ `get` exposes the value in context — prefer inline `$(secret get <k>)` for tool args"}
+{"id":"lsp","kind":"hook","usage":"lsp {wire|status|rebuild <file>}","use":"editor LSP wiring (.lsp.json; hexa-lang `hexa lsp` for .hexa by default) + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited"}
+{"id":"research","kind":"hook","usage":"research {arxiv <query|id> [--n N] | yt <url|id> [lang]}","use":"fetch arXiv papers / YouTube transcript (no key)"}
+{"id":"watch","kind":"hook","usage":"watch <url|path> [question] [flags]","use":"download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent"}
+{"id":"imagine","kind":"hook","usage":"imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history","use":"AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)"}
+{"id":"paper","kind":"hook","usage":"paper <new|build|cover|list> [slug] [flags]","use":"demiurge-house scientific paper: scaffold (emoji title · g5 tier badges · TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate history [-b][-m][--start][--limit][--status][--local][--json] — past prompts (fal API / local ledger)"}
+{"id":"lint","kind":"gate","usage":"lint [all|fast|verbose]","use":"staged-L0 + freshness + convergence checks"}
+{"id":"ci","kind":"gate","usage":"ci [all|fast|list]","use":"run configured verification commands in parallel (was verify; config key stays verify.checks)","triggers":["commit","커밋","push","푸시","ship","배포"]}
+{"id":"ci-track","kind":"gate","usage":"ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]","use":"track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop · c19)"}
+{"id":"verify","kind":"gate","usage":"verify [rubric|fence \"<claim>\"]","use":"tier-rubric claim verification (badges · no self-judge)"}
+{"id":"errors","kind":"gate","usage":"errors {route|list|drain_check|mark_fixed}","use":""}
+{"id":"ledger","kind":"gate","usage":"ledger {register|complete|list|gc|dup_check}","use":""}
+{"id":"bitter-gate","kind":"gate","usage":"bitter-gate audit [window]","use":"rule-hit frequency → retire dormant rules"}
+{"id":"audit","kind":"report","usage":"audit [full|summary|json]","use":"6-axis self-scorecard"}
+{"id":"gc","kind":"report","usage":"gc [scan|drift]","use":"broken markdown links in guides"}
+{"id":"docs","kind":"report","usage":"docs [status|check|scratch [name]]","use":"single-doc discipline (architecture SSOT + log + scratch + quickref) write-time enforced in `pre write` (docs.enforce: warn[default]|block|off)"}
+{"id":"lockdown","kind":"report","usage":"lockdown {status|add <path...>|rm <path...>|check <path>}","use":"manage L0 set (opt-in · none until designated) add/rm mutate harness.config.json lockdown.files"}
+{"id":"folders","kind":"report","usage":"folders [scan|scaffold <dir>]","use":"per-subfolder CLAUDE.md coverage + scaffolding","triggers":["폴더 구조","폴더별","서브폴더","디렉토리 설명","folder guide","module doc","코드 탐색","구조 파악"]}
+{"id":"end","kind":"report","usage":"end","use":"session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)"}
+{"id":"worktree","kind":"report","usage":"worktree {scan|gc|guard <cmd>}","use":"no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped) (SessionStart-wire `worktree gc\\"}

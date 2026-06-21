@@ -8,6 +8,7 @@
       "STALE": "block",
       "CONVERGENCE-MISSING": "block",
       "CONVERGENCE-MALFORMED": "block",
+      "TOOLKIT-DRIFT": "warn",
       "CHANGELOG-MISSING": "block",
       "PROTECTED-BRANCH": "block",
       "DOC-SCATTER": "block",

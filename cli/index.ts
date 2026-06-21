@@ -34,6 +34,7 @@ import { runWorktree } from "../modules/worktree.ts";
 import { runImagine } from "../modules/imagine.ts";
 import { runPaper } from "../modules/paper.ts";
 import { runResearch } from "../modules/research.ts";
+import { runToolkit } from "../modules/toolkit.ts";
 import { runWatch } from "../modules/watch.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
@@ -49,7 +50,7 @@ import { runArchitecture } from "../modules/architecture.ts";
 import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
 
-const HELP = `dancinlab/harness — project-agnostic AI coding harness
+export const HELP = `dancinlab/harness — project-agnostic AI coding harness
 
 usage: harness <cmd> [args]
 
@@ -76,6 +77,7 @@ hook delegates (wire these into your agent's settings.json):
   architecture {inject|show|lint}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart; lint = c4 tree hygiene (oversized/piled/history nodes)
   git-context {inject|show}   SessionStart: warn when HEAD is BEHIND origin/<default> (stale-branch trap — reading pre-merge code as current)
   claudemd {inject|show}   re-inject repo-root CLAUDE.md (project rules) EACH UserPromptSubmit so they stay enforced (optional <!-- enforce:start/end --> block)
+  toolkit {list|inject|json|write|check}   command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
@@ -264,6 +266,8 @@ async function main(): Promise<number> {
       return runPaper(rest);
     case "research":
       return runResearch(rest);
+    case "toolkit":
+      return runToolkit(rest);
     case "watch":
       return runWatch(rest);
     case "ing":

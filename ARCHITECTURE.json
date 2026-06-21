@@ -288,6 +288,12 @@
                 "상세": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입 — commons inject 와 같은 운반 장치. CLAUDE.md 는 Claude Code 기본으로 SessionStart 1회만 들어가 대화가 길어지면 묻히는데, 매턴 재주입으로 프로젝트 규칙을 commons 급 salience 로 유지(MUST-FOLLOW 헤더 prepend). 선택적 `<!-- enforce:start/end -->` 블록이 있으면 그 hard-rules 섹션만 재주입(전체 맵 재전송 회피), 없으면 전체. 80KB 초과 절단. 부재 시 무음"
               },
               {
+                "이름": "toolkit",
+                "역할": "명령 카탈로그 — agent 가 전 명령을 인지·사용하도록 SessionStart 주입 (sidecar TOOLKIT 패리티)",
+                "구분": "module",
+                "상세": "list|inject|json|write|check. 단일 출처 = cli/index.ts 의 `HELP` 텍스트(엔트리 모듈 import 부작용 회피 위해 텍스트로 읽어 파싱). keyword 트리거를 매핑해 각 명령에 ⟨triggers⟩ 부착. **inject**=SessionStart 에 전 명령 surface 를 compact 카탈로그(`id — use ⟨triggers⟩`)로 주입 — keyword 반응형의 사각지대(트리거 없는 research/secret/imagine 등)를 능동적으로 메워 agent 가 명령 존재를 알게 함. **write**=TOOLKIT.jsonl(repo-root 커밋 산출물) 생성. **check**=HELP-파생 카탈로그와 커밋본 스냅샷 diff → drift 시 exit 1. `harness lint` 가 **TOOLKIT-DRIFT(warn)** 로 표면화(inject 는 HELP 에서 라이브 생성이라 agent 는 항상 최신 → block 아닌 warn)"
+              },
+              {
                 "이름": "convergence",
                 "역할": "incident 집계 + 인라인 @convergence 마커 검증 게이트 + 캡처-토큰 강제 루프",
                 "구분": "module",

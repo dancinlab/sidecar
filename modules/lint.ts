@@ -16,6 +16,7 @@ import { routeError, classify } from "./errors.ts";
 import { docViolations } from "./docs.ts";
 import { lintArchitectureTree } from "./architecture.ts";
 import { scanConvergenceMarkers } from "./convergence.ts";
+import { toolkitDrift } from "./toolkit.ts";
 
 interface Violation {
   rule: string;
@@ -145,6 +146,13 @@ export async function runLint(args: string[]): Promise<number> {
   for (const it of (await scanConvergenceMarkers([])).issues) {
     violations.push({ rule: "CONVERGENCE-MALFORMED", file: it.file, msg: `${it.reason} (line ${it.line})` });
   }
+
+  // 4e. toolkit catalog drift (agent command discoverability) — the committed
+  // TOOLKIT.jsonl artifact must match the HELP-derived catalog. warn-only: the
+  // SessionStart inject regenerates live from HELP, so the agent always sees the
+  // current surface; the committed file is just the external snapshot.
+  const drift = toolkitDrift();
+  if (drift) violations.push({ rule: "TOOLKIT-DRIFT", file: "TOOLKIT.jsonl", msg: drift });
 
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });
 

@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## feat(toolkit): agent-facing command catalog + SessionStart injection (sidecar TOOLKIT parity)
+
+Commands existed and worked, but an AI agent only learned of them REACTIVELY — via a
+keyword trigger — so commands without a trigger (`research`/`arxiv`, `secret`, `imagine`,
+`watch`…) were a discoverability blind spot: the agent didn't know to reach for them.
+
+🗂️ toolkit — "harness 명령 카탈로그"
+
+New `harness toolkit {list|inject|json|write|check}` (`modules/toolkit.ts`):
+- SSOT is the `HELP` text in `cli/index.ts` — toolkit PARSES it (read as text to avoid the
+  entry module's import side effects), so there is ONE source and zero drift. Each command
+  is enriched with its keyword triggers (from `keywords.json`) as `⟨triggers⟩`.
+- **inject** — SessionStart additionalContext: the WHOLE command surface as a compact
+  `id — use ⟨triggers⟩` catalog, so the agent proactively knows every command (matches
+  sidecar's once-per-session COMMANDS.md injection). Wired into `hooks.json` + `setup.ts`.
+- **write** — materializes `TOOLKIT.jsonl` (repo-root committed artifact, 59 entries).
+- **check** — regenerates from HELP and snapshot-diffs the committed file → exit 1 on drift.
+  `harness lint` surfaces drift as **TOOLKIT-DRIFT (warn)** — warn, not block, because the
+  inject regenerates live from HELP so the agent is always current; the file is the snapshot.
+
+Also closes the immediate gap surfaced while QAing `research arxiv` + `secret` (both verified
+working — arxiv keyless public API, secret resolves `~/.hx/bin/secret` with 20+ keys).
+
 ## docs(commons): c14 (d) — 게으른 천장(lazy ceiling) 금지 · research census + 측정이 천장의 심판
 
 c14 의 벽 분류 (d) "진짜 천장" 에 **lazy-ceiling 금지** 규칙을 추가했다. 그동안 (d) 는 MULTI-LENS
@@ -19,6 +42,7 @@ byte-eq PASS(max|Δ|=0)이나 perf flat — ptxas 가 이미 near-optimal(CloudR
 research 는 게으른 프레임을 깨고 미시도 레버를 드러내되 **측정이 최종 심판** — 남은 레버(Ozaki-INT8
 n≥8K, INT8 이 ~4× rate 라 multiplier 초과) 시도 전엔 미완. 진짜 천장도 흔히 양쪽 공유 캡 →
 "parity 도달, 너머는 구조 레버(fusion·결정성)" 가 정직한 종착이지 "미달"이 아니다.
+>>>>>>> origin/main
 
 ## fix(worktree): age backstop in gc — stop squash/no-push agent worktrees piling up
 

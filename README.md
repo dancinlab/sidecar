@@ -59,6 +59,7 @@ harness/
 | `prompt <text>` | 키워드 트리거 + 프롬프트 힌트 주입 | UserPromptSubmit |
 | `architecture {inject\|show}` | repo-root `ARCHITECTURE.json`(우선)/`.md` 를 컨텍스트로 주입 — CLAUDE.md 처럼 설계 SSOT 상주 (80KB 초과 시 절단, 부재 시 무음) | SessionStart + 매 UserPromptSubmit |
 | `claudemd {inject\|show}` | repo-root `CLAUDE.md`(프로젝트 규칙)를 **매 턴** 재주입 — commons 처럼 salience 유지해 규칙이 묻히지 않게 (선택적 `<!-- enforce:start/end -->` 블록만, 80KB 절단, 부재 시 무음) | UserPromptSubmit |
+| `toolkit {list\|inject\|json\|write\|check}` | **명령 카탈로그** — agent 가 전 명령을 인지·사용하게 SessionStart 에 `id — use ⟨triggers⟩` compact 주입(키워드 반응형 사각지대 보완). SSOT=`HELP`(파싱) → `write`=`TOOLKIT.jsonl` 산출, `check`=HELP↔파일 drift(`lint` 가 `TOOLKIT-DRIFT` warn) | SessionStart |
 | `lint [all\|fast]` | staged-L0 + 신선도 + **CHANGELOG 누락** + 수렴 누락 체크 | commit 전 (git pre-commit hook) |
 | `ci [all\|fast\|list]` | config 의 검증 명령 병렬 실행 (실패 1개라도 → exit 1; 옛 이름 `verify` 별칭 유지, config 키도 `verify.checks`) | commit/push 전 |
 | `ci-track <pr\|branch> [--watch] [--merge-on-green] [-R owner/repo]` | 원격 PR/CI 체크 추적 — `gh pr checks --json` → pass/fail/pending 집계 + 🟢GREEN/🔴RED/🟡PENDING/⚪NONE verdict(exit 0/2/1/0). `--watch` = CLI-내부 폴링으로 terminal 까지 대기(손수 짠 `gh pr checks\|grep` + /tmp monitor sleep 루프 대체 · c19), `--merge-on-green` = 그린이면 자동 squash-merge | merge-on-green · CI 대기 시 |

@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## feat(inject): ARCHITECTURE·ING turn-close gate — update + report per turn, not on-request
+
+The every-turn ARCHITECTURE/ING injects told the model to keep the design tree and the in-progress
+board current, but the directive was buried in a parenthetical note *in front of* a huge JSON dump —
+so the model skimmed past it and only updated when the user explicitly asked. Two fixes:
+
+- **Move the directive to a turn-close gate AFTER the tree/board** (recency = most-attended) in both
+  `architecture inject` and `ing inject`. The gate fires per turn: if this turn changed
+  code/structure/data-flow → update the affected node in-place / `harness ing done|add|next` **now**.
+- **Mandate reporting**: when an update happened, the model must print `🏛️ ARCHITECTURE 갱신: …` /
+  `🔵 ING 갱신: …` one-liner so the user sees what changed — but stay silent (no false claim) when
+  nothing relevant changed. Pinned durably in commons c12 (turn-close section).
+
 ## chore(prs): merge in 3 stranded PRs after review (c23 · c24 · ing worktree-aware) + retire superseded #125
 
 Reconciled the 4 abandoned PRs the reaper surfaced. All had rotted to CONFLICTING (the c25 naming

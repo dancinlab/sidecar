@@ -232,6 +232,10 @@ export async function runIng(args: string[]): Promise<number> {
       if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}${r.from ? ` 📥${r.from}` : ""} ${r.text}`).join(" · "));
       if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
       let ctx = `🔵 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`harness ing show\` / done <id>`;
+      // Turn-close gate: make per-turn board upkeep + reporting actual, not on-request only.
+      ctx +=
+        `\n🔵 턴 마감 게이트 — 이번 턴에 진행상황이 바뀌었으면(완료/새 작업/다음 단계) **지금** \`harness ing done <id>\`/\`add\`/\`next\` 로 보드를 갱신하고, ` +
+        "응답에 `🔵 ING 갱신: <무엇을>` 한 줄로 보고하라. 안 바뀌었으면 보드 그대로 두고 보고도 생략.";
       // c21 heartbeat: flag live long-runners (pods) left unchecked past maxSilenceSec.
       const hb = staleLongRunnerWarn(
         pods.map((r) => `pod ${r.id}(${r.gpu ?? "?"})`),

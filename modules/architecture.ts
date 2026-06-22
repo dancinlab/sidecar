@@ -60,7 +60,13 @@ export async function runArchitecture(args: string[]): Promise<number> {
     const note = isJson
       ? `설계 SSOT (JSON 트리 = AI·툴 파싱용 · 사람은 \`python3 serve.py\` HTML 뷰어). 코드/설계 변경 시 lockstep 갱신 (commons c4·c14). ${snapshot}`
       : `설계 SSOT (최종 아키텍처 = 갱신형). 코드/설계 변경 시 lockstep 갱신 (commons c4·c14). ${snapshot}`;
-    const ctx = `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n\`\`\`${lang}\n${text}${tail}\n\`\`\``;
+    // Turn-close gate placed AFTER the tree (recency = most-attended) so the model
+    // actually updates+reports per turn instead of only when the user asks. @convergence
+    // state=in_flight id=ARCH_INJECT_IGNORED value="갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신" threshold="지시를 트리 뒤 게이트 줄로 이동 + 갱신 시 보고 의무화"
+    const gate =
+      "🏛️ 턴 마감 게이트 — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** 위 트리의 해당 노드를 제자리 교체(update-in-place)하고, " +
+      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로 보고하라. 안 바꿨으면 트리 그대로 두고 보고도 생략 (안 했으면서 했다고 말하지 말 것).";
+    const ctx = `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n\`\`\`${lang}\n${text}${tail}\n\`\`\`\n${gate}`;
     try {
       const j = JSON.parse(readStdin());
       const ev = String(j.hook_event_name ?? j.hookEventName ?? "");

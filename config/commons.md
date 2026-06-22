@@ -130,6 +130,10 @@ ARCHITECTURE·README·ING 미갱신이면 **거부**한다(`--no-doc` 는 진짜
 묵혀두기" 금지 — **미완성·WIP 여도 무방**: `wip:` 커밋으로라도 그 턴에 push 해 작업 유실·문서 drift 를
 막는다(미완성 코드 매턴 강제 OK — 이 repo 정책. c2 검증은 완성 시점에 닫되, 미완을 핑계로 push 를
 미루지 않는다). 파일 변동이 staged 인데 그 턴을 커밋 없이 끝내지 말 것.
+**갱신 시 보고(필수)**: ARCHITECTURE·ING 은 매 턴 주입되는 턴-마감 게이트 — 코드/설계 변경이 있었으면
+그 턴에 해당 노드를 제자리 갱신(ARCHITECTURE)하고 진행상황을 현행화(`harness ing done/add/next`)한 뒤,
+응답에 `🏛️ ARCHITECTURE 갱신: …` / `🔵 ING 갱신: …` 한 줄로 **무엇을 바꿨는지 보고**한다. 시켜야만 갱신하지
+말고 게이트가 발화하면 자동 수행한다. 단, 변경이 없으면 갱신·보고를 **생략**한다(안 했으면서 했다고 말하지 말 것).
 **항상 최신 base 유지(로컬 main 뒤처짐 금지)**: pr-cycle 은 머지 검증 직후 **로컬 base(main) 를
 origin/base 로 ff-sync** 한다 — feature 브랜치에서 `git fetch origin <base>:<base>` 로 checkout 전환 없이
 로컬 base ref 만 갱신(non-ff 면 거부=안전, working tree 무변). origin 만 갱신하고 로컬 main 을 방치해

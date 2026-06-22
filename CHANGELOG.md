@@ -1,5 +1,29 @@
 # CHANGELOG
 
+## feat(companions): sibling-CLI command surface injected at SessionStart — agent stops re-probing `hexa cloud`
+
+🧰 companions — "이웃 도구 명함첩"
+
+- 하는 일: `hexa` 같은 옆 프로젝트 CLI 의 명령 목록을 세션 시작에 컨텍스트로 깔아줘서, 에이전트가 "hexa 깔렸나? cloud 라는 서브명령 있나?"를 매번 더듬지 않게 한다.
+- 비유: 새 사무실 첫날 책상에 동료 연락처 명함첩이 미리 놓여 있는 것 — 누가 뭘 하는지 일일이 물어볼 필요가 없다.
+
+증상이던 누수: `hexa cloud`/`atlas`/`verify`/`drill` 이 멀쩡히 존재·동작하는데, harness 의 `toolkit inject` 는 **harness 자신의 명령**만 카탈로그로 주입했다. 이웃 CLI 표면을 깔아주는 운반 장치가 없어 매 세션 빈손으로 시작 → 더듬기 반복.
+
+```
+전 (before)                         후 (after)
+────────────                        ────────────
+ toolkit inject = harness 명령만 ✅    toolkit inject = harness 명령 ✅
+ hexa 표면 ❌ ── 매 세션 재탐색        companions inject = hexa 표면 ✅ ── 즉시 인지
+```
+
+- **새 모듈 `companions {inject|list}`** — toolkit 의 자매. toolkit 이 harness 자신을 주입하면, companions 는 **이웃 CLI** 를 주입한다.
+- **DOMAIN-AGNOSTIC 유지**: 엔진에 `hexa` 를 박지 않는다(아키텍처 1–4층 규칙). 어떤 CLI 를 띄울지는 **데이터** — repo `harness.config.json` 의 `companions` 키 + host-wide `~/.harness/companions.json` 을 cmd 기준 union(repo 우선). 그래서 hexa 는 전역 config 1곳에만 박히고, 모든 repo 세션이 자동으로 인지한다.
+- **inject**: 각 companion 의 카탈로그 명령(default `--help`; hexa 는 `tool list` = 14줄 컴팩트)을 `execArgs`(8s timeout)로 실행 → `lines` 캡(default 40)으로 절단 → stderr 평문 블록 주입. cmd 부재/실패/무출력이면 그 항목 skip, 전부 없으면 무음 — companions 미설정 repo 에 영향 0.
+- 등록: `cli/index.ts`(dispatch + HELP) · `hooks/hooks.json` + `modules/setup.ts` 의 SessionStart 리스트(toolkit 바로 뒤) · `lib/config.ts` 인터페이스에 `companions?` 키 · `TOOLKIT.jsonl` 재생성(70 entries).
+- 재발방지: `modules/companions.ts` 에 `@convergence id=COMPANION_SURFACE_NOT_INJECTED`.
+
+검증: `npx tsc --noEmit` (exit 0) · `toolkit check` (70 entries in sync) · `companions list`(hexa ✓ resolves) · `companions inject`(hexa 전 verb 표면 + cloud 노출 확인).
+
 ## feat(inject): ARCHITECTURE·ING turn-close gate — update + report per turn, not on-request
 
 The every-turn ARCHITECTURE/ING injects told the model to keep the design tree and the in-progress

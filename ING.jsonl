@@ -7,3 +7,4 @@
 {"ts":"2026-06-17T18:40:25.585Z","kind":"work","id":"8","text":"전 repo DOMAINS.tape scrub (domain 기능 폐기 연장) — 16 repo 코드참조 0 즉시 rm, demiurge(16)·hexa-codex(105) 참조 live검사 후 결정. hexa-lang-wt-* 3개는 state agent 진행중이라 제외"}
 {"ts":"2026-06-17T18:48:10.442Z","kind":"next","id":"10","text":"hexa-lang state 통일 완성 — chore/state-unify 브랜치(b94bafd) push됨. 다른 세션이 main rt-native 사이클 이동중이라 PR 머지 보류 → 그 세션 종료 후 gh pr create+merge 안전하게"}
 {"ts":"2026-06-17T19:56:08.647Z","kind":"work","id":"11","text":"harness QA 전수 — 모든 명령/훅을 고갈(no-new-finding)까지 검증 (구 handoff#1)"}
+{"kind":"work","id":"12","ts":"2026-06-22T11:49:31.676Z","text":"QA 발견·수정: 전역 ~/.claude/settings.json 이 캐노니컬 hookSpec 보다 낡아 load/claudemd/architecture/ing(UPS)+git-context/toolkit/companions(SS)+Stop 게이트 누락 → harness install-hooks 재동기화(100% 일치). #151 잔재인 repo .claude/settings.json(가드+load 이중발사) git rm. CHANGELOG 기록. ship 대기."}

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat(commands): hexa-surface 슬래시 4종(/hexa·/cloud·/dojo·/deck) + /verify YAML 깨짐 수정
+
+🧩 "이웃 CLI(hexa) 도 슬래시로 손에 잡히게"
+
+- 하는 일: `hexa` CLI 의 자주 쓰는 서브커맨드를 bare 슬래시로 노출 — `/hexa`(passthrough)·`/cloud`(=`hexa cloud` GPU 디스패치)·`/dojo`(=`hexa dojo` 학습 빵틀)·`/deck`(=`hexa deck` 인풋덱 빵틀). 각 `commands/*.md` 는 desc+`Triggers —`(KO+EN) 갖춘 얇은 위임자(`hexa <sub> $ARGUMENTS`), hexa 부재 시 graceful echo. 기존 hexa-위임 패턴(/kick·/verify·/atlas)과 동형.
+- 충돌 해소: 기존 harness `/dojo`(= `harness dojo` 훈련잡 스캐폴더)는 **`/hdojo` 로 이전**하고 `/dojo` 는 `hexa dojo` 에 양보 — 사용자 의도(`/dojo`=hexa dojo). harness CLI 의 `dojo` 명령 자체는 불변.
+- 버그 수정(`/verify` 인지 실패): `commands/verify.md` 의 `argument-hint: "[rubric | fence "<claim>"]"` 가 **중첩 큰따옴표**로 YAML frontmatter 를 깨뜨려 → Claude Code 가 description 대신 SHADOW_MARKER 주석을 picker 설명으로 표시 → /verify 가 자연어 인지 안 됨. 안쪽을 작은따옴표(`'<claim>'`)로 고쳐 파싱 복원. 전 commands/*.md 중첩-따옴표 0 확인.
+- 영향: `commands/{hexa,cloud,dojo,deck,hdojo}.md`(신규/이전) · `commands/verify.md`(YAML fix) · ARCHITECTURE.json · README.md. ⚙️ 적용: ship 후 `harness shadow --force` 로 마커-없는 기존 `/cloud` 잔재까지 source 로 heal.
+
 ## feat(hooks): sidecar 참고 — 컴팩션 생존(PreCompact/PostCompact 재주입) + skill-desc write-time hard-deny
 
 🧠 "긴 대화 중간에 기억이 날아가도 다시 붙여준다"

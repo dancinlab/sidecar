@@ -1,7 +1,7 @@
 ---
-description: /dojo [<slug>] [--lang] — cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit). Triggers — "학습잡", "training job", "dojo", "모델 학습 스캐폴드", "/dojo".
-argument-hint: "[<slug>] [--lang]"
+description: /dojo <domain> <slug> '<spec-json>' [--lang=hexa|py|both] — passthrough to `hexa dojo` (generic cloud training-job generator · 학습 빵틀 — emits .hexa+.py+run.sh into exports/<domain>/dojo/<slug>/). `dojo domains` lists known domains. Triggers — "학습잡 만들어", "training job", "hexa dojo", "학습 빵틀", "모델 학습 잡 생성", "/dojo".
+argument-hint: "<domain> <slug> '<spec-json>' [--lang=hexa|py|both] | domains"
 allowed-tools: Bash
 ---
 
-!`command -v harness >/dev/null 2>&1 && harness dojo $ARGUMENTS || echo "harness CLI not found — install dancinlab/harness (~/.harness/cli + ~/.local/bin/harness on PATH)"`
+!`command -v hexa >/dev/null 2>&1 && hexa dojo $ARGUMENTS || echo "hexa CLI not found — install dancinlab/hexa-lang (~/.hx/bin/hexa on PATH)"`

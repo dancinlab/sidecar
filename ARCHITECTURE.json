@@ -208,7 +208,7 @@
                 "이름": "lint",
                 "역할": "staged-L0·신선도·수렴 + doc-gate",
                 "구분": "module",
-                "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate)"
+                "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate). 4f SHADOW-DESC(warn·sidecar s18 포팅): commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 검사 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(harness-repo 한정 · commands/ 존재 시)"
               },
               {
                 "이름": "install",
@@ -220,7 +220,7 @@
                 "이름": "shadow",
                 "역할": "harness commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
                 "구분": "module",
-                "상세": "plan|remove. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수 작성한 동명 파일은 skip. ⚠️ 마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로, 마커를 앞에 붙이면 picker 가 마커 주석을 명령 설명으로 표시한다(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). 사이드카 무의존 · 재생성 가능(플러그인 미설치 환경용 폴백)"
+                "상세": "plan|remove|--force. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수 작성한 동명 파일은 skip, **`--force` 는 마커-없는 충돌도 source(SSOT)로 덮어써 마커 도입 *전* stale shadow 를 heal**(@convergence SHADOW_PREMARKER_STALE: 마커없는 옛 shadow 가 손수작성 false-positive 로 skip 돼 source 의 `Triggers —` 줄을 잃으면 맨-텍스트 명령 인지가 죽는다). ⚠️ 마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로, 마커를 앞에 붙이면 picker 가 마커 주석을 명령 설명으로 표시한다(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). desc 품질은 lint 4f(SHADOW-DESC)가 게이트. 사이드카 무의존 · 재생성 가능(플러그인 미설치 환경용 폴백)"
               },
               {
                 "이름": "pr-cycle",

@@ -17,6 +17,7 @@ import { docViolations } from "./docs.ts";
 import { lintArchitectureTree } from "./architecture.ts";
 import { scanConvergenceMarkers } from "./convergence.ts";
 import { toolkitDrift } from "./toolkit.ts";
+import { lintCommandDescriptions } from "./shadow.ts";
 
 interface Violation {
   rule: string;
@@ -153,6 +154,14 @@ export async function runLint(args: string[]): Promise<number> {
   // current surface; the committed file is just the external snapshot.
   const drift = toolkitDrift();
   if (drift) violations.push({ rule: "TOOLKIT-DRIFT", file: "TOOLKIT.jsonl", msg: drift });
+
+  // 4f. command description-recognition hygiene (sidecar s18 port) — each
+  // commands/*.md `description:` must stay under the skill-listing cap AND carry
+  // a `Triggers —` clause, else the bare /cmd silently stops being auto-recognized
+  // from natural language. warn-only (discoverability). Harness-repo-only (commands/).
+  for (const it of lintCommandDescriptions()) {
+    violations.push({ rule: it.rule, file: it.file, msg: it.msg });
+  }
 
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });
 

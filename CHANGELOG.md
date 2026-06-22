@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## fix(shadow): 맨-명령 인지 복원 — `shadow --force` 로 마커-없는 stale shadow heal + sidecar s18 desc-lint 포팅
+
+🪞 "복사본이 원본보다 낡아 이름표가 떨어졌다"
+
+- 증상: 슬래시 없이 "fleet"·"sbs auto go"·"easy" 같은 **맨 텍스트로 명령이 인지 안 됨**. 원인은 `~/.claude/commands/*.md`(로드되는 shadow) 22개가 `SHADOW_MARKER` 도입 *전* 생성돼 마커가 없고, `harness shadow` 가 이를 "손수작성" false-positive 로 보고 덮어쓰기를 skip → 옛 버전이 잔존. 그중 **18개가 현행 source description 의 `Triggers —` 줄을 잃어**, Claude Code 가 세션 시작에 로드하는 skill 목록에서 그 명령의 트리거가 사라져 자연어 인지가 조용히 죽었다. (source `commands/*.md` 는 멀쩡했다 — 미러만 낡음.)
+- sidecar 비교(`dancinlab/sidecar` 방법 점검): sidecar 는 명령을 skill 로 등록하고 `skill-desc-guard`(@D s18)로 description ≤ 1400자(Claude Code per-entry skill-listing cap)를 강제 — cap 초과 시 엔트리가 잘려 인지가 죽는다. harness 의 source description 은 전부 cap 이내(최대 540자)였으므로 length 문제는 아니었고, 진짜 원인은 **shadow 미러 staleness** 였다.
+- 고침 ①: `harness shadow --force` — 마커-없는 충돌도 source(=SSOT)로 덮어쓴다. 마커 도입 전 shadow 를 한 방에 heal. 기본값은 그대로 보수적(skip), `--force` 만 override. `@convergence id=SHADOW_PREMARKER_STALE state=ossified`.
+- 고침 ②(재발방지): sidecar s18 을 harness 로 포팅 — `harness lint` 4f 가 `commands/*.md` 의 description 이 1400자 cap 이내 + `Triggers —` 절을 갖는지 검사(`SHADOW-DESC`, warn). 새 명령이 트리거 없이/너무 길게 추가되면 커밋 게이트가 환기.
+
+```
+전 (before)                                  후 (after)
+─────────────────────────────────          ─────────────────────────────────
+ shadow refresh → 마커없는 22개 skip          shadow --force → 22개 source 로 heal
+ 18개 Triggers 증발 → 맨텍스트 인지 ✗          61개 전부 Triggers 보유 → 인지 ✓
+ 트리거 누락 감지 수단 없음                     lint 4f SHADOW-DESC(warn) 가 환기
+```
+
+- 영향: `modules/shadow.ts`(--force + `lintCommandDescriptions` + marker) · `modules/lint.ts`(4f) · `cli/index.ts`(help) · `config/severity-map.json`(SHADOW-DESC=warn) · `TOOLKIT.jsonl`.
+
 ## fix(hooks): #151 잔재 청소 — 낡은 전역 settings.json 재동기화 + 자기-repo settings.json 삭제
 
 🧹 "방송국은 바꿨는데 옛 송출목록이 그대로였다"

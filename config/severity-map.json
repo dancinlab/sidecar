@@ -16,7 +16,8 @@
       "CLAUDE-MD-MISSING": "block",
       "CLAUDE-MD-NO-DESC": "block",
       "CLAUDE-MD-NO-TREE": "block",
-      "CLAUDE-MD-TREE-NO-DESC": "warn"
+      "CLAUDE-MD-TREE-NO-DESC": "warn",
+      "SHADOW-DESC": "warn"
     },
     "build_kind": {
       "bash_nonzero": "block",

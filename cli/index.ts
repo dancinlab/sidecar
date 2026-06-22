@@ -36,6 +36,7 @@ import { runImagine } from "../modules/imagine.ts";
 import { runPaper } from "../modules/paper.ts";
 import { runResearch } from "../modules/research.ts";
 import { runToolkit } from "../modules/toolkit.ts";
+import { runCompanions } from "../modules/companions.ts";
 import { runWatch } from "../modules/watch.ts";
 import { runFolders } from "../modules/folders.ts";
 import { runPrefs } from "../modules/prefs.ts";
@@ -81,6 +82,7 @@ hook delegates (wire these into your agent's settings.json):
   git-context {inject|show}   SessionStart: warn when HEAD is BEHIND origin/<default> (stale-branch trap — reading pre-merge code as current)
   claudemd {inject|show}   re-inject repo-root CLAUDE.md (project rules) EACH UserPromptSubmit so they stay enforced (optional <!-- enforce:start/end --> block)
   toolkit {list|inject|json|write|check}   command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift
+  companions {inject|list}   sibling-CLI command surface — inject runs each configured neighbour CLI's catalog (config \`companions\` + ~/.harness/companions.json · DOMAIN-AGNOSTIC, e.g. hexa) at SessionStart so the agent knows \`hexa cloud\` exists without probing
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
@@ -278,6 +280,8 @@ async function main(): Promise<number> {
       return runResearch(rest);
     case "toolkit":
       return runToolkit(rest);
+    case "companions":
+      return runCompanions(rest);
     case "watch":
       return runWatch(rest);
     case "ing":

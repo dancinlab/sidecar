@@ -153,6 +153,12 @@ export interface HarnessConfig {
   // opt-in launchd watchdog (`harness mem-guard install`) notifies every
   // watchdogIntervalSec. blockPct=0 = warn-only (never block). enabled=false off.
   memGuard: { enabled: boolean; warnPct: number; blockPct: number; watchdogIntervalSec: number };
+  // companions — sibling-CLI command catalogs surfaced at SessionStart (`harness
+  // companions inject`). DOMAIN-AGNOSTIC engine: this lists adjacent project CLIs
+  // (e.g. `hexa`) by DATA, never hardcoded, so an agent knows their command surface
+  // without re-probing. Each entry: a bare cmd name (probed via `--help`) or
+  // { cmd, args, label, lines }. Merged with host-wide ~/.harness/companions.json.
+  companions?: (string | { cmd: string; args?: string[]; label?: string; lines?: number })[];
 }
 
 const DEFAULTS: HarnessConfig = {

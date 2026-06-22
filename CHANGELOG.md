@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## feat(commons): c27 — 다수 동시 서브에이전트 fan-out 은 Workflow 로 (rate-limit 사망 방지)
+
+🚦 c27 — "동시 발사 신호등"
+
+- 하는 일: 독립 작업을 여러 서브에이전트로 동시에 펼칠 때(≥3 동시, 또는 fleet·abg·gap full·cycle-all 배치) `Agent` 를 N개 직접 쏘지 말고 `Workflow` 도구 한 번으로 묶게 만든다. Workflow 가 동시성을 min(16,cores−2)로 cap+큐잉하고 토큰 budget 을 공유해, 동시 API 스트림 폭주로 인한 rate-limit 즉사를 구조적으로 막는다.
+- 비유: 교차로에 신호등을 다는 것 — 차(에이전트) 16대까지만 동시에 통과시키고 나머지는 대기선에 줄 세운다. 신호등 없이 전부 한꺼번에 진입하면(N개 병렬 Agent) 교차로가 마비된다(rate-limit 사망).
+
+```
+전 (before)                      후 (after · c27)
+─────────────────────────        ─────────────────────────
+ abg/fleet → Agent ×N 동시   →    abg/fleet → Workflow 1회
+ = API 스트림 N개 폭주             = cap(≤16)+큐잉+budget 공유
+ = rate-limit 즉사                = 폭주 차단
+```
+
+- 적용: `config/commons.md` c27 신설(SSOT) + fan-out 런북(`templates/abg·gap·fleet·fleet-lab·fleet-abstract·fleet-full`)을 Workflow 라우팅으로 갱신. fleet 의 fire-on-arrival 스파인은 보존 — 다수 레인 동시 발사 배치만 Workflow 로 묶고, 단일 레인 재발사는 그대로 `Agent` 1개(동시 스트림 1 = rate-limit 무관). 예외: `afg`(순차·포그라운드 = 동시성 0)·단발 단일 agent 는 Workflow 불필요.
+
 ## feat(companions): sibling-CLI command surface injected at SessionStart — agent stops re-probing `hexa cloud`
 
 🧰 companions — "이웃 도구 명함첩"

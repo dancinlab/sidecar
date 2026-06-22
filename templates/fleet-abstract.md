@@ -11,7 +11,7 @@
 
 ## 1. 다이브 개시 (첫 턴)
 1. roster 기록: `.harness/fleet/abstract`, 한 줄당 레이어명.
-2. 각 레이어를 **census 라운드(r1)** 로 발사 — 누적 법칙(`ARCHITECTURE.json` LAWS · 메모리 · 직전 탐색 산출)을 한자리에 모은다. 빈손에서 시작하지 않는다(누적 위에 한 겹 더 벗긴다). mini-safe · GPU 0.
+2. 각 레이어를 **census 라운드(r1)** 로 발사 — 누적 법칙(`ARCHITECTURE.json` LAWS · 메모리 · 직전 탐색 산출)을 한자리에 모은다. 빈손에서 시작하지 않는다(누적 위에 한 겹 더 벗긴다). mini-safe · GPU 0. **다수 레이어(≥3) 동시 발사는 `Workflow` 한 번**으로 묶어 동시성 cap+큐잉(순수 사고 라운드라도 동시 API 스트림 N개 = rate-limit 사망 · commons c27); 1–2개면 background `Agent` 직접.
 3. 🌌 다이브 report(§4) 출력.
 
 ## 2. 라운드 lifecycle (레이어당 · fire-on-arrival)
@@ -64,4 +64,4 @@ status 토큰 — `📚`census중 · `🧅`peel중 · `💡`escape발명중 · `
 모든 레이어 🌌(메타법칙·reopen lens 0) OR 🤝(falsify 트랙으로 핸드오프) OR resolved → roster 삭제 + 최종 요약. 단 🌌 는 새 lens·새 frontier research 로 부활 가능하므로 SSOT(LAWS)에 다음 추상 표적 + 반증 조건을 남긴다. **추상화 dry 는 research/compute probe 후에만**(c14 d) — 인용만으로 끝내면 lazy-ceiling.
 
 ## 7. 동시성
-고정 레인 cap 없음 — 추상 라운드는 순수 사고라 동시 다발 OK(싸다). falsify 핸드오프(compute)는 `fleet lab`/pool 직렬화 규율 상속.
+**동시 라이브 서브에이전트 스트림은 Workflow cap(min(16,cores−2))을 넘기지 않는다**(c27 · rate-limit 방지) — 다수 레이어 동시 발사는 Workflow 로 묶어 자동 큐잉. falsify 핸드오프(compute)는 `fleet lab`/pool 직렬화 규율 상속.

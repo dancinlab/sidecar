@@ -11,7 +11,7 @@
 
 ## 1. 캠페인 개시 (첫 턴)
 1. roster 기록: `.harness/fleet/full`, 한 줄당 프론티어명.
-2. 각 프론티어를 **research 페이즈(r1)** 로 발사 — 기본은 싼 research(web/arxiv·코드 census · GPU 0 · mini-safe · `run_in_background:true`). 프롬프트 자기완결(미시도 레버 + 인용 + "다음 페이즈 명명 + 전환 조건").
+2. 각 프론티어를 **research 페이즈(r1)** 로 발사 — 기본은 싼 research(web/arxiv·코드 census · GPU 0 · mini-safe). 프롬프트 자기완결(미시도 레버 + 인용 + "다음 페이즈 명명 + 전환 조건"). **다수 프론티어(≥3) 동시 발사는 `Workflow` 한 번**으로 묶어 동시성 cap+큐잉(싼 research 라도 동시 API 스트림 N개 = rate-limit 사망 · commons c27); 1–2개면 background `Agent` 직접.
 3. 🛰️ 캠페인 report(§4) 출력.
 
 ## 2. 라운드 lifecycle (프론티어당 · fire-on-arrival · 자동 페이즈 전환)
@@ -79,4 +79,4 @@ implement 페이즈의 GPU/원격 측정은 흔히 수십 분 걸린다 — 이 
 모든 프론티어가 🧱(research 레버 0) AND 🌌(abstract lens 0) — 즉 **경험과 추상 양쪽 다 dry** — 이거나 📦(deferred)/resolved → roster 삭제 + 최종 요약. 단 둘 다 차세션 research/lens 로 부활 가능하므로 SSOT 에 다음 표적 + 반증 조건을 남긴다. **양축 dry 는 research probe + 추상 peel 둘 다 소진 후에만**(c14 d) · 그리고 **소진은 직교 mechanism-family 전수**여야 한다(§3 — 한 family 만 falsify 한 건 dry 아님, 🔓 reopen 대상).
 
 ## 7. 동시성
-고정 레인 cap 없음 — 머신 부하 정직하게. research·abstract 라운드는 동시 다발 OK(싸다). implement 라운드는 worktree 격리 + pool 호스트 직렬화(같은 GPU 연타 회피).
+**동시 라이브 서브에이전트 스트림은 Workflow cap(min(16,cores−2))을 넘기지 않는다**(c27 · rate-limit 방지) — 다수 프론티어 동시 발사는 Workflow 로 묶어 자동 큐잉. 그 안에서 머신 부하 정직하게. implement 라운드는 worktree 격리 + pool 호스트 직렬화(같은 GPU 연타 회피).

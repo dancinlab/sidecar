@@ -1,23 +1,46 @@
 {
-  "_note": "self-dogfooding hooks — harness 가 자기 자신을 단속. 엔진=repo 루트라 bin/harness 직접 호출(submodule 없음).",
+  "_note": "self-dogfooding GUARDS only — inject(prefs/recommend/easy/commons/architecture) 는 전역 ~/.harness/cli 1벌로 단일화(중복주입 방지). repo-전용 load 줄만 잔존.",
   "hooks": {
     "PreToolUse": [
-      { "matcher": "Bash", "hooks": [{ "type": "command", "command": "CLAUDE_TOOL_INPUT=\"$CLAUDE_TOOL_INPUT\" bash bin/harness pre bash" }] },
-      { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "CLAUDE_TOOL_INPUT=\"$CLAUDE_TOOL_INPUT\" bash bin/harness pre write" }] }
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_TOOL_INPUT=\"$CLAUDE_TOOL_INPUT\" bash bin/harness pre bash"
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "CLAUDE_TOOL_INPUT=\"$CLAUDE_TOOL_INPUT\" bash bin/harness pre write"
+          }
+        ]
+      }
     ],
     "PostToolUse": [
-      { "matcher": "Write|Edit", "hooks": [{ "type": "command", "command": "bash bin/harness post edit \"$CLAUDE_FILE_PATH\"" }] }
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash bin/harness post edit \"$CLAUDE_FILE_PATH\""
+          }
+        ]
+      }
     ],
     "UserPromptSubmit": [
-      { "hooks": [{ "type": "command", "command": "bash bin/harness prompt \"$CLAUDE_USER_PROMPT\"" }] },
-      { "hooks": [{ "type": "command", "command": "bash bin/harness prefs inject" }] },
-      { "hooks": [{ "type": "command", "command": "bash bin/harness recommend inject" }] },
-      { "hooks": [{ "type": "command", "command": "bash bin/harness easy inject" }] },
-      { "hooks": [{ "type": "command", "command": "bash bin/harness load inject" }] }
-    ],
-    "SessionStart": [
-      { "hooks": [{ "type": "command", "command": "bash bin/harness easy inject" }] },
-      { "hooks": [{ "type": "command", "command": "bash bin/harness recommend inject" }] }
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash bin/harness load inject"
+          }
+        ]
+      }
     ]
   }
 }

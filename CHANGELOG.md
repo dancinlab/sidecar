@@ -1,5 +1,24 @@
 # CHANGELOG
 
+## fix(hooks): #151 잔재 청소 — 낡은 전역 settings.json 재동기화 + 자기-repo settings.json 삭제
+
+🧹 "방송국은 바꿨는데 옛 송출목록이 그대로였다"
+
+- 하는 일: #151 은 *설치기*만 global-only 로 바꾸고 **이미 깔려 있던 결과물 2개**를 안 건드렸다 — 이번에 그 둘을 마저 정리한다. ① 호스트의 전역 `~/.claude/settings.json` 이 옛 설치기로 깔린 뒤 캐노니컬 훅 세트(`setup.ts:hookSpec` = SSOT)로 **재동기화된 적이 없어** `load`·`claudemd`·`architecture`·`ing`(UserPromptSubmit) · `git-context`·`toolkit`·`companions`(SessionStart) · `Stop` 게이트(`ing staleness-check`·`convergence due-check`)가 통째로 누락 + 폐기된 `handoff inject` 잔존 → `harness install-hooks` 로 재동기화(idempotent 머지). ② harness 자기 repo 의 `.claude/settings.json`(자기-도그푸드 잔존물)이 #151 의 "per-repo settings.json 금지" 정책을 스스로 위반하며 남아 있었다 → 삭제.
+- 비유: 송출 규칙(설치기)은 새로 정했는데, 이미 전파 타고 나간 옛 편성표(전역 settings)와 사내 테스트 송출(자기 repo settings)을 안 내려 그대로 방송되던 것.
+
+```
+전 (before)                              후 (after)
+───────────────────────────────        ───────────────────────────────
+ 전역 settings = 옛 세트(load 등 누락)    전역 = 캐노니컬 100% 일치
+ 부하줄·ing·Stop = 조용히 죽음            전역에서 정상 방출
+ repo settings 잔존 → 가드/load 이중발사   repo settings 삭제 → 1중
+```
+
+- 증상(왜 "공용만 쓰니 안 됨"): repo 의 잔존 settings 가 `load inject`+가드를 따로 또 배선해 **이 repo 안에서만** 부하줄이 떠 있었다. 공용(전역)만 쓰는 순간 그 보강이 사라져 🖥️ 부하줄·claudemd·ing·Stop 게이트가 전부 무음 사망.
+- 근원/재발방지: 근본원인은 "설치기 SSOT 가 바뀌어도 *기존* 전역 settings 는 자동 추적되지 않는다" — `harness install-hooks` 재실행이 유일한 동기화 경로. 호스트 onboarding/업데이트 시 재실행하면 항상 캐노니컬로 수렴한다.
+- 영향: `~/.claude/settings.json`(재동기화 · 호스트-로컬) · `.claude/settings.json`(삭제 · git rm) · CHANGELOG.
+
 ## fix(hooks): 훅 배선 GLOBAL-ONLY — per-repo .claude/settings.json 금지 (중복 주입 근절)
 
 🪝 "한 스피커만 켜기"

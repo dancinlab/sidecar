@@ -322,3 +322,14 @@ production davidson 에 배선 안 된 채 벤치만 있어 후속 감사가 "de
 sibling 더미가 쌓여 무엇이 진짜인지 흐려진다. 진짜로 의도된 이름(예: 공개 API 의 실제 버저닝 `v1/`/`v2/`)은
 파일에 `@canonical-ok` 마커로 정당화한다. **기계 강제(naming-guard)**: `pre write` 가 버전/복사 접미사
 파일명을 감지하면 **NAMING-VERSION-SUFFIX 경고(warn)** 로 canonical 이름 + 단일파일 업데이트를 환기한다(차단 아님 · `@canonical-ok` 로 면제).
+
+## c26 — 도구의 능력·상태는 그 도구에 물어라 (바이너리 self-report = cross-repo 인지 SSOT)
+프로젝트가 CLI 도구를 ship 하면, 그 도구의 **서브시스템·능력·가속(GPU)·빌드변종·버전** 상태는 stale 문서나
+기억 추측이 아니라 **그 도구 자신**(`<tool> --help`, 또는 상태 서브커맨드)으로 확인한다 — 바이너리에 실린
+출력은 그 **설치본의 현재 진실**이라 **타 repo 에서도 정확히 인지**된다(repo-내부 README/ARCHITECTURE 는
+그 repo 밖에선 안 보여 cross-repo 인지가 깨진다 · 바이너리 self-report 는 어디서든 보인다).
+**hexa 적용**: flame(native 학습엔진)·forge(GPU 커널 — own-default, cuBLAS=opt-in `HEXA_USE_CUBLAS`)·
+hexa-cuda(릴리스 빌드변종 — `cuda_available()=1` 은 `-cuda` 자산에서만) 의 상태·GPU parity 는
+**`hexa gpu`**(동적: cuda_available + 켜진 커널 + 플래그)·`hexa --help` 가 SSOT. anima 등 타 repo 에서
+"GPU 켜졌나 / own-GEMM parity / 어느 릴리스에 들어갔나" 를 **추측하지 말고 `hexa gpu` 를 실행**해 확인한다.
+도구쪽 lockstep(릴리스/CLI 갱신 시 `--help`/`gpu` 출력 동반 갱신 의무)은 그 도구 repo 의 governance 가 강제.

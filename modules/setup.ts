@@ -4,7 +4,7 @@
 //                    session/repo (like a global plugin). GLOBAL-ONLY: --repo is
 //                    refused — per-repo .claude/settings.json is banned (it
 //                    duplicated the global install → double-injected context).
-//                    Existing non-harness hooks are preserved; old sidecar
+//                    Existing non-sidecar hooks are preserved; old sidecar
 //                    entries are de-duped.
 //   self-update    — refresh the GLOBAL install clone (~/.sidecar/cli, what the
 //                    `sidecar` on PATH actually runs) to latest origin/main, and
@@ -79,7 +79,7 @@ function hookSpec(): Record<string, unknown[]> {
   };
 }
 
-function isHarness(e: unknown): boolean {
+function isSidecar(e: unknown): boolean {
   try {
     return ((e as { hooks: { command: string }[] }).hooks[0].command).includes("sidecar");
   } catch {
@@ -111,7 +111,7 @@ function installHooks(args: string[]): number {
     }
     const hooks = (d.hooks ?? {}) as Record<string, unknown[]>;
     for (const ev of Object.keys(hooks)) {
-      hooks[ev] = (hooks[ev] ?? []).filter((e) => !isHarness(e));
+      hooks[ev] = (hooks[ev] ?? []).filter((e) => !isSidecar(e));
       if (!hooks[ev].length) delete hooks[ev];
     }
     writeFileSync(settingsPath, JSON.stringify(d, null, 2) + "\n", "utf8");
@@ -130,7 +130,7 @@ function installHooks(args: string[]): number {
   const hooks = (d.hooks ?? (d.hooks = {})) as Record<string, unknown[]>;
   const spec = hookSpec();
   for (const [ev, items] of Object.entries(spec)) {
-    const cur = (hooks[ev] ?? []).filter((e) => !isHarness(e)); // dedup old sidecar entries
+    const cur = (hooks[ev] ?? []).filter((e) => !isSidecar(e)); // dedup old sidecar entries
     hooks[ev] = [...cur, ...items];
   }
   // Enable agent-teams (SendMessage to background subagents) by default — only
@@ -144,7 +144,7 @@ function installHooks(args: string[]): number {
   mkdirSync(dirname(settingsPath), { recursive: true });
   writeFileSync(settingsPath, JSON.stringify(d, null, 2) + "\n", "utf8");
   ok(`install-hooks: sidecar hooks merged → ${settingsPath} (global)${envNote}. Needs \`sidecar\` on PATH.`);
-  info("  events: PreToolUse · PostToolUse · UserPromptSubmit · SessionStart · Stop · PreCompact · PostCompact (existing non-harness hooks preserved)");
+  info("  events: PreToolUse · PostToolUse · UserPromptSubmit · SessionStart · Stop · PreCompact · PostCompact (existing non-sidecar hooks preserved)");
   return 0;
 }
 

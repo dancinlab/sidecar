@@ -157,19 +157,19 @@ CMDS = [
     # ── setup ──
     ("init", "[--force] [--hooks] [--dry-run]",
      "scaffold sidecar into a repo — config + .harness rules + gitignore + wrapper + hooks (strict by default).",
-     '"하네스 설치", "sidecar init", "repo 에 하네스", "scaffold sidecar", "/init"'),
+     '"사이드카 설치", "sidecar init", "repo 에 사이드카", "scaffold sidecar", "/init"'),
     ("install-hooks", "[--global|--repo]",
      "merge sidecar hooks into ~/.claude/settings.json (global) or repo .claude.",
      '"훅 설치", "install hooks", "/install-hooks"'),
     ("update", "[--hooks]",
      "bump the .harness-engine submodule to latest + optional hook refresh.",
-     '"하네스 업데이트", "sidecar update", "/update"'),
+     '"사이드카 업데이트", "sidecar update", "/update"'),
     ("self-update", "",
      "git-pull the sidecar CLI clone this binary runs from (~/.sidecar/cli) to latest main.",
-     '"하네스 자체 업데이트", "self-update", "sidecar 최신화", "/self-update"'),
+     '"사이드카 자체 업데이트", "self-update", "sidecar 최신화", "/self-update"'),
     ("uninstall", "[--dry-run] [--keep-logs]",
      "remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content.",
-     '"하네스 제거", "uninstall sidecar", "/uninstall"'),
+     '"사이드카 제거", "uninstall sidecar", "/uninstall"'),
 ]
 
 BODY = ('!`command -v sidecar >/dev/null 2>&1 && sidecar {name} $ARGUMENTS '

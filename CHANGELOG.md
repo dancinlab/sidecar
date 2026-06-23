@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## fix(rebrand): deplete remaining harness leftovers (identifiers · prose · uninstall bug)
+
+🧹 "rebrand sweep 가 놓친 harness 잔재를 dry 까지 소진"
+
+- 코드 식별자: `HarnessConfig`→`SidecarConfig`(lib/config.ts) · `harnessBin`→`sidecarBin` + launchd `com.harness.mem-guard`→`com.sidecar.mem-guard`(mem-guard.ts) · `isHarness*`→`isSidecar*`(setup·shadow·uninstall) · "non-harness hooks" 주석 정정.
+- **버그 fix**: `uninstall.ts` 의 settings.json 자동제거 판정이 `/\bharness\b/` 로 hook 명령을 매칭 — rebrand 후 hook 은 `sidecar` 라 영영 false → sidecar-only settings 를 못 지웠다. `/\bsidecar\b/` 로 교정.
+- 프로즈/트리거: ARCHITECTURE.json·README·docs·commands/*.md·gen_commands.py 의 한글 "하네스"→"사이드카"(ARCHITECTURE 의 "원본 하네스/새 하네스" 계보 표현은 이름-중립 "원본 도구/이 도구" 로). keywords.json 은 이미 클린(0).
+- 유지: per-repo 관례 `.harness/`·`harness.config.json`·legacy `.harness-engine` ignore·CHANGELOG 이력.
+- 검증: `하네스` 0 · 비-`.harness`/`harness.config` latin harness 0 · help 로드·`uninstall --dry-run`·`shadow plan` 스모크·`lint`/`architecture lint`/`toolkit` 그린.
+
 ## feat(architecture-lint): tighten tree-hygiene to 700자/6-piled + BLOCK — force fine decomposition
 
 🌳 "ARCHITECTURE.json 트리를 산문 leaf 말고 잘게 쪼갠 노드로 쓰게 강제"

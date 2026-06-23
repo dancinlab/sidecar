@@ -1,5 +1,5 @@
 ---
-description: /update [--hooks] — bump the .harness-engine submodule to latest + optional hook refresh. Triggers — "하네스 업데이트", "sidecar update", "/update".
+description: /update [--hooks] — bump the .harness-engine submodule to latest + optional hook refresh. Triggers — "사이드카 업데이트", "sidecar update", "/update".
 argument-hint: "[--hooks]"
 allowed-tools: Bash
 ---

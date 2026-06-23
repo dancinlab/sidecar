@@ -97,7 +97,7 @@ L0 파일이 staged 되면 `lint` 가, 편집되면 `post edit` 가 경고한다
 
 ### 패턴 A — repo 자체 스크립트 + enforcement 로 강제
 
-도메인 로직은 repo 의 `scripts/deploy.sh` 에 두고, 하네스는 "직접 docker restart 금지, deploy.sh 만 허용" 같은 **가드만** enforcement 로 건다. 엔진은 도메인을 모른 채 규칙만 집행한다.
+도메인 로직은 repo 의 `scripts/deploy.sh` 에 두고, 사이드카는 "직접 docker restart 금지, deploy.sh 만 허용" 같은 **가드만** enforcement 로 건다. 엔진은 도메인을 모른 채 규칙만 집행한다.
 
 ### 패턴 B — 엔진 fork 에 모듈 추가
 
@@ -112,7 +112,7 @@ repo 군이 공통 도메인(예: 같은 배포 인프라)을 쓰면, 엔진을 
 
 ## 6. 서브폴더별 CLAUDE.md 유도 (folder-guides)
 
-각 소스 폴더에 로컬 `CLAUDE.md` 를 두면 에이전트가 그 폴더만 읽어도 맥락(목적·핵심파일·컨벤션·주의점)을 잡는다. 하네스가 이를 두 갈래로 유도한다:
+각 소스 폴더에 로컬 `CLAUDE.md` 를 두면 에이전트가 그 폴더만 읽어도 맥락(목적·핵심파일·컨벤션·주의점)을 잡는다. 사이드카가 이를 두 갈래로 유도한다:
 
 ```
 능동: sidecar folders scan            누락 폴더 목록

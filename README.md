@@ -1,9 +1,9 @@
 # sidecar
 
-> 프로젝트 무관(project-agnostic) **AI 코딩 하네스** — 어느 repo 에든 드롭인.
+> 프로젝트 무관(project-agnostic) **AI 코딩 사이드카** — 어느 repo 에든 드롭인.
 > 실행·파일·프롬프트 단계에 끼어들어 규칙을 강제하고, 모든 결과를 append-only JSONL 로 남긴다.
 
-🔧 **하네스 = "AI 코딩 보안검색대"** — AI 에이전트(Claude Code / Codex 등)가 명령을 실행하거나 파일을 고치기 직전·직후에 게이트를 통과시켜, 위험한 동작은 막고(block) 잠금 파일 수정은 경고(warn)하며 검증·인계를 자동화한다. ESLint 가 "코드 문법"만 본다면, 하네스는 **명령 실행·파일 잠금·검증·세션 인계까지 작업 흐름 전체**를 단속한다.
+🔧 **사이드카 = "AI 코딩 보안검색대"** — AI 에이전트(Claude Code / Codex 등)가 명령을 실행하거나 파일을 고치기 직전·직후에 게이트를 통과시켜, 위험한 동작은 막고(block) 잠금 파일 수정은 경고(warn)하며 검증·인계를 자동화한다. ESLint 가 "코드 문법"만 본다면, 사이드카는 **명령 실행·파일 잠금·검증·세션 인계까지 작업 흐름 전체**를 단속한다.
 
 이 저장소는 dancinlab 의 모든 repo(edge · anima · …)가 공유하는 **엔진**이다. 프로젝트마다 달라지는 것은 `harness.config.json` + `.harness/*.json`(규칙 데이터)뿐이고, `.ts` 엔진 코드는 전부 공유한다.
 
@@ -120,7 +120,7 @@ hook-내부 전용(`pre`/`post`/`prompt`)은 슬래시로 노출하지 않는다
 
 ### 0. 공용(전역) 설치 — `sidecar install` (한 줄)
 
-머신에 하네스를 **공용 명령**으로 깔고 전역 훅까지 한 방에 배선한다(특정 repo 단독 세팅 아님). 부트스트랩 one-liner:
+머신에 사이드카를 **공용 명령**으로 깔고 전역 훅까지 한 방에 배선한다(특정 repo 단독 세팅 아님). 부트스트랩 one-liner:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
@@ -134,9 +134,9 @@ curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/inst
 🪝 hooks   sidecar install-hooks --global          (모든 Claude Code 세션에 가드/주입)
 ```
 
-이후 갱신은 `sidecar self-update`, 이미 하네스가 깔려 있으면 `sidecar install` 로도 동일 동작. 훅 없이 깔려면 `--no-hooks`, 미리보기는 `--dry-run`. 그다음 특정 repo 에 적용하려면 아래 1·2 단계(또는 `sidecar init`).
+이후 갱신은 `sidecar self-update`, 이미 사이드카가 깔려 있으면 `sidecar install` 로도 동일 동작. 훅 없이 깔려면 `--no-hooks`, 미리보기는 `--dry-run`. 그다음 특정 repo 에 적용하려면 아래 1·2 단계(또는 `sidecar init`).
 
-### 1. (per-repo) 하네스를 repo 에 둔다 (submodule 권장)
+### 1. (per-repo) 사이드카를 repo 에 둔다 (submodule 권장)
 
 ```bash
 cd your-repo
@@ -197,7 +197,7 @@ bash .harness-engine/bin/sidecar ci list
 }
 ```
 
-> 환경변수 이름(`CLAUDE_TOOL_INPUT` 등)은 런타임 버전에 따라 다를 수 있다. 하네스는 `CLAUDE_TOOL_INPUT` 와 `CODEX_TOOL_INPUT` 둘 다 읽는다. JSON 형식: `{"command":"...","file_path":"...","content":"..."}`.
+> 환경변수 이름(`CLAUDE_TOOL_INPUT` 등)은 런타임 버전에 따라 다를 수 있다. 사이드카는 `CLAUDE_TOOL_INPUT` 와 `CODEX_TOOL_INPUT` 둘 다 읽는다. JSON 형식: `{"command":"...","file_path":"...","content":"..."}`.
 
 > 💡 `sidecar install-hooks [--global|--repo]` 는 hook 배선과 함께 `settings.json` 의 `env` 에 `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` 도 세팅한다 — 백그라운드 subagent 에 `SendMessage`(agent-teams)를 기본 활성화. 이미 그 키가 있으면 사용자 값을 보존한다(덮어쓰지 않음). 끄려면 그 키를 `"0"` 으로 두면 된다.
 
@@ -224,13 +224,13 @@ bash .harness-engine/bin/sidecar ci list
 ## 더 읽기
 
 - [docs/languages.md](docs/languages.md) — 언어/플랫폼 범용성 (Python·Rust·C·Go·Swift·hexa 프리셋 + Node 런타임 요구)
-- [ARCHITECTURE.json](ARCHITECTURE.json) — 하네스 아키텍처 트리 SSOT (컬럼형 노드: 이름·역할·구분·상세). 사람용 뷰어는 [ARCHITECTURE.html](ARCHITECTURE.html) — 로컬은 `python3 serve.py`(서버 + 브라우저 자동 오픈), 원격은 raw.githack.com / GitHub Pages
+- [ARCHITECTURE.json](ARCHITECTURE.json) — 사이드카 아키텍처 트리 SSOT (컬럼형 노드: 이름·역할·구분·상세). 사람용 뷰어는 [ARCHITECTURE.html](ARCHITECTURE.html) — 로컬은 `python3 serve.py`(서버 + 브라우저 자동 오픈), 원격은 raw.githack.com / GitHub Pages
 - [docs/install.md](docs/install.md) — repo 통합 상세 (submodule / vendor / 멀티 repo)
 - [docs/extending.md](docs/extending.md) — 규칙 추가, 도메인 모듈 확장 패턴
 
 ## self-hosted
 
-이 repo 자체가 하네스를 쓴다(dogfooding) — `harness.config.json` + `.claude/settings.json` self hooks + pre-commit `bin/sidecar lint`. 코어(`.ts`) 변경 시 CHANGELOG 동시 갱신이 강제되고, 번들 enforcement(root-cause·secret·force-push)가 자기 코드에도 적용된다. 단 `protectedBranches` 미설정으로 자기 개발 흐름(main 직접 push)은 막지 않는다.
+이 repo 자체가 사이드카를 쓴다(dogfooding) — `harness.config.json` + `.claude/settings.json` self hooks + pre-commit `bin/sidecar lint`. 코어(`.ts`) 변경 시 CHANGELOG 동시 갱신이 강제되고, 번들 enforcement(root-cause·secret·force-push)가 자기 코드에도 적용된다. 단 `protectedBranches` 미설정으로 자기 개발 흐름(main 직접 push)은 막지 않는다.
 
 매 사이클(`sidecar pr-cycle`)의 doc-gate 는 의미있는 변경에 대해 **CHANGELOG.md(append) + (존재 시) ARCHITECTURE.json·README.md 현행화**를 요구한다 — 셋 중 미갱신이 있으면 머지를 거부한다(`--no-doc` 는 진짜 문서 불필요할 때만). 이 README 도 그 대상이므로 매 사이클 최신 상태로 유지된다. (commons `cycle-docs-pr`)
 

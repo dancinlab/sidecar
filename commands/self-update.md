@@ -1,5 +1,5 @@
 ---
-description: /self-update — git-pull the sidecar CLI clone this binary runs from (~/.sidecar/cli) to latest main. Triggers — "하네스 자체 업데이트", "self-update", "sidecar 최신화", "/self-update".
+description: /self-update — git-pull the sidecar CLI clone this binary runs from (~/.sidecar/cli) to latest main. Triggers — "사이드카 자체 업데이트", "self-update", "sidecar 최신화", "/self-update".
 allowed-tools: Bash
 ---
 

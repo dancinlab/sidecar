@@ -17,14 +17,14 @@ interface Flags {
 
 type Act = { path: string; how: "remove" | "edit" | "keep" | "skip" | "would" };
 
-function isHarnessWrapper(abs: string): boolean {
+function isSidecarWrapper(abs: string): boolean {
   try {
     return /bin\/sidecar/.test(readFileSync(abs, "utf8"));
   } catch {
     return false;
   }
 }
-function isHarnessHook(abs: string): boolean {
+function isSidecarHook(abs: string): boolean {
   try {
     const t = readFileSync(abs, "utf8");
     // primary signal = the signature comment init writes into every hook it installs
@@ -76,14 +76,14 @@ export async function runUninstall(args: string[]): Promise<number> {
   // 3. scripts/sidecar wrapper (only if it's ours)
   {
     const abs = resolve(REPO_ROOT, "scripts", "sidecar");
-    if (existsSync(abs) && isHarnessWrapper(abs)) rm("scripts/sidecar");
+    if (existsSync(abs) && isSidecarWrapper(abs)) rm("scripts/sidecar");
     else if (existsSync(abs)) acts.push({ path: "scripts/sidecar", how: "keep" });
   }
 
   // 4. git hooks installed by sidecar (signature-gated)
   for (const hook of ["pre-commit", "pre-push"]) {
     const abs = resolve(REPO_ROOT, ".git", "hooks", hook);
-    if (existsSync(abs) && isHarnessHook(abs)) rm(`.git/hooks/${hook}`);
+    if (existsSync(abs) && isSidecarHook(abs)) rm(`.git/hooks/${hook}`);
     else if (existsSync(abs)) acts.push({ path: `.git/hooks/${hook}`, how: "keep" });
   }
 
@@ -108,7 +108,7 @@ export async function runUninstall(args: string[]): Promise<number> {
   {
     const abs = resolve(REPO_ROOT, ".claude", "settings.json");
     if (existsSync(abs)) {
-      let allHarness = false;
+      let allSidecar = false;
       try {
         const j = JSON.parse(readFileSync(abs, "utf8"));
         const cmds: string[] = [];
@@ -117,11 +117,11 @@ export async function runUninstall(args: string[]): Promise<number> {
             for (const h of g.hooks ?? []) if (h.command) cmds.push(h.command);
           }
         }
-        allHarness = cmds.length > 0 && cmds.every((c) => /\bharness\b/.test(c));
+        allSidecar = cmds.length > 0 && cmds.every((c) => /\bsidecar\b/.test(c));
       } catch {
-        allHarness = false;
+        allSidecar = false;
       }
-      if (allHarness) rm(".claude/settings.json");
+      if (allSidecar) rm(".claude/settings.json");
       else acts.push({ path: ".claude/settings.json", how: "keep" });
     }
   }
@@ -134,7 +134,7 @@ export async function runUninstall(args: string[]): Promise<number> {
   }
   const kept = acts.filter((a) => a.how === "keep");
   if (kept.some((a) => a.path.includes("settings.json"))) {
-    warn(".claude/settings.json kept (has non-harness hooks) — remove sidecar pre/post/prompt/prefs/easy/recommend lines manually if desired.");
+    warn(".claude/settings.json kept (has non-sidecar hooks) — remove sidecar pre/post/prompt/prefs/easy/recommend lines manually if desired.");
   }
   info("");
   info("preserved (user content, never removed): ARCHITECTURE.md · CHANGELOG.md · CLAUDE.md · scripts/scratch/ · source.");

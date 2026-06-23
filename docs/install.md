@@ -4,13 +4,13 @@
 
 ## 공용(전역) 설치 — `sidecar install`
 
-머신 전역에 하네스를 깔아 **어느 repo 에서든** `sidecar` 명령을 쓰고, 모든 Claude Code 세션에 가드/주입 훅을 배선한다 (per-repo 스캐폴드인 `init` 과 별개 — 이쪽은 머신 1벌 공용 세팅).
+머신 전역에 사이드카를 깔아 **어느 repo 에서든** `sidecar` 명령을 쓰고, 모든 Claude Code 세션에 가드/주입 훅을 배선한다 (per-repo 스캐폴드인 `init` 과 별개 — 이쪽은 머신 1벌 공용 세팅).
 
 ```bash
-# 하네스가 아직 없을 때 (curl 부트스트랩)
+# 사이드카가 아직 없을 때 (curl 부트스트랩)
 curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
 
-# 이미 하네스가 깔려 있으면 동일 동작
+# 이미 사이드카가 깔려 있으면 동일 동작
 sidecar install
 ```
 
@@ -27,7 +27,7 @@ sidecar install
 
 ## 배치 옵션 (per-repo — 엔진 벤더링)
 
-하네스 엔진은 repo 안 어디에 두든 동작한다(`lib/paths.ts` 가 repo 루트를 상향 탐색). 세 가지 권장 배치:
+사이드카 엔진은 repo 안 어디에 두든 동작한다(`lib/paths.ts` 가 repo 루트를 상향 탐색). 세 가지 권장 배치:
 
 ### A. git submodule (권장 — 버전 고정 + 업데이트 추적)
 
@@ -109,7 +109,7 @@ repo 의 `.gitignore` 에 로그 디렉토리를 추가한다:
 
 ## 제거 (uninstall)
 
-하네스가 repo 에 **주입한 것만** 되돌린다 — 사용자 콘텐츠는 보존.
+사이드카가 repo 에 **주입한 것만** 되돌린다 — 사용자 콘텐츠는 보존.
 
 ```bash
 bash .harness-engine/bin/sidecar uninstall --dry-run   # 무엇을 지울지 미리보기

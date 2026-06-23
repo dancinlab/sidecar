@@ -2,7 +2,7 @@
   "schemaVersion": "2.0",
   "kind": "architecture-tree",
   "title": "sidecar — 아키텍처 SSOT",
-  "summary": "AI 코딩 하네스 엔진. 핵심: 규칙은 코드가 아니라 데이터 — 엔진(언제·어떻게 검사)은 공유, 규칙(무엇을 검사)만 per-repo 주입.",
+  "summary": "AI 코딩 사이드카 엔진. 핵심: 규칙은 코드가 아니라 데이터 — 엔진(언제·어떻게 검사)은 공유, 규칙(무엇을 검사)만 per-repo 주입.",
   "viewer": "ARCHITECTURE.html",
   "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
   "columns": [
@@ -26,13 +26,13 @@
   ],
   "tree": {
     "이름": "sidecar",
-    "역할": "프로젝트-무관 AI 코딩 하네스 — 작업 흐름에 끼어드는 게이트 집합",
+    "역할": "프로젝트-무관 AI 코딩 사이드카 — 작업 흐름에 끼어드는 게이트 집합",
     "구분": "root",
     "상세": "엔진(.ts)은 모든 repo 공유, 규칙(JSON)만 주입. 1–4층은 5층(규칙 데이터)을 하드코딩하지 않는다.",
     "children": [
       {
         "이름": "surfaces — 5가지 통합 지점",
-        "역할": "에이전트가 무언가 하기 직전/직후 = 하네스가 끼어들 자리",
+        "역할": "에이전트가 무언가 하기 직전/직후 = 사이드카가 끼어들 자리",
         "구분": "group",
         "상세": "어떤 에이전트 런타임이든 이 5 hook으로 환원된다.",
         "children": [
@@ -320,7 +320,7 @@
                 "이름": "poll",
                 "역할": "자가-페이스 ≥10분 폴링 런북 (c19 승인 대안)",
                 "구분": "module",
-                "상세": "templates/poll.md 방출. 매 idle 반응/손수 짠 bash sleep 루프(c19 차단) 대신 타이머로 자가 wake → 1회 체크 → fire-on-arrival → 보고 → 재예약. interval 인자는 ≥600s floor 로 클램프(기본 1200s), 숫자 아닌 인자=watch target. CI는 ci-track --watch 우선·하네스가 알림 주는 건 폴링 금지"
+                "상세": "templates/poll.md 방출. 매 idle 반응/손수 짠 bash sleep 루프(c19 차단) 대신 타이머로 자가 wake → 1회 체크 → fire-on-arrival → 보고 → 재예약. interval 인자는 ≥600s floor 로 클램프(기본 1200s), 숫자 아닌 인자=watch target. CI는 ci-track --watch 우선·사이드카가 알림 주는 건 폴링 금지"
               },
               {
                 "이름": "fleet (+ lab/abstract/full)",
@@ -627,9 +627,9 @@
       },
       {
         "이름": "debt — 들어낸 비범용 부채 (교훈)",
-        "역할": "원본 하네스 일반화 시 제거한 안티패턴",
+        "역할": "원본 도구 일반화 시 제거한 안티패턴",
         "구분": "group",
-        "상세": "새 하네스에서 피할 것",
+        "상세": "이 도구에서 피할 것",
         "children": [
           {
             "이름": "경로 하드코딩",

@@ -108,7 +108,7 @@ export function memPreflight(cmd: string): { action: "warn" | "block"; reason: s
 
 // ── CLI ────────────────────────────────────────────────────────────────────────
 
-const PLIST_LABEL = "com.harness.mem-guard";
+const PLIST_LABEL = "com.sidecar.mem-guard";
 const PLIST_PATH = resolve(homedir(), "Library", "LaunchAgents", `${PLIST_LABEL}.plist`);
 const NOTIFY_MARKER = resolve(LOG_DIR, ".mem-guard-last-notify");
 
@@ -175,7 +175,7 @@ function tick(): number {
   return 0;
 }
 
-function plistBody(harnessBin: string): string {
+function plistBody(sidecarBin: string): string {
   const interval = config().memGuard.watchdogIntervalSec;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -184,7 +184,7 @@ function plistBody(harnessBin: string): string {
   <key>Label</key><string>${PLIST_LABEL}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${harnessBin}</string>
+    <string>${sidecarBin}</string>
     <string>mem-guard</string>
     <string>tick</string>
   </array>
@@ -197,17 +197,17 @@ function plistBody(harnessBin: string): string {
 }
 
 function install(): number {
-  let harnessBin = "";
+  let sidecarBin = "";
   try {
-    harnessBin = execSync("command -v sidecar").toString().trim();
+    sidecarBin = execSync("command -v sidecar").toString().trim();
   } catch { /* fall through */ }
-  if (!harnessBin) harnessBin = resolve(homedir(), ".local", "bin", "sidecar");
-  if (!existsSync(harnessBin)) {
-    warn(`mem-guard install: \`sidecar\` binary not found at ${harnessBin}. Run \`sidecar install\` first.`);
+  if (!sidecarBin) sidecarBin = resolve(homedir(), ".local", "bin", "sidecar");
+  if (!existsSync(sidecarBin)) {
+    warn(`mem-guard install: \`sidecar\` binary not found at ${sidecarBin}. Run \`sidecar install\` first.`);
     return 1;
   }
   mkdirSync(resolve(homedir(), "Library", "LaunchAgents"), { recursive: true });
-  writeFileSync(PLIST_PATH, plistBody(harnessBin));
+  writeFileSync(PLIST_PATH, plistBody(sidecarBin));
   try {
     execSync(`launchctl unload "${PLIST_PATH}" 2>/dev/null; launchctl load "${PLIST_PATH}"`);
   } catch (e) {

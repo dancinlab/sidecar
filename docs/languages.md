@@ -2,13 +2,13 @@
 
 > 📍 SSOT: 설계 [ARCHITECTURE.json](../ARCHITECTURE.json) · 이력 [CHANGELOG.md](../CHANGELOG.md). 본 문서는 보조 언어 가이드.
 
-하네스 **엔진 로직은 언어 무관**이다 — git staged/commit, 파일 경로·내용 정규식, 명령 실행, JSONL 로그만 다룬다. 웹앱뿐 아니라 로컬 앱(Python·Rust·C/C++·Go·hexa)과 모바일(Swift)에 그대로 쓴다.
+사이드카 **엔진 로직은 언어 무관**이다 — git staged/commit, 파일 경로·내용 정규식, 명령 실행, JSONL 로그만 다룬다. 웹앱뿐 아니라 로컬 앱(Python·Rust·C/C++·Go·hexa)과 모바일(Swift)에 그대로 쓴다.
 
 ## 한 가지 호스트 요구사항: Node (tsx)
 
 엔진 자체는 TypeScript 라 `tsx`(Node) 로 실행된다. 즉 **개발 머신에 Node 1개**가 필요하다. 단:
 
-- **타깃 프로젝트 빌드와는 무관** — Rust/Swift 프로젝트에 Node 의존성을 추가하지 않는다. 하네스만 Node 로 돈다.
+- **타깃 프로젝트 빌드와는 무관** — Rust/Swift 프로젝트에 Node 의존성을 추가하지 않는다. 사이드카만 Node 로 돈다.
 - `bin/sidecar` 는 `tsx` 를 자동 탐색하고 없으면 `npx tsx` 로 받는다.
 - 완전 오프라인/Node 불가 환경이면 엔진 옆에서 한 번 `pnpm install`(tsx 번들) 해두면 네트워크 없이 동작.
 

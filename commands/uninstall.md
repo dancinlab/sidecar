@@ -1,5 +1,5 @@
 ---
-description: /uninstall [--dry-run] [--keep-logs] — remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content. Triggers — "하네스 제거", "uninstall sidecar", "/uninstall".
+description: /uninstall [--dry-run] [--keep-logs] — remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content. Triggers — "사이드카 제거", "uninstall sidecar", "/uninstall".
 argument-hint: "[--dry-run] [--keep-logs]"
 allowed-tools: Bash
 ---

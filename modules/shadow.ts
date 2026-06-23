@@ -45,7 +45,7 @@ function withMarker(body: string): string {
 const SRC_DIR = resolve(SIDECAR_ROOT, "commands");
 const DEST_DIR = resolve(homedir(), ".claude", "commands");
 
-function isHarnessShadow(path: string): boolean {
+function isSidecarShadow(path: string): boolean {
   try {
     return readFileSync(path, "utf8").includes(SHADOW_MARKER);
   } catch {
@@ -122,7 +122,7 @@ export function runShadow(args: string[]): number {
     let removed = 0;
     for (const f of readdirSync(DEST_DIR).filter((f) => f.endsWith(".md"))) {
       const p = resolve(DEST_DIR, f);
-      if (isHarnessShadow(p)) {
+      if (isSidecarShadow(p)) {
         rmSync(p);
         removed++;
       }
@@ -146,8 +146,8 @@ export function runShadow(args: string[]): number {
   const forcedNames: string[] = [];
   for (const f of src) {
     const destPath = resolve(DEST_DIR, f);
-    const collides = existsSync(destPath) && !isHarnessShadow(destPath);
-    // never clobber a hand-authored (non-harness-shadow) user command of the same
+    const collides = existsSync(destPath) && !isSidecarShadow(destPath);
+    // never clobber a hand-authored (non-sidecar-shadow) user command of the same
     // name — UNLESS --force (one-shot heal for pre-marker stale shadows; source=SSOT).
     if (collides && !force) {
       skipped++;

@@ -19,7 +19,7 @@ export interface FreshnessFile {
   rule?: string;
 }
 
-export interface HarnessConfig {
+export interface SidecarConfig {
   project: string;
   // L0 "lockdown" files — editing one emits an onEdit reminder (post edit) and
   // is flagged by `lint` when staged. Optionally parsed from a markdown 🔴 L0 block.
@@ -161,7 +161,7 @@ export interface HarnessConfig {
   companions?: (string | { cmd: string; args?: string[]; label?: string; lines?: number })[];
 }
 
-const DEFAULTS: HarnessConfig = {
+const DEFAULTS: SidecarConfig = {
   project: "unknown",
   // L0 is OPT-IN: empty by default — there is NO L0 until a repo explicitly
   // designates files (via `sidecar lockdown add` → harness.config.json, or by
@@ -251,15 +251,15 @@ function deepMerge<T>(base: T, over: Partial<T>): T {
   return out as T;
 }
 
-let _cfg: HarnessConfig | null = null;
+let _cfg: SidecarConfig | null = null;
 
-export function config(): HarnessConfig {
+export function config(): SidecarConfig {
   if (_cfg) return _cfg;
   const p = resolve(REPO_ROOT, "harness.config.json");
-  let user: Partial<HarnessConfig> = {};
+  let user: Partial<SidecarConfig> = {};
   if (existsSync(p)) {
     try {
-      user = JSON.parse(readFileSync(p, "utf8")) as Partial<HarnessConfig>;
+      user = JSON.parse(readFileSync(p, "utf8")) as Partial<SidecarConfig>;
     } catch {
       /* malformed config → defaults */
     }

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## feat(email): Postmark 트랜잭션 메일 발송 명령 `/email` (`secret` 토큰 · curl -K)
+
+📮 "터미널에서 바로 메일 한 통"
+
+- 하는 일: Postmark REST API(`POST /email`)로 트랜잭션 이메일을 보낸다. 서버 토큰은 `secret get postmark.server_token` 으로만 가져오고(절대 인라인·로그 금지), curl `-K` config 파일로 헤더에 실어 프로세스 argv 에도 안 뜬다 — `imagine` 의 키-은닉 기법 그대로. 본문은 FILE 에서 읽어(provenance·argv 누출 0) `--text`/`--html`, 짧은 건 `-m <inline>`.
+- 표면: `email send --to <a[,b]> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]` · `history [--count N][--offset N][--tag t][--json][--local]`(Postmark outbound API 또는 로컬 원장) · `list`(토큰·기본 From·스트림 점검) · `help`. `--from` 미지정 시 `secret get postmark.from` 기본값. `--dry` 는 발송 없이 payload 만 렌더(첨부 base64 는 파일명만 요약). 성공 조용·실패 큰소리 + `email.jsonl` 로컬 원장.
+- 영향: `modules/email.ts`(신규) · `cli/index.ts`(등록 `email`/`mail` + HELP 라인) · `commands/email.md`(bare 슬래시 위임자). ⚙️ 적용: `harness ship` 후 picker 에 `/email` 노출. 사용 전 `secret set postmark.server_token <토큰>`.
+
 ## feat(commands): hexa-surface 슬래시 4종(/hexa·/cloud·/dojo·/deck) + /verify YAML 깨짐 수정
 
 🧩 "이웃 CLI(hexa) 도 슬래시로 손에 잡히게"

@@ -265,6 +265,12 @@
                 "상세": "출력 확장자로 분기: 이미지(.png/.jpg)=fal queue `openai/gpt-image-2`(image2·핀) 또는 -b openai `gpt-image-1`; 영상(.mp4/.mov/.webm)=fal queue Seedance 2.0(핀·fast 티어=…/fast/…) — `-i <image>` 없으면 `bytedance/seedance-2.0/text-to-video`, 있으면 `bytedance/seedance-2.0/image-to-video`(이미지 애니메이트·로컬파일은 base64 data-URI, http URL은 그대로 image_url). 동일 queue+poll(영상은 폴링 길게)·결과 URL은 images[].url|video.url 추출. 프롬프트는 FILE·키는 secret get fal/openai.api_key·-K curl config로 argv 누출 방지. -m 로 모델 override"
               },
               {
+                "이름": "email (alias mail)",
+                "역할": "Postmark 트랜잭션 메일 발송 (토큰 secret 경유)",
+                "구분": "module",
+                "상세": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl config로 헤더에 실어 argv 누출 0(imagine 키-은닉 동형). send: --to/--from(미지정시 `secret get postmark.from`)/--subject + 본문(--text/--html=FILE·provenance, -m=인라인 텍스트) + --cc/--bcc/--reply-to/--tag/--stream + --attach(base64·MIME 추정) + --dry(발송없이 payload 렌더·첨부는 파일명만). history=Postmark outbound API(또는 --local 원장)·list=토큰/From/스트림 점검. 성공 조용·실패 큰소리 + email.jsonl 로컬 원장"
+              },
+              {
                 "이름": "kick (alias drill)",
                 "역할": "hexa-lang gap-breakthrough/discovery 엔진 패스스루",
                 "구분": "module",

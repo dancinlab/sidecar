@@ -59,7 +59,7 @@ function helpText(): string {
 // (they share the canonical's HELP line, so they don't get their own catalog row).
 const ALIASES: Record<string, string> = {
   "all-bg-go": "abg", "all-fg-go": "afg", drill: "kick", demiurge: "demi",
-  micro: "micro-exp", "step-by-step": "sbs", mem: "mem-guard",
+  micro: "micro-exp", "step-by-step": "sbs", mem: "mem-guard", mail: "email",
 };
 
 // Every dispatch `case "x"` id, parsed from the CLI source (authoritative surface).

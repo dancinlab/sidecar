@@ -33,6 +33,7 @@ import { runSecret } from "../modules/secret.ts";
 import { runLsp } from "../modules/lsp.ts";
 import { runWorktree } from "../modules/worktree.ts";
 import { runImagine } from "../modules/imagine.ts";
+import { runEmail } from "../modules/email.ts";
 import { runPaper } from "../modules/paper.ts";
 import { runResearch } from "../modules/research.ts";
 import { runToolkit } from "../modules/toolkit.ts";
@@ -116,6 +117,9 @@ hook delegates (wire these into your agent's settings.json):
   watch <url|path> [question] [flags]   download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
+  email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]
+                           transactional email via Postmark API (POST /email) — token from \`secret get postmark.server_token\` (curl -K · never in argv)
+                           | history [--count N][--offset N][--tag t][--json][--local] | list | help
   paper <new|build|cover|list> [slug] [flags]   demiurge-house scientific paper: scaffold (emoji title · g5 tier badges ·
                            TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate
                            history [-b][-m][--start][--limit][--status][--local][--json] — past prompts (fal API / local ledger)
@@ -274,6 +278,9 @@ async function main(): Promise<number> {
       return runWorktree(rest);
     case "imagine":
       return runImagine(rest);
+    case "email":
+    case "mail":
+      return runEmail(rest);
     case "paper":
       return runPaper(rest);
     case "research":

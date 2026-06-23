@@ -347,7 +347,7 @@
                 "이름": "claudemd",
                 "역할": "프로젝트 규칙 매턴 재주입",
                 "구분": "module",
-                "상세": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입 — commons inject 와 같은 운반 장치. CLAUDE.md 는 Claude Code 기본으로 SessionStart 1회만 들어가 대화가 길어지면 묻히는데, 매턴 재주입으로 프로젝트 규칙을 commons 급 salience 로 유지(MUST-FOLLOW 헤더 prepend). 선택적 `<!-- enforce:start/end -->` 블록이 있으면 그 hard-rules 섹션만 재주입(전체 맵 재전송 회피), 없으면 전체. 80KB 초과 절단. 부재 시 무음"
+                "상세": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입 — commons inject 와 같은 운반 장치. CLAUDE.md 는 Claude Code 기본으로 SessionStart 1회만 들어가 대화가 길어지면 묻히는데, 매턴 재주입으로 프로젝트 규칙을 commons 급 salience 로 유지(MUST-FOLLOW 헤더 prepend). 선택적 `<!-- enforce:start/end -->` 블록이 있으면 그 hard-rules 섹션만 재주입(전체 맵 재전송 회피), 없으면 전체. 80KB 초과 절단. 부재 시 무음. **CLAUDE.md = 진입 포인터**(프로젝트 설명 + SSOT 포인터 + 작업규칙): 디렉토리·모듈 트리는 ARCHITECTURE.json 단일 SSOT 라 CLAUDE.md 에 중복하지 않는다 — `docs.ts:claudeMdViolations` 의 CLAUDE-MD-NO-TREE 검사는 구조 SSOT(ARCHITECTURE.json/.md) 존재 시 면제(트리 중복 drift 방지)"
               },
               {
                 "이름": "load",

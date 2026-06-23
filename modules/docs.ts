@@ -129,13 +129,16 @@ function walkMd(dir: string, out: string[]): void {
   }
 }
 
-// Main CLAUDE.md MUST carry: (1) a project blurb, (2) a tree structure with a
-// per-node one-line description. Checked whenever the doc discipline is active.
+// Main CLAUDE.md MUST carry a project blurb. The structure tree is the single
+// SSOT of ARCHITECTURE.json/.md when present — so CLAUDE.md only needs its own
+// tree when NO architecture SSOT exists (else the tree would duplicate it and
+// drift · commons single-doc). When an architecture SSOT is present, CLAUDE.md
+// is an entry pointer (blurb + pointers + work rules) and the tree is exempt.
 function claudeMdViolations(): DocViolation[] {
   const v: DocViolation[] = [];
   const abs = repoPath("CLAUDE.md");
   if (!existsSync(abs)) {
-    v.push({ rule: "CLAUDE-MD-MISSING", file: "CLAUDE.md", msg: "메인 CLAUDE.md 없음 — 프로젝트 설명 + 트리 구조 포함해 작성" });
+    v.push({ rule: "CLAUDE-MD-MISSING", file: "CLAUDE.md", msg: "메인 CLAUDE.md 없음 — 프로젝트 설명 + (구조 SSOT 부재 시) 트리 구조 포함해 작성" });
     return v;
   }
   const text = readFileSync(abs, "utf8");
@@ -153,11 +156,15 @@ function claudeMdViolations(): DocViolation[] {
     }
   }
   if (!hasDesc) v.push({ rule: "CLAUDE-MD-NO-DESC", file: "CLAUDE.md", msg: "프로젝트 간략 설명 누락 — H1 아래 한두 문장 추가" });
-  // (2) tree + per-node descriptions
-  const hasTree = /(├─|└─|│ )/.test(text);
-  const hasTreeDesc = lines.some((l) => /(├─|└─).*(—| - |#|:)/.test(l));
-  if (!hasTree) v.push({ rule: "CLAUDE-MD-NO-TREE", file: "CLAUDE.md", msg: "트리 구조 누락 — ``` 블록에 디렉토리 트리(├─/└─) + 각 항목 한 줄 설명 추가" });
-  else if (!hasTreeDesc) v.push({ rule: "CLAUDE-MD-TREE-NO-DESC", file: "CLAUDE.md", msg: "트리 항목별 설명 누락 — 각 트리 라인에 `— 설명` 추가" });
+  // (2) tree + per-node descriptions — EXEMPT when an architecture SSOT exists
+  // (the structure tree lives there as the single SSOT, not duplicated here).
+  const hasArchSSOT = existsSync(repoPath("ARCHITECTURE.json")) || existsSync(repoPath("ARCHITECTURE.md"));
+  if (!hasArchSSOT) {
+    const hasTree = /(├─|└─|│ )/.test(text);
+    const hasTreeDesc = lines.some((l) => /(├─|└─).*(—| - |#|:)/.test(l));
+    if (!hasTree) v.push({ rule: "CLAUDE-MD-NO-TREE", file: "CLAUDE.md", msg: "트리 구조 누락 — 구조 SSOT(ARCHITECTURE.json/.md)가 없으면 ``` 블록에 디렉토리 트리(├─/└─) + 각 항목 한 줄 설명 추가 (또는 ARCHITECTURE.json 을 만들어 거기 단일 SSOT)" });
+    else if (!hasTreeDesc) v.push({ rule: "CLAUDE-MD-TREE-NO-DESC", file: "CLAUDE.md", msg: "트리 항목별 설명 누락 — 각 트리 라인에 `— 설명` 추가" });
+  }
   return v;
 }
 

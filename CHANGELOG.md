@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## refactor(claudemd): CLAUDE.md = 진입 포인터(트리 제거) + 작업규칙 do/dont — 트리는 ARCHITECTURE.json 단일 SSOT
+
+🗺️ "지도는 한 곳에만 — CLAUDE.md 는 입구 표지판"
+
+- 배경: 디렉토리·모듈 트리가 `CLAUDE.md` 와 `ARCHITECTURE.json` 양쪽에 있어 중복 → 한쪽만 갱신되면 drift. `single-doc` 정신대로 **트리는 ARCHITECTURE.json 단일 SSOT** 로 일원화.
+- CLAUDE.md 슬림화: 큰 ASCII 트리 블록(25줄)을 제거하고 **SSOT 포인터**(구조→ARCHITECTURE.json · 거버넌스→commons.md · 이력→CHANGELOG)로 대체. 작업규칙 3불릿도 commons 와 톤 통일해 **do/dont** 형식으로. **41→16줄**(매 턴 claudemd 재주입 토큰 절감).
+- 린터 완화(트리 면제): `docs.ts:claudeMdViolations` 의 **CLAUDE-MD-NO-TREE** 검사가 구조 SSOT(ARCHITECTURE.json/.md) 존재 시 면제되도록 — 트리가 거기 단일 SSOT 면 CLAUDE.md 는 진입 포인터로 충분(트리 없으면 여전히 block, 구조 문서 자체가 없는 repo 보호). CLAUDE-MD-MISSING 문구도 "구조 SSOT 부재 시 트리 포함" 으로 정정.
+- 영향: `CLAUDE.md`(트리 제거 + do/dont) · `modules/docs.ts`(트리 면제 게이트) · ARCHITECTURE.json(claudemd 노드) · README.md.
+
 ## refactor(commons): do/dont 압축(-70%) + slug 키 + do/dont 형식 린터 (sidecar 포팅)
 
 ✂️ "거버넌스 규칙을 산문에서 do/dont 두 줄로 — 가볍게, 다시 못 부풀게"

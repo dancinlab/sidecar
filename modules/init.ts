@@ -197,25 +197,54 @@ export async function runInit(args: string[]): Promise<number> {
   }
 
   // 2d. single-doc discipline scaffolds (create-if-absent):
-  //   ARCHITECTURE.md (update-in-place SSOT) · CHANGELOG.md (append) ·
-  //   CLAUDE.md (project blurb + tree) · state/ (작업 산출물 단일 루트).
+  //   ARCHITECTURE.json (current-state SSOT tree · commons single-doc) ·
+  //   CHANGELOG.md (append) · CLAUDE.md (entry pointer — NO directory tree;
+  //   the tree is the single SSOT in ARCHITECTURE.json) · state/ (산출물 루트).
   {
     const proj = basename(REPO_ROOT);
+    const archTree = {
+      schemaVersion: "2.0",
+      kind: "architecture-tree",
+      title: `${proj} — 아키텍처 SSOT`,
+      summary: "(한 줄 프로젝트 설명)",
+      viewer: "ARCHITECTURE.html",
+      serve: "python3 serve.py",
+      columns: [
+        { key: "이름", label: "이름", tree: true },
+        { key: "역할", label: "역할" },
+        { key: "구분", label: "구분" },
+        { key: "상세", label: "상세" },
+      ],
+      tree: {
+        이름: proj,
+        역할: "(프로젝트 한 줄 역할)",
+        구분: "root",
+        상세:
+          "현재상태 스냅샷 트리 — 변경 시 해당 노드를 제자리 교체(update-in-place)." +
+          " 이력/버전/날짜/previous/deprecated 노드 금지(이력은 CHANGELOG + git).",
+        children: [
+          { 이름: "src/", 역할: "소스 코드", 구분: "group", 상세: "(컴포넌트별 역할)" },
+          { 이름: "state/", 역할: "작업 산출물 단일 루트", 구분: "group", 상세: "실험·벤치·검증·스크래치 (git-tracked)" },
+        ],
+      },
+    };
     write(
-      resolve(REPO_ROOT, "ARCHITECTURE.md"),
-      `# ${proj} — 아키텍처 (SSOT · 업데이트형)\n\n` +
-        `> 최종 아키텍처 단일 SSOT. 변경 시 이 파일을 **갱신(덮어쓰기)** 한다(추가형 아님). 이력/결정은 CHANGELOG.md.\n\n` +
-        `## 개요\n(한 줄 설명)\n\n## 구성요소\n(컴포넌트별 역할)\n\n## 데이터 흐름\n(입력 → 처리 → 출력)\n`,
-      "ARCHITECTURE.md"
+      resolve(REPO_ROOT, "ARCHITECTURE.json"),
+      JSON.stringify(archTree, null, 2) + "\n",
+      "ARCHITECTURE.json"
     );
     write(
       resolve(REPO_ROOT, "CHANGELOG.md"),
-      `# CHANGELOG\n\n> 추가형(append-only) 이력. 최종 상태는 ARCHITECTURE.md.\n\n## (unreleased)\n- \n`,
+      `# CHANGELOG\n\n> 추가형(append-only) 이력. 현재상태 SSOT 는 ARCHITECTURE.json.\n\n## (unreleased)\n- \n`,
       "CHANGELOG.md"
     );
     write(
       resolve(REPO_ROOT, "CLAUDE.md"),
-      `# ${proj}\n\n${proj} — (한 줄 프로젝트 설명을 여기에).\n\n## 구조\n\n\`\`\`\n${proj}/\n├─ src/         — 소스 코드\n├─ state/       — 실험·벤치·검증 등 모든 작업 산출물 단일 루트 (git-tracked)\n├─ ARCHITECTURE.md — 최종 아키텍처 SSOT (업데이트형)\n└─ CHANGELOG.md  — 이력 (추가형)\n\`\`\`\n`,
+      `# ${proj}\n\n${proj} — (한 줄 프로젝트 설명을 여기에).\n\n` +
+        `> 📍 SSOT 포인터 (이 파일 = 진입점):\n` +
+        `> · 구조·설계 → [ARCHITECTURE.json](ARCHITECTURE.json) — 디렉토리·모듈 트리 단일 SSOT (\`sidecar architecture inject\` 가 SessionStart 주입 · 사람은 \`python3 serve.py\` HTML 뷰어)\n` +
+        `> · 이력 → [CHANGELOG.md](CHANGELOG.md) (append)\n\n` +
+        `## 작업 규칙 (this repo)\n- do: (프로젝트별 do/dont 규칙을 여기에)\n`,
       "CLAUDE.md"
     );
     const scratch = resolve(REPO_ROOT, "state");

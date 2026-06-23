@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## refactor(commons): do/dont 압축(-70%) + slug 키 + do/dont 형식 린터 (sidecar 포팅)
+
+✂️ "거버넌스 규칙을 산문에서 do/dont 두 줄로 — 가볍게, 다시 못 부풀게"
+
+- 배경: `config/commons.md`(매 턴 주입되는 거버넌스 SSOT)가 규칙당 5~10줄 산문 + 메커니즘/실증 박제로 350줄·38KB 까지 비대 → 매 턴 컨텍스트를 무겁게 먹었다. sidecar 의 do/dont 린터(governance = `do`/`dont` 쌍, SKILL.md 본문을 그 형식으로 강제) 철학을 harness 에 이식.
+- 압축: 27규칙 전부 `## <slug> — <title>` + `- do:`/`- dont:` 두 줄로 재작성. **350→119줄 · 38,841→11,732 바이트(-70%)**. 메커니즘 세부·실증 사례는 버리고(코드 hook 이 강제 + git/CHANGELOG 가 이력) do/dont 핵심만 남김 — 강제력 불변.
+- slug 키(번호 폐기): `c1~c27` 번호는 순서가 바뀌면 깨지므로 **의미 slug**(`root-cause`·`break-walls`·`fanout-workflow`…)로 전환. 내부 cross-ref(`(c1·c16)` → `root-cause·no-escape-hatch`)와 외부 활성 참조(`cloud-guard.ts`·`lint.ts` 주석·`CLAUDE.md`)도 slug 로 정정. `@convergence` 마커의 과거 incident 기록(threshold)은 그 시점 박제라 불변.
+- 린터(재발 차단): `commons.ts:lintCommonsFormat()` 신설 — 각 `## ` 섹션 본문이 do/dont 줄만인지(산문 단락 금지) + 섹션마다 do/dont ≥1 인지 검사. `harness lint` 4g 로 통합, `severity-map.json` 에 **COMMONS-PROSE/COMMONS-NO-DODONT = block** → 거버넌스가 산문으로 다시 부풀면 커밋 차단(첫 `## ` 이전 머리말은 면제).
+
+```
+전 (before)                              후 (after)
+─────────────────────────              ─────────────────────────
+ ## c1 — root cause                      ## root-cause — …
+ 원인을 고친다... 금지:@ts-ignore         - do: 증상 아닌 원인 · 재발은 @convergence
+ ·eslint... (산문 18줄)                   - dont: @ts-ignore·eslint·빈catch… (2줄)
+ 350줄 · 38KB · 번호 ID(순서의존)          119줄 · 12KB · slug ID(순서무관) + 린터
+```
+
+- 영향: `config/commons.md`(재작성) · `modules/commons.ts`(린터) · `modules/lint.ts`(4g 통합 + 주석 slug) · `config/severity-map.json` + `.harness/severity-map.json`(2 룰) · `modules/cloud-guard.ts`(주석 slug) · `CLAUDE.md` · ARCHITECTURE.json. ⚙️ `harness ship` 후 전 repo 의 inject 가 가벼워짐.
+
 ## feat(email): Postmark 트랜잭션 메일 발송 명령 `/email` (`secret` 토큰 · curl -K)
 
 📮 "터미널에서 바로 메일 한 통"

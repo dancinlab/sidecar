@@ -17,7 +17,9 @@
       "CLAUDE-MD-NO-DESC": "block",
       "CLAUDE-MD-NO-TREE": "block",
       "CLAUDE-MD-TREE-NO-DESC": "warn",
-      "SHADOW-DESC": "warn"
+      "SHADOW-DESC": "warn",
+      "COMMONS-PROSE": "block",
+      "COMMONS-NO-DODONT": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

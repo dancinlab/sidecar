@@ -214,7 +214,7 @@
                 "이름": "lint",
                 "역할": "staged-L0·신선도·수렴 + doc-gate",
                 "구분": "module",
-                "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate). 4f SHADOW-DESC(warn·sidecar s18 포팅): commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 검사 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(harness-repo 한정 · commands/ 존재 시)"
+                "상세": "CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate). 4f SHADOW-DESC(warn·sidecar s18 포팅): commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 검사 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(harness-repo 한정 · commands/ 존재 시). 4g COMMONS-PROSE/COMMONS-NO-DODONT(block·sidecar do/dont 린터 포팅): commons.md(또는 .harness override)의 각 `## <slug> — <title>` 섹션 본문이 `- do:`/`- dont:` 줄만(산문 단락 금지·빈줄/들여쓰기 continuation 허용)인지 + 섹션마다 do/dont ≥1 보유인지 검사 — 거버넌스 SSOT 가 산문으로 다시 비대해지는 걸 커밋 게이트로 차단(첫 `## ` 이전 머리말은 면제 · `commons.ts:lintCommonsFormat`)"
               },
               {
                 "이름": "install",

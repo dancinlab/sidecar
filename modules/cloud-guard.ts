@@ -1,6 +1,6 @@
 // cloud-guard — built-in code-level block for raw GPU-provider CLI/API use AND
 // raw training-job / input-deck launches in `pre bash`. The canonical path is
-// hexa's builtins (`hexa cloud` / `hexa dojo` / `hexa deck`, commons c11); calling
+// hexa's builtins (`hexa cloud` / `hexa dojo` / `hexa deck`, commons canonical-cli); calling
 // a provider's own CLI/API — or hand-running a train script / deck generator —
 // directly bypasses that layer (and the `ing pod` board / cost accounting). This
 // is enforced in CODE — before config rules, default-on, NO `# raw-cloud-ok`-style

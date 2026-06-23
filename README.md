@@ -232,11 +232,13 @@ bash .harness-engine/bin/harness ci list
 
 이 repo 자체가 하네스를 쓴다(dogfooding) — `harness.config.json` + `.claude/settings.json` self hooks + pre-commit `bin/harness lint`. 코어(`.ts`) 변경 시 CHANGELOG 동시 갱신이 강제되고, 번들 enforcement(root-cause·secret·force-push)가 자기 코드에도 적용된다. 단 `protectedBranches` 미설정으로 자기 개발 흐름(main 직접 push)은 막지 않는다.
 
-매 사이클(`harness pr-cycle`)의 doc-gate 는 의미있는 변경에 대해 **CHANGELOG.md(append) + (존재 시) ARCHITECTURE.md·README.md 현행화**를 요구한다 — 셋 중 미갱신이 있으면 머지를 거부한다(`--no-doc` 는 진짜 문서 불필요할 때만). 이 README 도 그 대상이므로 매 사이클 최신 상태로 유지된다. (commons c12)
+매 사이클(`harness pr-cycle`)의 doc-gate 는 의미있는 변경에 대해 **CHANGELOG.md(append) + (존재 시) ARCHITECTURE.md·README.md 현행화**를 요구한다 — 셋 중 미갱신이 있으면 머지를 거부한다(`--no-doc` 는 진짜 문서 불필요할 때만). 이 README 도 그 대상이므로 매 사이클 최신 상태로 유지된다. (commons `cycle-docs-pr`)
 
-> 📌 **README = 현재상태 SSOT, 이력 로그 아님** (ARCHITECTURE 와 동급 규율 · commons c4). README 현행화는 *지금의* 기능·사용법·구조를 **제자리 덮어쓰기(update-in-place)** 하는 것이지, 변경이력을 덧붙이는 게 아니다. README 에 버전 로그·날짜·`이전엔…`/`deprecated`/"v0.x 에서 추가" 식 누적 금지 — 이력은 **CHANGELOG.md + git** 이 SSOT.
+> 📌 **README = 현재상태 SSOT, 이력 로그 아님** (ARCHITECTURE 와 동급 규율 · commons `single-doc`). README 현행화는 *지금의* 기능·사용법·구조를 **제자리 덮어쓰기(update-in-place)** 하는 것이지, 변경이력을 덧붙이는 게 아니다. README 에 버전 로그·날짜·`이전엔…`/`deprecated`/"v0.x 에서 추가" 식 누적 금지 — 이력은 **CHANGELOG.md + git** 이 SSOT.
 
-`harness pr-cycle` 은 검증된 머지 직후 **로컬 base(main) 를 origin/base 로 ff-sync** 한다(feature 브랜치에서 `git fetch origin <base>:<base>` — checkout 전환 없이 로컬 main 뒤처짐 방지, non-ff 거부=안전). origin 만 갱신하고 로컬 main 을 방치하지 않으므로, 다음 작업 브랜치는 항상 최신 base 에서 분기된다. (commons c12)
+`harness pr-cycle` 은 검증된 머지 직후 **로컬 base(main) 를 origin/base 로 ff-sync** 한다(feature 브랜치에서 `git fetch origin <base>:<base>` — checkout 전환 없이 로컬 main 뒤처짐 방지, non-ff 거부=안전). origin 만 갱신하고 로컬 main 을 방치하지 않으므로, 다음 작업 브랜치는 항상 최신 base 에서 분기된다. (commons `cycle-docs-pr`)
+
+거버넌스 SSOT `config/commons.md` 는 **slug 키 do/dont 형식**이다 — 각 규칙은 `## <slug> — <title>` + `- do:`/`- dont:` 두 줄(번호 ID 없음 · 순서 무관). 메커니즘·실증은 코드 hook + CHANGELOG·git 이 담고, commons 는 do/dont 핵심만 운반한다. `harness lint` 4g(COMMONS-PROSE/COMMONS-NO-DODONT · block)가 산문 단락·do/dont 누락을 커밋 게이트로 막아 다시 비대해지지 않게 한다.
 
 이어서 **stale-PR reaper** 가 돈다 — pr-cycle 은 원래 *자기 브랜치 PR* 만 다뤄, 한 번 중단·실패한 머지는 PR 이 열린 채 영구 방치되고 시간이 지나면 머지가능하던 것도 충돌로 썩었다. reaper 는 검증 머지 직후 **내 다른 열린 PR 을 전수 점검**해 머지가능(MERGEABLE)은 자동 squash-머지(자기 PR · admin · delete-branch — 메인 흐름과 동일 신뢰모델), 기계가 안전하게 못 닿는 것(CONFLICTING/blocked)은 다음 조치(rebase 또는 `gh pr close`)와 함께 **큰소리로 보고**한다. 즉 만들어졌지만 안 머지된 PR 은 매 사이클 **반드시 처리되거나 경보**되어 조용히 잊히지 않는다. `--no-reap` 으로 끈다.
 

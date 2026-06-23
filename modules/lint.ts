@@ -18,6 +18,7 @@ import { lintArchitectureTree } from "./architecture.ts";
 import { scanConvergenceMarkers } from "./convergence.ts";
 import { toolkitDrift } from "./toolkit.ts";
 import { lintCommandDescriptions } from "./shadow.ts";
+import { lintCommonsFormat } from "./commons.ts";
 
 interface Violation {
   rule: string;
@@ -135,13 +136,13 @@ export async function runLint(args: string[]): Promise<number> {
     violations.push({ rule: d.rule, file: d.file, msg: d.msg });
   }
 
-  // 4c. architecture tree hygiene (c4) — oversized / piled / history leaf nodes
+  // 4c. architecture tree hygiene (single-doc) — oversized / piled / history leaf nodes
   // drift the design SSOT from a navigable tree into a wall of text. warn-only.
   for (const h of lintArchitectureTree()) {
     violations.push({ rule: h.rule, file: "ARCHITECTURE.json", msg: `${h.path} — ${h.msg}` });
   }
 
-  // 4d. convergence inline-marker hygiene (c1) — every recurrence-prevention marker
+  // 4d. convergence inline-marker hygiene (root-cause) — every recurrence-prevention marker
   // must carry the required keys (state·id) + a valid state, else it can't be
   // aggregated and the learning is silently lost. Mechanically enforces @convergence.
   for (const it of (await scanConvergenceMarkers([])).issues) {
@@ -160,6 +161,12 @@ export async function runLint(args: string[]): Promise<number> {
   // a `Triggers —` clause, else the bare /cmd silently stops being auto-recognized
   // from natural language. warn-only (discoverability). Harness-repo-only (commands/).
   for (const it of lintCommandDescriptions()) {
+    violations.push({ rule: it.rule, file: it.file, msg: it.msg });
+  }
+
+  // 4g. commons do/dont format — each `## <slug>` section in the governance SSOT
+  // must be do/dont lines only (no prose), so it can't silently re-bloat. block.
+  for (const it of lintCommonsFormat()) {
     violations.push({ rule: it.rule, file: it.file, msg: it.msg });
   }
 

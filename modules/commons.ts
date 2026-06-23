@@ -23,15 +23,10 @@ function body(): string {
 // always-on governance SSOT can't silently re-bloat into prose. Preamble before
 // the first `## ` (file header + blockquote note) is exempt. The mechanism that
 // makes a rule enforceable lives in code; this block carries only the do/dont.
-export function lintCommonsFormat(): Array<{ rule: string; file: string; msg: string }> {
-  const f = resolveRuleFile(".harness/commons.md", "commons.md");
-  let text: string;
-  try {
-    text = readFileSync(f, "utf8");
-  } catch {
-    return [];
-  }
-  const rel = f.includes(`${"/.harness/"}`) || f.includes(".harness/") ? ".harness/commons.md" : "config/commons.md";
+// Core: check raw text (used both by the commit-time lint AND the write-time
+// pre-write guard, so a malformed edit is denied the moment it's written —
+// not just at commit · sidecar-style).
+export function lintCommonsText(text: string, rel: string): Array<{ rule: string; file: string; msg: string }> {
   const lines = text.split("\n");
   const out: Array<{ rule: string; file: string; msg: string }> = [];
   let cur: string | null = null; // current section slug (null = preamble)
@@ -63,6 +58,47 @@ export function lintCommonsFormat(): Array<{ rule: string; file: string; msg: st
   }
   flush();
   return out;
+}
+
+// commit-time entry — reads the resolved commons.md off disk (harness lint 4g).
+export function lintCommonsFormat(): Array<{ rule: string; file: string; msg: string }> {
+  const f = resolveRuleFile(".harness/commons.md", "commons.md");
+  let text: string;
+  try {
+    text = readFileSync(f, "utf8");
+  } catch {
+    return [];
+  }
+  const rel = f.includes(".harness/") ? ".harness/commons.md" : "config/commons.md";
+  return lintCommonsText(text, rel);
+}
+
+// write-time guard (sidecar-style) — when a commons.md (bundled config/ or a
+// repo .harness/ override) is written via Write (full content) the do/dont
+// format is validated BEFORE it lands, so a prose edit is hard-DENIED at the
+// edit, not just at commit. Returns a block payload or null. Edit (new_string-
+// only fragments) is left to the commit-time lint 4g backstop (no full-file
+// context to validate a fragment against). Mirrors descWriteViolation.
+export function commonsWriteViolation(filePath: string, content: string): { rule: string; block: string } | null {
+  if (!content) return null;
+  const isBundled = filePath.endsWith("config/commons.md");
+  const isOverride = filePath.endsWith(".harness/commons.md");
+  if (!isBundled && !isOverride) return null;
+  // a full-document write has the preamble + ## sections; a tiny fragment with no
+  // `## ` header would be all-preamble (exempt) → only validate real documents.
+  if (!content.includes("## ")) return null;
+  const rel = isOverride ? ".harness/commons.md" : "config/commons.md";
+  const v = lintCommonsText(content, rel);
+  if (!v.length) return null;
+  const prose = v.filter((x) => x.rule === "COMMONS-PROSE");
+  const nodo = v.filter((x) => x.rule === "COMMONS-NO-DODONT");
+  const parts: string[] = [];
+  if (prose.length) parts.push(`${prose.length} prose line(s) — e.g. ${prose[0].msg}`);
+  if (nodo.length) parts.push(`${nodo.length} section(s) with no do/dont — e.g. ${nodo[0].msg}`);
+  return {
+    rule: prose.length ? "COMMONS-PROSE" : "COMMONS-NO-DODONT",
+    block: `commons.md is do/dont-only (slug-keyed rules): every \`## <slug>\` section body = \`- do:\` / \`- dont:\` lines only, no prose paragraphs. ${parts.join(" · ")}. 산문은 코드 hook + CHANGELOG/git 으로, commons 엔 do/dont 핵심만.`,
+  };
 }
 
 export async function runCommons(args: string[]): Promise<number> {

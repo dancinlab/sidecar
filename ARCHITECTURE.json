@@ -96,7 +96,7 @@
             "이름": "PreToolUse(Write)",
             "역할": "쓰기 직전 → pre write",
             "구분": "surface",
-            "상세": "경로·내용·우회패턴 매칭. stdout JSON / stderr"
+            "상세": "경로·내용·우회패턴 매칭 + write-time hard-deny: SKILL-DESC-CAP(commands/*.md·SKILL.md desc cap), COMMONS-PROSE/COMMONS-NO-DODONT(commons.md 전체-문서 Write 가 do/dont-only 인지 — 산문 섹션이면 쓰기 차단, 커밋까지 안 감 · sidecar 동형, lint 4g 가 backstop), SECRET-LITERAL, HANDOFF-SCATTER. stdout JSON(deny) / stderr(warn)"
           },
           {
             "이름": "PostToolUse",

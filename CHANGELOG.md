@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat(commons): do/dont 형식 **write-time** hard-deny (sidecar 동형 · 커밋 아닌 수정 시점 차단)
+
+🚧 "잘못 쓰는 순간 막는다 — 커밋까지 안 기다리고"
+
+- 배경: commons do/dont 형식 검사(COMMONS-PROSE/COMMONS-NO-DODONT)가 `harness lint`(**커밋 시점**)에만 돌아서, 산문을 써 넣어도 커밋 전까진 통과했다. sidecar 의 skill-desc write-deny 처럼 **수정(Write) 즉시** 막아야 한다는 피드백.
+- 고침: `commons.ts` 의 검사 코어를 `lintCommonsText(text, rel)` 로 분리(파일 읽기와 분리) → ① 커밋 게이트 `lintCommonsFormat()`(lint 4g) ② **write-time `commonsWriteViolation(filePath, content)`** 둘이 공유. `pre.ts:preWrite` 가 commons.md(bundled `config/` 또는 repo `.harness/` override) 전체-문서 Write 를 가로채 do/dont-only 아니면 **PreToolUse `permissionDecision: deny`** 로 쓰기 자체를 차단(`descWriteViolation`(SKILL-DESC) 바로 뒤, 동형 패턴).
+- 2층 방어: write-time deny(즉시) + commit-time lint 4g(backstop) — skill-desc 가드와 동일 구조. Edit 의 new_string 단편(섹션 헤더 없는 조각)은 full-file 맥락이 없어 커밋 lint 가 맡고, 전체-문서 Write 는 write 시점에 막는다.
+- 검증: 산문 든 commons.md Write → `deny` 발화 확인 · 정상 do/dont → 통과. 영향: `modules/commons.ts`(코어 분리 + write 가드) · `modules/pre.ts`(preWrite 배선) · ARCHITECTURE.json.
+
 ## refactor(claudemd): CLAUDE.md = 진입 포인터(트리 제거) + 작업규칙 do/dont — 트리는 ARCHITECTURE.json 단일 SSOT
 
 🗺️ "지도는 한 곳에만 — CLAUDE.md 는 입구 표지판"

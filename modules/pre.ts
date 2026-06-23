@@ -21,6 +21,7 @@ import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { docWriteViolation } from "./docs.ts";
 import { descWriteViolation } from "./shadow.ts";
+import { commonsWriteViolation } from "./commons.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
 import { detectVersionedName } from "./naming-guard.ts";
@@ -279,6 +280,13 @@ export async function preWrite(_args: string[]): Promise<number> {
     if (sd.warn) emitWarn("SKILL-DESC-TRIGGERS", sd.warn);
     if (sd.block) return emitBlock("SKILL-DESC-CAP", sd.block);
   }
+
+  // commons do/dont format guard (write-time, sidecar-style) — a commons.md
+  // (bundled or .harness/ override) full-document write must be do/dont-only;
+  // a prose section is hard-DENIED before it lands, not just at commit (lint 4g
+  // is the backstop). Keeps the always-on governance SSOT from re-bloating.
+  const cw = commonsWriteViolation(filePath, content);
+  if (cw) return emitBlock(cw.rule, cw.block);
 
   const cfg = loadConfig();
 

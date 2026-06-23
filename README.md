@@ -240,7 +240,7 @@ bash .harness-engine/bin/harness ci list
 
 루트 `CLAUDE.md` 는 **진입 포인터**(프로젝트 설명 + SSOT 포인터 + 작업규칙)다 — 디렉토리·모듈 **트리는 `ARCHITECTURE.json` 단일 SSOT** 라 CLAUDE.md 에 중복하지 않는다(`docs.ts` 의 CLAUDE-MD-NO-TREE 검사는 구조 SSOT 존재 시 면제 · 트리 drift 방지).
 
-거버넌스 SSOT `config/commons.md` 는 **slug 키 do/dont 형식**이다 — 각 규칙은 `## <slug> — <title>` + `- do:`/`- dont:` 두 줄(번호 ID 없음 · 순서 무관). 메커니즘·실증은 코드 hook + CHANGELOG·git 이 담고, commons 는 do/dont 핵심만 운반한다. `harness lint` 4g(COMMONS-PROSE/COMMONS-NO-DODONT · block)가 산문 단락·do/dont 누락을 커밋 게이트로 막아 다시 비대해지지 않게 한다.
+거버넌스 SSOT `config/commons.md` 는 **slug 키 do/dont 형식**이다 — 각 규칙은 `## <slug> — <title>` + `- do:`/`- dont:` 두 줄(번호 ID 없음 · 순서 무관). 메커니즘·실증은 코드 hook + CHANGELOG·git 이 담고, commons 는 do/dont 핵심만 운반한다. 형식은 **2층으로 강제**된다(sidecar 동형): ① **write-time** — `pre write` 가 commons.md 전체-문서 Write 가 do/dont-only 아니면 **즉시 `permissionDecision: deny`**(산문 섹션이면 쓰기 자체가 안 됨, 커밋까지 안 감) · ② **commit-time** — `harness lint` 4g(COMMONS-PROSE/COMMONS-NO-DODONT · block)가 backstop. 둘이 `commons.ts:lintCommonsText` 코어를 공유한다.
 
 이어서 **stale-PR reaper** 가 돈다 — pr-cycle 은 원래 *자기 브랜치 PR* 만 다뤄, 한 번 중단·실패한 머지는 PR 이 열린 채 영구 방치되고 시간이 지나면 머지가능하던 것도 충돌로 썩었다. reaper 는 검증 머지 직후 **내 다른 열린 PR 을 전수 점검**해 머지가능(MERGEABLE)은 자동 squash-머지(자기 PR · admin · delete-branch — 메인 흐름과 동일 신뢰모델), 기계가 안전하게 못 닿는 것(CONFLICTING/blocked)은 다음 조치(rebase 또는 `gh pr close`)와 함께 **큰소리로 보고**한다. 즉 만들어졌지만 안 머지된 PR 은 매 사이클 **반드시 처리되거나 경보**되어 조용히 잊히지 않는다. `--no-reap` 으로 끈다.
 

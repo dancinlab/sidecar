@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## fix(load): worktree 표기 다른 축과 동일화 — 나무 이모지 제거 + 신호등 + ≥10 빨강
+
+🚦 "worktree 도 CPU/RAM 처럼 `wt N 🟢` 한 형식으로"
+
+- 직전(#161)의 `🌲 wt N` 표기를 다른 자원 축(CPU/RAM/swap)과 **동일 형식 `wt N <신호등>`** 으로 통일 — 나무 이모지 제거, `light()` 헬퍼 재사용으로 색상 신호등 부여.
+- threshold: 🟢 0-2 · 🟡 3-9 · 🔴 **≥10**(이전 ≥4 → 사용자 기준 10개부터 빨강) — `light(worktrees, 3, 10)`.
+- 영향: `modules/load.ts` · ARCHITECTURE.json(load 노드) · README.md.
+
 ## feat(load): 부하 한 줄 우측에 worktree 갯수 표시 (🌲 wt N · stranded 가시화)
 
 🌲 "지금 worktree 몇 개 떠있나 — 매 턴 눈에"

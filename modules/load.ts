@@ -102,12 +102,11 @@ export function readSnapshot(): Snapshot | null {
 function line(s: Snapshot): string {
   const swap = s.swapUsedGiB >= 1 ? `${s.swapUsedGiB.toFixed(1)}G` : `${Math.round(s.swapUsedGiB * 1024)}M`;
   const head = s.danger ? "⚠️ 부하" : "🖥️ 부하";
-  const wtLight = s.worktrees === 0 ? "🟢" : s.worktrees >= 4 ? "🔴" : "🟡";
   return (
     `${head} — CPU ${s.load1.toFixed(2)}/${s.cores} ${s.cpuLight} · ` +
     `RAM ${s.ramUsedPct}%(${s.pressureLabel}) ${s.ramLight} · ` +
     `swap ${swap} ${s.swapLight} · ` +
-    `🌲 wt ${s.worktrees} ${wtLight}`
+    `wt ${s.worktrees} ${light(s.worktrees, 3, 10)}`
   );
 }
 
@@ -120,7 +119,7 @@ function body(s: Snapshot): string {
     line(s) + "\n" +
     "- CPU = load1/cores (🟢<0.7 🟡<1.0 🔴≥1.0) · RAM = active+wired+compressor used% + kernel pressure(normal/warn/critical) · swap used (🟢<2G 🟡<6G 🔴≥6G).\n" +
     "- A Mac that dies under load fails on MEMORY (compressor+swap), not CPU — when RAM/swap light is 🔴 or pressure≥warn, say so loudly.\n" +
-    "- 🌲 wt = extra git worktrees (main excluded · 🟢0 🟡1-3 🔴≥4) — 누적되면 `harness worktree gc` 로 정리." +
+    "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10) — 누적되면 `harness worktree gc` 로 정리." +
     warn + "\n"
   );
 }

@@ -193,7 +193,7 @@ const DEFAULTS: HarnessConfig = {
     ],
   },
   docs: {
-    architecture: "ARCHITECTURE.md",
+    architecture: "ARCHITECTURE.json",
     log: "CHANGELOG.md",
     scratchDir: "state",
     scatterPatterns: [

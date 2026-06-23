@@ -232,7 +232,7 @@ bash .harness-engine/bin/sidecar ci list
 
 이 repo 자체가 하네스를 쓴다(dogfooding) — `harness.config.json` + `.claude/settings.json` self hooks + pre-commit `bin/sidecar lint`. 코어(`.ts`) 변경 시 CHANGELOG 동시 갱신이 강제되고, 번들 enforcement(root-cause·secret·force-push)가 자기 코드에도 적용된다. 단 `protectedBranches` 미설정으로 자기 개발 흐름(main 직접 push)은 막지 않는다.
 
-매 사이클(`sidecar pr-cycle`)의 doc-gate 는 의미있는 변경에 대해 **CHANGELOG.md(append) + (존재 시) ARCHITECTURE.md·README.md 현행화**를 요구한다 — 셋 중 미갱신이 있으면 머지를 거부한다(`--no-doc` 는 진짜 문서 불필요할 때만). 이 README 도 그 대상이므로 매 사이클 최신 상태로 유지된다. (commons `cycle-docs-pr`)
+매 사이클(`sidecar pr-cycle`)의 doc-gate 는 의미있는 변경에 대해 **CHANGELOG.md(append) + (존재 시) ARCHITECTURE.json·README.md 현행화**를 요구한다 — 셋 중 미갱신이 있으면 머지를 거부한다(`--no-doc` 는 진짜 문서 불필요할 때만). 이 README 도 그 대상이므로 매 사이클 최신 상태로 유지된다. (commons `cycle-docs-pr`)
 
 > 📌 **README = 현재상태 SSOT, 이력 로그 아님** (ARCHITECTURE 와 동급 규율 · commons `single-doc`). README 현행화는 *지금의* 기능·사용법·구조를 **제자리 덮어쓰기(update-in-place)** 하는 것이지, 변경이력을 덧붙이는 게 아니다. README 에 버전 로그·날짜·`이전엔…`/`deprecated`/"v0.x 에서 추가" 식 누적 금지 — 이력은 **CHANGELOG.md + git** 이 SSOT.
 

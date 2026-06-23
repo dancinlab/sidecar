@@ -13,7 +13,7 @@ function atlasPath(): string {
 }
 const HEADER = `# ATLAS — claim registry
 
-> 📍 SSOT: [ARCHITECTURE.md](ARCHITECTURE.md) · verdicts in \`state/\`
+> 📍 SSOT: [ARCHITECTURE.json](ARCHITECTURE.json) · verdicts in \`state/\`
 > Each atom = a verifiable claim. An atom is VERIFIED only when it links a PASS verdict (\`sidecar verdict\`). Never LLM-judge.
 
 | id | claim | tier | verdict |

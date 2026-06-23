@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## fix(init): scaffold ARCHITECTURE.json (not .md) + CLAUDE.md as tree-less entry pointer
+
+🏛️ "init 이 SSOT 인 .json 대신 .md 를 만들고, CLAUDE.md 에 파일트리를 박던 문제"
+
+- 문제: `sidecar init` scaffold 가 ① `ARCHITECTURE.md`(prose)를 생성 — 구조 SSOT 는 `ARCHITECTURE.json`(JSON 트리, AI·툴 파싱용) 인데 어긋남 · ② `CLAUDE.md` 에 디렉토리 트리를 박음 — single-doc 상 트리는 ARCHITECTURE.json 단일 SSOT 라 중복·drift 유발.
+- 수정: `init.ts` scaffold 를 `ARCHITECTURE.json` 스켈레톤(schemaVersion 2.0 · columns · tree[src/·state/])으로 교체 · `CLAUDE.md` 를 진입점(설명 + SSOT 포인터 + 작업규칙, **트리 없음**)으로 · CHANGELOG 머리말도 ARCHITECTURE.json 참조. `lib/config.ts` docs.architecture 기본값 `.md`→`.json` · `atlas.ts` ATLAS 헤더 SSOT 포인터도 `.json`. (읽기 폴백 `.json||.md` 는 레거시 repo 용으로 유지.)
+- 정합: `docs.ts` 는 ARCHITECTURE.json 존재 시 CLAUDE.md 트리를 면제(CLAUDE-MD-NO-TREE) — scaffold 결과가 lint 와 일치.
+- 검증: 임시 repo `init` → `ARCHITECTURE.json` 유효 JSON 생성·`.md` 미생성·CLAUDE.md 트리 0줄·`lint: ok`·`architecture show` 가 .json 읽음.
+
 ## fix(rebrand): global-home paths built via `homedir(), ".harness"` → `.sidecar`
 
 🩹 "리브랜드 누락 — homedir 기반 글로벌 경로 5곳이 옛 ~/.harness 를 계속 가리킴"

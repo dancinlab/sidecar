@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## feat(naming-guard): escalate to BLOCK + cover bash mv/cp/touch/mkdir
+
+🔒 "warn-only 라 무시되던 `_v2`·`_final`·`_copy` 작명 가드를 하드 차단으로 — 이력은 git history 로만"
+
+- 동기: `naming-guard` 의 `@convergence` 마커가 `threshold=warn-only proves too weak 이면 block 으로 격상` 이라 예고. 유저가 그 격상을 명시 요청. 또한 가드가 `pre write`(Write/Edit) 에만 있어 `mv a.ts a_v2.ts`·`touch report_final.md`·`mkdir model_v2` 같은 **CLI 작명**이 통째로 샜다.
+- BLOCK 격상: `pre write` 의 `emitWarn` → `return emitBlock` (Write/Edit 로 버전/복사 접미사 파일·폴더 생성 시 하드 deny).
+- Bash 커버리지 신설: `detectVersionedNameBash` — `mv`/`cp`/`ln`/`rename`(목적지=마지막 인자만)·`touch`(각 인자)·`mkdir`(각 경로 세그먼트)·`git mv` 가 버전접미 이름을 **생성**하면 차단. `mv foo_v2.ts foo.ts`(나쁜 이름→고치는 방향)는 목적지만 검사해 통과(FP 방지). flag 토큰·`echo`/`ls`/`cat`/`rm` 등 비-생성 명령 무시.
+- 면제: `@canonical-ok`(Write/Edit content) / `# canonical-ok`(bash 인라인) — 실 public API 버저닝용. 기존 escape 유지(새 구멍 아님).
+- 검증: Write/Edit 16종(`model_v2.py`·`config copy.json`·`notes 2.md`·`model_v2/`… BLOCK · `final_report`·`_test.go`·`.spec.ts`·`v2/api.ts`·marker ALLOW) · Bash 16종(`mv …_v2`·`mkdir -p src/model_v2/sub`·`git mv …_copy` BLOCK · 고침방향·flag·비생성·marker ALLOW) · end-to-end `pre write`/`pre bash` 실제 `permissionDecision:deny` 발사 확인 · `help` 로드 OK · ARCHITECTURE/config 코멘트 lockstep.
+
+## fix(cloud-guard): cover the `runpod` Python CLI + `api.runpod.ai` serverless host
+
+🔒 "runpod 차단도 vast 처럼 표면 누락 — Go `runpodctl` 만 막고 공식 Python `runpod` CLI 와 서버리스 엔드포인트가 샜다"
+
+- 증상: `runpod config`·`runpod project deploy`·`runpod pod create`·`runpod exec` (공식 pip `runpod` CLI) 전부 ALLOW · `curl https://api.runpod.ai/v2/<id>/run`(서버리스) ALLOW. `runpodctl`·`api.runpod.io`·`rest.runpod.io` 만 막혀 있었다.
+- 수정: `CLI_COMMANDS` 에 `runpod` 추가(두 RunPod CLI 헤드 모두 command-position 무조건 차단) · API regex 에 `api.runpod.ai`(서버리스 호스트) 추가. `@convergence BOTH_RUNPOD_CLIS` 박제.
+- root-cause(따옴표 인식 세그먼트): `vast`/`runpod` 를 무조건차단으로 만들자 `grep -E "vast|runpod"` 처럼 **따옴표 안 정규식 `|`** 가 shell 파이프로 오인돼 false-block 발생(stripQuotes 를 먼저 하고 `|` 로 쪼개 따옴표 경계 소실). `segments()` 헬퍼 신설 — **따옴표 밖** `;|&()` 만 분리, 따옴표 안 `|` 는 데이터로 보존. `detectRawCloudCli`·`detectRawDojoDeck` 양쪽 적용 · `leadToken` 이 토큰별 stripQuotes. 기존 `vastai`/`runpodctl` 의 같은 잠복 FP 도 동시 해소. `@convergence QUOTE_AWARE_SEGMENT` 박제.
+- 잔여(정직): `python -c "import runpod; …"` SDK 직접 호출은 여전히 통과 — `import runpod` 전체 차단은 코드 열람까지 막는 과차단이라 의도적 비포함(같은 부류의 vastai/SDK 벡터와 동일).
+- 검증: `runpod` 5종 + `api.runpod.ai` 2종 BLOCK · `runpodctl`/`.io`/`rest` 회귀 유지 · 따옴표 정규식(`grep "vast|runpod"`·`awk "/vast|runpod/"`)·양성(`echo`·`hexa cloud`) ALLOW · 따옴표 헤드 `"vast" create` BLOCK.
+
 ## fix(cloud-guard): block `vast` unconditionally — drop the leaking verb whitelist
 
 🔒 "vast.ai 차단이 '또 풀리던' 진짜 원인 — `vast` 만 동사 화이트리스트라 새 서브커맨드가 줄줄 샜다"

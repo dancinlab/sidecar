@@ -3,10 +3,11 @@
 // `index_new.ts`, `utils_old.ts`, `config copy.json`, `parser_fix.rs` — each one bakes
 // HISTORY into the filename, which is exactly git's job. The result is a pile of stale
 // siblings nobody dares delete. The rule: ONE canonical file, updated in place; the old
-// versions live in git history (and `git log`/`git blame` recover them). Warn-only — this
-// guides, it never blocks (a genuinely API-versioned name can keep going via the marker).
+// versions live in git history (and `git log`/`git blame` recover them). BLOCKS — both on
+// Write/Edit (`detectVersionedName`) and on Bash file-creation/rename (mv/cp/touch/mkdir,
+// `detectVersionedNameBash`). A genuinely API-versioned name keeps going via the marker.
 //
-// @convergence state=stable id=NAMING_VERSION_SUFFIX value="new files named foo_v2/_final/_copy/_old bake history into the filename instead of git → stale-sibling pileup" threshold="re-add as block-level if warn-only proves too weak to stop the pileup"
+// @convergence state=ossified id=NAMING_VERSION_SUFFIX value="new files/dirs named foo_v2/_final/_copy/_old (via Write/Edit OR a mv/cp/touch/mkdir bash command) are BLOCKED — history belongs in git, not the filename; the `@canonical-ok` (write) / `# canonical-ok` (bash) marker is the only override" threshold="warn-only proved too weak — the stale-sibling pileup kept recurring, so the user escalated it to a hard block + added bash-command coverage (a CLI `mv a a_v2.ts` previously slipped past the Write-only guard)"
 
 import { basename, extname, dirname } from "node:path";
 
@@ -47,4 +48,47 @@ export function detectVersionedName(filePath: string, content = ""): string | nu
     `Use ONE canonical native name and update it in place (old versions stay recoverable via git log/blame). ` +
     `If this name is genuinely intentional (e.g. real public API versioning), add a '@canonical-ok' marker in the file.`
   );
+}
+
+// inline escape for a bash command (mirrors the danger-guard `# ...-ok` convention)
+const CANONICAL_OK = /#\s*canonical-ok\b/i;
+// file-creating / renaming commands. mv/cp/ln/rename → only the DESTINATION (last
+// non-flag arg) is a NEW name, so `mv foo_v2.ts foo.ts` (renaming AWAY from a bad
+// name) is allowed. touch → every arg is created. mkdir → every path SEGMENT of
+// every arg is created (so `mkdir -p a/model_v2/b` is caught at `model_v2`).
+const DEST_LAST = new Set(["mv", "cp", "ln", "rename"]);
+const TOUCH = new Set(["touch"]);
+const MKDIR = new Set(["mkdir"]);
+
+// Bash file-creation/rename into a versioned/copy name — the CLI sibling of the
+// Write/Edit naming guard. Returns the offending {offender, token}, or null.
+export function detectVersionedNameBash(rawCmd: string): { offender: string; token: string } | null {
+  if (CANONICAL_OK.test(rawCmd)) return null;
+  for (const seg of rawCmd.split(/[\n;|&()]+/)) {
+    let toks = seg.trim().split(/\s+/).filter(Boolean);
+    if (toks[0] === "sudo") toks = toks.slice(1);
+    if (toks[0] === "git" && toks[1] === "mv") toks = toks.slice(1); // `git mv` → like mv
+    const head = toks[0] ?? "";
+    const args = toks.slice(1).filter((t) => !t.startsWith("-")); // drop flags
+    if (!head || args.length === 0) continue;
+
+    // collect the path tokens this command CREATES (not its sources)
+    let created: string[] = [];
+    if (DEST_LAST.has(head)) created = args.length >= 2 ? [args[args.length - 1]] : [];
+    else if (TOUCH.has(head)) created = args;
+    else if (MKDIR.has(head)) created = args;
+    else continue;
+
+    for (const path of created) {
+      const clean = path.replace(/\/+$/, "");
+      // mkdir creates every segment; for a move/copy dest or touch, only the new
+      // basename is novel (the parent dir already exists), so check just that.
+      const parts = MKDIR.has(head) ? clean.split("/") : [basename(clean)];
+      for (const part of parts) {
+        const token = offendingToken(part);
+        if (token) return { offender: part, token };
+      }
+    }
+  }
+  return null;
 }

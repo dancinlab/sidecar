@@ -86,9 +86,9 @@
               },
               {
                 "이름": "naming-guard",
-                "역할": "비-canonical 작명 경고",
+                "역할": "비-canonical 작명 차단",
                 "구분": "guard",
-                "상세": "버전/복사 접미사 파일·폴더명(`_v2`·`_final`·`_copy`·`foo 2`…) warn → canonical 단일파일 update-in-place 유도 · c25 · `@canonical-ok` 면제 · test/spec 제외"
+                "상세": "버전/복사 접미사 파일·폴더명(`_v2`·`_final`·`_copy`·`foo 2`…) BLOCK → canonical 단일파일 update-in-place 강제 · Write/Edit(`detectVersionedName`) + Bash mv/cp/touch/mkdir(`detectVersionedNameBash`, 목적지만 검사) 양쪽 · c25 · 이력은 git history · `@canonical-ok`(write)/`# canonical-ok`(bash) 면제 · test/spec 제외"
               }
             ]
           },

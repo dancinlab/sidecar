@@ -18,6 +18,35 @@ function stripQuotes(s: string): string {
   return out;
 }
 
+// Split a command line into segments on shell separators (; | & newline ( )) that
+// are NOT inside single/double quotes. Critical: a quoted regex like
+// `grep -E "vast|runpod"` must stay ONE segment — the `|` there is DATA, not a
+// pipe — otherwise `vast`/`runpod` get mis-read as a command head and false-block.
+// (Stripping quotes first then splitting on `|`, the old approach, lost that
+// boundary.) Each returned segment still carries its quotes; callers stripQuotes.
+// @convergence state=ossified id=QUOTE_AWARE_SEGMENT value="command-head detection segments on UNQUOTED shell operators only — a `|`/`;`/`&` inside quotes is data, not a separator" threshold="`grep -E \"vast|runpod\"` false-blocked once `vast`/`runpod` became unconditional CLI heads: stripQuotes ran before the `|`-split, so the quoted alternation was torn into a bare `vast` segment"
+function segments(raw: string): string[] {
+  const segs: string[] = [];
+  let cur = "";
+  let q: string | null = null;
+  for (const c of raw) {
+    if (q) {
+      if (c === q) q = null;
+      cur += c;
+    } else if (c === '"' || c === "'") {
+      q = c;
+      cur += c;
+    } else if (c === ";" || c === "|" || c === "&" || c === "\n" || c === "(" || c === ")") {
+      segs.push(cur);
+      cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  segs.push(cur);
+  return segs;
+}
+
 // A hexa-builtin invocation is the SANCTIONED path — never flag it even though it
 // contains "cloud". Matches `hexa cloud …`, `hexa dojo …`, `hexa deck …`.
 function isHexaBuiltin(cmd: string): boolean {
@@ -38,25 +67,32 @@ function isHexaBuiltin(cmd: string): boolean {
 // NOT match the bare head), so — like DOJO_TRAIN_NAME_BROAD on this no-override
 // guard — we bias to the false-positive and block bare `vast` outright.
 // @convergence state=ossified id=NO_VAST_VERB_WHITELIST value="`vast` is blocked unconditionally in command position, same as `vastai`/`runpodctl` — NO verb whitelist" threshold="a verb whitelist (VAST_VERBS) only blocked ~10 verbs; `vast set api-key`/`vast scp`/`vast execute`/literally `vast cli` all leaked because their verb wasn't listed — the guard 're-unlocked' every time vast.ai added a subcommand"
-const CLI_COMMANDS = new Set(["runpodctl", "vastai", "vast"]);
+// RunPod ships TWO CLIs — the Go `runpodctl` and the official Python `runpod`
+// (`runpod config`/`project deploy`/`pod create`/`exec`) — so both heads must be
+// blocked; listing only `runpodctl` left the entire `runpod` CLI surface open.
+// @convergence state=ossified id=BOTH_RUNPOD_CLIS value="both RunPod CLI heads (`runpodctl` Go + `runpod` Python) are blocked, plus the serverless host `api.runpod.ai` alongside the control-plane `api.runpod.io`/`rest.runpod.io`" threshold="only `runpodctl` was listed, so `runpod config`/`runpod project deploy`/`runpod pod create` and serverless `curl api.runpod.ai/v2/<id>/run` all leaked — same whitelist-too-narrow bypass as VAST_VERBS"
+const CLI_COMMANDS = new Set(["runpodctl", "runpod", "vastai", "vast"]);
 
 function leadToken(segment: string): { head: string; rest: string[] } {
   let toks = segment.trim().split(/\s+/).filter(Boolean);
   if (toks[0] === "sudo") toks = toks.slice(1);
   while (toks[0] && /^[A-Za-z_][A-Za-z0-9_]*=/.test(toks[0])) toks = toks.slice(1); // env-assignments
-  return { head: toks[0] ?? "", rest: toks.slice(1) };
+  // strip quotes per-token AFTER segmentation (segments() preserved quote-bounded
+  // separators); a quoted head like `"vast"` still resolves to its bare form.
+  return { head: stripQuotes(toks[0] ?? ""), rest: toks.slice(1).map(stripQuotes) };
 }
 
 // Returns a human label for a raw provider CLI/API invocation, or null.
 //   • provider CLI in command position: `runpodctl …`, `vastai …`, `vast …`
 //   • the legacy wrapper verb `cloud rent` (the exact command a past session ran)
-//   • provider control endpoints anywhere: api.runpod.io / rest.runpod.io / console.vast.ai
+//   • provider control endpoints anywhere: api.runpod.io / rest.runpod.io /
+//     api.runpod.ai (serverless) / console.vast.ai
 export function detectRawCloudCli(rawCmd: string): string | null {
   const cmd = stripQuotes(rawCmd);
   if (isHexaBuiltin(cmd)) return null;
 
-  // segment on shell command separators: ; & | && || newline ( )
-  for (const seg of cmd.split(/[\n;|&()]+/)) {
+  // segment on UNQUOTED shell separators only (a `|` inside a quoted regex is data)
+  for (const seg of segments(rawCmd)) {
     const { head, rest } = leadToken(seg);
     if (!head) continue;
     if (CLI_COMMANDS.has(head)) return `raw provider CLI \`${head}\``;
@@ -65,10 +101,10 @@ export function detectRawCloudCli(rawCmd: string): string | null {
 
   // provider control-plane API endpoints (curl/wget/python hitting them) — match
   // anywhere, since the endpoint is the intent regardless of token position.
-  const api = /\b(api\.runpod\.io|rest\.runpod\.io|console\.vast\.ai)\b/.exec(cmd);
+  const api = /\b(api\.runpod\.io|rest\.runpod\.io|api\.runpod\.ai|console\.vast\.ai)\b/.exec(cmd);
   if (api) return `provider API endpoint \`${api[1]}\``;
 
-  return detectRawDojoDeck(cmd);
+  return detectRawDojoDeck(rawCmd);
 }
 
 // Always-a-training-launcher in command position → must go through `hexa dojo`.
@@ -84,8 +120,8 @@ const DOJO_LAUNCHERS = new Set(["torchrun", "deepspeed"]);
 //     own output — running it by hand skips the builtin's dispatch + ing-pod reg)
 //
 // @convergence state=ossified id=DOJO_TRAIN_NAME_BROAD value="the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)" threshold="someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP."
-function detectRawDojoDeck(cmd: string): string | null {
-  for (const seg of cmd.split(/[\n;|&()]+/)) {
+function detectRawDojoDeck(rawCmd: string): string | null {
+  for (const seg of segments(rawCmd)) {
     const { head, rest } = leadToken(seg);
     if (!head) continue;
     if (head === "accelerate" && rest[0] === "launch") return "raw training launcher `accelerate launch` — use `hexa dojo`";

@@ -24,7 +24,7 @@ import { descWriteViolation } from "./shadow.ts";
 import { commonsWriteViolation } from "./commons.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
-import { detectVersionedName } from "./naming-guard.ts";
+import { detectVersionedName, detectVersionedNameBash } from "./naming-guard.ts";
 import { memPreflight } from "./mem-guard.ts";
 
 interface BashRule {
@@ -151,6 +151,21 @@ export async function preBash(_args: string[]): Promise<number> {
   const danger = detectDangerousBash(cmd);
   if (danger) return emitBlock(danger.id, danger.reason);
 
+  // naming-guard (bash) — BLOCK a mv/cp/touch/mkdir that CREATES a version/copy-
+  // suffixed name (`mv a a_v2.ts`, `touch report_final.md`, `mkdir model_v2`). The
+  // CLI sibling of the Write/Edit guard; honors an inline `# canonical-ok` marker.
+  if (config().namingGuard) {
+    const nb = detectVersionedNameBash(cmd);
+    if (nb) {
+      return emitBlock(
+        "NAMING-VERSION-SUFFIX",
+        `'${nb.offender}' carries a version/copy suffix ('${nb.token}') — history belongs in git, not the filename. ` +
+          `Use ONE canonical native name and update it in place (old versions stay recoverable via git log/blame). ` +
+          `If genuinely intentional (e.g. real public API versioning), append '# canonical-ok <reason>' to the command.`
+      );
+    }
+  }
+
   // built-in raw-cloud-CLI guard — code-level block (c11), runs before config
   // rules, default-on, NO override. GPU/cloud must go through hexa builtins.
   const cloudLabel = detectRawCloudCli(cmd);
@@ -254,10 +269,11 @@ export async function preWrite(_args: string[]): Promise<number> {
     emitWarn("TMP-VOLATILE", `${filePath} is in a volatile tmp dir (lost on reboot/reaper). Write progress/working data to ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
   }
 
-  // naming-guard — steer away from version/copy-suffixed names; history is git's job.
+  // naming-guard — BLOCK version/copy-suffixed names; history is git's job, not the
+  // filename. Honors the `@canonical-ok` marker in content (real API versioning).
   if (config().namingGuard) {
     const nv = detectVersionedName(filePath, content);
-    if (nv) emitWarn("NAMING-VERSION-SUFFIX", nv);
+    if (nv) return emitBlock("NAMING-VERSION-SUFFIX", nv);
   }
 
   // built-in single-doc discipline (write-time) — fires when a scattered or

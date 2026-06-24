@@ -6,8 +6,10 @@
 //             (emoji title · g5 tier-badge discs · TikZ+pgfplots · fal.ai cover
 //              include · references.bib · PAPER.md), generate the cover via
 //              `sidecar imagine` (fal), then build.
-//   • build — xelatex → bibtex → xelatex → xelatex, report pages + refs, and
-//             enforce the g51 page floor (default 10 pages).
+//   • build — xelatex → bibtex → xelatex → xelatex, report pages + refs + result
+//             figures, and enforce TWO hard content floors: ≥10 pages (g51) AND
+//             ≥4 result figures (NeuroLM bar 9+). Either miss = build fails (exit 3);
+//             waive with --min-pages 0 / --min-figures 0.
 //   • cover — (re)generate figures/cover.png via `sidecar imagine`.
 //   • list  — list papers under the papers dir.
 //
@@ -35,6 +37,7 @@ import { tmpdir } from "node:os";
 
 const DEFAULT_DIR = "PAPERS";
 const DEFAULT_MIN_PAGES = 10; // commons g51
+const DEFAULT_MIN_FIGURES = 4; // result-figure floor (NeuroLM quality bar = 9+)
 
 // ── demiurge house template (xelatex; emoji-native) ─────────────────────────
 // Mirrors the SENOLYX/HERPES/NUMB/ANIMA preamble verbatim so every paper shares
@@ -212,7 +215,7 @@ async function have(bin: string): Promise<boolean> {
 }
 
 // ── build: xelatex → bibtex → xelatex → xelatex ─────────────────────────────
-async function build(dir: string, minPages: number): Promise<number> {
+async function build(dir: string, minPages: number, minFigures: number): Promise<number> {
   if (!existsSync(resolve(dir, "main.tex"))) {
     loudFail(`paper build: no main.tex in ${dir}`);
     return 1;
@@ -262,18 +265,36 @@ async function build(dir: string, minPages: number): Promise<number> {
     refs = (readFileSync(bbl, "utf8").match(/\\bibitem/g) || []).length;
   }
 
+  // result-figure count = every \begin{figure} in main.tex MINUS the cover block
+  // (the teaser cover is identified by its \label{fig:cover} and does NOT count as
+  // a result figure — NeuroLM discipline: figures back results, not promotion).
+  let figs = 0;
+  const texPath = resolve(dir, "main.tex");
+  if (existsSync(texPath)) {
+    const tex = readFileSync(texPath, "utf8");
+    const total = (tex.match(/\\begin\{figure\*?\}/g) || []).length;
+    const covers = (tex.match(/\\label\{fig:cover\}/g) || []).length;
+    figs = Math.max(0, total - covers);
+  }
+
   const fatal = last.stdout.split("\n").filter((l) => /^! LaTeX Error|^! Package .*Error|tikz Error/.test(l));
   const sizeKb = Math.round(bytes(pdf) / 1024);
-  ok(`paper build: ${basename(dir)} → ${pages || "?"} pages · ${refs} refs · ${sizeKb}KB`);
+  ok(`paper build: ${basename(dir)} → ${pages || "?"} pages · ${figs} result figs · ${refs} refs · ${sizeKb}KB`);
   if (fatal.length) {
     warn(`paper build: ${fatal.length} LaTeX/tikz error line(s) survived (PDF still produced):`);
     for (const e of fatal.slice(0, 8)) info(`  ${e}`);
   }
-  if (pages && pages < minPages) {
-    warn(`paper build: ${pages} pages < g51 floor of ${minPages} — expand before shipping (or pass --min-pages ${pages}).`);
-    return 0; // compiled OK; page floor is a warning, not a hard build failure
+
+  // ---- hard content-floor gates (both ENFORCED; tune via --min-pages / --min-figures, 0 = waive) ----
+  const failures: string[] = [];
+  if (minPages > 0 && pages && pages < minPages) failures.push(`${pages} pages < ${minPages} (g51 page floor)`);
+  if (minPages > 0 && !pages) info("paper build: page floor unenforced — pdfinfo absent (install poppler to gate pages).");
+  if (minFigures > 0 && figs < minFigures) failures.push(`${figs} result figs < ${minFigures} (NeuroLM quality bar = 9+)`);
+  if (failures.length) {
+    loudFail(`paper build: content-floor gate FAILED — ${failures.join(" · ")}. Expand before shipping (waive with --min-pages 0 / --min-figures 0).`);
+    return 3;
   }
-  if (pages >= minPages) info(`paper build: g51 page floor (≥${minPages}) PASS.`);
+  info(`paper build: content floors PASS (≥${minPages} pages · ≥${minFigures} result figs).`);
   return 0;
 }
 
@@ -302,7 +323,7 @@ function defaultCoverPrompt(title: string): string {
 }
 
 // ── new: scaffold + cover + build ───────────────────────────────────────────
-async function scaffold(slug: string, opts: { dir: string; title: string; subtitle: string; minPages: number; doCover: boolean; coverPrompt?: string; coverSize: string }): Promise<number> {
+async function scaffold(slug: string, opts: { dir: string; title: string; subtitle: string; minPages: number; minFigures: number; doCover: boolean; coverPrompt?: string; coverSize: string }): Promise<number> {
   const dir = paperDir(slug, opts.dir);
   if (existsSync(resolve(dir, "main.tex"))) {
     loudFail(`paper new: ${dir}/main.tex already exists — use 'sidecar paper build ${slug}' or pick another slug.`);
@@ -321,7 +342,16 @@ async function scaffold(slug: string, opts: { dir: string; title: string; subtit
     info("paper new: --no-cover — add figures/cover.png or run `sidecar paper cover` before build.");
   }
   // only build if a cover exists (the template \includegraphics would otherwise fail)
-  if (existsSync(resolve(dir, "figures", "cover.png"))) return build(dir, opts.minPages);
+  if (existsSync(resolve(dir, "figures", "cover.png"))) {
+    const rc = await build(dir, opts.minPages, opts.minFigures);
+    // a fresh TODO scaffold is EXPECTED to miss the content floors — that is not a
+    // `new` failure (it compiled). Surface it as a next-step, propagate real fails only.
+    if (rc === 3) {
+      info(`paper new: scaffolded + compiles, but content floors not yet met (expected for a draft) — fill, then: sidecar paper build ${slug}`);
+      return 0;
+    }
+    return rc;
+  }
   info(`paper new: skip build (no cover yet). After adding one: sidecar paper build ${slug}`);
   return 0;
 }
@@ -349,12 +379,12 @@ function listPapers(dir: string): number {
 
 function usage(): void {
   info("sidecar paper <new|build|cover|list|help>");
-  info("  new <slug> [--title T] [--subtitle S] [--dir D] [--min-pages N] [--no-cover] [--cover-prompt-file F] [-s size]");
-  info("            scaffold demiurge-house template (emoji title · g5 tier badges · TikZ+pgfplots · fal.ai cover) → cover → build");
-  info("  build <slug|dir> [--min-pages N] [--dir D]   xelatex → bibtex → xelatex×2; report pages+refs; g51 ≥N gate (default 10)");
+  info("  new <slug> [--title T] [--subtitle S] [--dir D] [--min-pages N] [--min-figures N] [--no-cover] [--cover-prompt-file F] [-s size]");
+  info("            scaffold demiurge-house template (NeuroLM-mirrored sections · g5 tier badges · TikZ+pgfplots result figs · fal.ai cover) → cover → build");
+  info("  build <slug|dir> [--min-pages N] [--min-figures N] [--dir D]   xelatex→bibtex→xelatex×2; HARD gates: ≥N pages (g51) + ≥N result figs (0 waives)");
   info("  cover <slug|dir> [--cover-prompt-file F] [-p \"prompt\"] [-s size] [--dir D]   (re)generate figures/cover.png via `sidecar imagine`");
   info("  list [--dir D]");
-  info(`  defaults: dir=${DEFAULT_DIR} · min-pages=${DEFAULT_MIN_PAGES} (g51) · cover size=landscape_16_9 · cover backend=fal (secret get fal.api_key)`);
+  info(`  defaults: dir=${DEFAULT_DIR} · min-pages=${DEFAULT_MIN_PAGES} (g51) · min-figures=${DEFAULT_MIN_FIGURES} (NeuroLM bar 9+) · cover size=landscape_16_9 · cover backend=fal (secret get fal.api_key)`);
 }
 
 function parseFlags(args: string[]): { pos: string[]; flags: Record<string, string>; bools: Set<string> } {
@@ -364,7 +394,7 @@ function parseFlags(args: string[]): { pos: string[]; flags: Record<string, stri
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--no-cover") bools.add("no-cover");
-    else if ((a === "--title" || a === "--subtitle" || a === "--dir" || a === "--min-pages" || a === "--cover-prompt-file" || a === "-p" || a === "--prompt" || a === "-s" || a === "--size") && i + 1 < args.length) {
+    else if ((a === "--title" || a === "--subtitle" || a === "--dir" || a === "--min-pages" || a === "--min-figures" || a === "--cover-prompt-file" || a === "-p" || a === "--prompt" || a === "-s" || a === "--size") && i + 1 < args.length) {
       const key = a.replace(/^-+/, "").replace("prompt", "p") === "p" ? "p" : a.replace(/^-+/, "");
       flags[key === "size" ? "s" : key] = args[++i];
     } else pos.push(a);
@@ -380,7 +410,14 @@ export async function runPaper(args: string[]): Promise<number> {
   }
   const { pos, flags, bools } = parseFlags(args.slice(1));
   const dir = flags["dir"] || DEFAULT_DIR;
-  const minPages = flags["min-pages"] ? parseInt(flags["min-pages"], 10) || DEFAULT_MIN_PAGES : DEFAULT_MIN_PAGES;
+  // allow an explicit 0 (= waive the gate); only fall back to the default on absent/NaN.
+  const intFlag = (key: string, def: number): number => {
+    if (flags[key] == null) return def;
+    const n = parseInt(flags[key], 10);
+    return Number.isNaN(n) ? def : n;
+  };
+  const minPages = intFlag("min-pages", DEFAULT_MIN_PAGES);
+  const minFigures = intFlag("min-figures", DEFAULT_MIN_FIGURES);
   const size = flags["s"] || "landscape_16_9";
 
   if (sub === "list") return listPapers(dir);
@@ -399,7 +436,7 @@ export async function runPaper(args: string[]): Promise<number> {
       if (existsSync(pf)) coverPrompt = readFileSync(pf, "utf8");
       else warn(`paper new: cover-prompt-file not found: ${pf} — using default prompt.`);
     }
-    return scaffold(slug, { dir, title, subtitle, minPages, doCover: !bools.has("no-cover"), coverPrompt, coverSize: size });
+    return scaffold(slug, { dir, title, subtitle, minPages, minFigures, doCover: !bools.has("no-cover"), coverPrompt, coverSize: size });
   }
 
   if (sub === "build") {
@@ -408,7 +445,7 @@ export async function runPaper(args: string[]): Promise<number> {
       loudFail("paper build: usage: sidecar paper build <slug|dir> [--min-pages N]");
       return 1;
     }
-    return build(paperDir(target, dir), minPages);
+    return build(paperDir(target, dir), minPages, minFigures);
   }
 
   if (sub === "cover") {

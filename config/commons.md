@@ -30,6 +30,10 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - do: 실험·벤치·검증(verdict/claim)·스크래치 등 모든 작업 산출물을 git-tracked repo-root `state/` 한 폴더에 평면 보관·커밋(GitHub 보존)
 - dont: 휘발 `/tmp` 에만 두기 · `scripts/scratch`·`.verdicts`·`bench`·`experiments` 등 별도 디렉토리 신설 · 임시물 버리기 (재생성 가능한 `build/` 만 gitignore · 머신 로그는 `.harness/`)
 
+## folder-docs — 작업 폴더엔 로컬 CLAUDE.md
+- do: 자격 폴더(설정 `folderGuides` roots/depth/minFiles)에서 커밋하면 그 폴더에 로컬 `CLAUDE.md`(목적·핵심파일·규칙·gotcha) 를 두고 코드 변경 시 lockstep 현행화 — staged 폴더 누락은 `sidecar lint` 가 `FOLDER-GUIDE-MISSING` 으로 게이트(`sidecar folders scaffold <dir>`). 내용은 자유양식(do/dont 강제 아님)
+- dont: 가이드 없이 폴더에 코드만 쌓기 · 옛 가이드 stale 방치 · 루트 CLAUDE.md 하나로 깊은 폴더 맥락 대체
+
 ## ing-board — 진행추적·인계는 한 보드
 - do: 다단계/장기작업 진행추적과 세션/크로스레포 인계를 repo-root `ING.jsonl`(전용 `ing` git ref) 한 보드로 — `sidecar ing add/next/done`(완료=scrub→CHANGELOG) · 상태변동마다 현행화 · 타 repo 는 `ing add <text> --to <repo>`
 - dont: `HANDOFF.md`·`INBOX.md`·`inbox/*.md` 흩뿌리기 · 구 `handoff`/`trail` 사용

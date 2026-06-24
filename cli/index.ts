@@ -141,7 +141,7 @@ reports:
                                write-time enforced in \`pre write\` (docs.enforce: warn[default]|block|off)
   lockdown {status|add <path...>|rm <path...>|check <path>}   manage L0 set (opt-in · none until designated)
                                add/rm mutate harness.config.json lockdown.files
-  folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding
+  folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding (enforced: lint blocks FOLDER-GUIDE-MISSING for the folder of any staged file lacking a guide · commons folder-docs)
   end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)
   worktree {scan|gc|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped)
                            (SessionStart-wire \`worktree gc\`; \`scan\` exit 1 gates new work on abandoned worktrees)

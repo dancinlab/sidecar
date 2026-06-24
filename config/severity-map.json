@@ -22,7 +22,8 @@
       "COMMONS-NO-DODONT": "block",
       "ARCH-BIG-CELL": "block",
       "ARCH-PILED": "block",
-      "ARCH-HISTORY": "block"
+      "ARCH-HISTORY": "block",
+      "FOLDER-GUIDE-MISSING": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

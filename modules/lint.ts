@@ -5,7 +5,7 @@
 //   • convergence: a fix/feat commit must also touch the issues file
 // Quiet on pass (H1); violations go to stderr + lint_log.jsonl + errors queue.
 import { existsSync, statSync } from "node:fs";
-import { resolve } from "node:path";
+import { resolve, dirname } from "node:path";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl, info, loudFail, ok } from "../lib/log.ts";
 import { readJsonOr } from "../lib/json.ts";
@@ -19,6 +19,7 @@ import { scanConvergenceMarkers } from "./convergence.ts";
 import { toolkitDrift } from "./toolkit.ts";
 import { lintCommandDescriptions } from "./shadow.ts";
 import { lintCommonsFormat } from "./commons.ts";
+import { qualifiesMissing } from "./folders.ts";
 
 interface Violation {
   rule: string;
@@ -134,6 +135,22 @@ export async function runLint(args: string[]): Promise<number> {
   // the architecture SSOT file exists (opt-in by presence).
   for (const d of docViolations(staged)) {
     violations.push({ rule: d.rule, file: d.file, msg: d.msg });
+  }
+
+  // 4b'. per-folder CLAUDE.md (commons folder-docs) — a folder you COMMIT into must
+  // carry a local guide. Scoped to the dirs of STAGED files (not a whole-repo scan)
+  // so an unrelated missing guide never blocks an unrelated commit — "manage the
+  // guide as you work the folder". qualifiesMissing() honors folderGuides config
+  // (roots/depth/minFiles/ignore); `sidecar folders scaffold <dir>` fixes it.
+  const stagedDirs = new Set(staged.map((f) => dirname(resolve(repoPath("."), f))));
+  for (const dir of [...stagedDirs].sort()) {
+    if (qualifiesMissing(dir)) {
+      violations.push({
+        rule: "FOLDER-GUIDE-MISSING",
+        file: `${dir.replace(repoPath(".") + "/", "")}/`,
+        msg: `committing into this folder but it lacks ${config().folderGuides.filename} — run \`sidecar folders scaffold ${dir.replace(repoPath(".") + "/", "")}\` and fill it (commons folder-docs)`,
+      });
+    }
   }
 
   // 4c. architecture tree hygiene (single-doc) — oversized / piled / history leaf nodes

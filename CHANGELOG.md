@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## feat(folder-docs): enforce per-folder CLAUDE.md at commit (existence-only) + commons rule
+
+📁 "작업한 폴더엔 로컬 CLAUDE.md 필수 — scan/넛지에 그치던 걸 commit-time block 게이트로 강제"
+
+- 동기: 폴더별 CLAUDE.md 가 `folders scan` + post-edit warn 넛지뿐이라 실질 강제가 없었다. 유저 요청 = 생성·관리 강제 + commons 등록.
+- lint 게이트(`FOLDER-GUIDE-MISSING` · block): `sidecar lint` 가 **staged 파일의 폴더**만 검사 — 그 폴더가 자격(`folderGuides` roots/depth/minFiles)인데 로컬 `CLAUDE.md` 없으면 커밋 차단(`folders scaffold <dir>`). 전체-repo 스캔이 아니라 staged-scoped 라 무관 폴더 누락이 무관 커밋을 막지 않는다("작업한 폴더만 관리").
+- **존재만 강제 · 내용 자유양식**: 가이드 파일 내부를 do/dont 등으로 강제하는 content lint 는 없음(유저 명시).
+- commons 등록: `## folder-docs` 규칙 신설(do/dont 한 쌍 — commons SSOT 포맷). severity-map(config/+.harness/) 에 `FOLDER-GUIDE-MISSING:block`.
+- repo 준수화: 누락이던 `lib/`·`modules/` 에 실제 내용 채운 `CLAUDE.md` 생성(목적·핵심파일·규칙·gotcha).
+- lockstep: ARCHITECTURE lint 노드(4h) · cli help · README folders 행. 검증: guide 치우고 staged → `[block] FOLDER-GUIDE-MISSING modules/` 발사·복원 시 소멸 · `help` 로드 OK · `folders scan` 0.
+
 ## fix(fleet-full): stop the implement-skip collapse + make sequential the default
 
 🛰️ "fleet-full 이 패러다임 전환(abstract)만 돌던 구조적 누수를 막고 3 페이즈 전부 순서대로 통과시킴"

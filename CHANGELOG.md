@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## fix(brainstorm): quote `$ARGUMENTS` + rewrite runbook to subagent-dispatch form
+
+🗣️ "발산을 메인 대화가 아니라 서브에이전트 한 명에게 던진다 — 게다가 괄호 든 seed 도 안 깨진다"
+
+- 동기: 유저가 `/brainstorm` 을 괄호 든 seed 로 호출 → 셸이 `( )` 를 glob 으로 해석해 명령이 깨지고, fallback echo 가 "sidecar CLI not found" 라고 **오진** 메시지를 띄움(실제 CLI 는 정상 설치). 더해 런북이 inline형이라 발산 라운드가 전부 메인 컨텍스트에 쌓였다.
+- 원인 1 (glob 깨짐): `commands/brainstorm.md` 가 `sidecar brainstorm $ARGUMENTS` 로 **따옴표 없이** 인자를 넘김 → `"$ARGUMENTS"` 로 인용해 root-cause fix(ING 보드의 stdin-safe 가이드와 동일 정신). `argument-hint: "[seed]"` 추가.
+- 원인 2 (inline 발산): `templates/brainstorm.md` 를 dispatch형 런북으로 재작성 — `/abg` 골격(절차·규칙·종료메시지)을 차용하되 **단발 `Agent` 하나**(한 줄기 발산 → Workflow 불필요 · commons `fanout-workflow` 단발 예외)에 발산 규약을 self-contained 프롬프트로 통째로 위임, 최종 dedup→cluster→3–5 shortlist 만 메인에 회수. `modules/runbooks.ts` `runBrainstorm` 이 seed 인자를 받아 런북 뒤 `seed:` 줄로 파라미터화.
+- 검증: `brainstorm "AI 코딩 (사이드카) 개선"`(괄호 seed) → `seed: AI 코딩 (사이드카) 개선` 깨짐 없이 통과 · 빈 seed → REACTIVE 안내 · `help` 로드 OK · `toolkit write` 71개 카탈로그 100%.
+
 ## chore(load): drop the `🖥️ 부하 —` prefix from the per-turn load line
 
 🖥️ "매 턴 부하 라인에서 라벨 접두사만 빼고 수치는 그대로"

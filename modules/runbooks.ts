@@ -128,8 +128,18 @@ export async function runGo(_args: string[]): Promise<number> {
   return printTemplate("go");
 }
 
-export async function runBrainstorm(_args: string[]): Promise<number> {
-  return printTemplate("brainstorm");
+export async function runBrainstorm(args: string[]): Promise<number> {
+  const seed = args.filter((a) => !a.startsWith("-")).join(" ").trim();
+  printTemplate("brainstorm");
+  // Surface the dispatch target so the runbook is parameterized: the host agent
+  // hands this seed to ONE subagent (see templates/brainstorm.md). Plain stdout so
+  // it reads as part of the runbook, not a side log.
+  process.stdout.write(
+    seed
+      ? `\nseed: ${seed}\n`
+      : `\n(no seed passed — confirm the divergence target from context; if none, ask in one line)\n`,
+  );
+  return 0;
 }
 
 export async function runMicroExp(args: string[]): Promise<number> {

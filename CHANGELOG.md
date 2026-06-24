@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## fix(cloud-guard): block `vast` unconditionally — drop the leaking verb whitelist
+
+🔒 "vast.ai 차단이 '또 풀리던' 진짜 원인 — `vast` 만 동사 화이트리스트라 새 서브커맨드가 줄줄 샜다"
+
+- 증상: 유저가 "vast cli 등 금지처리가 또 풀렸다" 보고. 실측 결과 `vast cli`·`vast set api-key`·`vast scp`·`vast attach`·`vast execute`·`vast logs`·`vast reboot`·`vast label`·`vast recycle`·… 14종이 전부 ALLOW 로 새고 있었다.
+- 원인: `cloud-guard.ts` 의 `vast` 만 `VAST_VERBS`(create·launch·start·stop·destroy·ssh·show·search·copy·cloud·instance 11개) 화이트리스트로 게이트 — 그 목록에 없는 vast.ai 서브커맨드는 `continue`(=ALLOW). vast.ai 가 서브커맨드를 늘릴 때마다 가드가 "재-unlock" 되는 구조적 구멍. `vastai`·`runpodctl` 은 원래 무조건 차단인데 `vast` 만 예외였다.
+- 수정: `vast` 의 동사 화이트리스트 특수분기 제거 → `CLI_COMMANDS`(runpodctl·vastai·vast) 무조건 차단으로 통일(command-position bare `vast` = vast.ai CLI). path 충돌 우려는 `./vast`·`/usr/bin/vast` 가 bare head 와 불일치라 비영향 — no-override 가드라 DOJO_TRAIN_NAME_BROAD 선례처럼 false-positive 편향. `@convergence NO_VAST_VERB_WHITELIST` 박제.
+- 검증: 14종 vast 서브커맨드 전부 BLOCK 🔒 · `vastai`/`runpodctl`/`cloud rent` 회귀 BLOCK 유지 · 양성(`echo vast`·`grep vast`·`./vast foo`·`cat /etc/vast.conf`·`hexa cloud`·`hexa dojo`) 전부 ALLOW · `help` 로드 OK.
+
 ## feat(easy): add deterministic `scaffold` + `lint` builtins — /sbs wraps a real backbone
 
 🎓 "easy 가 show/inject 만이라 sbs chat-form 이 손-self-check 에 그쳤던 구멍을 메움 — archive 의 `hexa easy` 결정적 빌트인 수준"

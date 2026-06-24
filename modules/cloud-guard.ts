@@ -29,8 +29,16 @@ function isHexaBuiltin(cmd: string): boolean {
 // (`grep runpodctl logs`, `echo runpodctl`). We split the line into command
 // segments on shell operators, then inspect each segment's leading token (after
 // stripping a `sudo ` prefix and any leading VAR=val env-assignments).
+// All three provider CLIs are blocked UNCONDITIONALLY in command position — no
+// per-verb whitelist. `vast` used to gate on a fixed VAST_VERBS list, but vast.ai
+// keeps adding subcommands (`set api-key`, `scp`, `attach`, `execute`, `logs`,
+// `label`, `reboot`, …) so any whitelist leaks the moment a new verb ships — the
+// exact recurring bypass. `vast` as a literal command head is essentially always
+// the vast.ai CLI (a path collision would be `./vast`/`/usr/bin/vast`, which do
+// NOT match the bare head), so — like DOJO_TRAIN_NAME_BROAD on this no-override
+// guard — we bias to the false-positive and block bare `vast` outright.
+// @convergence state=ossified id=NO_VAST_VERB_WHITELIST value="`vast` is blocked unconditionally in command position, same as `vastai`/`runpodctl` — NO verb whitelist" threshold="a verb whitelist (VAST_VERBS) only blocked ~10 verbs; `vast set api-key`/`vast scp`/`vast execute`/literally `vast cli` all leaked because their verb wasn't listed — the guard 're-unlocked' every time vast.ai added a subcommand"
 const CLI_COMMANDS = new Set(["runpodctl", "vastai", "vast"]);
-const VAST_VERBS = new Set(["create", "launch", "start", "stop", "destroy", "ssh", "show", "search", "copy", "cloud", "instance"]);
 
 function leadToken(segment: string): { head: string; rest: string[] } {
   let toks = segment.trim().split(/\s+/).filter(Boolean);
@@ -40,7 +48,7 @@ function leadToken(segment: string): { head: string; rest: string[] } {
 }
 
 // Returns a human label for a raw provider CLI/API invocation, or null.
-//   • provider CLI in command position: `runpodctl …`, `vastai …`, `vast <verb> …`
+//   • provider CLI in command position: `runpodctl …`, `vastai …`, `vast …`
 //   • the legacy wrapper verb `cloud rent` (the exact command a past session ran)
 //   • provider control endpoints anywhere: api.runpod.io / rest.runpod.io / console.vast.ai
 export function detectRawCloudCli(rawCmd: string): string | null {
@@ -51,10 +59,6 @@ export function detectRawCloudCli(rawCmd: string): string | null {
   for (const seg of cmd.split(/[\n;|&()]+/)) {
     const { head, rest } = leadToken(seg);
     if (!head) continue;
-    if (head === "vast") {
-      if (VAST_VERBS.has(rest[0] ?? "")) return "raw provider CLI `vast`";
-      continue; // bare `vast` w/o a provider verb (e.g. a path) — not the CLI
-    }
     if (CLI_COMMANDS.has(head)) return `raw provider CLI \`${head}\``;
     if (head === "cloud" && rest[0] === "rent") return "`cloud rent` (raw provider rent)";
   }

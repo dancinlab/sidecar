@@ -88,8 +88,10 @@ export function docWriteViolation(absOrRelPath: string, content: string): DocVio
     };
   }
   if (isAllowed(rel)) return null;
-  if (!inScope(rel)) return null;
   const cfg = config().docs;
+  // a scatter-filename (`*-report/summary/notes.md` …) is the single-doc anti-pattern
+  // ANYWHERE — not just inside scopeDirs — so this check runs BEFORE the scope gate
+  // (mirrors naming-guard: the NAME itself is the problem, regardless of directory).
   if (isScatter(rel)) {
     return {
       rule: "DOC-SCATTER",
@@ -97,6 +99,8 @@ export function docWriteViolation(absOrRelPath: string, content: string): DocVio
       msg: `흩어진 문서 생성 차단 대상 — 아키텍처는 ${cfg.architecture}(갱신형 SSOT), 이력은 ${cfg.log}(append)로 통합하세요. 임시 산출물은 ${cfg.scratchDir}/ (tmp 휘발 금지).`,
     };
   }
+  // quickref discipline (a separate doc must point back to the SSOT) stays scope-limited.
+  if (!inScope(rel)) return null;
   if (content && !contentHasQuickref(content)) {
     return {
       rule: "DOC-NO-QUICKREF",

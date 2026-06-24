@@ -25,6 +25,7 @@ import { commonsWriteViolation } from "./commons.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
 import { detectVersionedName, detectVersionedNameBash } from "./naming-guard.ts";
+import { detectBannedStateDir, detectBannedStateDirBash } from "./state-guard.ts";
 import { memPreflight } from "./mem-guard.ts";
 
 interface BashRule {
@@ -166,6 +167,21 @@ export async function preBash(_args: string[]): Promise<number> {
     }
   }
 
+  // state-guard (bash) — BLOCK a mkdir/touch/cp/mv that CREATES output inside a
+  // scatter dir (.verdicts/bench/experiments/scripts-scratch); work output lives in
+  // the single `state/` root (commons preserve-state). Honors `# state-ok`.
+  if (config().stateGuard) {
+    const sd = detectBannedStateDirBash(cmd);
+    if (sd) {
+      return emitBlock(
+        "STATE-SCATTER-DIR",
+        `'${sd}/' is a scatter directory (commons preserve-state) — work output belongs in the single git-tracked \`state/\` root ` +
+          `(committed → preserved on GitHub). Regenerable artifacts → \`build/\` (gitignored); machine logs → \`.harness/\`. ` +
+          `If genuinely needed outside \`state/\`, append '# state-ok <reason>' to the command.`
+      );
+    }
+  }
+
   // built-in raw-cloud-CLI guard — code-level block (c11), runs before config
   // rules, default-on, NO override. GPU/cloud must go through hexa builtins.
   const cloudLabel = detectRawCloudCli(cmd);
@@ -276,13 +292,26 @@ export async function preWrite(_args: string[]): Promise<number> {
     if (nv) return emitBlock("NAMING-VERSION-SUFFIX", nv);
   }
 
+  // state-guard — BLOCK writing output into a scatter dir (.verdicts/bench/…);
+  // all work output lives in the single `state/` root (commons preserve-state).
+  // Honors the `@state-ok` marker in content.
+  if (config().stateGuard) {
+    const sv = detectBannedStateDir(filePath, content);
+    if (sv) return emitBlock("STATE-SCATTER-DIR", sv);
+  }
+
   // built-in single-doc discipline (write-time) — fires when a scattered or
   // quickref-less .md is created, the moment it happens (lint alone is too late).
   if (filePath.endsWith(".md")) {
     const dv = docWriteViolation(filePath, content);
     if (dv) {
       const level = config().docs.enforce ?? "warn";
-      if (level === "block") return emitBlock(dv.rule, `${dv.msg} (docs.enforce=block)`);
+      // scatter filenames (`*-report/summary/notes.md` …) and a non-root architecture
+      // dup are HARD single-doc violations — always BLOCK (commons single-doc · the
+      // 산출물 이름 family). The softer missing-quickref nudge stays at the configured
+      // enforce level (warn by default).
+      const hard = dv.rule === "DOC-SCATTER" || dv.rule === "DOC-ARCH-NONROOT";
+      if (hard || level === "block") return emitBlock(dv.rule, dv.msg);
       emitWarn(dv.rule, dv.msg);
     }
   }

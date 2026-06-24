@@ -78,9 +78,9 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - do: 차단/가드/정책은 요청받은 그대로 전면 차단으로 구현 · 탈출구는 유저가 따로 요청할 때만 추가
 - dont: 지시 전 우회경로(`# *-ok` 류 마커·opt-out 플래그·skip 조건·fallback 분기·가드 무력화) 끼워넣기 (기존 마커 탈출구는 유지, 새 가드엔 구멍 X)
 
-## upstream-fix — upstream 막힘은 그 세션에서 직접 고친다
-- do: 의존 upstream(`hexa`/`hexa-lang` 등 dancinlab repo) 막힘은 직접 고쳐 `sidecar pr-cycle` 머지 · 중단되는 현재작업은 `ing add "↩resume …"` 박제(복원) · 고위험 substrate(codegen·runtime·toolchain)는 격리 worktree, 동시세션 활동 감지 시 STOP
-- dont: 인계로 미루기 · 로컬 wrapper/shadow/fork/monkey-patch 로 덮기 · 내가 막힌 걸 남에게 cross-repo 인계
+## upstream-fix — upstream 막힘은 그 세션에서 내 손으로 끝까지 고친다 (cross-repo 인계 금지)
+- do: 의존 upstream(`hexa`/`hexa-lang`/`demiurge` 등 **전부 dancinlab repo = 너의 쓰기권한 안**) 결함은 **막힌 바로 그 세션에서 직접** — clone/worktree 받아 원인 고치고 그 repo 의 빌드·CI 로 검증한 뒤 **그 repo 에서 `sidecar pr-cycle` 머지까지 완료** → 그 후 원작업 복귀. ING 은 오직 **내 현재 repo** 의 `↩resume …` 복원 메모로만(작업 끊김 방지). 고위험 substrate(codegen·runtime·toolchain)는 격리 worktree, 동시세션 활동(브랜치변동) 감지 시 STOP
+- dont: **`sidecar ing add --to hexa-lang`(또는 어떤 upstream repo)로 그 수정을 떠넘기기 — 절대 금지** (반복되는 핵심 위반: 고칠 수 있고 권한도 있는데 남에게 미룸) · 다른 세션/사람에게 cross-repo 인계 · "upstream 이라 여기선 못 고친다" 핑계 · 로컬 wrapper/shadow/fork/monkey-patch 로 덮기 · 고쳤다며 머지 안 하고 둠. (`ing add --to <repo>` 는 진짜 별개 신규 TODO 전용 — upstream **결함 수정**은 대상 아님)
 
 ## release-tag-ci — 릴리즈는 태그 → CI 배포
 - do: 배포 산출물 있는 repo 는 검증된 main 에 semver 태그(`vX.Y.Z`) → `release.yml`(CI)가 타깃별 빌드·GitHub release 업로드 · (선택) main push 마다 edge prerelease

@@ -382,7 +382,7 @@
                 "이름": "ing",
                 "역할": "진행보드 + cross-repo 인계 (전용 `ing` git ref)",
                 "구분": "module",
-                "상세": "work/next/pod",
+                "상세": "work/next/pod · `add --to <repo>` 는 형제 repo 보드로 전달 — 단 upstream(hexa/hexa-lang/demiurge) 으로 '결함 수정'을 인계하면 차단(commons upstream-fix 이빨 · @convergence upstream-fix-handoff · 신규 TODO 만 허용)",
                 "children": [
                   {
                     "이름": "저장 = ing ref (worktree 아님)",

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat(commons+ing): upstream-fix teeth — block forwarding a defect fix to an upstream repo
+
+🗣️ "hexa-lang 막히면 ING로 떠넘기지 말고 그 세션에서 직접 다 고쳐라 — 규칙을 강화하고, 떠넘기기 자체를 명령에서 막았다"
+
+- 동기: 유저 — 에이전트가 hexa-lang upstream 결함을 자꾸 `ing add --to hexa-lang` 으로 인계하려 함. commons `upstream-fix` 가 이미 "직접 고쳐라"였지만 약했다 → ① 규칙 강화 ② 실제 차단 이빨.
+- commons(`config/commons.md` `upstream-fix`): 문구 강화 — "막힌 그 세션에서 clone/worktree→수정→그 repo 빌드/CI 검증→거기서 `pr-cycle` 머지까지 직접 완료, ING 은 내 repo 의 `↩resume` 메모로만". dont 에 **`ing add --to hexa-lang` 류 결함수정 인계 절대 금지**(반복 위반 명시) + "upstream 이라 못 고친다 핑계" 추가. `ing add --to <repo>` 는 진짜 신규 TODO 전용임을 못박음.
+- 이빨(`modules/ing.ts` `add/next --to`): 대상이 upstream(`hexa`/`hexa-lang`/`demiurge`[+`-wt-*`])이고 텍스트가 결함수정(fix·bug·broken·repair·patch·crash·regress·error·fail / 버그·고쳐·막힘·깨짐·에러·오류·실패·수정)으로 보이면 **차단(exit 2)** + 그 세션에서 직접 고치는 절차 안내. 신규 TODO(비-fix 표현)는 통과. opt-out 플래그 없음(no-escape-hatch). `@convergence upstream-fix-handoff` 마커로 박제.
+- 검증: `ing add --to hexa-lang "fix broken seed"`/`"시드 깨짐 고쳐줘"` → exit 2 차단·안내 출력 · regex 단위 6/6(en·ko fix=block · `add new deck domain`/타 repo=pass · `hexa-lang-wt-*`=block · `demiurge 오류 수정`=block).
+
 ## chore(paper): raise default min-figures floor 4 → 9 (= NeuroLM bar)
 
 🗣️ "결과그림 기본 하한을 정답지(NeuroLM)와 동일하게 9장으로 — 4장은 너무 헐거웠다"

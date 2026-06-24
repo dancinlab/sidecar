@@ -12,7 +12,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve, basename } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
-import { info, ok, warn, nowIso } from "../lib/log.ts";
+import { info, ok, warn, loudFail, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
 import { config } from "../lib/config.ts";
 import { setLiveMarker, staleLongRunnerWarn } from "./heartbeat-guard.ts";
@@ -182,6 +182,20 @@ export async function runIng(args: string[]): Promise<number> {
       : parts.filter((a) => a !== "--stdin").join(" ").trim();
     if (!text) return usage();
     if (to) {
+      // @convergence upstream-fix-handoff — commons `upstream-fix` teeth: forwarding a
+      // DEFECT FIX to an upstream dancinlab repo (hexa/hexa-lang/demiurge) is the
+      // recurring violation — you have write access there, so fix it in THIS session
+      // (clone/worktree → fix → that repo's `sidecar pr-cycle` merge), never punt the
+      // fix cross-repo. A genuine NEW feature TODO to a sibling is still fine.
+      const upstream = /^(hexa|hexa-lang|demiurge)(-wt-[\w.-]+)?$/i.test(to);
+      const looksLikeFix = /\b(fix|bug|broken|repair|patch|crash|regress|error|fail(ed|ure)?)\b|버그|고쳐|고침|고치|막힘|막혀|막혔|깨[짐졌져]|에러|오류|실패|수정/i.test(text);
+      if (upstream && looksLikeFix) {
+        loudFail(`ing add --to ${to}: upstream 결함 수정을 cross-repo 인계하려 함 — commons 'upstream-fix' 위반(차단).`);
+        info(`  → 그 결함은 이 세션에서 직접 고쳐라: cd ../${to} (또는 worktree) → 원인 수정 → 빌드/CI 검증 → 거기서 'sidecar pr-cycle' 머지 → 원작업 복귀.`);
+        info(`  → 끊기는 현재 작업만 내 repo 보드에 남겨라: sidecar ing add "↩resume <원작업>".`);
+        info(`  (진짜 별개 신규 TODO 면 fix/버그/수정 류 표현을 빼고 다시 — 이 게이트는 '결함 수정' 떠넘김만 막는다.)`);
+        return 2;
+      }
       const destRoot = resolve(REPO_ROOT, "..", to);
       if (!existsSync(destRoot)) {
         info(`ing: 대상 repo 없음 — ${to} (형제 디렉토리 ${resolve(REPO_ROOT, "..")}/ 에서 확인)`);

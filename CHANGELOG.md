@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat(guards): preserve-state scatter-dir BLOCK + single-doc scatter-filename BLOCK
+
+🗂️ "산출물 '위치·이름' 거버넌스 2종에 코드 이빨 — 흩어진 결과 디렉토리·문서를 쓰기 직전 하드 차단"
+
+- 동기: commons `preserve-state`·`single-doc` 이 거버넌스 텍스트만 있고 코드 강제가 비거나 약했음. naming-guard 와 같은 "산출물 위치·이름" 계열 2종을 BLOCK 으로 격상(유저 ④ 표준 선택).
+- preserve-state(신규 `state-guard.ts`): scatter 디렉토리(`.verdicts`·`verdicts`·`bench`·`.bench`·`experiments`·`scratch`·`scripts/scratch`) 안에 산출물 생성 시 BLOCK → 단일 git-tracked `state/` 루트로 유도. Write/Edit(`detectBannedStateDir`) + Bash mkdir/touch/cp/mv(`detectBannedStateDirBash`, naming 빵틀 재사용) 양쪽. `state/`·`build/`·`dist/`·`.harness/`·`node_modules/`·`.git/` 하위는 통과. `@state-ok`(content)/`# state-ok`(bash) 면제. config `stateGuard`(기본 true). `@convergence NO_SCATTER_STATE_DIR`.
+- single-doc(기존 `DOC-SCATTER` 격상): scatter 파일명(`*-report/summary/notes/plan/guide/design/spec/overview/audit/status.md`·`UPPERCASE.md`·`\d{6,8}[-_]*.md`) 생성 시 **scope 무관 항상 BLOCK**(전엔 `docs.scopeDirs` 안에서만 warn) — `docs.ts` 에서 `isScatter` 검사를 scope 게이트 위로 이동(naming 과 같은 "이름 자체가 문제" 철학) + preWrite 라우팅에서 `DOC-SCATTER`/`DOC-ARCH-NONROOT` 는 enforce 레벨 무관 항상 emitBlock. quickref 누락(`DOC-NO-QUICKREF`) 같은 약한 건 scope-한정 warn 유지. 면제는 `docs.allow` 리스트 + `docs.enforce:off`.
+- 검증: state-guard 17 unit ALL PASS(.verdicts·bench·experiments·scripts/scratch BLOCK · state//build/ allow · marker allow · ls/rm 비생성 allow) · scatter .md e2e(`foo-report`·`x-summary`·`20260624-notes`·`-guide` deny · README/CHANGELOG allow) · naming/cloud 회귀 BLOCK 유지 · `help` 로드 OK · ARCHITECTURE/README/config lockstep.
+
 ## feat(naming-guard): escalate to BLOCK + cover bash mv/cp/touch/mkdir
 
 🔒 "warn-only 라 무시되던 `_v2`·`_final`·`_copy` 작명 가드를 하드 차단으로 — 이력은 git history 로만"

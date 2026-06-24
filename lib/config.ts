@@ -110,6 +110,12 @@ export interface SidecarConfig {
   // to git, not the filename. Steer to one canonical file updated in place. The
   // `@canonical-ok` (Write/Edit content) / `# canonical-ok` (bash) marker overrides.
   namingGuard: boolean;
+  // stateGuard BLOCKS (pre write AND pre bash) creating output inside a scatter
+  // directory (`.verdicts` · `bench` · `experiments` · `scripts/scratch` …) instead
+  // of the single git-tracked `state/` root (commons preserve-state). Paths under a
+  // sanctioned root (`state/` · `build/` · `.harness/`) pass. The `@state-ok`
+  // (Write/Edit content) / `# state-ok` (bash) marker overrides.
+  stateGuard: boolean;
   // askqText DENIES the AskUserQuestion option-box tool (PreToolUse) and tells
   // the agent to ask in plain CHAT text instead (options inline, mark the
   // recommended one, accept a free-form answer). A FORM redirect, not anti-punt.
@@ -228,6 +234,7 @@ const DEFAULTS: SidecarConfig = {
   tmpGuard: true,
   handoffGuard: true,
   namingGuard: true,
+  stateGuard: true,
   askqText: true,
   poll: { maxSilenceSec: 600 },
   ledger: { staleSec: 3600 },

@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## chore(paper): raise default min-figures floor 4 → 9 (= NeuroLM bar)
+
+🗣️ "결과그림 기본 하한을 정답지(NeuroLM)와 동일하게 9장으로 — 4장은 너무 헐거웠다"
+
+- 동기: 유저 결정 — 직전 사이클에서 둔 result-figure 기본 하한 4를 NeuroLM 정답지의 실제 그림 밀도(9+)에 맞춰 **9** 로 상향. 도구가 "정답지만큼" 요구하게.
+- 변경(`modules/paper.ts`): `DEFAULT_MIN_FIGURES` 4 → 9. 게이트 로직·`--min-figures N`(0=해제)은 그대로 — 기본값만 상향. 헤더 주석·PAPER.md 체크리스트(≥9)·usage `defaults` 라인 lockstep.
+- 영향: `paper build` 가 기본적으로 결과그림 ≥9 를 요구(미달 exit3). 가벼운 노트/단문은 `--min-figures <N>` 로 낮춰 빌드.
+- 검증: `paper help` defaults → `min-figures=9` 노출 · 2-fig 스캐폴드 기본 빌드 → `2 result figs < 9` 로 FAIL(exit3) · `--min-figures 2` → 그림 게이트 통과 확인.
+
 ## feat(paper): HARD content-floor gates — ≥10 pages AND ≥4 result figures
 
 🗣️ "논문이 덜 됐으면 빌드를 통과 못 시킨다 — 페이지수도, 결과그림 개수도 강제 (둘 중 하나라도 미달이면 exit 3)"

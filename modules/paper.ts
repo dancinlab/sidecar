@@ -8,7 +8,7 @@
 //              `sidecar imagine` (fal), then build.
 //   • build — xelatex → bibtex → xelatex → xelatex, report pages + refs + result
 //             figures, and enforce TWO hard content floors: ≥10 pages (g51) AND
-//             ≥4 result figures (NeuroLM bar 9+). Either miss = build fails (exit 3);
+//             ≥9 result figures (= NeuroLM bar). Either miss = build fails (exit 3);
 //             waive with --min-pages 0 / --min-figures 0.
 //   • cover — (re)generate figures/cover.png via `sidecar imagine`.
 //   • list  — list papers under the papers dir.
@@ -37,7 +37,7 @@ import { tmpdir } from "node:os";
 
 const DEFAULT_DIR = "PAPERS";
 const DEFAULT_MIN_PAGES = 10; // commons g51
-const DEFAULT_MIN_FIGURES = 4; // result-figure floor (NeuroLM quality bar = 9+)
+const DEFAULT_MIN_FIGURES = 9; // result-figure floor = NeuroLM quality bar (9+)
 
 // ── demiurge house template (xelatex; emoji-native) ─────────────────────────
 // Mirrors the SENOLYX/HERPES/NUMB/ANIMA preamble verbatim so every paper shares
@@ -188,7 +188,7 @@ function refsTemplate(): string {
 }
 
 function paperMd(slug: string, title: string): string {
-  return `# ${slug} — paper status\n\n@title: ${title}\n@goal: TODO.\n\n- [ ] draft v1\n- [ ] cover (sidecar paper cover ${slug}) — teaser cover allowed\n- [ ] result figures (≥6 · caption tied to a result · NeuroLM bar = 9+)\n- [ ] references (≥10)\n- [ ] compile clean (sidecar paper build ${slug} — ≥10 pages, g51)\n\nquality target: templates/paper/_reference_samples/2409.00101_neurolm.pdf (NeuroLM, ICLR 2025).\nprovenance: TODO. 검증 수치는 verbatim 복사(c9), closed-negative는 그대로 표기.\n`;
+  return `# ${slug} — paper status\n\n@title: ${title}\n@goal: TODO.\n\n- [ ] draft v1\n- [ ] cover (sidecar paper cover ${slug}) — teaser cover allowed\n- [ ] result figures (≥9 · caption tied to a result · = NeuroLM bar)\n- [ ] references (≥10)\n- [ ] compile clean (sidecar paper build ${slug} — ≥10 pages, g51)\n\nquality target: templates/paper/_reference_samples/2409.00101_neurolm.pdf (NeuroLM, ICLR 2025).\nprovenance: TODO. 검증 수치는 verbatim 복사(c9), closed-negative는 그대로 표기.\n`;
 }
 
 // ── path helpers ────────────────────────────────────────────────────────────

@@ -308,7 +308,7 @@
                 "이름": "paper",
                 "역할": "demiurge 하우스 논문 스캐폴드·표지·빌드",
                 "구분": "module",
-                "상세": "new=PAPERS/<slug>/{main.tex·references.bib·PAPER.md} → cover(imagine 위임) → build(xelatex+bibtex×3·pages/refs/result-figs 보고·하드 content-floor 2게이트 ≥10p(g51)+≥4 result figs(cover 제외·NeuroLM바9+)·둘다 --min-* 0 해제·미달시 exit3·깨진/빈 PDF 실패처리). 템플릿은 외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용)를 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림 디스플린(TikZ 아키텍처 블록 + pgfplots 결과막대 · 캡션=결과 연결) · g5 tier-badge · natbib. 마케팅/티저 표지는 허용(cover include 유지 — NeuroLM 대비 의도된 divergence). 손 조립 규율을 도구로 박제(self-improving)"
+                "상세": "new=PAPERS/<slug>/{main.tex·references.bib·PAPER.md} → cover(imagine 위임) → build(xelatex+bibtex×3·pages/refs/result-figs 보고·하드 content-floor 2게이트 ≥10p(g51)+≥9 result figs(cover 제외·=NeuroLM바)·둘다 --min-* 0 해제·미달시 exit3·깨진/빈 PDF 실패처리). 템플릿은 외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용)를 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림 디스플린(TikZ 아키텍처 블록 + pgfplots 결과막대 · 캡션=결과 연결) · g5 tier-badge · natbib. 마케팅/티저 표지는 허용(cover include 유지 — NeuroLM 대비 의도된 divergence). 손 조립 규율을 도구로 박제(self-improving)"
               },
               {
                 "이름": "imagine",

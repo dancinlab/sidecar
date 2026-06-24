@@ -16,6 +16,14 @@
 // ≥10-page g51 gate, and a fal.ai cover. Encoding that once here removes the
 // per-paper hand-assembly that kept regressing (missing calc lib, emoji glyph
 // warnings, bbl deleted before page-count, etc.).
+//
+// Quality target: templates/paper/_reference_samples/2409.00101_neurolm.pdf
+// (NeuroLM, Jiang et al., ICLR 2025 — a third-party arxiv paper, read-only).
+// The `new` template mirrors its section structure (Intro · Background · Method ·
+// Experiments · Ablation · Discussion) and its RESULT-figure discipline (every
+// figure caption ties to a specific result). A teaser/marketing cover is still
+// ALLOWED (the cover include + `cover` verb stay) — that is a deliberate local
+// divergence from NeuroLM, which ships cover-free.
 import { execShell } from "../lib/exec.ts";
 import { runImagine } from "./imagine.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
@@ -75,7 +83,8 @@ function mainTexTemplate(slug: string, title: string, subtitle: string): string 
 \begin{document}
 \maketitle
 
-% Cover (generate via: sidecar paper cover ` + slug + String.raw`)
+% Cover (optional teaser/marketing cover IS allowed here — generate via:
+%   sidecar paper cover ` + slug + String.raw`). Remove this block if you ship cover-free.
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.82\textwidth]{figures/cover.png}
@@ -89,20 +98,51 @@ TODO abstract. State the falsifiable hypothesis, the measurement, and the findin
 numbers verbatim; show a closed-negative as a closed-negative.
 \end{abstract}
 
+% ---------- section structure mirrors the NeuroLM quality target ----------
+% (templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025):
+% Intro → Background → Method → Experiments → Ablation → Discussion → refs,
+% heavy on RESULT figures (caption tied to a specific result), not decoration.
 \section{Introduction}
-TODO. End with a \textbf{Contributions} paragraph.
+TODO. End with a \textbf{Contributions} paragraph (bulleted).
 
-\section{Hypothesis}
-TODO pre-registered falsifier(s).
+\section{Background and Related Work}
+TODO. Position against the closest prior work; cite inline with \citep{placeholder2026}.
 
 \section{Method}
-TODO.
+TODO. Ship $\ge 1$ architecture block diagram (Fig.~\ref{fig:arch}).
 
-\section{Measurement}
-TODO. Include $\ge 1$ TikZ or pgfplots figure.
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[node distance=10mm, every node/.style={font=\small,draw,rounded corners,minimum height=7mm}]
+\node (in) {input};
+\node[right=of in] (proc) {method};
+\node[right=of proc] (out) {result};
+\draw[-{Latex}] (in) -- (proc);
+\draw[-{Latex}] (proc) -- (out);
+\end{tikzpicture}
+\caption{TODO architecture — replace with the real pipeline (this is the NeuroLM-style block diagram).}
+\label{fig:arch}
+\end{figure}
 
-\section{Finding}
-TODO ($\Delta$ vs baseline OR ruled-out axis).
+\section{Experiments}
+TODO setup + main quantitative results. Every figure caption ties to a specific result.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=0.72\linewidth,height=5cm,ybar,bar width=16pt,
+  symbolic x coords={baseline,method A,this work},xtick=data,
+  ymin=0,enlarge x limits=0.28,ylabel={metric (units)},nodes near coords,
+  every axis plot/.append style={fill=blue!55!black,draw=black}]
+\addplot coordinates {(baseline,0.42) (method A,0.71) (this work,0.96)};
+\end{axis}
+\end{tikzpicture}
+\caption{TODO headline result (baseline vs.\ this work). Result figure, not decoration.}
+\label{fig:main}
+\end{figure}
+
+\section{Ablation}
+TODO. Knock out one component at a time; report the $\Delta$ for each.
 
 \section{Tier ledger}
 Every headline claim carries a g5 tier verdict (\tierBlue{} closed-form ·
@@ -119,6 +159,9 @@ TODO & TODO & \tierGreen{} \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section{Discussion}
+TODO. What generalises beyond this measurement; what it does \emph{not} claim.
 
 \section{Limitations}
 TODO. Be explicit about scope; do not over-claim.
@@ -142,7 +185,7 @@ function refsTemplate(): string {
 }
 
 function paperMd(slug: string, title: string): string {
-  return `# ${slug} — paper status\n\n@title: ${title}\n@goal: TODO.\n\n- [ ] draft v1\n- [ ] cover (sidecar paper cover ${slug})\n- [ ] references (≥10)\n- [ ] compile clean (sidecar paper build ${slug} — ≥10 pages, g51)\n\nprovenance: TODO. 검증 수치는 verbatim 복사(c9), closed-negative는 그대로 표기.\n`;
+  return `# ${slug} — paper status\n\n@title: ${title}\n@goal: TODO.\n\n- [ ] draft v1\n- [ ] cover (sidecar paper cover ${slug}) — teaser cover allowed\n- [ ] result figures (≥6 · caption tied to a result · NeuroLM bar = 9+)\n- [ ] references (≥10)\n- [ ] compile clean (sidecar paper build ${slug} — ≥10 pages, g51)\n\nquality target: templates/paper/_reference_samples/2409.00101_neurolm.pdf (NeuroLM, ICLR 2025).\nprovenance: TODO. 검증 수치는 verbatim 복사(c9), closed-negative는 그대로 표기.\n`;
 }
 
 // ── path helpers ────────────────────────────────────────────────────────────

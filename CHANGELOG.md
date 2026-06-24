@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(ing): age-aware pileup guard — stale/over-count items shout for a `done` scrub
+
+🧹 "완료된 ING 라인이 scrub 안 된 채 ACTIVE 로 썩는 적체를 매 턴 들춰내 강제"
+
+- 동기: `ing done` 은 이미 라인을 통째로 scrub 하지만, 끝난 작업에 `done` 을 안 부르면 active 라인이 묵은 채 쌓였다(현 보드 9건 중 4건이 6일+ 방치). 데이터모델이 아니라 **환기 부재**가 원인 — 자동삭제는 위험(장기 cross-repo 건은 진짜 진행중)하니 매 턴 적체를 큰소리로 들춰 scrub 을 강제.
+- inject(매 UserPromptSubmit)·show: 각 work 항목에 나이 `⏳Nd` 표시. `bloatDirective` — `ing.staleDays`(기본 5) 초과 묵음 항목이나 `ing.maxActive`(기본 12) 초과 시 `🧹 ING 적체 — N건 5일+ 묵음 — #id(⏳Nd)… 끝난 항목 지금 \`ing done <id>\` 로 scrub(보드는 ACTIVE 만 · 완료분은 CHANGELOG)` 강제 라인 추가. 진행중이면 그 줄 현행화 요구(방치 금지).
+- 턴-마감 게이트 문구에 `done(완료=scrub→CHANGELOG)` 명시 강화.
+- config `ing` 확장: `{ editThreshold, staleDays:5, maxActive:12 }`(기존 editThreshold 보존). 자동삭제 없음 — NUDGE 강화만(나이는 done-vs-active 의 proxy).
+- 검증: 실보드 inject 가 `🧹 ING 적체 — 4건 5일+ 묵음 #1·#5·#6·#8(⏳6d)` 정확 발사(최근 #11 ⏳0d 제외) · show 나이 표시 · `help` 로드 OK · ARCHITECTURE/config lockstep.
+
 ## feat(guards): preserve-state scatter-dir BLOCK + single-doc scatter-filename BLOCK
 
 🗂️ "산출물 '위치·이름' 거버넌스 2종에 코드 이빨 — 흩어진 결과 디렉토리·문서를 쓰기 직전 하드 차단"

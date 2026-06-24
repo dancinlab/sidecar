@@ -132,6 +132,33 @@ function resumeRank(r: Item): number {
   return (r.text ?? "").startsWith("↩") ? 0 : 1;
 }
 
+// whole days since an item's `ts` (ISO). Unparseable ts → 0 (never flag a bad stamp).
+function ageDays(ts: string, now: number): number {
+  const t = Date.parse(ts);
+  if (!t) return 0;
+  return Math.floor((now - t) / 86_400_000);
+}
+
+// Pileup signal for the board: any work item older than `staleDays`, or an open-work
+// count over `maxActive`, means completed lines are likely NOT being scrubbed. Returns
+// a loud one-line scrub directive (or "" when the board is healthy). Surfaced every
+// turn by `inject` so a finished-but-unscrubbed item can't sit quietly forever.
+function bloatDirective(work: Item[], staleDays: number, maxActive: number, now: number): string {
+  const stale = work.filter((r) => ageDays(r.ts, now) >= staleDays);
+  const over = work.length > maxActive;
+  if (!stale.length && !over) return "";
+  const parts: string[] = [];
+  if (stale.length) {
+    const tags = stale.map((r) => `#${r.id}(⏳${ageDays(r.ts, now)}d)`).join(" · ");
+    parts.push(`${stale.length}건 ${staleDays}일+ 묵음 — ${tags}`);
+  }
+  if (over) parts.push(`보드 ${work.length}건(>${maxActive} 적체)`);
+  return (
+    `🧹 ING 적체 — ${parts.join(" · ")}. 끝난 항목은 **지금** \`sidecar ing done <id>\` 로 scrub하라 ` +
+    `(보드는 ACTIVE 만 · 완료분은 CHANGELOG 로 graduate). 아직 진행중이면 그 한 줄을 현행화하라(방치 금지).`
+  );
+}
+
 export async function runIng(args: string[]): Promise<number> {
   const sub = args[0] ?? "show";
 
@@ -228,14 +255,19 @@ export async function runIng(args: string[]): Promise<number> {
       work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
       const pods = rows.filter((r) => r.kind === "pod");
       if (!work.length && !pods.length) return 0; // silent when nothing active
+      const now = Date.now();
       const parts: string[] = [];
-      if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}${r.from ? ` 📥${r.from}` : ""} ${r.text}`).join(" · "));
+      if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}${r.from ? ` 📥${r.from}` : ""}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
       if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
       let ctx = `🔵 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
       // Turn-close gate: make per-turn board upkeep + reporting actual, not on-request only.
       ctx +=
-        `\n🔵 턴 마감 게이트 — 이번 턴에 진행상황이 바뀌었으면(완료/새 작업/다음 단계) **지금** \`sidecar ing done <id>\`/\`add\`/\`next\` 로 보드를 갱신하고, ` +
+        `\n🔵 턴 마감 게이트 — 이번 턴에 진행상황이 바뀌었으면(완료/새 작업/다음 단계) **지금** \`sidecar ing done <id>\`(완료=scrub→CHANGELOG)/\`add\`/\`next\` 로 보드를 갱신하고, ` +
         "응답에 `🔵 ING 갱신: <무엇을>` 한 줄로 보고하라. 안 바뀌었으면 보드 그대로 두고 보고도 생략.";
+      // pileup gate: a finished-but-unscrubbed item shows its age every turn; once an
+      // item is stale or the board overflows, shout for a scrub so it can't accumulate.
+      const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
+      if (bloat) ctx += `\n${bloat}`;
       // c21 heartbeat: flag live long-runners (pods) left unchecked past maxSilenceSec.
       const hb = staleLongRunnerWarn(
         pods.map((r) => `pod ${r.id}(${r.gpu ?? "?"})`),
@@ -268,9 +300,12 @@ export async function runIng(args: string[]): Promise<number> {
   work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
   const pods = rows.filter((r) => r.kind === "pod");
   const next = rows.filter((r) => r.kind === "next");
+  const now = Date.now();
   info(`ING — 진행중 (ing ref · git show ing:ING.jsonl) · 완료→CHANGELOG · 최종설계→ARCHITECTURE`);
   info(`작업 (in-progress): ${work.length || "—"}`);
-  for (const r of work) info(`  • #${r.id}${r.from ? ` 📥${r.from}` : ""} ${r.text}   (since ${r.ts.slice(0, 10)})`);
+  for (const r of work) info(`  • #${r.id}${r.from ? ` 📥${r.from}` : ""} ${r.text}   (⏳${ageDays(r.ts, now)}d · since ${r.ts.slice(0, 10)})`);
+  const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
+  if (bloat) warn(bloat.replace(/\*\*/g, ""));
   if (pods.length) {
     info(`POD (running): ${pods.length}`);
     for (const r of pods) info(`  • ${r.id} | ${r.provider ?? "-"} | ${r.gpu ?? "-"} | ${r.purpose ?? "-"} | ${r.cost ?? "-"} | since ${r.ts.slice(0, 10)}`);

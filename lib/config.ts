@@ -145,7 +145,12 @@ export interface SidecarConfig {
   ledger: { staleSec: number };
   // ing staleness (c6) — warn at session Stop when ≥ `editThreshold` code files were
   // edited since the ing board was last touched (add/next/done). 0 disables the nudge.
-  ing: { editThreshold: number };
+  // ing.editThreshold — Stop-hook warn when ≥N code files edited without a board
+  // touch. ing.staleDays — a work item open ≥ this many days is flagged 묵음(stale)
+  // in the per-turn inject + show, pushing a `done` scrub (the board holds only
+  // ACTIVE work; completed lines graduate to CHANGELOG — they must NOT pile up).
+  // ing.maxActive — when the open work count exceeds this, inject shouts 적체(bloat).
+  ing: { editThreshold: number; staleDays: number; maxActive: number };
   // worktree gc — `[gone]` upstream only catches pushed+deleted branches; squash-merge /
   // no-push agent worktrees never get it and pile up. `maxAgeDays` is the age backstop:
   // a clean, unlocked, not-recently-touched AGENT worktree whose HEAD is older than this
@@ -238,7 +243,7 @@ const DEFAULTS: SidecarConfig = {
   askqText: true,
   poll: { maxSilenceSec: 600 },
   ledger: { staleSec: 3600 },
-  ing: { editThreshold: 5 },
+  ing: { editThreshold: 5, staleDays: 5, maxActive: 12 },
   worktree: { maxAgeDays: 3 },
   memGuard: { enabled: true, warnPct: 15, blockPct: 0, watchdogIntervalSec: 45 },
   dangerGuard: { rmRfRoot: false },

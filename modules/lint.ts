@@ -4,7 +4,7 @@
 //   • freshness of tracked files (_updated field or mtime vs maxAgeDays)
 //   • convergence: a fix/feat commit must also touch the issues file
 // Quiet on pass (H1); violations go to stderr + lint_log.jsonl + errors queue.
-import { existsSync, statSync } from "node:fs";
+import { existsSync, statSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl, info, loudFail, ok } from "../lib/log.ts";
@@ -30,6 +30,38 @@ interface Violation {
 async function stagedFiles(): Promise<string[]> {
   const r = await execShell("git diff --cached --name-only", { cwd: repoPath(".") });
   return r.stdout.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
+// HELP-BACKTICK — the `cli/index.ts` `export const HELP = \`…\`` block is a template
+// literal, so an UNESCAPED backtick inside a help line silently terminates it and
+// breaks `sidecar help` + every tsx/esbuild build. Escaped `\\\`` is fine (used for
+// `code` spans); a bare backtick is the bug. Text-scan (not import) so it still flags
+// when the file is already broken. Sidecar-repo-only (no `export const HELP` → no-op).
+// @convergence state=ossified id=HELP_NO_RAW_BACKTICK value="a bare backtick in the cli HELP template literal terminates it → help/build break; lint HELP-BACKTICK(block) scans the HELP block and flags any unescaped backtick (escaped \\\` allowed)" threshold="twice in one session a help-line edit added `code`-style backticks (fleet-full, folders), each silently breaking `sidecar help` until caught by hand — ossify as a commit gate"
+function lintHelpBacktick(): { rule: string; file: string; msg: string }[] {
+  const path = repoPath("cli/index.ts");
+  if (!existsSync(path)) return [];
+  let lines: string[];
+  try {
+    lines = readFileSync(path, "utf8").split("\n");
+  } catch {
+    return [];
+  }
+  const start = lines.findIndex((l) => /export const HELP = `/.test(l));
+  if (start < 0) return [];
+  const out: { rule: string; file: string; msg: string }[] = [];
+  for (let i = start + 1; i < lines.length; i++) {
+    if (lines[i].trim() === "`;") break; // intended closer
+    const stripped = lines[i].replace(/\\`/g, ""); // drop escaped backticks
+    if (stripped.includes("`")) {
+      out.push({
+        rule: "HELP-BACKTICK",
+        file: "cli/index.ts",
+        msg: `line ${i + 1}: unescaped backtick in the HELP template literal — it terminates the literal and breaks 'sidecar help' + build. Escape as \\\` or use plain quotes.`,
+      });
+    }
+  }
+  return out;
 }
 
 function fileAgeDays(absPath: string): number | null {
@@ -174,6 +206,10 @@ export async function runLint(args: string[]): Promise<number> {
   // current surface; the committed file is just the external snapshot.
   const drift = toolkitDrift();
   if (drift) violations.push({ rule: "TOOLKIT-DRIFT", file: "TOOLKIT.jsonl", msg: drift });
+
+  // 4e'. HELP template-literal hygiene — an unescaped backtick in cli/index.ts's HELP
+  // block breaks `sidecar help` + build silently (recurred twice). block (HELP_NO_RAW_BACKTICK).
+  for (const it of lintHelpBacktick()) violations.push(it);
 
   // 4f. command description-recognition hygiene (sidecar s18 port) — each
   // commands/*.md `description:` must stay under the skill-listing cap AND carry

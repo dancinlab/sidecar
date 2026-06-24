@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(lint): HELP-BACKTICK gate — ossify the recurring cli HELP backtick break
+
+🔒 "한 세션에 두 번 낸 'HELP 백틱→리터럴 깨짐' 실수를 commit 게이트로 박제"
+
+- 동기: `cli/index.ts` 의 `export const HELP = \`…\`` 는 템플릿 리터럴이라, 도움말 줄에 **이스케이프 안 된 백틱**을 넣으면 리터럴이 조기 종료돼 `sidecar help` + 모든 tsx/esbuild 빌드가 조용히 깨진다. 이번 세션에 fleet-full·folders help 편집에서 각각 1번씩, 총 2번 재발 → root-cause 박제.
+- 검출(`lintHelpBacktick`): `cli/index.ts` 를 **텍스트로** 읽어(파일이 이미 깨져도 동작) HELP 블록(`export const HELP = \`` ~ `` `; ``) 안의 각 줄에서 이스케이프된 `\\\`` 를 제거한 뒤 남은 백틱을 `HELP-BACKTICK`(block)로 플래그. `export const HELP` 없으면 no-op(sidecar-repo 한정).
+- 배선: `lint.ts` 4e' + severity-map(config/+.harness/) `HELP-BACKTICK:block` + `@convergence HELP_NO_RAW_BACKTICK`.
+- 검증: HELP 라인에 raw 백틱 주입 → `[block] HELP-BACKTICK cli/index.ts line 99 … exit 1` · 복원 시 0 · architecture lint clean(노드 압축) · help OK · toolkit 71.
+- 잔여: 빌드 자체 파스 검사는 아님(텍스트 휴리스틱) — 이스케이프된 백틱만 허용하는 HELP 컨벤션 전제. 다른 템플릿 리터럴은 미검사(HELP 만 재발 대상이었음).
+
 ## feat(folder-docs): enforce per-folder CLAUDE.md at commit (existence-only) + commons rule
 
 📁 "작업한 폴더엔 로컬 CLAUDE.md 필수 — scan/넛지에 그치던 걸 commit-time block 게이트로 강제"

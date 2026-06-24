@@ -19,7 +19,7 @@
 {"id":"toolkit","kind":"hook","usage":"toolkit {list|inject|json|write|check}","use":"command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift"}
 {"id":"companions","kind":"hook","usage":"companions {inject|list}","use":"sibling-CLI command surface — inject runs each configured neighbour CLI's catalog (config `companions` + ~/.sidecar/companions.json · DOMAIN-AGNOSTIC, e.g. hexa) at SessionStart so the agent knows `hexa cloud` exists without probing"}
 {"id":"prefs","kind":"hook","usage":"prefs {show|code|docs|response <lang>|inject}","use":"language prefs (3 axes) + UserPromptSubmit inject"}
-{"id":"easy","kind":"hook","usage":"easy {show|inject}","use":"inject the \"easy\" friendly-response style (lang from prefs.response)"}
+{"id":"easy","kind":"hook","usage":"easy {show|inject|scaffold \"<q>\"|lint <file|->}","use":"easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)"}
 {"id":"load","kind":"hook","usage":"load {show|inject}","use":"per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject"}
 {"id":"recommend","kind":"hook","usage":"recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}","use":"4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)"}
 {"id":"sbs","kind":"hook","usage":"sbs [auto[:<axis>]|manual] [<task>]","use":"plan-first runbook — resolver-first mode · chat-form 모호성→0 · plan.md handoff + auto-QA 4축 + 9-section dossier"}

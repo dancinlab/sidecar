@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(easy): add deterministic `scaffold` + `lint` builtins — /sbs wraps a real backbone
+
+🎓 "easy 가 show/inject 만이라 sbs chat-form 이 손-self-check 에 그쳤던 구멍을 메움 — archive 의 `hexa easy` 결정적 빌트인 수준"
+
+- 동기: archive_sidecar 의 sbs 런북은 chat-form 7요소 라운드를 `hexa easy scaffold`(빈 7-슬롯 골격) + `hexa easy lint`(축별 advisory 점수) 결정적 빌트인으로 감쌌으나, 현재 `sidecar easy` 는 `show|inject`(스타일 주입)만이라 그 backbone 이 없었다. 두 verb 를 `modules/easy.ts` 에 추가해 sbs 가 실 빌트인을 래핑하게 승격.
+- `sidecar easy scaffold "<q>"` — 라운드의 빈 7-슬롯 골격(아이콘·이름/별칭·하는 일·비유·ASCII(4종 안내)·비교표·추천 + `→ A · B · 또는 자유응답`)을 결정적으로 발행. LLM 은 창의 슬롯만 채운다.
+- `sidecar easy lint <file|->` — 렌더된 라운드를 styles 의 측정 축으로 advisory 채점: jargon-ratio(≤0.30) · analogy-presence(같은/처럼/마치) · ascii-diagram-presence(펜스 박스문자) · acronym-expansion(약어 첫 등장 풀어쓰기) · 7-element adoption(icon·비유·ascii·표 ≥3/4). **항상 exit 0(advisory · 라운드 미차단 · NO LLM)**.
+- 배선: `cli/index.ts` help 라인 갱신 · `templates/sbs.md` 의 Step2 7요소 블록을 "styles self-check 만" → "scaffold→채움→lint 빌트인 래핑(graceful fallback 유지)" 으로 승격. SSOT(`styles/easy.<lang>.md`) 복제 금지 원칙 유지.
+- 검증: `help` 로드 OK · `scaffold` 골격 발행 OK · `lint` good round → all PASS · bad round(jargon 0.47·무비유·무ASCII·약어 7개 미풀이) → 5 warn 정확 · 잘못된 subverb → usage · `toolkit write` 71 entries.
+
 ## feat(sbs): restore full archive_sidecar fidelity in the /sbs runbook
 
 🧭 "60줄로 압축돼 정밀도를 잃었던 /sbs 런북을 archive_sidecar 0.15.0 (517+207줄) 수준으로 복원"

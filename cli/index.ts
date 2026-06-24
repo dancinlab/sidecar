@@ -85,7 +85,8 @@ hook delegates (wire these into your agent's settings.json):
   toolkit {list|inject|json|write|check}   command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift
   companions {inject|list}   sibling-CLI command surface — inject runs each configured neighbour CLI's catalog (config \`companions\` + ~/.sidecar/companions.json · DOMAIN-AGNOSTIC, e.g. hexa) at SessionStart so the agent knows \`hexa cloud\` exists without probing
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
-  easy {show|inject}       inject the "easy" friendly-response style (lang from prefs.response)
+  easy {show|inject|scaffold "<q>"|lint <file|->}
+                           easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <m> [--global]|clear-default [--global]|resolve-mode <a>}
                            4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)

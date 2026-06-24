@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(paper): NeuroLM quality-target template + bundled reference sample (cover still allowed)
+
+🗣️ "남이 쓴 좋은 논문 한 편(NeuroLM)을 정답지로 옆에 두고, paper new 가 그 구조를 따라 나오게 했다 — 표지는 우리 식대로 허용"
+
+- 동기: 유저가 `paper` 명령을 "참고해서 구현"하라며 가리킨 레퍼런스 = `demiurge/PAPERS/_reference_samples/2409.00101_neurolm.pdf` (NeuroLM, Jiang et al., ICLR 2025 — 제3자 arxiv 논문, 우리가 쓴 게 아님). dancinlab 자작 샘플이 아닌 **외부 품질 정답지**를 sidecar 로 가져와 `paper new` 산출물이 그 바를 따르게 한다.
+- 레퍼런스 반입: `templates/paper/_reference_samples/` 에 NeuroLM PDF(22쪽·1.8MB·읽기전용) + 무엇을 보고 맞출지 적은 README 동봉.
+- 템플릿(`modules/paper.ts` `mainTexTemplate`) NeuroLM 구조로 교체: 섹션을 Intro(+Contributions) · Background and Related Work · Method · Experiments · Ablation · Discussion · Limitations · Conclusion(+Tier ledger) 로 정렬 · **결과 그림 디스플린** 반영 — TikZ 아키텍처 블록도(Fig.~arch) + pgfplots 막대 결과그림(Fig.~main) 스캐폴드 동봉(캡션=특정 결과 연결). natbib·hyperref·11pt(ICLR류)은 기존 preamble 유지.
+- **마케팅/티저 표지 허용**(유저 명시 결정): NeuroLM 은 표지가 없지만 우리는 `cover` verb + `\includegraphics{cover.png}` 를 그대로 둠 — 의도된 로컬 divergence 로 헤더 주석에 명시. `PAPER.md` 체크리스트에 결과그림 ≥6(NeuroLM 바=9+) 추가.
+- 검증: 스캐폴드 후 정상 PNG cover 로 `paper build` → `3 pages · 1 refs · 37KB` 컴파일 성공(cover+TikZ+pgfplots+8섹션+bib 전부) · `paper help` 로드 OK · g51 10쪽 미달은 TODO 스캐폴드라 경고만(빌드 성공).
+
 ## fix(brainstorm): quote `$ARGUMENTS` + rewrite runbook to subagent-dispatch form
 
 🗣️ "발산을 메인 대화가 아니라 서브에이전트 한 명에게 던진다 — 게다가 괄호 든 seed 도 안 깨진다"

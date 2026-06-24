@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat(paper): HARD content-floor gates — ≥10 pages AND ≥4 result figures
+
+🗣️ "논문이 덜 됐으면 빌드를 통과 못 시킨다 — 페이지수도, 결과그림 개수도 강제 (둘 중 하나라도 미달이면 exit 3)"
+
+- 동기: NeuroLM 정답지를 템플릿에 박은 데 이어, 유저 요청 — 결과그림 개수와 페이지수를 **경고가 아니라 하드 게이트**로. 덜 채운 논문이 "빌드 성공"으로 새지 않게 한다.
+- 변경(`modules/paper.ts` `build`): ① 페이지 floor 를 경고→**하드 실패**(기존 g51 10p, `pages < min` 이면 return 3). ② **결과그림 게이트 신설** — main.tex 의 `\begin{figure}` 수에서 cover(`\label{fig:cover}`) 를 빼 result-figure 수를 세고 `< min` 이면 실패. 기본 `min-figures=4`(NeuroLM 바=9+). 둘 다 `--min-pages N`/`--min-figures N` 로 조정, `0` 이면 해제. pdfinfo 없으면 페이지 게이트는 측정불가로 skip(명시 로그).
+- `new` 배려: 갓 만든 TODO 스캐폴드는 당연히 floor 미달 → 프리뷰 빌드가 `3` 이어도 `new` 는 "컴파일됨·floor 아직 미달(정상)" 안내로 처리하고 0 반환(컴파일 실패 1/2 는 그대로 전파).
+- 검증(smoke-paper · 3p·2figs): 기본 빌드 → `content-floor gate FAILED — 3 pages < 10 · 2 result figs < 4` **real exit 3** · `--min-pages 0 --min-figures 0` → PASS exit 0 · `--min-pages 3 --min-figures 2` → PASS. `paper help`/`defaults` 라인에 min-figures 노출 확인.
+
 ## feat(paper): NeuroLM quality-target template + bundled reference sample (cover still allowed)
 
 🗣️ "남이 쓴 좋은 논문 한 편(NeuroLM)을 정답지로 옆에 두고, paper new 가 그 구조를 따라 나오게 했다 — 표지는 우리 식대로 허용"

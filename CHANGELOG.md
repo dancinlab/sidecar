@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## chore(convergence): 파일-터치 시 학습 주입 비활성화 (주석 처리 · 효용 불확실)
+
+🗣️ "이건 근데 애매하다 / 주석처리로 기능 꺼줘"
+
+- 동기: 유저 — `convergenceForFile` 의 파일-터치(Read/Write/Edit) 시점 학습 주입이 매-터치 노이즈/토큰 대비 효용이 불확실(애매). 삭제가 아니라 주석으로 꺼서 손쉽게 재활성 가능하게.
+- 변경(`modules/pre.ts`): `preWrite` 의 convergence 주입 블록 + `preTouch` 본문 + `convergenceForFile` import 를 주석 처리. `preTouch` 는 no-op 로 남겨 Read 훅 매처가 무해. store(`convergence.records[]`)·CRUD(`architecture convergence`)·`lintConvergenceRecords`(커밋 게이트)·매-턴 inject 제외는 그대로 유지 — 주석 해제 한 줄로 재활성.
+- 검증: tsc clean · `pre write`/`pre touch` 무음(주입 OFF) 확인 · lintConvergenceRecords 0 issue · convergenceForFile 함수 보존.
+
 ## fix(architecture): 매-턴 inject 에서 convergence 배열 제외 — 토큰 재주입 −21KB/턴
 
 🗣️ "토큰이 빨리 소진되는데 injection 중복/재주입 체크해줘"

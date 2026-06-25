@@ -734,7 +734,7 @@
                     "이름": "convergence 재발학습 store (구 convergence 모듈 흡수)",
                     "역할": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
                     "구분": "detail",
-                    "상세": "재발방지 학습은 코드 인라인 마커가 아니라 repo-root ARCHITECTURE.json 최상위 `convergence.records[]`(id·state·value·threshold·source) 한곳에 산다(single-doc). CRUD=`sidecar architecture convergence {list|add|rm|edit}`(id-keyed · add=upsert · value/threshold 셸특수문자는 `--value -` stdin · 손-JSON편집 불필요). 소비 2경로: ① `lintConvergenceRecords()` = 커밋 게이트(id+유효 state · CONVERGENCE-MALFORMED block) · ② `convergenceForFile(path)` = 에이전트가 그 `source` 파일을 **터치(Read/Write/Edit)할 때마다** PreToolUse(`pre touch`/`pre write`)가 매칭 학습을 stderr 주입(같은 결함 재도입 차단). 구 convergence 모듈(scan·due-check·캡처토큰)은 제거."
+                    "상세": "재발방지 학습은 코드 인라인 마커가 아니라 repo-root ARCHITECTURE.json 최상위 `convergence.records[]`(id·state·value·threshold·source) 한곳에 산다(single-doc). CRUD=`sidecar architecture convergence {list|add|rm|edit}`(id-keyed · add=upsert · value/threshold 셸특수문자는 `--value -` stdin · 손-JSON편집 불필요). 소비: `lintConvergenceRecords()` = 커밋 게이트(id+유효 state · CONVERGENCE-MALFORMED block). `convergenceForFile(path)`(파일 터치 시 학습 주입)은 **현재 비활성**(pre.ts 에서 호출 주석 처리 — 매-터치 노이즈/토큰 대비 효용 불확실 · 함수·store·CRUD·lint 는 유지, 주석 해제로 재활성). 구 convergence 모듈(scan·due-check·캡처토큰)은 제거."
                   }
                 ]
               },

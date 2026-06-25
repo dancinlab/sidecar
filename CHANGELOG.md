@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## fix(sbs): AUTO 모드 행동배너 front-load — 고정축(완성도) 자동진행이 런북 prose 에 묻히던 회귀
+
+🗣️ "sbs go 했을 때 recommend 에 완성도로 고정해뒀는데 자동진행이 안 된다"
+
+- 증상: `recommend set-default complete` (FIXED 완성도)인데 `/sbs` 가 라운드별로 사용자에게 묻는 MANUAL 식으로 동작. 자동 auto-pick 이 안 됨.
+- 진단(근본원인): 결정적 레이어는 멀쩡했다 — `recommend resolve-mode` 가 `mode: auto (complete forced) ← inherited` 를 정확히 출력하고 전역 CLI 도 최신이었다. 문제는 그 다음, agent 가 받는 **런북 전문의 프레이밍**: `mode: auto` 결론 바로 아래에 거대한 §1 파싱-우선순위 벽글 + §2 "한 번에 하나씩 물어"(MANUAL) 프레이밍이 지배하고, AUTO 의 "즉시 auto-pick·일시정지 없음"은 sub-bullet 로 파묻혀 있었다. agent 가 prose 를 skim 하며 지배적 MANUAL 프레이밍으로 떨어졌다.
+- 픽스(CODE 가 권위 — sidecar resolver-first 철학): `resolveMode` 가 이제 `{mode,axis,weights,source}`(`SbsResolution`)를 **반환**(기존 print 출력은 그대로 — `recommend resolve-mode` CLI 후방호환). `modules/sbs.ts` 가 그 반환값으로 분기해 `mode==="auto"` 면 런북 본문 **위에** 🤖 AUTO 행동배너를 front-load: "매 라운드 즉시 auto-pick·라운드별 질문 없음·유일 일시정지=합의화면 1회·아래 §2 의 대기 묘사는 MANUAL 용이니 auto-pick 으로 치환해 읽어라". 모델 해석을 제거하고 행동명령을 코드로 박았다(prose 수정이 아니라 — prose-skim 이 실패원인이므로 prose 만 고치는 건 근본해결이 아님).
+- 배너 포맷: 고정축이면 `<완성도(complete)> 축 forced`(상속 시 `← recommend-default 상속`), 가중치 spec 이면 `4축 가중평균(<weights>)`. MANUAL 은 배너 미출력(clean).
+- 검증: `help` 로드 · `recommend resolve-mode go` 출력 **무변경**(후방호환) · `sbs go`→AUTO 배너 front-load(complete inherited) · `sbs manual`→배너 없음 · 엣지 `auto:complete=2,simple=3`(가중치 early-return 경로)·`auto:safe`(명시 단일축) 배너 정확.
+
 ## feat(paper): publish lifecycle — Zenodo REST (DOI) + arXiv submission package, keys via secret
 
 🗣️ "paper 명령에 arxiv·zenodo 배포·수정·삭제를 붙여라 — 키는 secret CLI 연결"

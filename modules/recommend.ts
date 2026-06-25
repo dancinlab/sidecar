@@ -87,9 +87,13 @@ function axisWeights(axis: string): string {
     : balanced();
 }
 
-function emitResolution(kind: string, axis: string, src: string, deprecation: boolean): void {
+// Structured resolution returned to callers (e.g. `sidecar sbs`) so they can
+// branch deterministically on the mode instead of re-parsing the printed lines.
+export type SbsResolution = { mode: "auto" | "manual"; axis: string; weights: string; source: string };
+
+function emitResolution(kind: string, axis: string, src: string, deprecation: boolean): SbsResolution {
   let human = "";
-  let mmode = "manual";
+  let mmode: "auto" | "manual" = "manual";
   let maxis = "-";
   let mweights = "-";
   if (kind === "auto-axis") {
@@ -108,9 +112,10 @@ function emitResolution(kind: string, axis: string, src: string, deprecation: bo
   if (deprecation) process.stdout.write("⚠ legacy-manual is the old per-step pause — use plain manual\n");
   process.stdout.write(human + "\n");
   process.stdout.write(`resolved: mode=${mmode} axis=${maxis} weights=${mweights} source=${src}\n`);
+  return { mode: mmode, axis: maxis, weights: mweights, source: src };
 }
 
-export function resolveMode(raw: string): void {
+export function resolveMode(raw: string): SbsResolution {
   const tok = raw.trim().split(/\s+/)[0] ?? "";
   const def = readDefault();
   if (tok === "manual") return emitResolution("manual", "-", "explicit", false);
@@ -120,7 +125,7 @@ export function resolveMode(raw: string): void {
     if (AXES.has(spec)) return emitResolution("auto-axis", spec, "explicit", false);
     process.stdout.write(`mode: auto (4-axis weighted: ${spec})\n`);
     process.stdout.write(`resolved: mode=auto axis=- weights=${spec} source=explicit\n`);
-    return;
+    return { mode: "auto", axis: "-", weights: spec, source: "explicit" };
   }
   if (tok === "auto") {
     if (AXES.has(def)) return emitResolution("auto-axis", def, "inherited", false);

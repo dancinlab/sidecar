@@ -49,6 +49,22 @@ export async function runArchitecture(args: string[]): Promise<number> {
       return 0;
     }
     if (!text.trim()) return 0;
+    // Per-turn re-inject must NOT carry the `convergence` learning store — it can be
+    // large (one record per recurrence) and is delivered TARGETED on file-touch
+    // (convergenceForFile), so dumping all records every UserPromptSubmit is pure
+    // token waste. Strip it from the injected snapshot only (file/show/lint keep it).
+    if (found.rel.endsWith(".json")) {
+      try {
+        const obj = JSON.parse(text) as Record<string, unknown>;
+        if (obj.convergence) {
+          const n = (obj.convergence as { records?: unknown[] }).records?.length ?? 0;
+          delete obj.convergence;
+          text = JSON.stringify(obj, null, 2) + `\n(convergence: ${n} record(s) omitted — surfaced per-file on touch · \`sidecar architecture convergence list\`)`;
+        }
+      } catch {
+        /* invalid JSON → inject raw text as-is */
+      }
+    }
     let tail = "";
     if (text.length > CAP) {
       text = text.slice(0, CAP);

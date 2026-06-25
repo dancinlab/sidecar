@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## fix(architecture): 매-턴 inject 에서 convergence 배열 제외 — 토큰 재주입 −21KB/턴
+
+🗣️ "토큰이 빨리 소진되는데 injection 중복/재주입 체크해줘"
+
+- 진단(실측): 주입 레이어 **중복은 없음**(전역 `~/.claude/settings.json` 1곳 · repo `.claude` 없음 · settings.local 훅 없음 · 플러그인 훅 0 → INIT-INJECT-DUP 재발 아님). 토큰 누수는 매 UserPromptSubmit 재주입 **볼륨**(~82KB/턴)이고, 그 중 `architecture inject` 가 압도적(~59KB). 직전 convergence SSOT 이관으로 records 18.5KB(ARCHITECTURE.json의 40%)가 매 턴 통째 재주입되며 악화.
+- 픽스(`modules/architecture.ts` inject): 매-턴 주입 스냅샷에서 `convergence` 키를 제거(parse→delete→stringify) — records 는 파일-터치 시 `convergenceForFile` 로 타깃 주입되므로 매 턴 통째 실을 이유가 없음. 한 줄 `(convergence: N record(s) omitted …)` 표기만 남김. show/lint/CRUD/터치주입은 그대로 records 사용. invalid-JSON 이면 raw fallback.
+- 효과: architecture inject 60KB→39KB (**−20.9KB/턴 · 35%↓**). tsc clean · inject 출력에 records 없음 확인.
+- 별건(전역 훅 stale): `~/.claude/settings.json` Stop 에 폐기된 `convergence due-check` 잔존(`||true` 로 삼켜짐) → self-update 후 `install-hooks --global` 재싱크로 제거.
+
 ## feat(architecture): convergence 레코드 CRUD 이빨 — `architecture convergence {list|add|rm|edit}`
 
 🗣️ "add remove edit 도 할수 있게 명령어 세팅 되잇나?"

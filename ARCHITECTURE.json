@@ -722,7 +722,7 @@
                 "이름": "architecture",
                 "역할": "설계 SSOT 주입 (SessionStart + 매 UserPromptSubmit)",
                 "구분": "module",
-                "상세": "repo-root ARCHITECTURE.json(우선)/.md 를 additionalContext 로 주입 — SessionStart 1회 + claudemd 처럼 매 UserPromptSubmit 재주입으로 설계 트리를 commons급 salience 로 상주. 80KB 초과 시 head+포인터로 절단. 부재 시 무음. (이벤트 게이트 없음 — 받은 hook_event_name 을 그대로 echo). 트리 **뒤**에 턴-마감 게이트 한 줄을 붙임(recency=최다주목) — 이번 턴에 코드/구조/데이터흐름을 바꿨으면 해당 노드를 제자리 갱신하고 `🏛️ ARCHITECTURE 갱신: …` 한 줄 보고를 의무화(무변경 시 무음). 동기: 갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신하던 누수 차단. ing inject 도 동형 게이트(`🔵 ING 갱신: …`)",
+                "상세": "repo-root ARCHITECTURE.json(우선)/.md 를 additionalContext 로 주입 — SessionStart 1회 + claudemd 처럼 매 UserPromptSubmit 재주입으로 설계 트리를 commons급 salience 로 상주. 매-턴 재주입은 **`convergence` 배열을 제외**(records 는 파일-터치 시 타깃 주입되므로 매 턴 통째 주입은 토큰낭비 · 한 줄 omitted 표기만 남김 = 매 턴 ~21KB 절감). 80KB 초과 시 head+포인터로 절단. 부재 시 무음. (이벤트 게이트 없음 — 받은 hook_event_name 을 그대로 echo). 트리 **뒤**에 턴-마감 게이트 한 줄을 붙임(recency=최다주목) — 이번 턴에 코드/구조/데이터흐름을 바꿨으면 해당 노드를 제자리 갱신하고 `🏛️ ARCHITECTURE 갱신: …` 한 줄 보고를 의무화(무변경 시 무음). ing inject 도 동형 게이트(`🔵 ING 갱신: …`)",
                 "children": [
                   {
                     "이름": "lint (트리 위생 · c4 강제)",

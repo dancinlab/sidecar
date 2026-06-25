@@ -19,7 +19,7 @@ import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
 import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
-import { convergenceForFile } from "./architecture.ts";
+// import { convergenceForFile } from "./architecture.ts"; // convergence-on-touch DISABLED (commented off)
 import { docWriteViolation } from "./docs.ts";
 import { descWriteViolation } from "./shadow.ts";
 import { commonsWriteViolation } from "./commons.ts";
@@ -268,11 +268,11 @@ export async function preWrite(_args: string[]): Promise<number> {
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
 
-  // convergence-on-touch — surface any recurrence-prevention learnings recorded against
-  // this file (ARCHITECTURE.json convergence store) so an edit doesn't reintroduce a
-  // fixed defect. Non-blocking context (stderr), printed before the write guards run.
-  const cv = convergenceForFile(filePath);
-  if (cv) process.stderr.write(cv + "\n");
+  // convergence-on-touch — DISABLED (commented off): surfacing the file's recurrence
+  // learnings on every Write/Edit added per-touch noise/tokens of uncertain value.
+  // The store + CRUD + lint stay; re-enable by uncommenting (+ the preTouch/import).
+  // const cv = convergenceForFile(filePath);
+  // if (cv) process.stderr.write(cv + "\n");
 
   // handoff-guard — block scattered HANDOFF.md / INBOX.md / inbox/*.md; route to handoff.jsonl.
   if (config().handoffGuard) {
@@ -393,14 +393,14 @@ export async function preAskq(_args: string[]): Promise<number> {
   );
 }
 
-// preTouch — Read (and any non-mutating file touch): convergence surfacing ONLY, no
-// write guards. So opening a file with recorded recurrence learnings shows them first.
+// preTouch — Read convergence surfacing — DISABLED (commented off · see preWrite).
+// Kept as a no-op so the Read hook matcher stays harmless; re-enable by uncommenting.
 export async function preTouch(_args: string[]): Promise<number> {
-  const input = parseToolInput();
-  const filePath = String(input.file_path ?? "");
-  if (!filePath) return 0;
-  const cv = convergenceForFile(filePath);
-  if (cv) process.stderr.write(cv + "\n");
+  // const input = parseToolInput();
+  // const filePath = String(input.file_path ?? "");
+  // if (!filePath) return 0;
+  // const cv = convergenceForFile(filePath);
+  // if (cv) process.stderr.write(cv + "\n");
   return 0;
 }
 

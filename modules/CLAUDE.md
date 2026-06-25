@@ -14,12 +14,12 @@
 | `naming-guard.ts` | 버전/복사 접미사 파일·폴더명 차단 (`_v2`·`_copy`…) |
 | `state-guard.ts` | scatter 디렉토리(.verdicts/bench/…) 차단 → `state/` 유도 |
 | `docs.ts` | single-doc 규율 (scatter `.md` 차단 + quickref) |
-| `lint.ts` | commit-time 게이트 — staged 검사 모음 (CHANGELOG·convergence·folder-guide…) |
-| `ing.ts` · `folders.ts` · `architecture.ts` · `toolkit.ts` … | 진행보드 · 폴더가이드 · 설계주입 · 명령카탈로그 |
+| `lint.ts` | commit-time 게이트 — staged 검사 모음 (CHANGELOG·folder-guide·convergence-record…) |
+| `ing.ts` · `folders.ts` · `architecture.ts` · `toolkit.ts` … | 진행보드 · 폴더가이드 · 설계주입+재발학습 store · 명령카탈로그 |
 
 ## 규칙 / 컨벤션
 - 새 명령 = `modules/<name>.ts` + `cli/index.ts` 등록 + help 라인 + CHANGELOG (+ `templates/`·`commands/`) → `toolkit write` 카탈로그 100%.
-- 코드 가드는 **config 보다 먼저** 실행되고 프로필 편집으로 못 끈다 (인라인 `# …-ok` 마커만 예외) — 재발방지는 `@convergence` 마커로 박제(lint 가 well-formed 강제).
+- 코드 가드는 **config 보다 먼저** 실행되고 프로필 편집으로 못 끈다 (인라인 `# …-ok` 마커만 예외) — 재발방지 학습은 `ARCHITECTURE.json` 의 `convergence.records[]` 단일 SSOT 에 기록(인라인 마커 폐기 · lint 가 well-formed 강제 · 파일 터치 시 자동 표면화).
 - 토글·임계는 `lib/config.ts` 에서만 (여기 하드코딩 금지).
 
 ## 주의 (gotchas)

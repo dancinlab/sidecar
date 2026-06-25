@@ -6,7 +6,6 @@
 // the Stop hook warns once when it crosses the threshold (then resets, so it nags at
 // most once per N edits — not every Stop). warn-only, never blocks.
 //
-// @convergence state=in_flight id=ING_STALENESS_NUDGE value="code edited ≫ ing untouched is WARNED at Stop (c6) — code edits bump a counter, ing add/next/done resets it, Stop warns once past editThreshold then resets; warn-only (forcing an ing update has no ground truth, so a hard block would be a false-positive factory)" threshold="every-turn `ing inject` only SHOWED the board; sessions edited lots of code while the board went stale because nothing nudged an update"
 
 import { resolve } from "node:path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";

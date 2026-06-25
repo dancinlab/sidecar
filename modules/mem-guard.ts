@@ -17,7 +17,6 @@
 // Verbs: status (default · snapshot) · check (exit 1 if low · scriptable) ·
 //        tick (watchdog body) · install / uninstall (launchd LaunchAgent).
 //
-// @convergence state=in_flight id=MAC_OOM_FANOUT_JETSAM value="a 16GB Mac OOM-dies (jetsam kills apps + kernel panic) because parallel fan-out (cycle-all/all-bg-go) accumulates 6+ detached `claude` processes (~400-490MB each) across sessions until macOS jetsams — mem-guard adds a free-RAM preflight before background-spawn + an opt-in launchd notify watchdog" threshold="JetsamEvent reports 6/13-6/18 + panic 6/17 showed six `2.1.179` (claude) procs as top memory holders at OOM time; preflight warns/blocks spawn when available RAM < warnPct"
 
 import { execFileSync, execSync } from "node:child_process";
 import { resolve } from "node:path";

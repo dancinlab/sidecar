@@ -124,7 +124,6 @@ async function gc(): Promise<number> {
   const fresh = await classify();
   let swept = 0;
 
-  // @convergence state=ossified id=WORKTREE_GONE_ONLY_PILEUP value="gc/pr-cycle reaped ONLY [gone]-upstream worktrees; squash-merge + no-push AGENT worktrees never get [gone], so they were skipped forever and piled (67 wts / 84GB / 6 days). Fix: reap on [gone] OR HEAD-age > worktree.maxAgeDays, preserving the tip under refs/reaped/ first so aged work stays recoverable" threshold="agent worktree clean+unlocked+not-recent and older than maxAgeDays, or [gone] upstream"
   const maxAgeDays = config().worktree?.maxAgeDays ?? 3;
   for (const w of fresh) {
     if (w.isMain || !w.isAgent) continue; // only agent worktrees, conservative

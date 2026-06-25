@@ -13,7 +13,6 @@
 //   check   regenerate from HELP and diff the committed TOOLKIT.jsonl — exit 1 on
 //           drift (mechanical sync guard: edit HELP → must `toolkit write`)
 //
-// @convergence state=ossified id=TOOLKIT_FROM_HELP_SSOT value="the agent-facing command catalog (TOOLKIT.jsonl) is GENERATED from the HELP text in cli/index.ts, never hand-maintained in parallel; `toolkit check` snapshot-diffs committed vs generated so the two can't drift" threshold="commands existed + worked but had no proactive catalog/triggers, so the agent didn't know to use them (arxiv/secret blind spot); a hand-kept second catalog would just drift from help"
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { info, ok, warn, loudFail } from "../lib/log.ts";
@@ -42,7 +41,6 @@ function sectionKind(header: string): string {
 }
 
 // Extract the HELP template literal body from cli/index.ts source as plain text.
-// @convergence state=ossified id=HELP_CLOSE_DELIM_NEWLINE value="the closing delimiter search must be the line-start `\\n\\`;`, NOT a bare `\\`;` — the HELP body contains escaped backticks (e.g. `worktree gc\\`;`) and a bare-`\\`;` search truncated there, silently dropping every command after worktree (atlas/convergence/ing/sync/upstream/verdict)" threshold="bare backtick-semicolon search matched an escaped inline backtick mid-body and cut the catalog short"
 function helpText(): string {
   const src = readFileSync(CLI_SRC, "utf8");
   const start = src.indexOf("HELP = `");

@@ -78,7 +78,6 @@ async function arxiv(args: string[]): Promise<number> {
   //      backoff EMITS a notice so the agent knows it's rate-limited, not stuck/broken.
   //   2) if it persists, loudFail with a clear rate-limit error (exit 1) — never the
   //      misleading "no results" (which reads as "the paper doesn't exist").
-  // @convergence state=ossified id=ARXIV_RATELIMIT_NOT_NORESULTS value="arXiv throttles a burst with EITHER a 'Rate exceeded.' text body OR an HTTP 503 page — both have 0 <entry> exactly like a genuine empty result. Detect throttle by status>=500 OR /rate exceeded/ OR a non-Atom body (no <feed/<entry); a real empty result IS a valid <feed> with totalResults 0. Auto-retry with backoff (notice each round so the agent recognizes a RATE problem), then loudFail with a rate-limit error; NEVER report 'no results' for a throttle" threshold="checked only the 'rate exceeded' string, so an HTTP-503 throttle slipped through and the command said 'no results' for a query with thousands of papers"
   const sleep = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
   // A throttle (text "Rate exceeded." OR a 5xx page) is NOT a valid Atom feed.
   const isThrottle = (status: number, body: string): boolean =>

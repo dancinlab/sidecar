@@ -12,7 +12,6 @@
 //           compact block. Silent when none are configured or none resolve.
 //   list    human render — which companions are configured and whether each resolves.
 //
-// @convergence state=ossified id=COMPANION_SURFACE_NOT_INJECTED value="a sibling CLI (hexa) and its subcommands (cloud/atlas/verify/drill) existed and worked, but the sidecar injected only its OWN command catalog (toolkit) — never the neighbour CLI's surface — so the agent re-probed 'is hexa installed? does cloud exist?' every session" threshold="toolkit injected sidecar commands only; no carrier surfaced an adjacent project-CLI's verb list, so each session started blind to hexa"
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { execArgs } from "../lib/exec.ts";

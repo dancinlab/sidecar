@@ -11,7 +11,6 @@
 // with the exact remedy: `git log origin/<default> -- <file>` before trusting any
 // file's contents. On the up-to-date default branch it stays a one-line OK.
 //
-// @convergence state=in_flight id=STALE_BRANCH_TRAP value="SessionStart surfaces HEAD vs origin/<default> (behind/ahead/detached); BEHIND or detached → loud ⚠️ stale-branch warning so the agent re-checks origin before trusting code (and doesn't duplicate already-merged work)" threshold="a session started on a stale feature branch behind origin/main, read pre-merge code as current, and rebuilt an already-merged fix (#3736 dup of #3734); no guard flagged HEAD≠merged-tip"
 
 import { execArgs, readStdin } from "../lib/exec.ts";
 import { REPO_ROOT } from "../lib/paths.ts";

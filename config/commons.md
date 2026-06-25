@@ -11,8 +11,8 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 > 트리를 단일 출처로 읽고 코드/설계 변경 시 lockstep 갱신(`cycle-docs-pr`). 사람은 `python3 serve.py`.
 
 ## root-cause — 원인을 고친다, workaround 아님
-- do: 증상 아닌 원인을 고친다 · 같은 결함이 재발하면 그 파일 인라인 `@convergence` 마커로 박제(lint 가 well-formed 강제)
-- dont: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만·shadow 가드 (정당하면 `@root-cause-ok <이유>`) · 재발 학습을 별도 incident 트래커로 흩기
+- do: 증상 아닌 원인을 고친다 · 같은 결함이 재발하면 그 학습을 repo-root `ARCHITECTURE.json` 의 `convergence.records[]`(id·state·value·threshold·source · update-in-place) 단일 SSOT 에 기록 — `sidecar lint` 가 well-formed(id+유효 state) 강제, 그 `source` 파일을 터치(Read/Write/Edit)할 때마다 사이드카가 그 학습을 자동 표면화(같은 결함 재도입 차단)
+- dont: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만·shadow 가드 (정당하면 `@root-cause-ok <이유>`) · 재발 학습을 코드 인라인 주석(구 `@convergence` 마커 폐기)이나 별도 incident 트래커로 흩기 (ARCHITECTURE SSOT 한곳으로)
 
 ## verify-done — "됐다" 전에 실제 검증
 - do: `sidecar ci`/build/test 를 돌려 **출력으로** 확인 · 기능구현/버그픽스 후 전 서브커맨드·엣지케이스 전수 QA(PASS/FAIL 집계 → 발견 버그 fix 후 닫기) · 증거는 `sidecar verdict record`

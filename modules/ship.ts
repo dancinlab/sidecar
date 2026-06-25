@@ -8,7 +8,6 @@
 //   2. self-update — git-pull the GLOBAL CLI clone (~/.sidecar/cli) to the just-merged main
 //   3. shadow      — re-mirror commands/ → ~/.claude/commands/ as bare /cmd delegators
 //
-// @convergence state=ossified id=SHIP_PROPAGATE_ALL_SURFACES value="merge+self-update+shadow must run as one unit" threshold="adding a slash command then running only pr-cycle+self-update left the shadow mirror stale → /fleet-abstract invisible; ship bundles all three"
 import { info, ok, loudFail } from "../lib/log.ts";
 import { runPrCycle } from "./pr-cycle.ts";
 import { runSelfUpdate } from "./setup.ts";

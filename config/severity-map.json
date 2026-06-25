@@ -6,8 +6,6 @@
     "lint_rule": {
       "L0-LOCKDOWN": "block",
       "STALE": "block",
-      "CONVERGENCE-MISSING": "block",
-      "CONVERGENCE-MALFORMED": "block",
       "TOOLKIT-DRIFT": "warn",
       "CHANGELOG-MISSING": "block",
       "PROTECTED-BRANCH": "block",
@@ -24,7 +22,8 @@
       "ARCH-PILED": "block",
       "ARCH-HISTORY": "block",
       "FOLDER-GUIDE-MISSING": "block",
-      "HELP-BACKTICK": "block"
+      "HELP-BACKTICK": "block",
+      "CONVERGENCE-MALFORMED": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

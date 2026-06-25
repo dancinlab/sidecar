@@ -1,8 +1,6 @@
 // sidecar ing {show|add <text>|done <id|match>|next <text>|pod ...|inject}
 // In-progress board stored on a DEDICATED git ref (refs/heads/ing) as a single
 // ING.jsonl file — NOT in the working tree.
-// @convergence state=ossified id=ING_BOARD_DEDICATED_REF value="board lives on a dedicated `ing` ref via plumbing, never the working tree" threshold="tracked worktree file: branch-switch/reset clobbers session edits (happened); untracked: unshared"
-// @convergence state=failed id=ING_NO_DIRECT_MAIN_PUSH value="never store/push the board on main" threshold="protectedBranches repo blocks direct main push so the board is unusable; a dedicated ref is protected-main-safe"
 // The `ing` ref is a board-only branch: read via `git show ing:ING.jsonl`, write via
 // plumbing (hash-object→mktree→commit-tree→update-ref) + best-effort `push origin ing`.
 // → branch-switch-proof (never in worktree) · committed · shared (push) · protected-safe.

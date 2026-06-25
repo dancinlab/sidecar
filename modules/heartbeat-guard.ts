@@ -12,7 +12,6 @@
 // A cheap `.live-runner` marker (maintained by `ing pod add`/`done`) gates the cost
 // so the per-bash check is skipped when nothing is live.
 //
-// @convergence state=in_flight id=NO_ABANDONED_LONGRUNNER value="a live long-runner (pod/bg-agent) left unchecked >maxSilenceSec is WARNED (c21) — heartbeat stamped on status-check cmds, surfaced on activity + session start; the inverse of c19's over-poll cap" threshold="sessions fired a pod/job then never polled it (idle-burn · result never harvested); c19 only capped over-polling, the under-polling/abandonment case had no guard"
 
 import { resolve } from "node:path";
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";

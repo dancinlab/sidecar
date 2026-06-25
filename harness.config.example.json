@@ -1,68 +1,121 @@
 {
   "project": "edge",
-
   "lockdown": {
-    "files": ["src/core/auth.ts", "src/core/payments.ts"],
+    "files": [
+      "src/core/auth.ts",
+      "src/core/payments.ts"
+    ],
     "fromMarkdown": "CLAUDE.md",
     "onEditReminder": "L0 core edited — update CHANGELOG + issues.json in the same change, and get a second reviewer."
   },
-
   "enforcementFile": ".harness/enforcement.json",
   "keywordsFile": ".harness/keywords.json",
   "severityMapFile": ".harness/severity-map.json",
-
   "verify": {
     "checks": [
-      { "id": "typecheck", "cmd": "npx tsc --noEmit", "timeoutMs": 240000 },
-      { "id": "lint", "cmd": "pnpm lint", "timeoutMs": 180000 },
-      { "id": "test", "cmd": "pnpm test", "timeoutMs": 240000 },
-      { "id": "build", "cmd": "pnpm build", "timeoutMs": 600000, "slow": true }
+      {
+        "id": "typecheck",
+        "cmd": "npx tsc --noEmit",
+        "timeoutMs": 240000
+      },
+      {
+        "id": "lint",
+        "cmd": "pnpm lint",
+        "timeoutMs": 180000
+      },
+      {
+        "id": "test",
+        "cmd": "pnpm test",
+        "timeoutMs": 240000
+      },
+      {
+        "id": "build",
+        "cmd": "pnpm build",
+        "timeoutMs": 600000,
+        "slow": true
+      }
     ]
   },
-
   "lint": {
     "freshnessFiles": [
-      { "path": "docs/deploy-status.json", "maxAgeDays": 3, "rule": "DEPLOY-STATUS-STALE" }
+      {
+        "path": "docs/deploy-status.json",
+        "maxAgeDays": 3,
+        "rule": "DEPLOY-STATUS-STALE"
+      }
     ],
-    "convergence": { "commitPattern": "^(fix|feat)", "requiredFile": "issues.json" },
     "changelog": {
       "file": "CHANGELOG.md",
       "triggerPattern": "\\.(ts|tsx|js|jsx|py|go|rs)$",
-      "ignore": ["(^|/)(tests?|__tests__|spec)/", "\\.(test|spec)\\.[a-z]+$", "(^|/)\\.harness(-engine)?/"]
+      "ignore": [
+        "(^|/)(tests?|__tests__|spec)/",
+        "\\.(test|spec)\\.[a-z]+$",
+        "(^|/)\\.harness(-engine)?/"
+      ]
     },
-    "protectedBranches": ["main", "master"]
+    "protectedBranches": [
+      "main",
+      "master"
+    ]
   },
-
-  "convergence": { "issuesFile": "issues.json" },
-
-  "sync": { "script": "scripts/sync.sh" },
-
-  "guides": ["CLAUDE.md", "AGENTS.md", "README.md"],
-
+  "sync": {
+    "script": "scripts/sync.sh"
+  },
+  "guides": [
+    "CLAUDE.md",
+    "AGENTS.md",
+    "README.md"
+  ],
   "docs": {
     "architecture": "ARCHITECTURE.md",
     "log": "CHANGELOG.md",
     "scratchDir": "scripts/scratch",
-    "scatterPatterns": ["-(report|summary|notes?|audit|status|plan|analysis|design)\\.md$", "\\d{6,8}[-_].*\\.md$"],
-    "allow": ["README.md", "CHANGELOG.md", "ARCHITECTURE.md", "CLAUDE.md", "AGENTS.md", "LICENSE"]
+    "scatterPatterns": [
+      "-(report|summary|notes?|audit|status|plan|analysis|design)\\.md$",
+      "\\d{6,8}[-_].*\\.md$"
+    ],
+    "allow": [
+      "README.md",
+      "CHANGELOG.md",
+      "ARCHITECTURE.md",
+      "CLAUDE.md",
+      "AGENTS.md",
+      "LICENSE"
+    ]
   },
-
   "folderGuides": {
     "enabled": true,
-    "roots": ["src", "packages"],
+    "roots": [
+      "src",
+      "packages"
+    ],
     "depth": 2,
     "minFiles": 3,
     "filename": "CLAUDE.md",
-    "ignore": ["node_modules", ".git", ".next", "dist", "build"],
-    "ext": [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs"]
+    "ignore": [
+      "node_modules",
+      ".git",
+      ".next",
+      "dist",
+      "build"
+    ],
+    "ext": [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".py",
+      ".go",
+      ".rs"
+    ]
   },
-
   "dojo": {
     "_note": "OPTIONAL — dojo scaffolder defaults. Engine stays domain-agnostic; the preferred training/kernel stack is carried HERE, never hardcoded. Absent → generic py stub. delegate: a `hexa dojo <domain>` (e.g. flame_forge | hexa_cuda) to emit REAL artifacts when hexa is on PATH.",
     "defaultLang": "hexa",
     "stack": "flame+forge+hexa-cuda",
     "delegate": "flame_forge"
   },
-
-  "ledger": { "staleSec": 1800 }
+  "ledger": {
+    "staleSec": 1800
+  }
 }

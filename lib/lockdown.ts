@@ -6,7 +6,6 @@ import { config } from "./config.ts";
 // L0 (lockdown) file list = explicit config.lockdown.files
 //   + (optionally) paths parsed from a "🔴 L0" block in a markdown guide.
 // Editing an L0 file is allowed but flagged, so the agent treats it deliberately.
-// @convergence state=ossified id=CLAUDEMD_NOT_L0 value="CLAUDE.md must never be classified L0 — it DECLARES the L0 list (fromMarkdown) and is re-injected each turn, it is not protected engine core" threshold="the L0 path-parser regex must NOT include a CLAUDE*.md alternation, or the guide captures itself"
 
 let _cache: string[] | null = null;
 

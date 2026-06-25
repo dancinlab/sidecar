@@ -7,7 +7,6 @@
 // `.harness/`. BLOCKS both on Write/Edit (`detectBannedStateDir`) and on a bash dir-
 // creating command (mkdir/touch/mv/cp dest, `detectBannedStateDirBash`).
 //
-// @convergence state=ossified id=NO_SCATTER_STATE_DIR value="work output (verdicts·bench·experiments·scratch) goes in the single git-tracked `state/` root — creating `.verdicts/`·`bench/`·`experiments/`·`scripts/scratch/` (via Write OR a mkdir/touch/cp/mv bash command) is BLOCKED; `# state-ok`(bash)/`@state-ok`(content) overrides" threshold="preserve-state was governance-only with no code teeth — sessions kept standing up scatter dirs that rot untracked; escalated to a hard guard mirroring naming-guard after the user asked to enforce the位置(location) family"
 
 // top-level directory names that are the scatter anti-pattern (commons preserve-state).
 const BANNED = new Set([".verdicts", "verdicts", "experiments", "bench", ".bench", "scratch"]);

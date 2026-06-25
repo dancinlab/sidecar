@@ -7,7 +7,6 @@
 // Write/Edit (`detectVersionedName`) and on Bash file-creation/rename (mv/cp/touch/mkdir,
 // `detectVersionedNameBash`). A genuinely API-versioned name keeps going via the marker.
 //
-// @convergence state=ossified id=NAMING_VERSION_SUFFIX value="new files/dirs named foo_v2/_final/_copy/_old (via Write/Edit OR a mv/cp/touch/mkdir bash command) are BLOCKED — history belongs in git, not the filename; the `@canonical-ok` (write) / `# canonical-ok` (bash) marker is the only override" threshold="warn-only proved too weak — the stale-sibling pileup kept recurring, so the user escalated it to a hard block + added bash-command coverage (a CLI `mv a a_v2.ts` previously slipped past the Write-only guard)"
 
 import { basename, extname, dirname } from "node:path";
 

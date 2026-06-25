@@ -36,16 +36,11 @@ export interface SidecarConfig {
   verify: { checks: VerifyCheck[] };
   lint: {
     freshnessFiles: FreshnessFile[];
-    // commit-subject regex that REQUIRES `requiredFile` to be in the commit
-    convergence?: { commitPattern: string; requiredFile: string };
     // staged code changes REQUIRE the changelog file to also be staged
     changelog?: { file: string; triggerPattern: string; ignore?: string[] };
     // committing directly on one of these branches is a violation
     protectedBranches?: string[];
   };
-  // optional incident/convergence tracking over a JSON file with
-  // { incidents: { records: [...] }, convergence: {...} }
-  convergence?: { issuesFile: string };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
   // upstream dependencies to fix IN-SESSION (not defer to an inbox memo) when a

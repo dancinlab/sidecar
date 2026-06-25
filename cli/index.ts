@@ -11,7 +11,6 @@ import { runLedger } from "../modules/ledger.ts";
 import { runBitterGate } from "../modules/bitter-gate.ts";
 import { runAudit } from "../modules/audit.ts";
 import { runGc } from "../modules/gc.ts";
-import { runConvergence } from "../modules/convergence.ts";
 import { runSync } from "../modules/sync.ts";
 import { runInit } from "../modules/init.ts";
 import { runInstall, runInstallHooks, runSelfUpdate } from "../modules/setup.ts";
@@ -128,7 +127,7 @@ hook delegates (wire these into your agent's settings.json):
                            update (Zenodo new-version) · unpublish (delete Zenodo draft) · status — keys via \`secret get zenodo.token\`
 
 gates & ledgers:
-  lint [all|fast|verbose]  staged-L0 + freshness + convergence checks
+  lint [all|fast|verbose]  staged-L0 + freshness + doc-gate checks
   naming audit [path] [--ing] [--gate]   repo-wide non-canonical name audit (version/copy/dup suffix backlog the write-guard never saw) · --ing = land summary on THIS repo's board · --gate = exit 1 on any hit
   ci [all|fast|list]       run configured verification commands in parallel (was verify; config key stays verify.checks)
   ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop · c19)
@@ -152,7 +151,6 @@ reports:
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
   upstream {list|fix <name|repo>}   in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)
-  convergence {status|recompute|by-category|scan|due-check}   incident tracker · scan = inline @convergence validator (state·id required; lint gates malformed) · due-check = Stop nudge for open capture-token debt
   sync {run|diff}              run configured shared-file sync script
 
 principles: quiet on success / loud on failure / never auto-fix / config-driven / AI-native JSONL
@@ -303,8 +301,6 @@ async function main(): Promise<number> {
       return runAtlas(rest);
     case "upstream":
       return runUpstream(rest);
-    case "convergence":
-      return runConvergence(rest);
     case "sync":
       return runSync(rest);
     case "naming":

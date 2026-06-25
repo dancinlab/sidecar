@@ -7,9 +7,6 @@
 // escape — so a regex profile edit can't silently weaken it (unlike an
 // enforcement.json rule).
 //
-// @convergence state=ossified id=NO_RAW_CLOUD_CLI value="raw runpodctl/vastai/`cloud rent`/provider-API calls are blocked in code (pre bash), not just by an enforcement regex rule" threshold="a session ran `runpodctl pod create`/`cloud rent` directly because c11 was only a hint+warn; code guard runs before config rules with no override"
-// @convergence state=ossified id=NO_RAW_DOJO_DECK value="raw `python train.py`/`torchrun`/`accelerate launch`/`deepspeed` training launches AND hand-run run.sh in a dojo/decks tree are blocked in code — use `hexa dojo`/`hexa deck`" threshold="c11 named dojo/deck builtins but only cloud CLI was code-guarded; training launches and deck run.sh slipped through"
-// @convergence state=in_flight id=NO_HANDROLLED_SHARD_FANOUT value="a hand-rolled launcher loop (split -n l/N + a for/while loop that setsid/nohup-backgrounds repeated `hexa run`/training launches) is the exact bypass that defeated NO_RAW_CLOUD_CLI — copy-to is whitelisted so the .sh sails through, then the fanout runs remotely unseen. Detected as a WARN that redirects to `hexa cloud fire-shards`" threshold="a session wrote /tmp/h1305_launch.sh (12-shard staggered `hexa run` decode loop) + `hexa cloud copy-to` + remote run, bypassing structured dispatch/register/cost-accounting; the guard only saw the whitelisted copy-to"
 
 // strip ' and " so a quoted token still resolves to its bare form
 function stripQuotes(s: string): string {
@@ -24,7 +21,6 @@ function stripQuotes(s: string): string {
 // pipe — otherwise `vast`/`runpod` get mis-read as a command head and false-block.
 // (Stripping quotes first then splitting on `|`, the old approach, lost that
 // boundary.) Each returned segment still carries its quotes; callers stripQuotes.
-// @convergence state=ossified id=QUOTE_AWARE_SEGMENT value="command-head detection segments on UNQUOTED shell operators only — a `|`/`;`/`&` inside quotes is data, not a separator" threshold="`grep -E \"vast|runpod\"` false-blocked once `vast`/`runpod` became unconditional CLI heads: stripQuotes ran before the `|`-split, so the quoted alternation was torn into a bare `vast` segment"
 function segments(raw: string): string[] {
   const segs: string[] = [];
   let cur = "";
@@ -66,11 +62,9 @@ function isHexaBuiltin(cmd: string): boolean {
 // the vast.ai CLI (a path collision would be `./vast`/`/usr/bin/vast`, which do
 // NOT match the bare head), so — like DOJO_TRAIN_NAME_BROAD on this no-override
 // guard — we bias to the false-positive and block bare `vast` outright.
-// @convergence state=ossified id=NO_VAST_VERB_WHITELIST value="`vast` is blocked unconditionally in command position, same as `vastai`/`runpodctl` — NO verb whitelist" threshold="a verb whitelist (VAST_VERBS) only blocked ~10 verbs; `vast set api-key`/`vast scp`/`vast execute`/literally `vast cli` all leaked because their verb wasn't listed — the guard 're-unlocked' every time vast.ai added a subcommand"
 // RunPod ships TWO CLIs — the Go `runpodctl` and the official Python `runpod`
 // (`runpod config`/`project deploy`/`pod create`/`exec`) — so both heads must be
 // blocked; listing only `runpodctl` left the entire `runpod` CLI surface open.
-// @convergence state=ossified id=BOTH_RUNPOD_CLIS value="both RunPod CLI heads (`runpodctl` Go + `runpod` Python) are blocked, plus the serverless host `api.runpod.ai` alongside the control-plane `api.runpod.io`/`rest.runpod.io`" threshold="only `runpodctl` was listed, so `runpod config`/`runpod project deploy`/`runpod pod create` and serverless `curl api.runpod.ai/v2/<id>/run` all leaked — same whitelist-too-narrow bypass as VAST_VERBS"
 const CLI_COMMANDS = new Set(["runpodctl", "runpod", "vastai", "vast"]);
 
 function leadToken(segment: string): { head: string; rest: string[] } {
@@ -119,7 +113,6 @@ const DOJO_LAUNCHERS = new Set(["torchrun", "deepspeed"]);
 //   • executing a `run.sh` that lives in a `dojo/` or `decks/` tree (the builtin's
 //     own output — running it by hand skips the builtin's dispatch + ing-pod reg)
 //
-// @convergence state=ossified id=DOJO_TRAIN_NAME_BROAD value="the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)" threshold="someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP."
 function detectRawDojoDeck(rawCmd: string): string | null {
   for (const seg of segments(rawCmd)) {
     const { head, rest } = leadToken(seg);

@@ -2,7 +2,6 @@
 // Repo-integrity checks, all driven by harness.config.json:
 //   • staged L0 files (git diff --cached) → flagged
 //   • freshness of tracked files (_updated field or mtime vs maxAgeDays)
-//   • convergence: a fix/feat commit must also touch the issues file
 // Quiet on pass (H1); violations go to stderr + lint_log.jsonl + errors queue.
 import { existsSync, statSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -14,8 +13,7 @@ import { isL0 } from "../lib/lockdown.ts";
 import { config, repoPath } from "../lib/config.ts";
 import { routeError, classify } from "./errors.ts";
 import { docViolations } from "./docs.ts";
-import { lintArchitectureTree } from "./architecture.ts";
-import { scanConvergenceMarkers } from "./convergence.ts";
+import { lintArchitectureTree, lintConvergenceRecords } from "./architecture.ts";
 import { toolkitDrift } from "./toolkit.ts";
 import { lintCommandDescriptions } from "./shadow.ts";
 import { lintCommonsFormat } from "./commons.ts";
@@ -37,7 +35,6 @@ async function stagedFiles(): Promise<string[]> {
 // breaks `sidecar help` + every tsx/esbuild build. Escaped `\\\`` is fine (used for
 // `code` spans); a bare backtick is the bug. Text-scan (not import) so it still flags
 // when the file is already broken. Sidecar-repo-only (no `export const HELP` → no-op).
-// @convergence state=ossified id=HELP_NO_RAW_BACKTICK value="a bare backtick in the cli HELP template literal terminates it → help/build break; lint HELP-BACKTICK(block) scans the HELP block and flags any unescaped backtick (escaped \\\` allowed)" threshold="twice in one session a help-line edit added `code`-style backticks (fleet-full, folders), each silently breaking `sidecar help` until caught by hand — ossify as a commit gate"
 function lintHelpBacktick(): { rule: string; file: string; msg: string }[] {
   const path = repoPath("cli/index.ts");
   if (!existsSync(path)) return [];
@@ -147,22 +144,6 @@ export async function runLint(args: string[]): Promise<number> {
     }
   }
 
-  // 3. convergence: a matching commit must touch requiredFile
-  if (cfg.lint.convergence) {
-    const { commitPattern, requiredFile } = cfg.lint.convergence;
-    const subj = (await execShell("git log -1 --pretty=%s", { cwd: repoPath(".") })).stdout.trim();
-    if (subj && new RegExp(commitPattern).test(subj)) {
-      const changed = (await execShell("git show --name-only --pretty=format: HEAD", { cwd: repoPath(".") })).stdout;
-      if (!changed.includes(requiredFile)) {
-        violations.push({
-          rule: "CONVERGENCE-MISSING",
-          file: requiredFile,
-          msg: `commit "${subj.slice(0, 50)}" did not update ${requiredFile}`,
-        });
-      }
-    }
-  }
-
   // 4b. single-doc discipline (staged .md scatter + quickref) — active only when
   // the architecture SSOT file exists (opt-in by presence).
   for (const d of docViolations(staged)) {
@@ -193,11 +174,12 @@ export async function runLint(args: string[]): Promise<number> {
     violations.push({ rule: h.rule, file: "ARCHITECTURE.json", msg: `${h.path} — ${h.msg}` });
   }
 
-  // 4d. convergence inline-marker hygiene (root-cause) — every recurrence-prevention marker
-  // must carry the required keys (state·id) + a valid state, else it can't be
-  // aggregated and the learning is silently lost. Mechanically enforces @convergence.
-  for (const it of (await scanConvergenceMarkers([])).issues) {
-    violations.push({ rule: "CONVERGENCE-MALFORMED", file: it.file, msg: `${it.reason} (line ${it.line})` });
+  // 4d. convergence record hygiene (root-cause) — recurrence-prevention learnings now
+  // live in the ARCHITECTURE.json `convergence` array (single-doc SSOT, not inline code
+  // markers). Each record must carry id + a valid state, else the learning is malformed
+  // and can't be surfaced on file-touch; architecture.ts owns the validator.
+  for (const it of lintConvergenceRecords()) {
+    violations.push({ rule: "CONVERGENCE-MALFORMED", file: "ARCHITECTURE.json", msg: it });
   }
 
   // 4e. toolkit catalog drift (agent command discoverability) — the committed

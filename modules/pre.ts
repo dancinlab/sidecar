@@ -19,6 +19,7 @@ import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
 import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
+import { convergenceForFile } from "./architecture.ts";
 import { docWriteViolation } from "./docs.ts";
 import { descWriteViolation } from "./shadow.ts";
 import { commonsWriteViolation } from "./commons.ts";
@@ -82,7 +83,6 @@ function loadConfig(): EnforcementConfig {
 // code-level guard (cloud-raw c11 · force-push · poll c19) silently no-op'd on an
 // empty command. Read stdin as the working carrier; keep env as back-compat.
 //
-// @convergence state=ossified id=PRETOOLUSE_INPUT_FROM_STDIN value="PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push, poll) a silent pass" threshold="a session ran raw `vastai`/`runpodctl` despite the ossified NO_RAW_CLOUD_CLI code guard because parseToolInput read an env var CC never set; verified by piping the real {tool_input:{command}} payload on stdin"
 function unwrapToolInput(j: unknown): Record<string, unknown> | null {
   if (!j || typeof j !== "object") return null;
   const obj = j as Record<string, unknown>;
@@ -110,7 +110,6 @@ function parseToolInput(): Record<string, unknown> {
 // c19) and every config `action:"block"` rule a silent no-op (stdout text, zero teeth).
 // We emit the current schema as the operative key and keep the legacy fields appended
 // for older CC builds (harmless — new builds read hookSpecificOutput, old read decision).
-// @convergence state=ossified id=PRETOOLUSE_DENY_SCHEMA value="pre-hook block must emit hookSpecificOutput.permissionDecision=deny (current PreToolUse schema), not the legacy {decision:block} which current Claude Code ignores — else the guard prints but never blocks" threshold="a session ran raw `vastai destroy` despite c11 because emitBlock emitted only {decision:block}+exit0, which CC silently dropped; verified the new schema blocks via the actual `pre bash` hook output"
 function emitBlock(id: string, reason: string): number {
   const full = `[${id}] ${reason}`;
   process.stdout.write(
@@ -269,6 +268,12 @@ export async function preWrite(_args: string[]): Promise<number> {
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
 
+  // convergence-on-touch — surface any recurrence-prevention learnings recorded against
+  // this file (ARCHITECTURE.json convergence store) so an edit doesn't reintroduce a
+  // fixed defect. Non-blocking context (stderr), printed before the write guards run.
+  const cv = convergenceForFile(filePath);
+  if (cv) process.stderr.write(cv + "\n");
+
   // handoff-guard — block scattered HANDOFF.md / INBOX.md / inbox/*.md; route to handoff.jsonl.
   if (config().handoffGuard) {
     const hs = detectHandoffScatter(filePath);
@@ -388,11 +393,23 @@ export async function preAskq(_args: string[]): Promise<number> {
   );
 }
 
+// preTouch — Read (and any non-mutating file touch): convergence surfacing ONLY, no
+// write guards. So opening a file with recorded recurrence learnings shows them first.
+export async function preTouch(_args: string[]): Promise<number> {
+  const input = parseToolInput();
+  const filePath = String(input.file_path ?? "");
+  if (!filePath) return 0;
+  const cv = convergenceForFile(filePath);
+  if (cv) process.stderr.write(cv + "\n");
+  return 0;
+}
+
 export async function runPre(args: string[]): Promise<number> {
   const sub = args[0];
   if (sub === "bash") return preBash(args.slice(1));
   if (sub === "write") return preWrite(args.slice(1));
   if (sub === "askq") return preAskq(args.slice(1));
-  process.stderr.write("usage: sidecar pre {bash|write|askq}\n");
+  if (sub === "touch") return preTouch(args.slice(1));
+  process.stderr.write("usage: sidecar pre {bash|write|askq|touch}\n");
   return 1;
 }

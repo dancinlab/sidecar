@@ -54,7 +54,6 @@ export function execArgs(bin: string, args: string[], opts: ExecOpts = {}): Prom
     child.stderr?.on("data", (b: Buffer) => {
       stderr += b.toString();
     });
-    // @convergence state=ossified id=EXEC_SPAWN_ERROR_UNHANDLED value="execArgs must handle the child's `error` event (spawn ENOENT / EACCES) — degrade to a non-zero ExecResult, never let an unhandled `error` crash the process" threshold="a minimal-PATH hook env (SessionStart) couldn't spawn `bash` → unhandled 'error' event killed the whole SessionStart hook (node:events crash); every execShell caller was exposed"
     child.on("error", (e: Error) => {
       settle({ code: 127, stdout, stderr: stderr + `spawn ${bin} failed: ${e?.message ?? String(e)}`, ms: Date.now() - t0, killed });
     });

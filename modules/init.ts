@@ -18,7 +18,6 @@ interface Flags {
   dryRun: boolean;
 }
 
-// @convergence state=ossified id=INIT-INJECT-DUP value="init --hooks scaffolded the full host-wide inject set (commons/recommend/prefs/easy/load/architecture) into per-repo .claude/settings.json, duplicating the global install (~/.claude/settings.json) and/or the enabled plugin — same context injected 2-3x/turn, burying short user prompts" threshold="resolved: per-repo .claude/settings.json is BANNED — sidecar is global-only. init no longer scaffolds repo hooks (the --hooks flag is gone); hooks live solely in the global ~/.claude/settings.json via `sidecar install`. inject = host-wide policy, the global layer owns it"
 
 function enginePath(): string {
   // relative path from repo root to the sidecar engine (for wrappers/snippets)

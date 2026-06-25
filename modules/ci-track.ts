@@ -11,7 +11,6 @@
 //   any fail/cancel → 🔴 RED (exit 2) · any pending → 🟡 PENDING (exit 1)
 //   all pass/skipping → 🟢 GREEN (exit 0) · no checks → ⚪ NONE (exit 0)
 //
-// @convergence state=ossified id=CI_TRACK_NATIVE value="PR CI status is tracked by `sidecar ci-track` (gh pr checks --json → aggregate + verdict + optional --watch/--merge-on-green), not by hand-rolled `gh pr checks|grep` + /tmp monitor sleep loops" threshold="merge-on-green campaigns repeatedly re-implemented CI polling inline (e.g. /tmp/pr3688_mon.sh) — no sidecar command tracked remote CI; this centralizes it (c19-compatible: the poll runs inside the CLI, not a bash sleep loop)"
 import { execShell } from "../lib/exec.ts";
 import { info, ok, warn, loudFail } from "../lib/log.ts";
 

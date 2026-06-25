@@ -5,6 +5,270 @@
   "summary": "AI 코딩 사이드카 엔진. 핵심: 규칙은 코드가 아니라 데이터 — 엔진(언제·어떻게 검사)은 공유, 규칙(무엇을 검사)만 per-repo 주입.",
   "viewer": "ARCHITECTURE.html",
   "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
+  "convergence": {
+    "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=ossified|in_flight|failed · value=핵심 · threshold=재발조건/해결 · source=원파일. 같은 결함 재발 시 여기 항목을 update-in-place 로 추가/갱신(코드 인라인 주석 금지).",
+    "records": [
+      {
+        "id": "EXEC_SPAWN_ERROR_UNHANDLED",
+        "state": "ossified",
+        "value": "execArgs must handle the child's `error` event (spawn ENOENT / EACCES) — degrade to a non-zero ExecResult, never let an unhandled `error` crash the process",
+        "threshold": "a minimal-PATH hook env (SessionStart) couldn't spawn `bash` → unhandled 'error' event killed the whole SessionStart hook (node:events crash); every execShell caller was exposed",
+        "source": "lib/exec.ts"
+      },
+      {
+        "id": "CLAUDEMD_NOT_L0",
+        "state": "ossified",
+        "value": "CLAUDE.md must never be classified L0 — it DECLARES the L0 list (fromMarkdown) and is re-injected each turn, it is not protected engine core",
+        "threshold": "the L0 path-parser regex must NOT include a CLAUDE*.md alternation, or the guide captures itself",
+        "source": "lib/lockdown.ts"
+      },
+      {
+        "id": "ARCH_SNAPSHOT_NOT_HISTORY",
+        "state": "ossified",
+        "value": "ARCHITECTURE.json/.md is a CURRENT-STATE snapshot tree, not a change log — 'update' means replace the affected node in-place and delete the old wording; NEVER append history/version/dated/previous/deprecated nodes (history → CHANGELOG + git). The inject note carries this every turn so the model stops accreting history into the tree",
+        "threshold": "the word '갱신형'(updatable) was read as 'add an update entry', so sessions kept leaving version/dated/'이전엔…' nodes in the tree; hardened the every-turn inject note + commons c4 to say snapshot/replace-in-place explicitly",
+        "source": "modules/architecture.ts"
+      },
+      {
+        "id": "CI_TRACK_NATIVE",
+        "state": "ossified",
+        "value": "PR CI status is tracked by `sidecar ci-track` (gh pr checks --json → aggregate + verdict + optional --watch/--merge-on-green), not by hand-rolled `gh pr checks|grep` + /tmp monitor sleep loops",
+        "threshold": "merge-on-green campaigns repeatedly re-implemented CI polling inline (e.g. /tmp/pr3688_mon.sh) — no sidecar command tracked remote CI; this centralizes it (c19-compatible: the poll runs inside the CLI, not a bash sleep loop)",
+        "source": "modules/ci-track.ts"
+      },
+      {
+        "id": "NO_RAW_CLOUD_CLI",
+        "state": "ossified",
+        "value": "raw runpodctl/vastai/`cloud rent`/provider-API calls are blocked in code (pre bash), not just by an enforcement regex rule",
+        "threshold": "a session ran `runpodctl pod create`/`cloud rent` directly because c11 was only a hint+warn; code guard runs before config rules with no override",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "NO_RAW_DOJO_DECK",
+        "state": "ossified",
+        "value": "raw `python train.py`/`torchrun`/`accelerate launch`/`deepspeed` training launches AND hand-run run.sh in a dojo/decks tree are blocked in code — use `hexa dojo`/`hexa deck`",
+        "threshold": "c11 named dojo/deck builtins but only cloud CLI was code-guarded; training launches and deck run.sh slipped through",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "NO_HANDROLLED_SHARD_FANOUT",
+        "state": "in_flight",
+        "value": "a hand-rolled launcher loop (split -n l/N + a for/while loop that setsid/nohup-backgrounds repeated `hexa run`/training launches) is the exact bypass that defeated NO_RAW_CLOUD_CLI — copy-to is whitelisted so the .sh sails through, then the fanout runs remotely unseen. Detected as a WARN that redirects to `hexa cloud fire-shards`",
+        "threshold": "a session wrote /tmp/h1305_launch.sh (12-shard staggered `hexa run` decode loop) + `hexa cloud copy-to` + remote run, bypassing structured dispatch/register/cost-accounting; the guard only saw the whitelisted copy-to",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "QUOTE_AWARE_SEGMENT",
+        "state": "ossified",
+        "value": "command-head detection segments on UNQUOTED shell operators only — a `|`/`;`/`&` inside quotes is data, not a separator",
+        "threshold": "`grep -E \"vast|runpod\"` false-blocked once `vast`/`runpod` became unconditional CLI heads: stripQuotes ran before the `|`-split, so the quoted alternation was torn into a bare `vast` segment",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "NO_VAST_VERB_WHITELIST",
+        "state": "ossified",
+        "value": "`vast` is blocked unconditionally in command position, same as `vastai`/`runpodctl` — NO verb whitelist",
+        "threshold": "a verb whitelist (VAST_VERBS) only blocked ~10 verbs; `vast set api-key`/`vast scp`/`vast execute`/literally `vast cli` all leaked because their verb wasn't listed — the guard 're-unlocked' every time vast.ai added a subcommand",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "BOTH_RUNPOD_CLIS",
+        "state": "ossified",
+        "value": "both RunPod CLI heads (`runpodctl` Go + `runpod` Python) are blocked, plus the serverless host `api.runpod.ai` alongside the control-plane `api.runpod.io`/`rest.runpod.io`",
+        "threshold": "only `runpodctl` was listed, so `runpod config`/`runpod project deploy`/`runpod pod create` and serverless `curl api.runpod.ai/v2/<id>/run` all leaked — same whitelist-too-narrow bypass as VAST_VERBS",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "DOJO_TRAIN_NAME_BROAD",
+        "state": "ossified",
+        "value": "the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)",
+        "threshold": "someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP.",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "COMPANION_SURFACE_NOT_INJECTED",
+        "state": "ossified",
+        "value": "a sibling CLI (hexa) and its subcommands (cloud/atlas/verify/drill) existed and worked, but the sidecar injected only its OWN command catalog (toolkit) — never the neighbour CLI's surface — so the agent re-probed 'is hexa installed? does cloud exist?' every session",
+        "threshold": "toolkit injected sidecar commands only; no carrier surfaced an adjacent project-CLI's verb list, so each session started blind to hexa",
+        "source": "modules/companions.ts"
+      },
+      {
+        "id": "CODE_GUARD_DESTRUCTIVE_BYPASS",
+        "state": "ossified",
+        "value": "--no-verify (gate bypass), git reset --hard/clean -fd (working-tree destroy), rm -rf / ~ $HOME (catastrophic), curl|wget|sh (remote code exec) are blocked in CODE before config rules — not regex-only — so a profile edit can't disable them; inline `# ...-ok` markers still allow an explicit per-command override",
+        "threshold": "these were block-policy but enforcement.json-only; a regex/profile edit (or the stdin-input bug that disabled the whole pre layer) would have left the irreversible/gate-bypass commands unguarded",
+        "source": "modules/danger-guard.ts"
+      },
+      {
+        "id": "STALE_BRANCH_TRAP",
+        "state": "in_flight",
+        "value": "SessionStart surfaces HEAD vs origin/<default> (behind/ahead/detached); BEHIND or detached → loud ⚠️ stale-branch warning so the agent re-checks origin before trusting code (and doesn't duplicate already-merged work)",
+        "threshold": "a session started on a stale feature branch behind origin/main, read pre-merge code as current, and rebuilt an already-merged fix (#3736 dup of #3734); no guard flagged HEAD≠merged-tip",
+        "source": "modules/git-context.ts"
+      },
+      {
+        "id": "FORCE_LEASE_DUAL_SSOT",
+        "state": "ossified",
+        "value": "`--force-with-lease` is ALLOWED by both the code guard (git-guard.ts) and config enforcement.json (H-FORCE-PUSH exceptions) — only blind --force/-f/+refspec is blocked, with a `# force-ok` escape",
+        "threshold": "QA found git-guard blocked --force-with-lease while config exempted it → lease hard-blocked with no override, breaking the rebase→lease-push workflow; aligned code guard to config intent",
+        "source": "modules/git-guard.ts"
+      },
+      {
+        "id": "NO_ABANDONED_LONGRUNNER",
+        "state": "in_flight",
+        "value": "a live long-runner (pod/bg-agent) left unchecked >maxSilenceSec is WARNED (c21) — heartbeat stamped on status-check cmds, surfaced on activity + session start; the inverse of c19's over-poll cap",
+        "threshold": "sessions fired a pod/job then never polled it (idle-burn · result never harvested); c19 only capped over-polling, the under-polling/abandonment case had no guard",
+        "source": "modules/heartbeat-guard.ts"
+      },
+      {
+        "id": "ING_STALENESS_NUDGE",
+        "state": "in_flight",
+        "value": "code edited ≫ ing untouched is WARNED at Stop (c6) — code edits bump a counter, ing add/next/done resets it, Stop warns once past editThreshold then resets; warn-only (forcing an ing update has no ground truth, so a hard block would be a false-positive factory)",
+        "threshold": "every-turn `ing inject` only SHOWED the board; sessions edited lots of code while the board went stale because nothing nudged an update",
+        "source": "modules/ing-staleness.ts"
+      },
+      {
+        "id": "ING_BOARD_DEDICATED_REF",
+        "state": "ossified",
+        "value": "board lives on a dedicated `ing` ref via plumbing, never the working tree",
+        "threshold": "tracked worktree file: branch-switch/reset clobbers session edits (happened); untracked: unshared",
+        "source": "modules/ing.ts"
+      },
+      {
+        "id": "ING_NO_DIRECT_MAIN_PUSH",
+        "state": "failed",
+        "value": "never store/push the board on main",
+        "threshold": "protectedBranches repo blocks direct main push so the board is unusable; a dedicated ref is protected-main-safe",
+        "source": "modules/ing.ts"
+      },
+      {
+        "id": "INIT-INJECT-DUP",
+        "state": "ossified",
+        "value": "init --hooks scaffolded the full host-wide inject set (commons/recommend/prefs/easy/load/architecture) into per-repo .claude/settings.json, duplicating the global install (~/.claude/settings.json) and/or the enabled plugin — same context injected 2-3x/turn, burying short user prompts",
+        "threshold": "resolved: per-repo .claude/settings.json is BANNED — sidecar is global-only. init no longer scaffolds repo hooks (the --hooks flag is gone); hooks live solely in the global ~/.claude/settings.json via `sidecar install`. inject = host-wide policy, the global layer owns it",
+        "source": "modules/init.ts"
+      },
+      {
+        "id": "HELP_NO_RAW_BACKTICK",
+        "state": "ossified",
+        "value": "a bare backtick in the cli HELP template literal terminates it → help/build break; lint HELP-BACKTICK(block) scans the HELP block and flags any unescaped backtick (escaped \\\\\\` allowed)",
+        "threshold": "twice in one session a help-line edit added `code`-style backticks (fleet-full, folders), each silently breaking `sidecar help` until caught by hand — ossify as a commit gate",
+        "source": "modules/lint.ts"
+      },
+      {
+        "id": "MAC_OOM_FANOUT_JETSAM",
+        "state": "in_flight",
+        "value": "a 16GB Mac OOM-dies (jetsam kills apps + kernel panic) because parallel fan-out (cycle-all/all-bg-go) accumulates 6+ detached `claude` processes (~400-490MB each) across sessions until macOS jetsams — mem-guard adds a free-RAM preflight before background-spawn + an opt-in launchd notify watchdog",
+        "threshold": "JetsamEvent reports 6/13-6/18 + panic 6/17 showed six `2.1.179` (claude) procs as top memory holders at OOM time; preflight warns/blocks spawn when available RAM < warnPct",
+        "source": "modules/mem-guard.ts"
+      },
+      {
+        "id": "NAMING_VERSION_SUFFIX",
+        "state": "ossified",
+        "value": "new files/dirs named foo_v2/_final/_copy/_old (via Write/Edit OR a mv/cp/touch/mkdir bash command) are BLOCKED — history belongs in git, not the filename; the `@canonical-ok` (write) / `# canonical-ok` (bash) marker is the only override",
+        "threshold": "warn-only proved too weak — the stale-sibling pileup kept recurring, so the user escalated it to a hard block + added bash-command coverage (a CLI `mv a a_v2.ts` previously slipped past the Write-only guard)",
+        "source": "modules/naming-guard.ts"
+      },
+      {
+        "id": "NO_SHORT_POLL_LOOP",
+        "state": "ossified",
+        "value": "a bash poll LOOP over an external long-runner (pod/r2/cloud/training) with sleep <1800s is blocked in code (c19) — poll at ≥30min or delegate to a sub-agent",
+        "threshold": "a session ran a short-interval background re-rent/poll loop; c19 was only a hint, ScheduleWakeup interval can't be code-guarded, but the bash sleep-loop can",
+        "source": "modules/poll-guard.ts"
+      },
+      {
+        "id": "PRETOOLUSE_INPUT_FROM_STDIN",
+        "state": "ossified",
+        "value": "PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push, poll) a silent pass",
+        "threshold": "a session ran raw `vastai`/`runpodctl` despite the ossified NO_RAW_CLOUD_CLI code guard because parseToolInput read an env var CC never set; verified by piping the real {tool_input:{command}} payload on stdin",
+        "source": "modules/pre.ts"
+      },
+      {
+        "id": "PRETOOLUSE_DENY_SCHEMA",
+        "state": "ossified",
+        "value": "pre-hook block must emit hookSpecificOutput.permissionDecision=deny (current PreToolUse schema), not the legacy {decision:block} which current Claude Code ignores — else the guard prints but never blocks",
+        "threshold": "a session ran raw `vastai destroy` despite c11 because emitBlock emitted only {decision:block}+exit0, which CC silently dropped; verified the new schema blocks via the actual `pre bash` hook output",
+        "source": "modules/pre.ts"
+      },
+      {
+        "id": "ARXIV_RATELIMIT_NOT_NORESULTS",
+        "state": "ossified",
+        "value": "arXiv throttles a burst with EITHER a 'Rate exceeded.' text body OR an HTTP 503 page — both have 0 <entry> exactly like a genuine empty result. Detect throttle by status>=500 OR /rate exceeded/ OR a non-Atom body (no <feed/<entry); a real empty result IS a valid <feed> with totalResults 0. Auto-retry with backoff (notice each round so the agent recognizes a RATE problem), then loudFail with a rate-limit error; NEVER report 'no results' for a throttle",
+        "threshold": "checked only the 'rate exceeded' string, so an HTTP-503 throttle slipped through and the command said 'no results' for a query with thousands of papers",
+        "source": "modules/research.ts"
+      },
+      {
+        "id": "CODE_GUARD_SECRET_LITERAL",
+        "state": "ossified",
+        "value": "hardcoded API keys / private keys / provider tokens are blocked in CODE at write time (before config rules) — a committed secret is an irreversible git-history leak; regex-only enforcement could be disabled by a profile edit",
+        "threshold": "H-SECRET-LITERAL was block-policy but enforcement.json-only; the stdin-input bug (and any profile edit) would have left credential writes unguarded",
+        "source": "modules/secret-guard.ts"
+      },
+      {
+        "id": "SHADOW_PREMARKER_STALE",
+        "state": "ossified",
+        "value": "pre-marker shadows in ~/.claude/commands/ lack SHADOW_MARKER, so refresh skips them as 'hand-authored' and they go stale — 18/22 lost the source description's `Triggers —` line, so bare-text recognition of /fleet /sbs /easy … silently broke even though source commands/*.md were correct",
+        "threshold": "resolved: `sidecar shadow --force` overwrites marker-less collisions from source (source = SSOT); run it once per host to heal pre-marker shadows. Re-breaks only if a NEW marker-less shadow layer is introduced without a heal path",
+        "source": "modules/shadow.ts"
+      },
+      {
+        "id": "SHADOW_GEN_NATIVE",
+        "state": "ossified",
+        "value": "bare /cmd shadows are generated by `sidecar shadow` from sidecar's own commands/ — not by the retired sidecar package, and never baked to a $CLAUDE_PLUGIN_ROOT/sidecar-cache path",
+        "threshold": "a session's /arxiv etc. died because sidecar-generated shadows pointed at a removed ~/.claude/plugins/cache/sidecar path; sidecar now owns shadow generation, marker-tracked + regenerable",
+        "source": "modules/shadow.ts"
+      },
+      {
+        "id": "SHADOW_MARKER_AFTER_FRONTMATTER",
+        "state": "ossified",
+        "value": "the SHADOW_MARKER must be inserted AFTER the YAML frontmatter block, never prepended — Claude Code only parses `description:` when `---` is on line 1; a marker on line 1 pushed frontmatter down so the picker rendered the marker comment as the command's description",
+        "threshold": "if the marker is ever prepended again, every shadow command shows '<!-- sidecar-shadow ... -->' instead of its description in the slash picker",
+        "source": "modules/shadow.ts"
+      },
+      {
+        "id": "SHIP_PROPAGATE_ALL_SURFACES",
+        "state": "ossified",
+        "value": "merge+self-update+shadow must run as one unit",
+        "threshold": "adding a slash command then running only pr-cycle+self-update left the shadow mirror stale → /fleet-abstract invisible; ship bundles all three",
+        "source": "modules/ship.ts"
+      },
+      {
+        "id": "NO_SCATTER_STATE_DIR",
+        "state": "ossified",
+        "value": "work output (verdicts·bench·experiments·scratch) goes in the single git-tracked `state/` root — creating `.verdicts/`·`bench/`·`experiments/`·`scripts/scratch/` (via Write OR a mkdir/touch/cp/mv bash command) is BLOCKED; `# state-ok`(bash)/`@state-ok`(content) overrides",
+        "threshold": "preserve-state was governance-only with no code teeth — sessions kept standing up scatter dirs that rot untracked; escalated to a hard guard mirroring naming-guard after the user asked to enforce the位置(location) family",
+        "source": "modules/state-guard.ts"
+      },
+      {
+        "id": "TOOLKIT_FROM_HELP_SSOT",
+        "state": "ossified",
+        "value": "the agent-facing command catalog (TOOLKIT.jsonl) is GENERATED from the HELP text in cli/index.ts, never hand-maintained in parallel; `toolkit check` snapshot-diffs committed vs generated so the two can't drift",
+        "threshold": "commands existed + worked but had no proactive catalog/triggers, so the agent didn't know to use them (arxiv/secret blind spot); a hand-kept second catalog would just drift from help",
+        "source": "modules/toolkit.ts"
+      },
+      {
+        "id": "HELP_CLOSE_DELIM_NEWLINE",
+        "state": "ossified",
+        "value": "the closing delimiter search must be the line-start `\\\\n\\\\`;`, NOT a bare `\\\\`;` — the HELP body contains escaped backticks (e.g. `worktree gc\\\\`;`) and a bare-`\\\\`;` search truncated there, silently dropping every command after worktree (atlas/convergence/ing/sync/upstream/verdict)",
+        "threshold": "bare backtick-semicolon search matched an escaped inline backtick mid-body and cut the catalog short",
+        "source": "modules/toolkit.ts"
+      },
+      {
+        "id": "WORKTREE_GONE_ONLY_PILEUP",
+        "state": "ossified",
+        "value": "gc/pr-cycle reaped ONLY [gone]-upstream worktrees; squash-merge + no-push AGENT worktrees never get [gone], so they were skipped forever and piled (67 wts / 84GB / 6 days). Fix: reap on [gone] OR HEAD-age > worktree.maxAgeDays, preserving the tip under refs/reaped/ first so aged work stays recoverable",
+        "threshold": "agent worktree clean+unlocked+not-recent and older than maxAgeDays, or [gone] upstream",
+        "source": "modules/worktree.ts"
+      },
+      {
+        "id": "ARCH_INJECT_IGNORED",
+        "state": "in_flight",
+        "value": "갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신 — 턴마감 게이트를 트리 뒤(recency)로 이동 + 갱신 시 보고 의무화",
+        "threshold": "ARCHITECTURE inject 가 갱신을 능동적으로 안 하고 사용자 지시에만 반응",
+        "source": "modules/architecture.ts"
+      }
+    ]
+  },
   "columns": [
     {
       "key": "이름",
@@ -232,7 +496,19 @@
                 "이름": "naming",
                 "역할": "repo 전수 비-canonical 이름 audit (write-guard 의 backlog 짝)",
                 "구분": "module",
-                "상세": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름(`offendingToken` 재사용 = naming-guard 와 동일 판정) 전수 스캔. write-time naming-guard 는 새 파일만 막아 기존 backlog(이미 커밋된 `_v2`·`config copy` 등)는 못 보던 갭을 메움. 기본 read-only 보고(exit 0) · `--gate` 면 위반 시 exit 1(commit/CI 게이트) · `--ing` 면 요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo naming 감사는 각 repo 안에서 이 명령을 돌려 그 repo ING 에 착지. 생태계-native 이름 면제(오탐 방지 · native-canonical-first): Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)"
+                "상세": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름을 전수 스캔(`offendingToken` 재사용 = naming-guard 와 동일 판정). write-time naming-guard 는 새 파일만 막아 기존 backlog 를 못 보던 갭을 메움.",
+                "children": [
+                  {
+                    "이름": "출력 모드",
+                    "구분": "detail",
+                    "상세": "기본 read-only 보고(exit 0) · `--gate`=위반 시 exit 1(commit/CI 게이트) · `--ing`=요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo 감사는 각 repo 안에서 돌려 그 repo ING 에 착지."
+                  },
+                  {
+                    "이름": "생태계-native 면제 (오탐 방지)",
+                    "구분": "detail",
+                    "상세": "native-canonical-first: Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)."
+                  }
+                ]
               },
               {
                 "이름": "install",
@@ -314,7 +590,24 @@
                 "이름": "paper",
                 "역할": "demiurge 하우스 논문 스캐폴드·표지·빌드·배포(Zenodo/arXiv)",
                 "구분": "module",
-                "상세": "new=PAPERS/<slug>/{main.tex·references.bib·PAPER.md} → cover(imagine 위임) → build(xelatex+bibtex×3·pages/refs/result-figs 보고·하드 content-floor 2게이트 ≥10p(g51)+≥9 result figs(cover 제외·=NeuroLM바)·둘다 --min-* 0 해제·미달시 exit3·깨진/빈 PDF 실패처리). 템플릿은 외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용)를 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림 디스플린(TikZ 아키텍처 블록 + pgfplots 결과막대 · 캡션=결과 연결) · g5 tier-badge · natbib. 마케팅/티저 표지는 허용(cover include 유지 — NeuroLM 대비 의도된 divergence). 손 조립 규율을 도구로 박제(self-improving). 배포 수명주기: publish/update/unpublish/status(--to zenodo|arxiv|both)·키는 secret(zenodo.token / --sandbox 면 zenodo.sandbox_token·인라인 금지)·발행원장 PAPERS/<slug>/publish.json. Zenodo=완전 REST(deposition 생성→main.pdf[+--source 소스tarball] 업로드→메타데이터[PAPER.md @title+main.tex \\title/abstract 추출·LaTeX 스트립·zenodo.json override]→발행→DOI · update=new-version[상속파일 삭제→재업로드→재발행·버전형 DOI] · unpublish=DRAFT 삭제, 발행본은 API 삭제 불가[DOI 영구] 보고). arXiv=프로그래밍 제출 API 없음(SWORDv1 폐지·web only)→arxiv-submission.tar.gz(main.tex+main.bbl+figures) 패키징 + https://arxiv.org/submit 가이드(가짜 자동제출 안 함·honesty)"
+                "상세": "new(스캐폴드) → cover(imagine 표지) → build(xelatex+bibtex×3) → publish/update/unpublish/status(배포). NeuroLM 정답지 미러 + 하드 content-floor 게이트.",
+                "children": [
+                  {
+                    "이름": "build content-floor 게이트",
+                    "구분": "detail",
+                    "상세": "build=xelatex+bibtex×3 · pages/refs/result-figs 보고 · 하드 2게이트 ≥10p(g51) + ≥9 result figs(cover 제외 = NeuroLM바) · 둘다 `--min-*` 0 으로 해제 · 미달 exit3 · 깨진/빈 PDF 실패처리."
+                  },
+                  {
+                    "이름": "NeuroLM 정답지 미러",
+                    "구분": "detail",
+                    "상세": "외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용) 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림(TikZ 아키텍처 + pgfplots 막대 · 캡션=결과연결) · g5 tier-badge · natbib. 마케팅 표지는 허용(의도된 divergence). 손조립 규율을 도구로 박제."
+                  },
+                  {
+                    "이름": "배포 수명주기 (Zenodo/arXiv)",
+                    "구분": "detail",
+                    "상세": "publish/update/unpublish/status `--to zenodo|arxiv|both` · 키는 secret(zenodo.token / --sandbox=zenodo.sandbox_token · 인라인 금지) · 발행원장 PAPERS/<slug>/publish.json. Zenodo=완전 REST(deposition→main.pdf[+--source tarball] 업로드→메타[PAPER.md @title+main.tex 추출·LaTeX 스트립·zenodo.json override]→발행→DOI · update=new-version · unpublish=DRAFT 삭제, 발행본 영구). arXiv=제출 API 없음(SWORDv1 폐지)→arxiv-submission.tar.gz 패키징 + 제출 가이드(가짜 자동제출 안 함)."
+                  }
+                ]
               },
               {
                 "이름": "imagine",
@@ -435,7 +728,13 @@
                     "이름": "lint (트리 위생 · c4 강제)",
                     "역할": "fine-decomposition 게이트",
                     "구분": "detail",
-                    "상세": "`architecture lint` = 셀 길이>700자(ARCH-BIG-CELL), piled ` · ` 항목>6(ARCH-PILED), history 키(previous/deprecated/history/changelog/이전 = ARCH-HISTORY) 검사. severity-map 에서 ARCH-*=block 이라 `sidecar lint`(pre-commit) 가 위반 시 커밋을 막는다 → 트리가 산문 leaf 로 비대해지지 않고 노드로 잘게 분해되도록 강제. 위반 노드는 상세를 요약으로 줄이고 세부는 children 으로 쪼갠다."
+                    "상세": "`architecture lint` = 셀 길이>700자(ARCH-BIG-CELL), piled ` · ` 항목>6(ARCH-PILED), history 키(previous/deprecated/history/changelog/이전 = ARCH-HISTORY) 검사. severity-map 에서 ARCH-*=block 이라 `sidecar lint`(pre-commit) 가 위반 시 커밋을 막는다 → 트리가 산문 leaf 로 비대해지지 않고 노드로 잘게 분해되도록 강제. 위반 노드는 상세를 요약으로 줄이고 세부는 children 으로 쪼갠다. ※ 최상위 `convergence` 배열은 트리 위생 검사에서 제외(재발학습 store · 자체 validator)."
+                  },
+                  {
+                    "이름": "convergence 재발학습 store (구 convergence 모듈 흡수)",
+                    "역할": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
+                    "구분": "detail",
+                    "상세": "재발방지 학습은 코드 인라인 마커가 아니라 repo-root ARCHITECTURE.json 최상위 `convergence.records[]`(id·state·value·threshold·source) 한곳에 산다(single-doc). 소비 2경로: ① `lintConvergenceRecords()` = 커밋 게이트(id+유효 state · CONVERGENCE-MALFORMED block) · ② `convergenceForFile(path)` = 에이전트가 그 `source` 파일을 **터치(Read/Write/Edit)할 때마다** PreToolUse(`pre touch`/`pre write`)가 매칭 학습을 stderr 로 주입(같은 결함 재도입 차단). 구 convergence 모듈(scan·due-check·캡처토큰·incident 집계)은 제거 — 마커 스캔/Stop-nudge 대신 터치-시점 타깃 주입으로 대체."
                   }
                 ]
               },
@@ -482,26 +781,6 @@
                 "역할": "이웃 CLI 명령 surface 주입 — agent 가 sibling 툴체인(hexa 등)을 더듬지 않고 인지하게 SessionStart 주입",
                 "구분": "module",
                 "상세": "list|inject. toolkit 의 자매 — toolkit 이 sidecar **자신**의 명령을 주입하면 companions 는 **이웃 CLI**(hexa 등)의 카탈로그를 주입한다. DOMAIN-AGNOSTIC: 어떤 CLI 를 띄울지는 데이터(repo `harness.config.json` 의 `companions` + host-wide `~/.sidecar/companions.json` 을 cmd 기준 union, repo 우선)라 엔진엔 hexa 를 박지 않는다 → 전역 config 1곳으로 모든 repo 세션이 자동 인지. inject 는 각 companion 의 카탈로그 명령(default `--help`, hexa 는 `tool list`)을 execArgs(8s)로 실행해 lines 캡으로 절단·stderr 주입하고, 부재/실패면 그 항목 skip·전부 없으면 무음. 동기 @convergence COMPANION_SURFACE_NOT_INJECTED: hexa cloud 가 동작하는데 toolkit 이 sidecar 명령만 주입해 agent 가 매 세션 재탐색하던 누수 차단"
-              },
-              {
-                "이름": "convergence",
-                "역할": "incident 집계 + 인라인 @convergence 마커 검증 게이트 + 캡처-토큰 강제 루프",
-                "구분": "module",
-                "상세": "status|recompute|by-category 는 JSON incident 파일 집계(스키마만 맞으면 범용).",
-                "children": [
-                  {
-                    "이름": "scan",
-                    "역할": "마커 기계 강제(c1)",
-                    "구분": "detail",
-                    "상세": "git-tracked 코드(ts/hexa/py/sh…) 스캔해 각 `@convergence` 마커가 필수키 state·id 보유 + state∈enum 인지 검증, 불량 시 exit 1. `sidecar lint` 가 CONVERGENCE-MALFORMED(block)로 커밋 게이트. 태그 뒤 `key=` 없는 산문 언급은 skip(오탐 방지)."
-                  },
-                  {
-                    "이름": "캡처-토큰 루프",
-                    "역할": "재발 신호 박제 유도",
-                    "구분": "detail",
-                    "상세": "재발 신호(재발·stale·regression·again…)에 keywords convergence-recurrence 트리거가 `⟦CONVERGENCE-DUE id=… matched=…⟧` 토큰 + 부채 기록(markCaptureDebt→logs/convergence-debt.json) → post-edit 가 well-formed 마커 추가 감지 시 부채 해소(resolveConvergenceDebtOnEdit) → 미해소면 Stop 훅 due-check 가 1회 warn 후 reset(warn-only)."
-                  }
-                ]
               },
               {
                 "이름": "sync",

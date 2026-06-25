@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## refactor(convergence): 모듈 폐기 → 재발학습을 ARCHITECTURE SSOT 로 + 파일-터치 시점 주입 (architecture 모듈 강화)
+
+🗣️ "컨버전스 모듈 제거하고 / 아키텍쳐 모듈을 강화 / ai agent 가 특정파일 터치할 때마다 inject"
+
+- 동기: 유저 — 재발방지 학습이 코드 인라인 `@convergence` 마커로 흩어져 있던 것을 single-doc(ARCHITECTURE SSOT) 한곳으로 옮기고, scan/Stop-nudge 기반 convergence 모듈을 폐기. 대신 에이전트가 그 파일을 만질 때 그 자리에서 학습을 보여주는 타깃 주입으로 대체.
+- 이관: 25개 코드파일의 인라인 `@convergence` 마커 36개 + split-marker 1개(ARCH_INJECT_IGNORED) = **37개 학습을 ARCHITECTURE.json 최상위 `convergence.records[]`**(id·state·value·threshold·source)로 구조 이관 후 인라인 마커 전량 strip. 트리 위생 lint(ARCH-*)는 이 배열을 제외(자체 validator 보유).
+- 모듈 폐기: `modules/convergence.ts` + `commands/convergence.md` 삭제 · 전 배선 제거(cli import/dispatch/help · lint scan+commit-gate · prompt-scan 캡처토큰 · post resolve · setup/hooks Stop due-check · config.ts lint.convergence+issuesFile · severity CONVERGENCE-MISSING · keywords 2 rule).
+- architecture 모듈 강화(`modules/architecture.ts`): `lintConvergenceRecords()`(커밋 게이트 — id+유효 state · `CONVERGENCE-MALFORMED` block) + `convergenceForFile(path)`(그 파일의 학습 포맷). PreToolUse 배선 — `pre write`(Write|Edit)에 주입 + 신규 `pre touch`(Read 매처) → 파일 터치마다 매칭 학습 stderr 주입(학습 없으면 무음).
+- SSOT lockstep: commons `root-cause`(인라인 마커→ARCHITECTURE convergence store) · ARCHITECTURE(convergence 모듈 노드 제거 + architecture 노드에 store child + paper/naming 노드 piled 분해) · README · modules/CLAUDE.md · #188 이 main 에 남긴 invalid-JSON(`version\d+` bad escape) 동반 수정(그동안 tree-lint 가 catch→[] 로 전부 skip 되던 잠복결함 해소).
+- 검증: tsc clean · `architecture lint` ok(분해 후) · `toolkit check` in-sync(71) · 전 JSON valid · `lintConvergenceRecords` 37 well-formed · 훅 스모크: `pre write` modules/ship.ts→SHIP_PROPAGATE · `pre touch` naming-guard.ts→NAMING_VERSION_SUFFIX · README.md(학습 0)→무음.
+
 ## fix(naming): audit/guard 오탐 정밀화 — 생태계-native 이름은 면제 (native-canonical-first)
 
 🗣️ cross-repo 감사 결과 생태계-native 이름이 대량 오탐됨 — Android 리소스 한정자 `mipmap-anydpi-v26`·`values-v26`, `gtk_version.zig`/`adw_version.zig` 같은 `_version` 모듈명, `archive/`·`.verdicts/` 내부 이력 파일. 정석을 강제하는 도구가 정석을 오탐하면 native-canonical-first 위반.

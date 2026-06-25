@@ -5,7 +5,6 @@
 // The design tree is the c4/c14 SSOT; keeping it salient means edits stay in
 // lockstep with the code instead of drifting.
 //
-// @convergence state=ossified id=ARCH_SNAPSHOT_NOT_HISTORY value="ARCHITECTURE.json/.md is a CURRENT-STATE snapshot tree, not a change log — 'update' means replace the affected node in-place and delete the old wording; NEVER append history/version/dated/previous/deprecated nodes (history → CHANGELOG + git). The inject note carries this every turn so the model stops accreting history into the tree" threshold="the word '갱신형'(updatable) was read as 'add an update entry', so sessions kept leaving version/dated/'이전엔…' nodes in the tree; hardened the every-turn inject note + commons c4 to say snapshot/replace-in-place explicitly"
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
@@ -61,8 +60,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
       ? `설계 SSOT (JSON 트리 = AI·툴 파싱용 · 사람은 \`python3 serve.py\` HTML 뷰어). 코드/설계 변경 시 lockstep 갱신 (commons c4·c14). ${snapshot}`
       : `설계 SSOT (최종 아키텍처 = 갱신형). 코드/설계 변경 시 lockstep 갱신 (commons c4·c14). ${snapshot}`;
     // Turn-close gate placed AFTER the tree (recency = most-attended) so the model
-    // actually updates+reports per turn instead of only when the user asks. @convergence
-    // state=in_flight id=ARCH_INJECT_IGNORED value="갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신" threshold="지시를 트리 뒤 게이트 줄로 이동 + 갱신 시 보고 의무화"
+    // actually updates+reports per turn instead of only when the user asks.
+    // (recurrence learning ARCH_INJECT_IGNORED → ARCHITECTURE.json convergence array.)
     const gate =
       "🏛️ 턴 마감 게이트 — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** 위 트리의 해당 노드를 제자리 교체(update-in-place)하고, " +
       "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로 보고하라. 안 바꿨으면 트리 그대로 두고 보고도 생략 (안 했으면서 했다고 말하지 말 것).";
@@ -157,6 +156,10 @@ export function lintArchitectureTree(): ArchLintHit[] {
       node.forEach((v, i) => walk(v, `${path}[${i}]`));
     } else if (node && typeof node === "object") {
       for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+        // the top-level `convergence` array is the recurrence-learning store, NOT part
+        // of the visual design tree — it has long value/threshold strings by design and
+        // its own validator (lintConvergenceRecords); skip it from tree-hygiene checks.
+        if (path === "root" && k === "convergence") continue;
         if (HISTORY_KEYS.has(k.toLowerCase())) {
           hits.push({
             rule: "ARCH-HISTORY",
@@ -170,4 +173,64 @@ export function lintArchitectureTree(): ArchLintHit[] {
   };
   walk(tree, "root");
   return hits;
+}
+
+// --- convergence: recurrence-learning store (ARCHITECTURE.json `convergence.records`) ---
+// Recurrence-prevention learnings live in the design SSOT (single-doc), NOT as inline
+// code markers. Each record: { id, state, value, threshold, source }. Two consumers:
+//   • lintConvergenceRecords — commit gate (well-formed id + valid state)
+//   • convergenceForFile     — surfaced when the agent touches `source` (pre hook)
+const CONV_STATES = new Set([
+  "ossified", "stable", "in_flight", "pending", "completed", "completed_gap", "failed", "blocked",
+]);
+
+export interface ConvergenceRecord {
+  id?: string;
+  state?: string;
+  value?: string;
+  threshold?: string;
+  source?: string;
+}
+
+function loadConvergence(): ConvergenceRecord[] {
+  const found = pick();
+  if (!found || !found.rel.endsWith(".json")) return [];
+  try {
+    const j = JSON.parse(readFileSync(found.path, "utf8")) as { convergence?: { records?: ConvergenceRecord[] } };
+    return j.convergence?.records ?? [];
+  } catch {
+    return [];
+  }
+}
+
+// commit-time validator (lint 4d) — a malformed record can't be surfaced on file-touch,
+// so the learning is silently lost. Mechanically enforces id + a valid state.
+export function lintConvergenceRecords(): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  loadConvergence().forEach((r, i) => {
+    const at = r.id ? `id=${r.id}` : `record[${i}]`;
+    if (!r.id) out.push(`convergence ${at} — missing required key: id`);
+    else if (seen.has(r.id)) out.push(`convergence ${at} — duplicate id (records are id-keyed, update in place)`);
+    else seen.add(r.id);
+    if (!r.state) out.push(`convergence ${at} — missing required key: state`);
+    else if (!CONV_STATES.has(r.state)) out.push(`convergence ${at} — invalid state '${r.state}' (allowed: ${[...CONV_STATES].join("·")})`);
+  });
+  return out;
+}
+
+// per-file surfacing — when the agent touches a file, return the recurrence learnings
+// recorded against it so it doesn't reintroduce a fixed defect. Empty string = none.
+export function convergenceForFile(file: string): string {
+  if (!file) return "";
+  const rel = file.startsWith(REPO_ROOT) ? file.slice(REPO_ROOT.length).replace(/^\/+/, "") : file;
+  const hits = loadConvergence().filter((r) => r.source && (r.source === rel || rel.endsWith("/" + r.source)));
+  if (!hits.length) return "";
+  const lines = hits.map(
+    (r) => `  • [${r.state}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`,
+  );
+  return (
+    `🛡️ convergence — ${rel} 에 박힌 재발방지 학습 ${hits.length}건 (ARCHITECTURE.json · 같은 결함 재도입 금지):\n` +
+    lines.join("\n")
+  );
 }

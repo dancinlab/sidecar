@@ -13,7 +13,6 @@
 // operation and is left alone. Returns a human label, or null when not a
 // blockable force push — the caller decides how to block.
 //
-// @convergence state=ossified id=FORCE_LEASE_DUAL_SSOT value="`--force-with-lease` is ALLOWED by both the code guard (git-guard.ts) and config enforcement.json (H-FORCE-PUSH exceptions) — only blind --force/-f/+refspec is blocked, with a `# force-ok` escape" threshold="QA found git-guard blocked --force-with-lease while config exempted it → lease hard-blocked with no override, breaking the rebase→lease-push workflow; aligned code guard to config intent"
 
 // strip ' and " so a quoted flag still tokenizes to its bare form
 function stripQuotes(s: string): string {

@@ -9,7 +9,6 @@
 // Honors the same per-line exemption markers as the regex rule (`@secret-ok`, `process.env`,
 // `example`, `REDACTED`, `xxxx`) so placeholders / env-var reads / fixtures are not flagged.
 //
-// @convergence state=ossified id=CODE_GUARD_SECRET_LITERAL value="hardcoded API keys / private keys / provider tokens are blocked in CODE at write time (before config rules) — a committed secret is an irreversible git-history leak; regex-only enforcement could be disabled by a profile edit" threshold="H-SECRET-LITERAL was block-policy but enforcement.json-only; the stdin-input bug (and any profile edit) would have left credential writes unguarded"
 
 // code/config file extensions where an inline credential is a real leak (matches H-SECRET-LITERAL path_match)
 const CODE_FILE = /\.(ts|tsx|js|jsx|mjs|cjs|py|rb|php|go|rs|java|kt|scala|c|h|cpp|cc|hpp|m|mm|swift|dart|hexa|env|ya?ml|json|toml)$/i;

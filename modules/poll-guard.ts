@@ -9,7 +9,6 @@
 // in minutes) are c19-exempt and NOT flagged — the guard only fires when the loop
 // references an external-long-runner term.
 //
-// @convergence state=ossified id=NO_SHORT_POLL_LOOP value="a bash poll LOOP over an external long-runner (pod/r2/cloud/training) with sleep <1800s is blocked in code (c19) — poll at ≥30min or delegate to a sub-agent" threshold="a session ran a short-interval background re-rent/poll loop; c19 was only a hint, ScheduleWakeup interval can't be code-guarded, but the bash sleep-loop can"
 
 const MIN_POLL_SECONDS = 1800; // c19 floor: 30 min
 

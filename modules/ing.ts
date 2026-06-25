@@ -1,4 +1,4 @@
-// sidecar ing {show|add <text> [--to <repo>]|done <id|match>|next <text>|pod ...|inject}
+// sidecar ing {show|add <text>|done <id|match>|next <text>|pod ...|inject}
 // In-progress board stored on a DEDICATED git ref (refs/heads/ing) as a single
 // ING.jsonl file — NOT in the working tree.
 // @convergence state=ossified id=ING_BOARD_DEDICATED_REF value="board lives on a dedicated `ing` ref via plumbing, never the working tree" threshold="tracked worktree file: branch-switch/reset clobbers session edits (happened); untracked: unshared"
@@ -10,9 +10,9 @@
 // SessionStart `inject` surfaces open work + running pods so the board is seen.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve, basename } from "node:path";
+import { resolve } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
-import { info, ok, warn, loudFail, nowIso } from "../lib/log.ts";
+import { info, ok, warn, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
 import { config } from "../lib/config.ts";
 import { setLiveMarker, staleLongRunnerWarn } from "./heartbeat-guard.ts";
@@ -57,7 +57,6 @@ interface Item {
   id: string;
   ts: string;
   text?: string;
-  from?: string; // set when forwarded from another repo (sidecar ing add --to <repo>)
   provider?: string;
   gpu?: string;
   purpose?: string;
@@ -163,51 +162,16 @@ export async function runIng(args: string[]): Promise<number> {
   const sub = args[0] ?? "show";
 
   if (sub === "add" || sub === "next") {
-    // `--to <repo>` forwards the item to a SIBLING project's `ing` ref (cross-repo
-    // hand-off — lands directly on the target repo's board branch, tagged `from`).
-    const toIdx = args.indexOf("--to");
-    let to = "";
-    let parts = args.slice(1);
-    if (toIdx >= 1) {
-      to = args[toIdx + 1] ?? "";
-      parts = args.slice(1).filter((_, i) => i + 1 !== toIdx && i + 1 !== toIdx + 1);
-    }
     // STDIN text path — robust for ANY characters (parens·quotes·$·→ …) that break
     // unquoted argv via the slash command's `$ARGUMENTS`. Opt-in only (`--stdin` flag
     // or a lone `-`) so an interactive no-text call still shows usage, never blocks on
     // a TTY. Agent-safe form: `printf '%s' "<free text>" | sidecar ing add --stdin`.
+    const parts = args.slice(1);
     const wantStdin = parts.includes("--stdin") || (parts.length === 1 && parts[0] === "-");
     const text = wantStdin
       ? readStdin().trim()
       : parts.filter((a) => a !== "--stdin").join(" ").trim();
     if (!text) return usage();
-    if (to) {
-      // @convergence upstream-fix-handoff — commons `upstream-fix` teeth: forwarding a
-      // DEFECT FIX to an upstream dancinlab repo (hexa/hexa-lang/demiurge) is the
-      // recurring violation — you have write access there, so fix it in THIS session
-      // (clone/worktree → fix → that repo's `sidecar pr-cycle` merge), never punt the
-      // fix cross-repo. A genuine NEW feature TODO to a sibling is still fine.
-      const upstream = /^(hexa|hexa-lang|demiurge)(-wt-[\w.-]+)?$/i.test(to);
-      const looksLikeFix = /\b(fix|bug|broken|repair|patch|crash|regress|error|fail(ed|ure)?)\b|버그|고쳐|고침|고치|막힘|막혀|막혔|깨[짐졌져]|에러|오류|실패|수정/i.test(text);
-      if (upstream && looksLikeFix) {
-        loudFail(`ing add --to ${to}: upstream 결함 수정을 cross-repo 인계하려 함 — commons 'upstream-fix' 위반(차단).`);
-        info(`  → 그 결함은 이 세션에서 직접 고쳐라: cd ../${to} (또는 worktree) → 원인 수정 → 빌드/CI 검증 → 거기서 'sidecar pr-cycle' 머지 → 원작업 복귀.`);
-        info(`  → 끊기는 현재 작업만 내 repo 보드에 남겨라: sidecar ing add "↩resume <원작업>".`);
-        info(`  (진짜 별개 신규 TODO 면 fix/버그/수정 류 표현을 빼고 다시 — 이 게이트는 '결함 수정' 떠넘김만 막는다.)`);
-        return 2;
-      }
-      const destRoot = resolve(REPO_ROOT, "..", to);
-      if (!existsSync(destRoot)) {
-        info(`ing: 대상 repo 없음 — ${to} (형제 디렉토리 ${resolve(REPO_ROOT, "..")}/ 에서 확인)`);
-        return 1;
-      }
-      const from = basename(REPO_ROOT);
-      const destRows = await readItems(destRoot);
-      const item: Item = { kind: "work", id: nextId(destRows), ts: nowIso(), text, from };
-      await writeItems([...destRows, item], `ing: + (from ${from}) ${text}`, destRoot);
-      ok(`ing: → ${to} 의 ing ref 에 전달 (from ${from}) — 그 repo 다음 세션 SessionStart 에 📥 표면화`);
-      return 0;
-    }
     const rows = await readItems();
     const item: Item = { kind: sub === "add" ? "work" : "next", id: nextId(rows), ts: nowIso(), text };
     await writeItems([...rows, item], `ing: + ${sub === "add" ? "work" : "next"} ${text}`);
@@ -271,7 +235,7 @@ export async function runIng(args: string[]): Promise<number> {
       if (!work.length && !pods.length) return 0; // silent when nothing active
       const now = Date.now();
       const parts: string[] = [];
-      if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}${r.from ? ` 📥${r.from}` : ""}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
+      if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
       if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
       let ctx = `🔵 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
       // Turn-close gate: make per-turn board upkeep + reporting actual, not on-request only.
@@ -317,7 +281,7 @@ export async function runIng(args: string[]): Promise<number> {
   const now = Date.now();
   info(`ING — 진행중 (ing ref · git show ing:ING.jsonl) · 완료→CHANGELOG · 최종설계→ARCHITECTURE`);
   info(`작업 (in-progress): ${work.length || "—"}`);
-  for (const r of work) info(`  • #${r.id}${r.from ? ` 📥${r.from}` : ""} ${r.text}   (⏳${ageDays(r.ts, now)}d · since ${r.ts.slice(0, 10)})`);
+  for (const r of work) info(`  • #${r.id} ${r.text}   (⏳${ageDays(r.ts, now)}d · since ${r.ts.slice(0, 10)})`);
   const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
   if (bloat) warn(bloat.replace(/\*\*/g, ""));
   if (pods.length) {
@@ -372,8 +336,8 @@ async function pod(args: string[]): Promise<number> {
 }
 
 function usage(): number {
-  info("usage: sidecar ing {show|add <text> [--to <repo>]|done <id|match>|next <text>|pod {add|rm|list}|inject}");
+  info("usage: sidecar ing {show|add <text>|done <id|match>|next <text>|pod {add|rm|list}|inject}");
   info("  free text with shell-special chars (parens·quotes·$·→): pipe via --stdin —");
-  info("    printf '%s' \"<text>\" | sidecar ing add --stdin   (or: ... add --to <repo> --stdin)");
+  info("    printf '%s' \"<text>\" | sidecar ing add --stdin");
   return 1;
 }

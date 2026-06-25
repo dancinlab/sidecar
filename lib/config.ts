@@ -102,7 +102,7 @@ export interface SidecarConfig {
   tmpGuard: boolean;
   // handoffGuard BLOCKS scattered hand-off markdown (HANDOFF.md / INBOX.md /
   // inbox/*.md at any depth) on Write/Edit — hand-offs route through the
-  // repo-root ING.jsonl board (`sidecar ing add [--to <repo>]`), not ad-hoc files.
+  // repo-root ING.jsonl board (`sidecar ing add <text>`), not ad-hoc files.
   handoffGuard: boolean;
   // namingGuard BLOCKS (pre write AND pre bash) when a new file/dir name carries a
   // version/copy suffix (`_v2` · `_final` · `_copy` · `_old` · `foo 2` …) instead of

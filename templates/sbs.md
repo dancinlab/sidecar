@@ -220,9 +220,9 @@ stale plan 의 @L 을 오강제하지 않게). flip 깜빡해도 fallback(최신
 ## 9. 인계 dossier (handoff agent · QA 직후 · 보고 직전)
 
 다음 세션(AI 인계용) 인계 정보를 굳힌다. ⛔ **NO ad-hoc HANDOFF.md / INBOX.md / inbox/*.md**
-(handoff-guard 가 Write/Edit hard-deny · ing-board 규칙). 두 carrier:
-- **(a) intra-repo** → 같은 `drafts/<slug>-plan.md` 에 `## handoff` 섹션 append(gitignored · 소유자와 co-locate · 이력=ship commit git log). append(덮어쓰기 X) · 재실행 시 최신 위.
-- **(b) cross-repo follow-up** → `sidecar ing add <text> --to <repo>` 레지스트리(타 repo 보드에 착지·커밋). 드래프트에만 두지 말 것 — 반드시 ING 보드로.
+(handoff-guard 가 Write/Edit hard-deny · ing-board 규칙). carrier:
+- **(a) intra-repo 인계** → 같은 `drafts/<slug>-plan.md` 에 `## handoff` 섹션 append(gitignored · 소유자와 co-locate · 이력=ship commit git log). append(덮어쓰기 X) · 재실행 시 최신 위. 세션 복원 메모는 `sidecar ing add <text>`(내 repo 보드).
+- **(b) cross-repo 작업은 인계하지 않는다** → ING 의 cross-repo 전달(`--to`)은 폐기됨(직접수정 원칙). upstream 결함은 그 세션에서 직접 고쳐 그 repo 의 `pr-cycle` 로 머지한다(commons `upstream-fix`) — 끊기는 현재 작업만 내 repo 에 `↩resume <원작업>` 으로 남긴다.
 
 **9 섹션** (생략 가능=SKIP 표기, 비우지 말 것) — `## handoff` 에 작성:
 1. `## § PR 진행 상태 매트릭스` — `| # | title | status | merged | core |`. status=merged/open/draft/closed. stacked 아니어도 최소 1행(이번 ship main commit/PR).

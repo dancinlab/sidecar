@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## refactor(ing): cross-repo 전달(`--to <repo>`) 기능 폐기 — 보드는 내 repo 전용 (직접수정 원칙)
+
+🗣️ "ing 를 타세션에 넣는 기능은 폐기하자. 직접 수정원칙이니까"
+
+- 동기: 유저 — ING 의 cross-repo 전달(`ing add --to <repo>`)이 commons `upstream-fix`(막힌 그 세션에서 내 손으로 직접 고친다)와 정면 모순. 떠넘김 경로 자체를 없애 직접수정 원칙을 구조적으로 강제.
+- 제거(`modules/ing.ts`): `--to` 인자 파싱·형제 repo ing ref 쓰기 경로 전체 삭제 · `from` 필드 + show/inject 의 `📥<from>` 표면화 제거 · `--to` 전용으로만 존재하던 upstream-fix 차단 가드(`@convergence upstream-fix-handoff`)·`loudFail`/`basename` import 동반 제거. `add`/`next` 는 stdin/argv 텍스트 경로만 남김(잔여 `--to` 토큰은 이제 리터럴 텍스트 — silent forward 없음).
+- 가드 문구(`modules/handoff-guard.ts`): HANDOFF.md/INBOX.md/inbox/*.md 차단 메시지에서 `--to <repo>` 안내 제거 → 로컬 `sidecar ing add <text>` 로만 유도.
+- SSOT lockstep: commons `ing-board`(보드=내 repo 전용)·`upstream-fix`(`--to` 폐기 명시) · ARCHITECTURE.json(ing 모듈 노드 2곳) · README · `templates/sbs.md`(handoff carrier (b) = cross-repo 인계 안 함) · `commands/ing.md`·`commands/sbs.md` · help line + `config/keywords.json` 힌트 + `lib/config.ts` 주석 + `_tools/gen_commands.py` · TOOLKIT.jsonl 재생성(71엔트리·in-sync).
+- 검증: tsc --noEmit clean · `toolkit check` in-sync · 전 JSON valid · 임시 repo 라운드트립(add/show/done by-id) PASS · 실보드 show/inject 회귀 없음.
+
 ## feat(commons): native-canonical-first 규칙 — 정석(native·canonical) 방식 최우선 + 위반 발견 시 개선
 
 🗣️ "commons 에 강화해줘 => native, canonical 방식 최우선, 위반 발견시 개선"

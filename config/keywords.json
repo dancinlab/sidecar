@@ -11,7 +11,7 @@
       "id": "session-handoff",
       "patterns": ["handoff", "인계", "wrap up", "마무리", "끝내자"],
       "tool": "sidecar ing",
-      "hint": "다음 세션/타 repo 인계는 ING 로: `sidecar ing add <text>` (이 repo) · `sidecar ing add <text> --to <repo>` (타 프로젝트 ING 에 직접 전달, from 태그)."
+      "hint": "다음 세션 인계는 ING 로: `sidecar ing add <text>` (내 repo 전용 · cross-repo 전달 폐기 — 직접수정 원칙)."
     },
     {
       "id": "convergence-check",

@@ -16,7 +16,7 @@ import { docViolations } from "./docs.ts";
 import { lintArchitectureTree, lintConvergenceRecords } from "./architecture.ts";
 import { toolkitDrift } from "./toolkit.ts";
 import { lintCommandDescriptions } from "./shadow.ts";
-import { lintCommonsFormat } from "./commons.ts";
+import { lintCommonsFormat, dodontLengthLint } from "./commons.ts";
 import { qualifiesMissing } from "./folders.ts";
 
 interface Violation {
@@ -205,6 +205,26 @@ export async function runLint(args: string[]): Promise<number> {
   // must be do/dont lines only (no prose), so it can't silently re-bloat. block.
   for (const it of lintCommonsFormat()) {
     violations.push({ rule: it.rule, file: it.file, msg: it.msg });
+  }
+
+  // 4h. do/dont length cap (archive_sidecar tape-lint #2 port) — diff-aware vs HEAD,
+  // so it catches BOTH Write and Edit (the write-guard only sees full-content Write).
+  // For each staged commons.md / CLAUDE.md, compare the working file to its HEAD
+  // version: a NEW or LENGTHENED `- do:`/`- dont:` line over the cap blocks; legacy
+  // long lines are grandfathered. block. cap 0 = off.
+  for (const f of staged) {
+    const base = f.split("/").pop() ?? "";
+    if (base !== "commons.md" && base !== "CLAUDE.md") continue;
+    let working = "";
+    try {
+      working = readFileSync(repoPath(f), "utf8");
+    } catch {
+      continue; // staged deletion — nothing to cap
+    }
+    const head = (await execShell(`git show HEAD:"${f}" 2>/dev/null`, { cwd: repoPath(".") })).stdout;
+    for (const it of dodontLengthLint(working, head, f)) {
+      violations.push({ rule: it.rule, file: it.file, msg: it.msg });
+    }
   }
 
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });

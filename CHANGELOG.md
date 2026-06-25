@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## feat(commons): do/dont 길이 cap + 사용 강제 — archive_sidecar tape-lint #2 포팅 (commons.md + CLAUDE.md)
+
+🗣️ "archive_sidecar 보면 do, dont 길이 강제 lint 있는데 우리도 CLAUDE.md, commons 용 필요" + "do, dont 사용도 강제"
+
+- 배경: 옛 `dancinlab/archive_sidecar` 의 `tape-lint` 플러그인(`hooks/tape-lint/bin/_tape_lint.hexa`)이 `commons.tape`/`project.tape` 의 `@D` do/dont 값을 100자 cap + diff-aware 로 게이트했다. 우리는 `.tape`→`commons.md`(Markdown) 로 옮겼으므로 그 등가물을 우리 가드 인프라(`commons.ts` + `lint.ts`)에 포팅 (정답지 직접 정독·reference-match). 아카이브를 `/Users/mini/dancinlab/archive_sidecar` 에 clone (자주 참고).
+- 길이 cap (`modules/commons.ts`): `- do:`/`- dont:` 줄 codepoint 길이가 `lint.dodontCap`(기본 200, config-driven, 0=off) 초과면 게이트. **diff-aware** (tape-lint #2 충실 포팅) — slug|kind|idx 키로 baseline 과 비교해 **새로/더 길어진 줄만** 차단, 기존 긴 줄은 grandfather (줄이면 통과). 한글=1자 카운트(`[...s].length`).
+  - 2층 배선: ① write-가드 `dodontLengthWriteViolation`(`pre.ts` PreToolUse Write) — 전체-content Write 조기 hard-DENY (baseline=on-disk) · ② commit-lint 4h(`lint.ts`) — staged commons.md/CLAUDE.md 를 HEAD 와 비교(diff-aware) → Write·Edit 모두 커버(write-가드는 Edit 조각의 slug 키를 못 잡으므로 commit 이 백스톱). 둘 다 `DODONT-LONG` block.
+- do/dont 사용 강제 (`lintCommonsText`): 기존엔 섹션에 do/dont 가 **둘 다 없을 때만**(`COMMONS-NO-DODONT`) 잡았는데, 한쪽만 있으면 통과했다. 이제 **둘 다 필수** — do 또는 dont 한쪽만 있으면 `COMMONS-DODONT-INCOMPLETE` block. (commons.md 는 do/dont-only 설계라 적용 · CLAUDE.md 는 folder-docs 자유양식이라 길이 cap 만.)
+- config: `lib/config.ts` `lint.dodontCap`(기본 200) · severity-map 에 `DODONT-LONG`/`COMMONS-DODONT-INCOMPLETE` = block.
+- 검증: tsc/import clean · 현재 트리 `sidecar lint` ok(소급 위반 0 — 전 commons 섹션이 do+dont 둘 다 보유) · QA — newOverCapDodont 6축(grandfather/grown/shrunk/new-over/new-short/한글-codepoint) ALL PASS · format INCOMPLETE 3축 · write-가드 3축(over=block·unchanged=allow·CLAUDE) · commit-lint diff-aware 통합(staged 300자 줄 → DODONT-LONG block) ALL PASS.
+
 ## feat(recommend): 4축 auto-proceed 기계적 백스톱 — Stop 훅 `recommend stop-check` (박스에서 멈추면 강제 진행)
 
 🗣️ "4축 선택사항 뜰때 auto pick 진행이 잘안되네 autopick 이라고는 뜨는데 자동진행 강화가 좀더 필요"

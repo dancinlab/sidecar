@@ -40,6 +40,10 @@ export interface SidecarConfig {
     changelog?: { file: string; triggerPattern: string; ignore?: string[] };
     // committing directly on one of these branches is a violation
     protectedBranches?: string[];
+    // do/dont line length cap (chars/codepoints) for commons.md + CLAUDE.md —
+    // a new or LENGTHENED `- do:` / `- dont:` line over this is gated (diff-aware:
+    // legacy long lines are grandfathered, only new/grown ones block). 0 = off.
+    dodontCap?: number;
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
@@ -181,7 +185,7 @@ const DEFAULTS: SidecarConfig = {
   keywordsFile: ".harness/keywords.json",
   severityMapFile: ".harness/severity-map.json",
   verify: { checks: [] },
-  lint: { freshnessFiles: [] },
+  lint: { freshnessFiles: [], dodontCap: 200 },
   upstreams: [{ name: "hexa-lang", repo: "dancinlab/hexa-lang" }],
   guides: ["CLAUDE.md", "AGENTS.md", "README.md"],
   folderGuides: {

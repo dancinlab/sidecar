@@ -18,6 +18,8 @@
       "SHADOW-DESC": "warn",
       "COMMONS-PROSE": "block",
       "COMMONS-NO-DODONT": "block",
+      "COMMONS-DODONT-INCOMPLETE": "block",
+      "DODONT-LONG": "block",
       "ARCH-BIG-CELL": "block",
       "ARCH-PILED": "block",
       "ARCH-HISTORY": "block",

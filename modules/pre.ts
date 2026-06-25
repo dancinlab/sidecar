@@ -22,7 +22,7 @@ import { worktreeAddAdvisory } from "./worktree.ts";
 // import { convergenceForFile } from "./architecture.ts"; // convergence-on-touch DISABLED (commented off)
 import { docWriteViolation } from "./docs.ts";
 import { descWriteViolation } from "./shadow.ts";
-import { commonsWriteViolation } from "./commons.ts";
+import { commonsWriteViolation, dodontLengthWriteViolation } from "./commons.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
 import { detectVersionedName, detectVersionedNameBash } from "./naming-guard.ts";
@@ -337,6 +337,13 @@ export async function preWrite(_args: string[]): Promise<number> {
   // is the backstop). Keeps the always-on governance SSOT from re-bloating.
   const cw = commonsWriteViolation(filePath, content);
   if (cw) return emitBlock(cw.rule, cw.block);
+
+  // do/dont length cap (archive_sidecar tape-lint #2 port) — a NEW or lengthened
+  // `- do:`/`- dont:` line over the cap in commons.md / CLAUDE.md is hard-DENIED
+  // at write (full-content Write); diff-aware so legacy long lines are grandfathered.
+  // Edit fragments fall through to the commit-time lint backstop (lint 4h).
+  const dl = dodontLengthWriteViolation(filePath, content);
+  if (dl) return emitBlock(dl.rule, dl.block);
 
   const cfg = loadConfig();
 

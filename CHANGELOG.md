@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## fix(recommend): FIXED-AXIS 행동명령 front-load — 고정축 선택이 박스에서 멈추던 회귀
+
+🗣️ "진행중 추천4축 질의시에 선택이 있으면 선택으로 바로 진행되도록 해줘" (선택 = standing 고정축)
+
+- 증상: `recommend set-default complete`(또는 임의 고정축)인데 4축 박스만 그리고 멈춤 — auto-proceed 안 됨. #183 이 `/sbs` 에서 고친 박스-then-stop 증상이 recommend 본체에도 그대로 남아 있었다.
+- 진단(근본원인): FIXED-AXIS 문구가 "박스 그려라"(★표시·4줄 렌더)를 **먼저**, "AUTO-PROCEED(decide, do NOT wait)"를 **뒤에** 두는 순서라, 모델이 박스를 그린 뒤 턴을 종료/대기하는 쪽으로 떨어졌다. prose 순서가 행동을 지배.
+- 픽스(#183 의 front-load 패턴을 recommend 에 적용): 행동명령을 **맨 앞으로** — "선택(standing 고정축)이 이미 있으니 박스는 정보용일 뿐 멈춤 지점이 아님 → 같은 턴에 그 champion 으로 바로 실행, 박스에서 턴 종료 금지·'진행할까요?' 금지·재선택 대기 금지", 그 다음에야 박스를 trade-off 가시화용으로 렌더. `config/recommend.md` r4(스펙 carrier) + `modules/recommend.ts` `defaultDirective()`(매 턴 주입 디렉티브) 둘 다 lockstep 갱신.
+- 검증: `recommend show`=새 front-load 문구 렌더 · `resolve-mode`(sbs 상속) 무변경(inherit complete / explicit manual) · `inject` 유효 JSON emit.
+
 ## fix(sbs): AUTO 모드 행동배너 front-load — 고정축(완성도) 자동진행이 런북 prose 에 묻히던 회귀
 
 🗣️ "sbs go 했을 때 recommend 에 완성도로 고정해뒀는데 자동진행이 안 된다"

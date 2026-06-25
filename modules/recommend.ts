@@ -59,7 +59,7 @@ function defaultDirective(): string {
   }
   const a = axisLabel(mode);
   if (!a) return "";
-  return `\n# default mode: FIXED ${a} (임의 고정 선택 · auto-proceed) — ★-mark this axis line IN PLACE in the r2 box + append \`  ← 기본값\`; STILL render all four lines, THEN AUTO-PROCEED with this axis's champion (decide, do NOT wait) + one conclusion line \`🤖 고정축 auto-pick: <안> (${a} 기준)\` (r4). ALSO governs /sbs with ${a} forced.\n`;
+  return `\n# default mode: FIXED ${a} (STANDING SELECTION · auto-proceed) — ⚡ BEHAVIORAL MANDATE FIRST: a standing selection (${a}) is already set, so the 4-axis box is informational ONLY and is NEVER a stop point — in the SAME turn AUTO-PROCEED with this axis's champion and CONTINUE straight into executing it; do NOT end your turn on the box, do NOT ask "진행할까요?", do NOT wait for a re-pick (the user already chose this axis = the selection). Then render the box for trade-off visibility: ★-mark this axis line IN PLACE + append \`  ← 기본값\`, STILL render all four lines, + one conclusion line \`🤖 고정축 auto-pick: <안> (${a} 기준)\` immediately followed by the actual work (r4). ALSO governs /sbs with ${a} forced.\n`;
 }
 
 function body(): string {

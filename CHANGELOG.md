@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## feat(paper): publish lifecycle — Zenodo REST (DOI) + arXiv submission package, keys via secret
+
+🗣️ "paper 명령에 arxiv·zenodo 배포·수정·삭제를 붙여라 — 키는 secret CLI 연결"
+
+- 동기: 유저 — `paper` 가 scaffold→build→cover 까지였는데 배포 surface 가 없었다. 배포(publish)·수정(update)·삭제(unpublish) 전체 수명주기를 도구에 박아 손-제출 회귀를 없앰. 자격증명은 commons `git-safety` 대로 `secret` CLI 경유(인라인·로그 금지).
+- 정직한 제약(commons honesty): **arXiv 는 프로그래밍 제출 API 가 없다**(SWORDv1 폐지 · web 업로드만) → 자동 제출을 가짜로 만들지 않고, 제출용 tarball 패키징 + 업로드 가이드만 출력. **Zenodo 는 완전한 REST 수명주기** → 실제 배포.
+- 신규 verb(`modules/paper.ts`):
+  - `publish <slug> --to zenodo|arxiv|both [--sandbox] [--source]` — Zenodo: deposition 생성→main.pdf(+`--source` 면 소스 tarball) 업로드→메타데이터→발행→DOI 발급. arXiv: `arxiv-submission.tar.gz`(main.tex+main.bbl+figures 평탄화) 생성 + https://arxiv.org/submit 가이드.
+  - `update <slug> --to zenodo` — Zenodo new-version(상속 파일 삭제→새 빌드 재업로드→재발행 · 버전형 DOI). arXiv 는 재패키징(웹 replace 안내).
+  - `unpublish <slug>` — Zenodo DRAFT deposition 삭제. **발행본은 API 삭제 불가**(DOI 영구) → 그대로 보고(가짜 삭제 안 함).
+  - `status <slug>` — per-paper 발행 원장(`PAPERS/<slug>/publish.json`) 표시.
+- 메타데이터: PAPER.md `@title` + main.tex `\title`/abstract 추출(LaTeX 스트립·이모지 보존) · 기본값(upload_type=publication · preprint · cc-by-4.0)은 `PAPERS/<slug>/zenodo.json` 으로 per-paper override.
+- 키: `secret get zenodo.token`(prod) / `zenodo.sandbox_token`(--sandbox) · 스코프 deposit:write+deposit:actions. 토큰 값은 절대 argv/로그에 안 실림.
+- 검증: `paper help`/`paper status __nope__`/`publish`(target 누락 usage) 스모크 · arxiv 패키징 E2E(tarball 내용·publish.json·status 반영) · 메타 추출 regex 실측(이모지 보존·latex 제거) · **Zenodo sandbox 라이브 실증**(create 201→upload 201→metadata 200→delete-draft 204 = unpublish 경로 일치 · draft 깨끗이 삭제 · 잔존물 0).
+
 ## feat(commons+ing): upstream-fix teeth — block forwarding a defect fix to an upstream repo
 
 🗣️ "hexa-lang 막히면 ING로 떠넘기지 말고 그 세션에서 직접 다 고쳐라 — 규칙을 강화하고, 떠넘기기 자체를 명령에서 막았다"

@@ -1,4 +1,4 @@
-// sidecar paper <new|build|cover|list|help>
+// sidecar paper <new|build|cover|list|publish|update|unpublish|status|help>
 //
 // Demiurge-house-style scientific-paper tool. Bakes the hard-won paper
 // discipline into the sidecar so it is never hand-rolled per campaign:
@@ -12,6 +12,19 @@
 //             waive with --min-pages 0 / --min-figures 0.
 //   • cover — (re)generate figures/cover.png via `sidecar imagine`.
 //   • list  — list papers under the papers dir.
+//
+// Distribution lifecycle (keys via the `secret` CLI — never inline · commons git-safety):
+//   • publish   — deploy the built paper. `--to zenodo` runs the full Zenodo REST
+//                 lifecycle (create deposition → upload main.pdf [+ --source tarball]
+//                 → metadata → publish → mint DOI). `--to arxiv` packages a
+//                 submission-ready tarball + prints the upload guide (arXiv has NO
+//                 submission API — SWORDv1 was retired; web upload is the only path,
+//                 reported honestly, never faked).
+//   • update    — Zenodo new-version (replace files + bump publication, fresh versioned DOI).
+//   • unpublish — delete a Zenodo DRAFT deposition (published records cannot be deleted
+//                 via API — only withdrawn by Zenodo support; reported, not faked).
+//   • status    — show the per-paper publish ledger (PAPERS/<slug>/publish.json).
+//   Tokens: `secret get zenodo.token` (prod) / `zenodo.sandbox_token` (--sandbox).
 //
 // Rationale (commons "self-improving tool" principle): every paper this repo
 // family ships used the same template, the same xelatex+bibtex×3 build, the same
@@ -28,6 +41,7 @@
 // divergence from NeuroLM, which ships cover-free.
 import { execShell } from "../lib/exec.ts";
 import { runImagine } from "./imagine.ts";
+import { secretGet } from "./secret.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { writeFileSync, mkdirSync, existsSync, readFileSync, statSync, rmSync } from "node:fs";
@@ -377,14 +391,354 @@ function listPapers(dir: string): number {
   return 0;
 }
 
+// ── publish lifecycle: zenodo (full REST) + arxiv (submission package + guide) ─
+// Keys come from the `secret` CLI only (commons git-safety: never inline a token).
+const ZENODO_HOST = { prod: "https://zenodo.org", sandbox: "https://sandbox.zenodo.org" } as const;
+
+async function zenodoToken(sandbox: boolean): Promise<string> {
+  // canonical key + a tolerated alias, per env
+  const keys = sandbox ? ["zenodo.sandbox_token", "zenodo.sandbox_api_token"] : ["zenodo.token", "zenodo.api_token"];
+  for (const k of keys) {
+    const t = await secretGet(k);
+    if (t) return t;
+  }
+  return "";
+}
+
+type PublishRecord = {
+  zenodo?: { id: number; doi?: string; concept_doi?: string; state?: string; html?: string; sandbox: boolean; version: number };
+  arxiv?: { package: string; bytes: number };
+};
+
+function recordPath(dir: string): string {
+  return resolve(dir, "publish.json");
+}
+function readRecord(dir: string): PublishRecord {
+  const p = recordPath(dir);
+  if (!existsSync(p)) return {};
+  try {
+    return JSON.parse(readFileSync(p, "utf8")) as PublishRecord;
+  } catch {
+    return {};
+  }
+}
+function writeRecord(dir: string, rec: PublishRecord): void {
+  writeFileSync(recordPath(dir), JSON.stringify(rec, null, 2) + "\n", "utf8");
+}
+
+// strip a small set of LaTeX wrappers so a Zenodo title/abstract is clean prose
+// (keep emoji + unicode — Zenodo accepts them; just drop \commands and braces).
+function stripTex(s: string): string {
+  return s
+    .replace(/%.*$/gm, "")
+    .replace(/\\(textbf|textit|emph|texttt|large|normalsize|textbackslash)\b/g, "")
+    .replace(/\\[a-zA-Z]+\*?(\[[^\]]*\])?/g, " ")
+    .replace(/[{}]/g, "")
+    .replace(/\\\\/g, " ")
+    .replace(/\$[^$]*\$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// pull title/description from PAPER.md (@title) + main.tex (\title, abstract).
+function paperMeta(dir: string): { title: string; description: string } {
+  let title = basename(dir);
+  let description = "";
+  const md = resolve(dir, "PAPER.md");
+  if (existsSync(md)) {
+    const m = readFileSync(md, "utf8");
+    const t = m.match(/@title:\s*(.+)/);
+    if (t) title = stripTex(t[1]);
+  }
+  const texPath = resolve(dir, "main.tex");
+  if (existsSync(texPath)) {
+    const src = readFileSync(texPath, "utf8");
+    if (title === basename(dir)) {
+      const tt = src.match(/\\title\{([\s\S]*?)\n\}/);
+      if (tt) title = stripTex(tt[1]);
+    }
+    const ab = src.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/);
+    if (ab) description = stripTex(ab[1]);
+  }
+  return { title: title || basename(dir), description };
+}
+
+// Zenodo deposition metadata — defaults, overridable per-paper via PAPERS/<slug>/zenodo.json.
+function buildZenodoMetadata(dir: string): Record<string, unknown> {
+  const { title, description } = paperMeta(dir);
+  const base: Record<string, unknown> = {
+    upload_type: "publication",
+    publication_type: "preprint",
+    title: title || basename(dir),
+    description: description || title || basename(dir),
+    creators: [{ name: "dancinlab", affiliation: "dancinlab" }],
+    keywords: [basename(dir), "dancinlab"],
+    access_right: "open",
+    license: "cc-by-4.0",
+  };
+  const ov = resolve(dir, "zenodo.json");
+  if (existsSync(ov)) {
+    try {
+      Object.assign(base, JSON.parse(readFileSync(ov, "utf8")));
+    } catch {
+      warn(`paper publish[zenodo]: ${ov} is not valid JSON — using default metadata.`);
+    }
+  }
+  return base;
+}
+
+// thin JSON fetch wrapper — returns status + parsed body (or raw text on non-JSON).
+async function zFetch(url: string, init: RequestInit): Promise<{ status: number; ok: boolean; body: any }> {
+  const r = await fetch(url, init);
+  const text = await r.text();
+  let body: any = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = text;
+  }
+  return { status: r.status, ok: r.ok, body };
+}
+
+function snip(v: unknown): string {
+  return (typeof v === "string" ? v : JSON.stringify(v) || "").slice(0, 280);
+}
+
+// upload main.pdf (+ optional source tarball) to a deposition's file bucket.
+async function uploadFiles(dir: string, bucket: string, auth: Record<string, string>, withSource: boolean): Promise<boolean> {
+  const pdf = resolve(dir, "main.pdf");
+  const data = readFileSync(pdf);
+  const up = await fetch(`${bucket}/${basename(pdf)}`, { method: "PUT", headers: auth, body: data });
+  if (!up.ok) {
+    loudFail(`paper publish[zenodo]: pdf upload failed HTTP ${up.status}`);
+    return false;
+  }
+  info(`paper publish[zenodo]: uploaded ${basename(pdf)} (${Math.round(data.length / 1024)}KB)`);
+  if (withSource) {
+    const tar = await arxivTarball(dir); // reuse the flattened source bundle
+    if (tar) {
+      const sdata = readFileSync(tar);
+      const sup = await fetch(`${bucket}/${basename(tar)}`, { method: "PUT", headers: auth, body: sdata });
+      if (sup.ok) info(`paper publish[zenodo]: uploaded ${basename(tar)} (${Math.round(sdata.length / 1024)}KB source)`);
+      else warn(`paper publish[zenodo]: source upload failed HTTP ${sup.status} (pdf is up — continuing).`);
+    }
+  }
+  return true;
+}
+
+async function zenodoPublish(dir: string, sandbox: boolean, withSource: boolean): Promise<number> {
+  const env = sandbox ? "sandbox" : "prod";
+  const token = await zenodoToken(sandbox);
+  if (!token) {
+    loudFail(`paper publish[zenodo]: \`secret get zenodo.${sandbox ? "sandbox_" : ""}token\` empty — set with 'secret set zenodo.${sandbox ? "sandbox_" : ""}token <token>'`);
+    info("  token: Zenodo → Applications → Personal access tokens → scopes deposit:write + deposit:actions");
+    return 1;
+  }
+  if (!existsSync(resolve(dir, "main.pdf"))) {
+    loudFail(`paper publish[zenodo]: no main.pdf in ${dir} — run 'sidecar paper build' first.`);
+    return 1;
+  }
+  const host = ZENODO_HOST[env];
+  const auth = { Authorization: `Bearer ${token}` };
+  const jsonAuth = { ...auth, "Content-Type": "application/json" };
+
+  const create = await zFetch(`${host}/api/deposit/depositions`, { method: "POST", headers: jsonAuth, body: "{}" });
+  if (create.status >= 300) {
+    loudFail(`paper publish[zenodo]: create deposition failed HTTP ${create.status} — ${snip(create.body)}`);
+    return 2;
+  }
+  const id = create.body.id as number;
+  const bucket = create.body?.links?.bucket as string;
+  info(`paper publish[zenodo]: created draft deposition ${id} (${env})`);
+
+  if (!(await uploadFiles(dir, bucket, auth, withSource))) return 2;
+
+  const meta = buildZenodoMetadata(dir);
+  const setm = await zFetch(`${host}/api/deposit/depositions/${id}`, { method: "PUT", headers: jsonAuth, body: JSON.stringify({ metadata: meta }) });
+  if (setm.status >= 300) {
+    loudFail(`paper publish[zenodo]: metadata update failed HTTP ${setm.status} — ${snip(setm.body)}`);
+    return 2;
+  }
+  info(`paper publish[zenodo]: metadata set (title='${snip(meta.title)}')`);
+
+  const pub = await zFetch(`${host}/api/deposit/depositions/${id}/actions/publish`, { method: "POST", headers: auth });
+  if (pub.status >= 300) {
+    loudFail(`paper publish[zenodo]: publish action failed HTTP ${pub.status} — ${snip(pub.body)}. Draft ${id} kept; fix metadata then 'sidecar paper update'.`);
+    return 2;
+  }
+  const rec = readRecord(dir);
+  rec.zenodo = { id, doi: pub.body.doi, concept_doi: pub.body.conceptdoi, state: pub.body.state, html: pub.body?.links?.html, sandbox, version: 1 };
+  writeRecord(dir, rec);
+  ok(`paper publish[zenodo]: PUBLISHED → DOI ${pub.body.doi} · ${pub.body?.links?.html}`);
+  return 0;
+}
+
+async function zenodoUpdate(dir: string, sandbox: boolean, withSource: boolean): Promise<number> {
+  const rec = readRecord(dir);
+  if (!rec.zenodo?.id) {
+    loudFail("paper update[zenodo]: no prior publish in publish.json — run 'sidecar paper publish --to zenodo' first.");
+    return 1;
+  }
+  const env = rec.zenodo.sandbox ? "sandbox" : "prod";
+  const token = await zenodoToken(rec.zenodo.sandbox);
+  if (!token) {
+    loudFail(`paper update[zenodo]: \`secret get zenodo.${rec.zenodo.sandbox ? "sandbox_" : ""}token\` empty.`);
+    return 1;
+  }
+  const host = ZENODO_HOST[env];
+  const auth = { Authorization: `Bearer ${token}` };
+  const jsonAuth = { ...auth, "Content-Type": "application/json" };
+
+  const nv = await zFetch(`${host}/api/deposit/depositions/${rec.zenodo.id}/actions/newversion`, { method: "POST", headers: auth });
+  if (nv.status >= 300) {
+    loudFail(`paper update[zenodo]: newversion failed HTTP ${nv.status} — ${snip(nv.body)}`);
+    return 2;
+  }
+  const draftUrl = nv.body?.links?.latest_draft as string;
+  const draft = await zFetch(draftUrl, { method: "GET", headers: auth });
+  const newId = draft.body.id as number;
+  const bucket = draft.body?.links?.bucket as string;
+  info(`paper update[zenodo]: new draft version ${newId} (from ${rec.zenodo.id})`);
+
+  // replace inherited files with the freshly built ones
+  for (const f of (draft.body.files || []) as Array<{ links?: { self?: string } }>) {
+    if (f.links?.self) await fetch(f.links.self, { method: "DELETE", headers: auth });
+  }
+  if (!(await uploadFiles(dir, bucket, auth, withSource))) return 2;
+
+  const meta = buildZenodoMetadata(dir);
+  const setm = await zFetch(`${host}/api/deposit/depositions/${newId}`, { method: "PUT", headers: jsonAuth, body: JSON.stringify({ metadata: meta }) });
+  if (setm.status >= 300) {
+    loudFail(`paper update[zenodo]: metadata update failed HTTP ${setm.status} — ${snip(setm.body)}`);
+    return 2;
+  }
+  const pub = await zFetch(`${host}/api/deposit/depositions/${newId}/actions/publish`, { method: "POST", headers: auth });
+  if (pub.status >= 300) {
+    loudFail(`paper update[zenodo]: publish failed HTTP ${pub.status} — ${snip(pub.body)}. Draft ${newId} kept.`);
+    return 2;
+  }
+  rec.zenodo = { id: newId, doi: pub.body.doi, concept_doi: pub.body.conceptdoi ?? rec.zenodo.concept_doi, state: pub.body.state, html: pub.body?.links?.html, sandbox: rec.zenodo.sandbox, version: rec.zenodo.version + 1 };
+  writeRecord(dir, rec);
+  ok(`paper update[zenodo]: PUBLISHED v${rec.zenodo.version} → DOI ${pub.body.doi} · ${pub.body?.links?.html}`);
+  return 0;
+}
+
+async function zenodoUnpublish(dir: string): Promise<number> {
+  const rec = readRecord(dir);
+  if (!rec.zenodo?.id) {
+    loudFail("paper unpublish[zenodo]: nothing recorded in publish.json.");
+    return 1;
+  }
+  const token = await zenodoToken(rec.zenodo.sandbox);
+  if (!token) {
+    loudFail(`paper unpublish[zenodo]: \`secret get zenodo.${rec.zenodo.sandbox ? "sandbox_" : ""}token\` empty.`);
+    return 1;
+  }
+  const host = ZENODO_HOST[rec.zenodo.sandbox ? "sandbox" : "prod"];
+  const del = await fetch(`${host}/api/deposit/depositions/${rec.zenodo.id}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
+  if (del.status === 204 || del.status === 200 || del.status === 201) {
+    delete rec.zenodo;
+    writeRecord(dir, rec);
+    ok(`paper unpublish[zenodo]: deleted draft deposition.`);
+    return 0;
+  }
+  if (del.status === 403) {
+    loudFail("paper unpublish[zenodo]: deposition is PUBLISHED — Zenodo does not allow API deletion of published records (DOI is permanent). To withdraw, contact Zenodo support; the ledger is kept.");
+    return 2;
+  }
+  loudFail(`paper unpublish[zenodo]: delete failed HTTP ${del.status}.`);
+  return 2;
+}
+
+// arXiv has NO submission API (SWORDv1 retired) — build a submission-ready tarball
+// (flattened main.tex + main.bbl + figures so arXiv needs no local .bib resolve).
+async function arxivTarball(dir: string): Promise<string | null> {
+  if (!existsSync(resolve(dir, "main.tex"))) {
+    loudFail(`paper publish[arxiv]: no main.tex in ${dir}.`);
+    return null;
+  }
+  const q = (s: string) => JSON.stringify(s);
+  const files = ["main.tex"];
+  for (const f of ["main.bbl", "references.bib"]) if (existsSync(resolve(dir, f))) files.push(f);
+  if (existsSync(resolve(dir, "figures"))) files.push("figures");
+  const out = resolve(dir, "arxiv-submission.tar.gz");
+  const r = await execShell(`cd ${q(dir)} && tar -czf arxiv-submission.tar.gz ${files.join(" ")}`, { timeoutMs: 60000 });
+  if (r.code !== 0 || !existsSync(out)) {
+    loudFail(`paper publish[arxiv]: tar failed — ${r.stderr.slice(0, 200)}`);
+    return null;
+  }
+  if (!existsSync(resolve(dir, "main.bbl"))) warn("paper publish[arxiv]: no main.bbl — run 'sidecar paper build' first so arXiv needs no .bib pass.");
+  return out;
+}
+
+async function arxivPublish(dir: string): Promise<number> {
+  const tar = await arxivTarball(dir);
+  if (!tar) return 2;
+  const kb = Math.round(bytes(tar) / 1024);
+  const rec = readRecord(dir);
+  rec.arxiv = { package: tar, bytes: bytes(tar) };
+  writeRecord(dir, rec);
+  ok(`paper publish[arxiv]: packaged → ${tar} (${kb}KB)`);
+  info("arXiv has NO submission API — upload this tarball manually (web is the only path):");
+  info("  1. https://arxiv.org/submit  (log in)");
+  info("  2. Start New Submission → upload arxiv-submission.tar.gz");
+  info("  3. pick the primary category · fill metadata · submit for moderation");
+  return 0;
+}
+
+function publishStatus(dir: string): number {
+  const rec = readRecord(dir);
+  if (!rec.zenodo && !rec.arxiv) {
+    info(`paper status: ${basename(dir)} — not yet published (no publish.json record).`);
+    return 0;
+  }
+  info(`paper status: ${basename(dir)}`);
+  if (rec.zenodo) info(`  zenodo : v${rec.zenodo.version} · ${rec.zenodo.state ?? "?"} · DOI ${rec.zenodo.doi ?? "?"} · ${rec.zenodo.sandbox ? "sandbox" : "prod"} · ${rec.zenodo.html ?? ""}`);
+  if (rec.arxiv) info(`  arxiv  : packaged ${rec.arxiv.package} (${Math.round(rec.arxiv.bytes / 1024)}KB · upload at https://arxiv.org/submit)`);
+  return 0;
+}
+
+// dispatch a publish/update verb across the requested targets (zenodo · arxiv · both).
+async function runPublish(verb: "publish" | "update" | "unpublish", dir: string, to: string, sandbox: boolean, withSource: boolean): Promise<number> {
+  if (!existsSync(dir)) {
+    loudFail(`paper ${verb}: dir not found: ${dir}`);
+    return 1;
+  }
+  const targets = to === "both" ? ["zenodo", "arxiv"] : [to];
+  let rc = 0;
+  for (const t of targets) {
+    if (verb === "unpublish") {
+      if (t === "arxiv") {
+        warn("paper unpublish: arXiv submissions cannot be withdrawn via API — use the arXiv web UI; skipping.");
+        continue;
+      }
+      rc = (await zenodoUnpublish(dir)) || rc;
+    } else if (t === "zenodo") {
+      rc = (await (verb === "update" ? zenodoUpdate(dir, sandbox, withSource) : zenodoPublish(dir, sandbox, withSource))) || rc;
+    } else if (t === "arxiv") {
+      if (verb === "update") info("paper update[arxiv]: re-packaging (arXiv replacement is a web action — upload the fresh tarball as a new version).");
+      rc = (await arxivPublish(dir)) || rc;
+    } else {
+      loudFail(`paper ${verb}: unknown target '${t}' — one of: zenodo · arxiv · both`);
+      rc = 1;
+    }
+  }
+  return rc;
+}
+
 function usage(): void {
-  info("sidecar paper <new|build|cover|list|help>");
+  info("sidecar paper <new|build|cover|list|publish|update|unpublish|status|help>");
   info("  new <slug> [--title T] [--subtitle S] [--dir D] [--min-pages N] [--min-figures N] [--no-cover] [--cover-prompt-file F] [-s size]");
   info("            scaffold demiurge-house template (NeuroLM-mirrored sections · g5 tier badges · TikZ+pgfplots result figs · fal.ai cover) → cover → build");
   info("  build <slug|dir> [--min-pages N] [--min-figures N] [--dir D]   xelatex→bibtex→xelatex×2; HARD gates: ≥N pages (g51) + ≥N result figs (0 waives)");
   info("  cover <slug|dir> [--cover-prompt-file F] [-p \"prompt\"] [-s size] [--dir D]   (re)generate figures/cover.png via `sidecar imagine`");
   info("  list [--dir D]");
+  info("  publish <slug|dir> [--to zenodo|arxiv|both] [--sandbox] [--source] [--dir D]   deploy: Zenodo create→upload→metadata→publish (mints DOI) · arXiv submission tarball + guide");
+  info("  update <slug|dir> [--to zenodo|arxiv] [--sandbox] [--source] [--dir D]   Zenodo new-version (replace files, fresh versioned DOI) · arXiv re-package");
+  info("  unpublish <slug|dir> [--dir D]   delete a Zenodo DRAFT deposition (published records are permanent — API cannot delete them)");
+  info("  status <slug|dir> [--dir D]   show the per-paper publish ledger (publish.json)");
   info(`  defaults: dir=${DEFAULT_DIR} · min-pages=${DEFAULT_MIN_PAGES} (g51) · min-figures=${DEFAULT_MIN_FIGURES} (NeuroLM bar 9+) · cover size=landscape_16_9 · cover backend=fal (secret get fal.api_key)`);
+  info("  keys (secret CLI · never inline): zenodo.token (prod) · zenodo.sandbox_token (--sandbox) · scopes deposit:write+deposit:actions");
 }
 
 function parseFlags(args: string[]): { pos: string[]; flags: Record<string, string>; bools: Set<string> } {
@@ -394,6 +748,9 @@ function parseFlags(args: string[]): { pos: string[]; flags: Record<string, stri
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--no-cover") bools.add("no-cover");
+    else if (a === "--sandbox") bools.add("sandbox");
+    else if (a === "--source") bools.add("source");
+    else if ((a === "--to" || a === "--target") && i + 1 < args.length) flags["to"] = args[++i];
     else if ((a === "--title" || a === "--subtitle" || a === "--dir" || a === "--min-pages" || a === "--min-figures" || a === "--cover-prompt-file" || a === "-p" || a === "--prompt" || a === "-s" || a === "--size") && i + 1 < args.length) {
       const key = a.replace(/^-+/, "").replace("prompt", "p") === "p" ? "p" : a.replace(/^-+/, "");
       flags[key === "size" ? "s" : key] = args[++i];
@@ -468,6 +825,18 @@ export async function runPaper(args: string[]): Promise<number> {
     return cover(pdir, prompt, size);
   }
 
-  loudFail(`paper: unknown subcommand '${sub}' — one of: new · build · cover · list · help`);
+  if (sub === "publish" || sub === "update" || sub === "unpublish" || sub === "status") {
+    const target = pos[0];
+    if (!target) {
+      loudFail(`paper ${sub}: usage: sidecar paper ${sub} <slug|dir> [--to zenodo|arxiv|both] [--sandbox] [--source]`);
+      return 1;
+    }
+    const pdir = paperDir(target, dir);
+    if (sub === "status") return publishStatus(pdir);
+    const to = (flags["to"] || "zenodo").toLowerCase();
+    return runPublish(sub, pdir, to, bools.has("sandbox"), bools.has("source"));
+  }
+
+  loudFail(`paper: unknown subcommand '${sub}' — one of: new · build · cover · list · publish · update · unpublish · status · help`);
   return 1;
 }

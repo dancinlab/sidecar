@@ -121,9 +121,10 @@ hook delegates (wire these into your agent's settings.json):
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]
                            transactional email via Postmark API (POST /email) — token from \`secret get postmark.server_token\` (curl -K · never in argv)
                            | history [--count N][--offset N][--tag t][--json][--local] | list | help
-  paper <new|build|cover|list> [slug] [flags]   demiurge-house scientific paper: scaffold (emoji title · g5 tier badges ·
-                           TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate
-                           history [-b][-m][--start][--limit][--status][--local][--json] — past prompts (fal API / local ledger)
+  paper <new|build|cover|list|publish|update|unpublish|status> [slug] [flags]   demiurge-house scientific paper: scaffold (emoji title ·
+                           g5 tier badges · TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate
+                           publish --to zenodo|arxiv|both [--sandbox][--source]: Zenodo REST lifecycle (DOI) · arXiv submission tarball+guide (no API)
+                           update (Zenodo new-version) · unpublish (delete Zenodo draft) · status — keys via \`secret get zenodo.token\`
 
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + convergence checks

@@ -114,6 +114,10 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - do: 파일·폴더는 그 생태계 canonical native 이름 하나 · 제자리 update-in-place · 진짜 버저닝(공개 API `v1/`/`v2/`)은 `@canonical-ok` 마커로 정당화
 - dont: `_v2`·`_final`·`_copy`·`_new`·`_old`·`_orig`·`_bak`·`_draft`·`_fix`·`_wip`·`foo 2`·`foo(1)` 등 이력을 파일명에 박기 (이력은 git)
 
+## native-canonical-first — native·canonical 방식 최우선 (위반 발견 시 개선)
+- do: 무언가를 구현·해결할 땐 그 생태계·플랫폼·언어·도구의 **native·canonical(정석) 방식을 최우선**으로 — 표준 primitive/내장 기능/관용 패턴을 먼저 찾아 쓴다 · 그런 native 경로가 없을 때만 직접 구현 (그때도 정답지 있으면 `reference-match`) · 작업 중 native 가 있는데 bespoke 로 우회한 **기존 위반을 발견하면 그 자리에서 native·canonical 로 개선**(surgical 범위 내 · 발견은 묻어두지 말 것)
+- dont: native primitive 가 있는데 손수 재구현(reinvent) · canonical 경로 위에 불필요한 wrapper/shim/shadow/monkey-patch/fork 덧대기 · "일단 돌아가니" 비정석 우회를 그대로 방치(발견하고도 미개선) · native 회피를 `@root-cause-ok` 없이 정당화
+
 ## tool-self-report — 도구 능력은 그 도구에 물어라
 - do: 도구의 서브시스템·능력·가속(GPU)·빌드변종·버전 상태는 그 도구 자신(`<tool> --help`/상태 서브커맨드)으로 확인 (예: hexa GPU 상태 = `hexa gpu`) · 릴리스/CLI 갱신 시 self-report 출력 lockstep
 - dont: stale 문서·기억 추측 · repo-내부 README/ARCHITECTURE 로 cross-repo 능력 추정(그 repo 밖에선 안 보임)

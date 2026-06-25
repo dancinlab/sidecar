@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## feat(commons): native-canonical-first 규칙 — 정석(native·canonical) 방식 최우선 + 위반 발견 시 개선
+
+🗣️ "commons 에 강화해줘 => native, canonical 방식 최우선, 위반 발견시 개선"
+
+- 동기: 유저 — 구현·해결 시 생태계의 native·canonical(정석) 경로를 1순위로 쓰고, 작업 중 비정석 우회(기존 위반)를 발견하면 그 자리에서 고치라는 always-on 거버넌스 원칙을 commons SSOT 에 박음.
+- 신규 slug `native-canonical-first`(canonical-* 패밀리 옆 배치):
+  - do: native primitive/내장/관용 패턴 우선 → 없을 때만 직접 구현(정답지 있으면 `reference-match`) → 발견한 기존 위반은 surgical 범위 내 즉시 native 로 개선(묻어두지 않음).
+  - dont: native 있는데 재구현 · canonical 위 불필요 wrapper/shim/shadow/fork · 비정석 우회 방치(발견하고도 미개선) · `@root-cause-ok` 없이 native 회피 정당화.
+- 기존 규칙과 경계: `canonical-cli`(정해진 명령 사용)·`canonical-naming`(이름)·`reference-match`(정답지 대조)·`root-cause`(증상 아닌 원인)와 겹치지 않게 **구현 방식 자체의 원칙**으로 한정 — commons 29개 규칙.
+- 검증: `commons show` 새 규칙 렌더 · do/dont-only 게이트 통과 · `commons inject` 유효 JSON emit.
+
 ## fix(recommend): FIXED-AXIS 행동명령 front-load — 고정축 선택이 박스에서 멈추던 회귀
 
 🗣️ "진행중 추천4축 질의시에 선택이 있으면 선택으로 바로 진행되도록 해줘" (선택 = standing 고정축)

@@ -380,9 +380,9 @@
               },
               {
                 "이름": "ing",
-                "역할": "진행보드 + cross-repo 인계 (전용 `ing` git ref)",
+                "역할": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
                 "구분": "module",
-                "상세": "work/next/pod · `add --to <repo>` 는 형제 repo 보드로 전달 — 단 upstream(hexa/hexa-lang/demiurge) 으로 '결함 수정'을 인계하면 차단(commons upstream-fix 이빨 · @convergence upstream-fix-handoff · 신규 TODO 만 허용)",
+                "상세": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다.",
                 "children": [
                   {
                     "이름": "저장 = ing ref (worktree 아님)",
@@ -392,7 +392,7 @@
                   {
                     "이름": "verb 의미 · stdin",
                     "구분": "detail",
-                    "상세": "`add --to <repo>`=형제 프로젝트 ing ref 에 from 태그 직접 전달(구 handoff 흡수). done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 중단작업 복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피."
+                    "상세": "add=work · next=다음 · done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 중단작업 복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피."
                   },
                   {
                     "이름": "적체 방지 (나이 게이트)",

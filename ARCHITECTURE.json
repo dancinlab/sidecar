@@ -382,9 +382,9 @@
           },
           {
             "이름": "Stop",
-            "역할": "에이전트 응답 종료 → ing staleness-check + convergence due-check",
+            "역할": "에이전트 응답 종료 → recommend stop-check(auto-proceed 강제) + ing staleness-check",
             "구분": "surface",
-            "상세": "c6 ing-staleness warn: 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. warn-only(강제 불가 — '이 편집이 ing 갱신 대상'의 ground truth 없음). + c1 convergence due-check: 재발 캡처-토큰 부채가 미해소(세션 중 재발 신호는 떴는데 @convergence 마커 미작성)면 1회 환기 후 reset. 둘 다 warn-only · stderr"
+            "상세": "recommend stop-check(decision:block): non-present default mode 인데 답변이 4축 박스/`🤖 ... auto-pick` 줄에서 끝났으면(endsOnBox — 실제 auto-pick 마커 + 트레일링 ~6줄에 박스 잔존) 모델을 강제로 깨워 챔피언 실행시킴. 루프 가드는 네이티브 `stop_hook_active` 플래그(체인당 1회). present/박스없음/작업수행후는 no-op · 파싱실패 silent. (modules/recommend.ts) — 유일하게 모델을 재호출하는 메커니즘이라 advisory 대신 block 사용. + c6 ing-staleness warn: 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋(warn-only · stderr · 강제 불가 — ground truth 없음)"
           },
           {
             "이름": "PreCompact·PostCompact",

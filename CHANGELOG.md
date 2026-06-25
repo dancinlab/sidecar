@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(recommend): 4축 auto-proceed 기계적 백스톱 — Stop 훅 `recommend stop-check` (박스에서 멈추면 강제 진행)
+
+🗣️ "4축 선택사항 뜰때 auto pick 진행이 잘안되네 autopick 이라고는 뜨는데 자동진행 강화가 좀더 필요"
+
+- 진단: auto/fixed-axis 모드의 auto-proceed 는 **전부 프롬프트 지시문**(`defaultDirective()`)뿐이라 강제력이 없었다 — 모델이 박스 + `🤖 ... auto-pick` 줄을 그리고 그대로 턴을 끝내는 게 재발(박스가 "멈출 지점"으로 학습됨). advisory(systemMessage)는 모델을 다시 깨우지 못해 실효 없음 → 모델을 이어가게 하는 유일한 메커니즘은 Stop `decision:block`.
+- 신규(`modules/recommend.ts` `stop-check`): Stop 훅이 마지막 assistant 메시지를 읽어 **박스에서 끝났는지** 판정(`endsOnBox` — 실제 auto-pick 마커가 있고 + 트레일링 ~6줄에 박스/auto-pick 줄 잔존) → 비-present 모드면 `{"decision":"block","reason":…}` 출력해 모델을 강제로 깨워 챔피언 실행. 루프 가드는 **네이티브** — CC 가 주는 `stop_hook_active` 플래그로 체인당 1회만(마커파일 불필요). present 모드(박스에서 멈춤이 정답)·박스없음·작업수행후 요약은 모두 no-op. 파싱/IO 실패는 silent no-op(세션 못 막게).
+- Layer 1(지시문 강화): fixed/auto directive 에 `⛔ HARD STOP RULE` 추가 — "답변의 마지막은 반드시 실제 작업(도구호출/변경/결과)이지 박스가 아니다 · 백스톱이 강제한다" 명시(recency).
+- 배선: `hooks/hooks.json` + `modules/setup.ts`(install-hooks settings.json 미러) Stop 배열에 `recommend stop-check` 를 staleness-check 앞에 추가(둘 다 실행 · staleness 는 warn-only stderr).
+- 검증: tsc clean · help 로드 OK · QA 5축 ALL PASS — ①박스종료+complete=block ②stop_hook_active=no(루프가드) ③작업수행=no ④박스없음=no ⑤present모드=no · inject 에 HARD STOP RULE 실림 확인.
+
 ## chore(convergence): 파일-터치 시 학습 주입 비활성화 (주석 처리 · 효용 불확실)
 
 🗣️ "이건 근데 애매하다 / 주석처리로 기능 꺼줘"

@@ -52,7 +52,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar worktree gc"),
       entry("sidecar ing inject"),
     ],
-    Stop: [entry("sidecar ing staleness-check")],
+    Stop: [entry("sidecar recommend stop-check"), entry("sidecar ing staleness-check")],
     // Compaction survival — the per-turn injects (commons/recommend/prefs/easy) ride
     // UserPromptSubmit so they always return, but the SESSION-scoped injects
     // (architecture·git-context·toolkit·companions·ing) only fire at SessionStart and

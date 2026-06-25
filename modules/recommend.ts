@@ -55,11 +55,97 @@ function defaultDirective(): string {
   const mode = readDefault();
   if (mode === "present") return "";
   if (mode === "auto") {
-    return "\n# default mode: AUTO (4축 합의기준 자동) — score the candidate options on ALL four axes (완성도·단순·안전·표준, 1–5, weighted avg 1:1:1:1, tie→안전), auto-pick the consensus winner, render the r2 box THEN one conclusion line `🤖 4축 auto-pick: <안> (완성도=X 단순=Y 안전=Z 표준=W · weighted=<sum>)`; decide for the user, do NOT wait (r4). ALSO governs /sbs when no explicit mode token is given.\n";
+    return "\n# default mode: AUTO (4축 합의기준 자동) — score the candidate options on ALL four axes (완성도·단순·안전·표준, 1–5, weighted avg 1:1:1:1, tie→안전), auto-pick the consensus winner, render the r2 box THEN one conclusion line `🤖 4축 auto-pick: <안> (완성도=X 단순=Y 안전=Z 표준=W · weighted=<sum>)`; decide for the user, do NOT wait (r4). ALSO governs /sbs when no explicit mode token is given.\n# ⛔ HARD STOP RULE — the LAST thing in your reply MUST be the actual work (a tool call / the executed change / its result) — NEVER the box or the `🤖 ... auto-pick` line. Ending the turn right after the auto-pick conclusion is the bug: keep going and DO the picked winner now. A Stop-hook backstop (`recommend stop-check`) will force you to continue if you stop on the box.\n";
   }
   const a = axisLabel(mode);
   if (!a) return "";
-  return `\n# default mode: FIXED ${a} (STANDING SELECTION · auto-proceed) — ⚡ BEHAVIORAL MANDATE FIRST: a standing selection (${a}) is already set, so the 4-axis box is informational ONLY and is NEVER a stop point — in the SAME turn AUTO-PROCEED with this axis's champion and CONTINUE straight into executing it; do NOT end your turn on the box, do NOT ask "진행할까요?", do NOT wait for a re-pick (the user already chose this axis = the selection). Then render the box for trade-off visibility: ★-mark this axis line IN PLACE + append \`  ← 기본값\`, STILL render all four lines, + one conclusion line \`🤖 고정축 auto-pick: <안> (${a} 기준)\` immediately followed by the actual work (r4). ALSO governs /sbs with ${a} forced.\n`;
+  return `\n# default mode: FIXED ${a} (STANDING SELECTION · auto-proceed) — ⚡ BEHAVIORAL MANDATE FIRST: a standing selection (${a}) is already set, so the 4-axis box is informational ONLY and is NEVER a stop point — in the SAME turn AUTO-PROCEED with this axis's champion and CONTINUE straight into executing it; do NOT end your turn on the box, do NOT ask "진행할까요?", do NOT wait for a re-pick (the user already chose this axis = the selection). Then render the box for trade-off visibility: ★-mark this axis line IN PLACE + append \`  ← 기본값\`, STILL render all four lines, + one conclusion line \`🤖 고정축 auto-pick: <안> (${a} 기준)\` immediately followed by the actual work (r4). ALSO governs /sbs with ${a} forced.\n# ⛔ HARD STOP RULE — the LAST thing in your reply MUST be the actual work (a tool call, the executed change, or its result) — NEVER the box or the \`🤖 ... auto-pick\` line. If you notice you are about to end the turn right after the auto-pick conclusion, THAT is the bug: keep going and DO the picked champion now. A Stop-hook backstop (\`recommend stop-check\`) will detect a turn that ends on the box and force you to continue — don't make it have to.\n`;
+}
+
+// ── stop-check: mechanical backstop for auto-proceed ─────────────────────────
+// The default-mode directive (above) is advisory — it TELLS the model to proceed
+// past the 4-axis box, but nothing forces it. In auto/fixed-axis mode the model
+// still sometimes renders the box + `🤖 ... auto-pick` line and then ENDS the turn
+// (the box reads as a stop point). This Stop hook is the teeth: it reads the final
+// assistant message; if the turn ended ON the box (auto-pick line / box border in
+// the trailing region) while a non-present default is active, it emits a Stop
+// `decision:block` so Claude Code re-invokes the model to actually do the work.
+//
+// Loop guard is NATIVE: Claude Code sets `stop_hook_active:true` on the payload of
+// a Stop that was itself triggered by a prior Stop-block — we bail on that, so we
+// nudge at most ONCE per chain (no marker file needed).
+const AUTOPICK_RE = /🤖[^\n]*auto-pick/; // the conclusion line emitted only on a real auto-pick
+const BOX_TAIL_RE = /(🤖[^\n]*auto-pick|^[│└┌├].*추천|추천 \(4축\)|^└[─]{3,})/m;
+
+// Pull the text of the LAST assistant message from a transcript JSONL file.
+function lastAssistantText(transcriptPath: string): string {
+  let raw = "";
+  try {
+    raw = readFileSync(transcriptPath, "utf8");
+  } catch {
+    return "";
+  }
+  let last = "";
+  for (const line of raw.split("\n")) {
+    const s = line.trim();
+    if (!s) continue;
+    let j: any;
+    try {
+      j = JSON.parse(s);
+    } catch {
+      continue;
+    }
+    const type = j.type ?? j.message?.role;
+    if (type !== "assistant") continue;
+    const content = j.message?.content ?? j.content;
+    let text = "";
+    if (typeof content === "string") text = content;
+    else if (Array.isArray(content))
+      text = content
+        .filter((c: any) => c && (c.type === "text" || typeof c.text === "string"))
+        .map((c: any) => c.text ?? "")
+        .join("\n");
+    if (text.trim()) last = text;
+  }
+  return last;
+}
+
+// True when the message ENDS on the recommendation box (premature stop): an
+// auto-pick / box marker appears within the trailing region and nothing of
+// substance follows it. We look at the last ~6 non-empty lines so "box, then did
+// the work, then summarized" (marker far above) does NOT trip.
+function endsOnBox(text: string): boolean {
+  if (!text || !AUTOPICK_RE.test(text)) return false; // no real auto-pick rendered at all
+  const lines = text.replace(/\s+$/, "").split("\n");
+  const tail = lines.filter((l) => l.trim()).slice(-6).join("\n");
+  return BOX_TAIL_RE.test(tail);
+}
+
+// Stop-hook entry. Reads the Stop payload (stdin JSON), and if a non-present
+// default mode is active AND the turn ended on the box, blocks to force the model
+// to proceed with the auto-picked champion. Best-effort: any parse/IO failure is a
+// silent no-op (never wedge a session on this backstop).
+function runStopCheck(): number {
+  let payload: any;
+  try {
+    payload = JSON.parse(readStdin());
+  } catch {
+    return 0;
+  }
+  if (payload?.stop_hook_active) return 0; // native loop guard — we already nudged
+  const mode = readDefault();
+  if (mode === "present" || !mode) return 0; // present = stopping on the box IS correct
+  const tp = payload?.transcript_path ?? payload?.transcriptPath;
+  if (!tp) return 0;
+  if (!endsOnBox(lastAssistantText(String(tp)))) return 0;
+  const axis = AXES.has(mode) ? axisLabel(mode) : mode === "auto" ? "4축 합의" : mode;
+  const reason =
+    `당신의 답변이 추천 4축 박스 / \`🤖 ... auto-pick\` 줄에서 끝났다 — 그건 멈출 지점이 아니다 ` +
+    `(default mode=${mode}${AXES.has(mode) ? ` · ${axis}` : ""}). 사용자는 이미 이 축을 standing selection 으로 골랐다. ` +
+    `지금 그 auto-pick 챔피언을 실제로 실행하라(되묻지 말 것) — 그 작업의 도구 호출/변경/결과로 이어가라. ` +
+    `로컬·가역·비파괴면 anti-punt 로 그냥 진행한다.`;
+  process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+  return 0;
 }
 
 function body(): string {
@@ -188,6 +274,9 @@ export async function runRecommend(args: string[]): Promise<number> {
     resolveMode(args.slice(1).join(" "));
     return 0;
   }
-  info("usage: sidecar recommend {inject|show|set-default|clear-default|get-default|resolve-mode}");
+  if (sub === "stop-check") {
+    return runStopCheck();
+  }
+  info("usage: sidecar recommend {inject|show|set-default|clear-default|get-default|resolve-mode|stop-check}");
   return 1;
 }

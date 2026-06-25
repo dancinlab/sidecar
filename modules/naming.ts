@@ -33,12 +33,19 @@ export interface NamingHit {
   kind: "file" | "dir";
 }
 
+// Trees where history-in-name is intentional (frozen snapshots) or transient, so a
+// version/copy suffix there is NOT naming debt: `archive/` = deliberately frozen
+// history · `.verdicts/` = transient verdict logs (preserve-state migrates these to
+// state/ separately). Skipped wholesale from the audit.
+const IGNORE_PATH = /(^|\/)(archive|\.verdicts)\//;
+
 // Audit a list of repo-relative paths. Each path's file basename AND every directory
 // segment is checked once (a bad dir is reported once, not per file under it).
 export function auditNames(paths: string[]): NamingHit[] {
   const hits: NamingHit[] = [];
   const seenDir = new Set<string>();
   for (const p of paths) {
+    if (IGNORE_PATH.test(p)) continue;
     const segs = p.split("/").filter(Boolean);
     for (let i = 0; i < segs.length; i++) {
       const seg = segs[i];

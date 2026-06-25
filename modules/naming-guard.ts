@@ -15,7 +15,13 @@ import { basename, extname, dirname } from "node:path";
 // matched only at the END of the name stem (so `final_report` is fine, `report_final` warns).
 // NOTE: deliberately excludes `test`/`spec` — `_test.go`·`_test.py`·`.spec.ts` are
 // CANONICAL test naming, not version suffixes (flagging them would warn on every edit).
-const SUFFIX = /[ _-](v\d+|version\d*|ver\d+|rev\d+|final\d*|copy\d*|new|old|orig|original|prev|previous|bak|backup|draft\d*|fixed|fix|wip|temp|tmp)$/i;
+// `version` REQUIRES a digit (`version2`) — bare `_version` is a canonical module/file
+// name (version.ts · gtk_version.zig · app_version.py), not a history suffix.
+const SUFFIX = /[ _-](v\d+|version\d+|ver\d+|rev\d+|final\d*|copy\d*|new|old|orig|original|prev|previous|bak|backup|draft\d*|fixed|fix|wip|temp|tmp)$/i;
+// platform-native suffixes that LOOK like a version token but are mandated conventions,
+// NOT history baked into the name. Android resource qualifiers (`values-v26`,
+// `mipmap-anydpi-v26`, `drawable-night-v21`) carry a required `-v<API>` level — exempt.
+const PLATFORM_NATIVE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-v\d{2,}$/;
 // macOS / download duplicate markers: "foo 2.ts", "foo(1).ts", "foo - copy.ts"
 const DUP = /( \d+|\(\d+\)|[ _-]copy)$/i;
 // an explicit opt-out: a name carrying this marker is intentional (e.g. real API versioning)
@@ -23,6 +29,7 @@ const ALLOW = /@canonical-ok/;
 
 export function offendingToken(name: string): string | null {
   if (!name) return null;
+  if (PLATFORM_NATIVE.test(name)) return null; // Android res qualifier etc. — native, not history
   const ext = extname(name);
   const stem = ext ? name.slice(0, -ext.length) : name;
   if (!stem) return null;

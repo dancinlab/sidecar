@@ -232,7 +232,7 @@
                 "이름": "naming",
                 "역할": "repo 전수 비-canonical 이름 audit (write-guard 의 backlog 짝)",
                 "구분": "module",
-                "상세": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름(`offendingToken` 재사용 = naming-guard 와 동일 판정) 전수 스캔. write-time naming-guard 는 새 파일만 막아 기존 backlog(이미 커밋된 `_v2`·`config copy` 등)는 못 보던 갭을 메움. 기본 read-only 보고(exit 0) · `--gate` 면 위반 시 exit 1(commit/CI 게이트) · `--ing` 면 요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo naming 감사는 각 repo 안에서 이 명령을 돌려 그 repo ING 에 착지"
+                "상세": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름(`offendingToken` 재사용 = naming-guard 와 동일 판정) 전수 스캔. write-time naming-guard 는 새 파일만 막아 기존 backlog(이미 커밋된 `_v2`·`config copy` 등)는 못 보던 갭을 메움. 기본 read-only 보고(exit 0) · `--gate` 면 위반 시 exit 1(commit/CI 게이트) · `--ing` 면 요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo naming 감사는 각 repo 안에서 이 명령을 돌려 그 repo ING 에 착지. 생태계-native 이름 면제(오탐 방지 · native-canonical-first): Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)"
               },
               {
                 "이름": "install",

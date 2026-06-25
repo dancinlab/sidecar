@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## fix(naming): audit/guard 오탐 정밀화 — 생태계-native 이름은 면제 (native-canonical-first)
+
+🗣️ cross-repo 감사 결과 생태계-native 이름이 대량 오탐됨 — Android 리소스 한정자 `mipmap-anydpi-v26`·`values-v26`, `gtk_version.zig`/`adw_version.zig` 같은 `_version` 모듈명, `archive/`·`.verdicts/` 내부 이력 파일. 정석을 강제하는 도구가 정석을 오탐하면 native-canonical-first 위반.
+
+- 공유 regex(`naming-guard.ts` · guard+audit 동시 적용): `version\d*`→`version\d+` (bare `_version`·`version.ts` 는 canonical 파일명이라 면제 · `version2` 만 위반) + 신규 `PLATFORM_NATIVE` 면제(`^[a-z][a-z0-9]*(-[a-z0-9]+)*-v\d{2,}$` = Android res 한정자 `-v<API>`).
+- audit 경로 무시(`naming.ts`): `archive/`(의도된 frozen 이력)·`.verdicts/`(전이 로그·preserve-state 가 state/ 로 별도 이관) 트리는 naming 부채가 아니라 wholesale 스킵.
+- 검증: tsc clean · 오탐 5종 모두 null(Android 한정자·`_version`·`version.ts`) · 진짜 위반 유지(`model_v2`·`utils_old`·`config copy`·`V10`·`src_v10`) · guard bash detector 회귀 없음(`mv→model_v2.ts` 차단 · `mkdir res/values-v26` 통과) · 경로무시 정확.
+
 ## feat(naming): repo 전수 비-canonical 이름 audit 명령 — write-guard 의 backlog 짝 (canonical-naming 강제)
 
 🗣️ "리포들이 거버넌스 규칙대로 단순·일관·canonical·native naming 지키도록 강제 메커니즘 강화" (A) + "감사결과는 각 repo ING 에만" 

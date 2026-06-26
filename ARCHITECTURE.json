@@ -540,7 +540,7 @@
                     "이름": "DODONT-LONG (4h)",
                     "역할": "do/dont 길이 cap (block)",
                     "구분": "check",
-                    "상세": "staged **commons.md + 루트 CLAUDE.md** 의 do/dont **엔트리**(=`- do:` 줄 + 뒤따르는 `  ` 들여쓰기 연속줄 전부 합산) codepoint 길이가 `lint.dodontCap`(기본 200) 초과 신규/증가면 차단 — 연속줄로 쪼개 cap 우회하는 회피 차단. HEAD 와 diff-aware(slug|kind|idx 키)라 기존 긴 줄 grandfather, Write·Edit 모두 커버. 서브폴더 CLAUDE.md 는 자유양식 제외. archive_sidecar tape-lint #2 포팅"
+                    "상세": "staged **commons.md + 루트 CLAUDE.md** 의 do/dont **엔트리**(=`- do:` 줄 + 뒤따르는 `  ` 연속줄 전부 합산 → 연속줄로 쪼개 cap 우회 차단) codepoint 길이가 `lint.dodontCap`(기본 200) 초과 신규/증가면 차단. HEAD diff-aware 라 기존 긴 줄 grandfather · Write·Edit 커버 · 서브폴더 CLAUDE.md 제외. archive_sidecar tape-lint #2 포팅"
                   },
                   {
                     "이름": "FOLDER-GUIDE-MISSING (4i)",

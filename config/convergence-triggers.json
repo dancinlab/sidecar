@@ -1,0 +1,13 @@
+{
+  "_doc": "Recurrence-signal patterns scanned against the AI AGENT's OWN output (last assistant message) at session Stop — NOT the user prompt. When the agent's reply mentions a recurring defect/regression, `sidecar architecture convergence stop-check` surfaces a once-per-session nudge to record the root-cause learning into ARCHITECTURE.json `convergence.records[]` (commons root-cause). Plain substrings match literally (case-insensitive); warn-only, never blocks (recurrence words false-positive). Override per-repo at .harness/convergence-triggers.json.",
+  "patterns": [
+    "또 터졌", "또 그러", "또 발생", "또 깨졌", "또 실패", "또 났", "다시 발생", "재발", "회귀", "재현됐",
+    "두 번째", "두번째", "똑같은 버그", "똑같은 문제", "똑같은 실수", "같은 결함", "같은 버그", "같은 실수",
+    "예전 버그", "전에도", "지난번에도", "previously fixed", "already fixed", "reintroduc", "reopened",
+    "same bug", "same defect", "same mistake", "same issue", "broke again", "again broke", "back again",
+    "yet again", "keeps breaking", "keeps failing", "regression", "recurr",
+    "OOM", "oom-kill", "out of memory", "메모리 부족", "SIGSEGV", "segfault", "segmentation fault",
+    "signal 11", "크래시", "core dump", "코어 덤프", "패닉", "panic", "🔴", "❌"
+  ],
+  "hint": "재발 신호 — 같은 원인의 결함/실수가 또 보인다(첫 발생이 아니라 재발). 그 학습을 설계 SSOT 한곳에 박아 같은 결함 재도입을 막아라. ① 기존 기록 확인: `sidecar architecture convergence list` ② 추가/갱신(id-keyed upsert): `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심 학습>\" --threshold \"<재발조건/해결>\" --source <원인파일>`. 인라인 @convergence 주석·별도 incident 트래커로 흩지 말 것 (commons root-cause)."
+}

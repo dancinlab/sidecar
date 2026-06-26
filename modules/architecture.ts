@@ -7,8 +7,10 @@
 //
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { REPO_ROOT } from "../lib/paths.ts";
+import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
 import { readStdin } from "../lib/exec.ts";
+import { resolveRuleFile } from "../lib/config.ts";
+import { lastAssistantText } from "./recommend.ts";
 import { info, ok, loudFail } from "../lib/log.ts";
 
 // Cap injected size so a huge tree never blows the context window. ~80 KB is
@@ -154,6 +156,7 @@ function writeConvergence(records: ConvergenceRecord[]): boolean {
 
 async function convergenceVerb(args: string[]): Promise<number> {
   const verb = args[0] ?? "list";
+  if (verb === "stop-check") return convergenceStopCheck();
   const records = loadConvergence();
 
   if (verb === "list") {
@@ -210,8 +213,84 @@ async function convergenceVerb(args: string[]): Promise<number> {
     return 0;
   }
 
-  info("usage: sidecar architecture convergence {list|add|rm <id>|edit <id> [--state|--value|--threshold|--source]}");
+  info("usage: sidecar architecture convergence {list|add|rm <id>|edit <id> [--state|--value|--threshold|--source]|stop-check}");
   return 1;
+}
+
+// --- convergence stop-check: agent-OUTPUT recurrence trigger (Stop hook) -------
+// The trigger scans the AI agent's OWN last message (NOT the user prompt) for
+// recurrence-signal words; when the agent itself reports a recurring defect /
+// regression / crash-class signal, it nudges (once per session) to record the
+// root-cause learning into ARCHITECTURE.json `convergence.records[]` (root-cause).
+// Patterns live as DATA (config/convergence-triggers.json · per-repo override at
+// .harness/convergence-triggers.json) — the engine never hardcodes them.
+// Mirrors `recommend stop-check`: reads the Stop stdin payload, pulls the last
+// assistant text, and on a hit emits decision:block ONCE to re-prompt the agent to
+// record. Native loop guard (stop_hook_active) + a per-transcript once-file keep it
+// from looping or re-nudging the same session every turn. Best-effort: any IO/parse
+// failure is a silent no-op (never wedge a session on this advisory backstop).
+interface ConvergenceTriggers {
+  patterns?: string[];
+  hint?: string;
+}
+
+function loadTriggers(): ConvergenceTriggers {
+  const file = resolveRuleFile("convergence-triggers.json", "convergence-triggers.json");
+  try {
+    return JSON.parse(readFileSync(file, "utf8")) as ConvergenceTriggers;
+  } catch {
+    return {};
+  }
+}
+
+const NUDGE_STATE = resolve(LOG_DIR, "convergence-nudge.json");
+
+function alreadyNudged(transcript: string): boolean {
+  try {
+    const j = JSON.parse(readFileSync(NUDGE_STATE, "utf8")) as { transcript?: string };
+    return j.transcript === transcript;
+  } catch {
+    return false;
+  }
+}
+
+function markNudged(transcript: string): void {
+  try {
+    writeFileSync(NUDGE_STATE, JSON.stringify({ transcript }) + "\n");
+  } catch {
+    /* best-effort — a missed mark only risks one extra nudge next turn */
+  }
+}
+
+function convergenceStopCheck(): number {
+  let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
+  try {
+    payload = JSON.parse(readStdin());
+  } catch {
+    return 0;
+  }
+  if (payload?.stop_hook_active) return 0; // native loop guard — already nudged this chain
+  const tp = payload?.transcript_path ?? payload?.transcriptPath;
+  if (!tp) return 0;
+  const transcript = String(tp);
+  if (alreadyNudged(transcript)) return 0; // one convergence nudge per session, not per turn
+  const text = lastAssistantText(transcript);
+  if (!text) return 0;
+
+  const { patterns, hint } = loadTriggers();
+  if (!patterns?.length) return 0;
+  const hay = text.toLowerCase();
+  const matched = patterns.find((p) => hay.includes(p.toLowerCase()));
+  if (!matched) return 0;
+
+  markNudged(transcript);
+  const reason =
+    `재발 신호 감지 — 네 답변에 "${matched}" 가 보인다(에이전트-출력 트리거). ` +
+    (hint ??
+      "같은 원인의 결함이 두 번째라면, 그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라: `sidecar architecture convergence list` 로 기존 확인 후 `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심>\" --threshold \"<재발조건/해결>\" --source <원인파일>` (commons root-cause).") +
+    " (첫 발생·일반 언급이면 무시하고 그냥 멈춰도 된다 — 이 넛지는 세션당 1회 advisory.)";
+  process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+  return 0;
 }
 
 // architecture lint - c4 tree_convention enforcement.

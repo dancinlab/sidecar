@@ -78,7 +78,9 @@ const AUTOPICK_RE = /🤖[^\n]*auto-pick/; // the conclusion line emitted only o
 const BOX_TAIL_RE = /(🤖[^\n]*auto-pick|^[│└┌├].*추천|추천 \(4축\)|^└[─]{3,})/m;
 
 // Pull the text of the LAST assistant message from a transcript JSONL file.
-function lastAssistantText(transcriptPath: string): string {
+// Exported so other Stop-hook scanners (e.g. architecture convergence stop-check)
+// reuse one transcript reader instead of duplicating the JSONL parse.
+export function lastAssistantText(transcriptPath: string): string {
   let raw = "";
   try {
     raw = readFileSync(transcriptPath, "utf8");

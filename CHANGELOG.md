@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## fix(pr-cycle): fall back to `main` when the remote HEAD symref is unset
+
+The doc-gate base was `git rev-parse --abbrev-ref origin/HEAD` stripped of `origin/`, with a
+`|| "main"` fallback. But repos created by scaffold (not `git clone`) never get a remote HEAD
+symref, so the command returns the literal `origin/HEAD` → strips to `"HEAD"` — non-empty, so
+the fallback never fired. The gate then diffed `origin/HEAD...HEAD` (a bogus base), saw a tiny
+wrong change set, and fired a misleading "문서 업데이트 필수 — CHANGELOG/ARCHITECTURE/README
+누락" even when those docs WERE updated.
+
+- **modules/pr-cycle.ts** — treat a stripped result of `"HEAD"` (or empty) as "no default
+  known" and fall back to `main`; a real non-main default branch still passes through.
+- Verified the branch logic for `HEAD`/empty/`main`/`develop` inputs. (Sibling scaffold repos —
+  `carbon-capture`, `lumen`, `rtsc`, `echoes` — all lacked the symref; `git remote set-head
+  origin main` fixes a repo, and this hardens the tool so an unset symref no longer misleads.)
+  (Typecheck CI `npx tsc` is unavailable in this environment; change is type-trivial,
+  `node --check` parses clean.)
+
 ## fix(paths): a `.git` dir is a hard boundary for REPO_ROOT discovery
 
 `findRepoRoot()` walked the whole ancestry for a `harness.config.json` BEFORE falling back to the

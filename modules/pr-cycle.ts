@@ -108,8 +108,13 @@ export async function runPrCycle(args: string[]): Promise<number> {
   //    SSOT + README current-info when present). Refuse to ship code without a
   //    CHANGELOG entry. Override: --no-doc.
   if (!args.includes("--no-doc")) {
-    const baseGuess =
-      (await git("git rev-parse --abbrev-ref origin/HEAD 2>/dev/null")).out.replace(/^origin\//, "") || "main";
+    // When the remote HEAD symref is unset (repos created by scaffold rather than
+    // `git clone` never get one), `rev-parse --abbrev-ref origin/HEAD` returns the
+    // literal "origin/HEAD" → strips to "HEAD", which is a bogus base. Treat "HEAD"
+    // (and empty) as "no default known" and fall back to main, else the doc gate
+    // diffs against the wrong base and fires a misleading "docs missing" error.
+    const headRef = (await git("git rev-parse --abbrev-ref origin/HEAD 2>/dev/null")).out.replace(/^origin\//, "");
+    const baseGuess = headRef && headRef !== "HEAD" ? headRef : "main";
     await git(`git fetch -q origin ${JSON.stringify(baseGuess)}`);
     const changed = (await git(`git diff --name-only origin/${baseGuess}...HEAD`)).out.split("\n").filter(Boolean);
     const ignore = /(^|\/)(tests?|__tests__|spec)\/|\.(test|spec)\.[a-z]+$|(^|\/)\.harness(-engine)?\//i;

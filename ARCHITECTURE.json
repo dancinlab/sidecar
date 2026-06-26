@@ -648,7 +648,7 @@
                 "이름": "ci",
                 "역할": "검증 명령 병렬 실행 + CI scaffold",
                 "구분": "module",
-                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1·옛 `verify` 별칭). `ci scaffold` = `.github/workflows/ci.yml` 방출(create-if-absent·러너=config `ci.runner` 기본 ubuntu-latest·러너-브랜드 강제 없음). `ciWorkflowYaml`/`defaultCiSetup` export → `init` 도 동일 생성기로 자동 scaffold"
+                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1·옛 `verify` 별칭). `ci scaffold` = `.github/workflows/ci.yml` 방출(create-if-absent·러너=config `ci.runner` 기본 ubuntu-latest·러너-브랜드 강제 없음). config `ci.fallback` 설정 시 cost-free fast 경로: `pick-runner` dispatch 잡(무료 github-hosted)이 `gh api .../actions/runners` 로 self-hosted pool ONLINE+idle probe → 있으면 self-hosted(public repo 무료 12-core)·없으면 fallback(무료 github-hosted) · `verify` 는 `fromJSON(needs.pick-runner.outputs.runs_on)` · safe-by-construction(probe 에러→fallback·큐 영구대기 0·실선호는 secret `RUNNER_PROBE_TOKEN` admin:read PAT) · Blacksmith 불요. config `ci.cachePaths` → `actions/cache@v4` warm 재사용 스텝. `ciWorkflowYaml`/`runnerToJson`/`defaultCiSetup` export → `init` 도 동일 생성기로 자동 scaffold"
               },
               {
                 "이름": "paper",

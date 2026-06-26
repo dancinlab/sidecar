@@ -1,5 +1,32 @@
 # CHANGELOG
 
+## feat(ci): scaffold cost-free fast CI path — self-hosted pool ▸ github-hosted fallback + warm cache (no Blacksmith)
+
+🗣️ "ci 플러그인 수정 / 기존에 blacksmith 했다가 요금때문에 취소했는데 그래도 최대한 빠른 ci 경로"
+
+`sidecar ci scaffold` 가 만드는 `.github/workflows/ci.yml` 을 fast-free 구조로 업그레이드.
+기존엔 단일 잡 `runs-on: ${ci.runner}`(기본 ubuntu-latest)뿐 — pool 우선·fallback·캐시 없음.
+이제 config `ci.fallback`/`ci.cachePaths`(둘 다 optional·미설정=기존 단일잡 그대로=하위호환):
+
+- **`ci.fallback`** 설정 시 → `pick-runner` dispatch 잡(무료 github-hosted·timeout 2분)이
+  `gh api .../actions/runners` 로 self-hosted pool 의 ONLINE+idle 러너를 probe →
+  있으면 `ci.runner`(self-hosted·public repo 무료 12-core), 없으면 `ci.fallback`(무료 github-hosted).
+  `verify` 잡은 `runs-on: ${{ fromJSON(needs.pick-runner.outputs.runs_on) }}`.
+  **safe-by-construction**: probe 에러(PAT 부재 403·offline) → fallback 이라 CI 가 영구 큐대기 안 함.
+  pool 선호를 실제 켜려면 repo secret `RUNNER_PROBE_TOKEN`(admin:read PAT) — 없으면 안전하게 무료 fallback.
+- **`ci.cachePaths`** 설정 시 → checkout 뒤 `actions/cache@v4` 스텝(`key=os-proj-ci-<sha>` +
+  `restore-keys` warm 재사용). ccache/툴체인/deps 따뜻하게 재사용 = 반복 빌드 가속.
+- `runnerToJson()` 헬퍼: `[self-hosted, Linux, X64]` YAML 리스트 ↔ JSON 배열 ↔ 단일 라벨 문자열을
+  `fromJSON()` 한 출력으로 통합. `serializeStep` 은 멀티라인 `with` 값(예: cache `path`)을 YAML 리터럴 블록(`|`)으로 emit.
+
+근거: GitHub larger runner 는 public repo 도 per-minute 과금(Blacksmith 와 동일 함정), 표준/self-hosted 러너만
+public repo 무료(GitHub docs). 따라서 "Blacksmith 없이 최대한 빠른 CI" = self-hosted pool 우선 + 무료 fallback + 캐시.
+설계 결정을 일회성 repo 가 아니라 **ci 플러그인 표준**으로 박아 전 repo 전파(root-cause).
+
+검증: `ciWorkflowYaml` 두 변종(no-fallback 하위호환 / fallback+cache) 렌더 → python `yaml.safe_load` 양쪽 OK ·
+`runnerToJson` 3 케이스 ✓ · `cli help` rc=0 로드.
+
+
 ## feat(research): web 검색 + fetch 페이지 서브커맨드 — Claude Code WebSearch/WebFetch 키리스 대응
 
 🗣️ "research 명령어 플러그인에 web 도 추가가능한가 그냥 claude code 가 하는거 그냥 붙이면 될듯"

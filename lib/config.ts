@@ -47,7 +47,11 @@ export interface SidecarConfig {
   // CI scaffold (`sidecar ci scaffold` / `init`) — emits a GitHub
   // Actions workflow that runs `sidecar ci` (verify.checks) on `runner`. `setup`
   // = the stack-specific steps (node/hexa/python …) injected before the verify.
-  ci: { runner: string; setup: CiStep[]; enforceRunner?: boolean };
+  // `fallback` (when set) turns on the cost-free fast path: a tiny dispatch job
+  // prefers the self-hosted pool when a runner is ONLINE+idle, else falls back to
+  // this github-hosted runner — safe by construction (probe error → fallback, so CI
+  // never queues forever). `cachePaths` emits an actions/cache step (warm reuse).
+  ci: { runner: string; setup: CiStep[]; enforceRunner?: boolean; fallback?: string; cachePaths?: string[] };
   lint: {
     freshnessFiles: FreshnessFile[];
     // staged code changes REQUIRE the changelog file to also be staged

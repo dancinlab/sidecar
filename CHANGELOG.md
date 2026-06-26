@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## fix(lint): DODONT-LONG 이 들여쓰기 연속줄까지 합산 — 다중줄 do/dont 길이-cap 회피 차단
+
+🗣️ (anima a_install_canonical 처럼 `- do:` 를 `  ` 연속줄로 쪼개면) "길이 lint 가 안되는거같은데"
+
+- 버그: `dodontEntries` 가 do/dont 길이를 **`- do:` 물리줄 하나(`m[2]`)만** 으로 쟀다. 규칙을 `  ` 들여쓰기 연속줄로 wrap 하면(commons/CLAUDE 양식이 연속줄 허용) 총 내용은 200 초과인데 첫 줄만 짧아 DODONT-LONG 이 안 걸렸다 — 길이 cap 우회.
+- fix: do/dont **엔트리** 길이 = `- do:` 줄 + 뒤따르는 모든 `  ` 연속줄 codepoint 합산(blank/다음 do·dont 에서 종료). write-가드 + commit lint 4h 둘 다 자동 반영(같은 `dodontEntries` 공유).
+- QA(실작성 재현): 다중줄 do 339자 → ✅ 차단 · write-guard deny ✅ · 실제 anima a_install_canonical(do 279자) ✅ 차단 · 짧은 단일줄·짧은 연속줄(합<200) → 오탐 0 · diff-aware grandfather 유지(기존 줄·sidecar 자기 commons/CLAUDE 무영향, lint 그린). tsc clean.
 ## chore(ci): disable Blacksmith — sidecar CI 를 표준 GitHub 러너로, 강제 폐기
 
 🗣️ "blacksmith 사용 해제 해줘 sidecar 에서도"

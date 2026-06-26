@@ -107,19 +107,6 @@ export async function runGap(args: string[]): Promise<number> {
   return 0;
 }
 
-export async function runPoll(args: string[]): Promise<number> {
-  printTemplate("poll");
-  // first numeric arg = requested interval (seconds), clamped to the ≥600s floor; rest = watch target
-  const nums = args.filter((a) => /^\d+$/.test(a));
-  const reqSec = nums.length ? Number(nums[0]) : 0;
-  const floored = reqSec && reqSec < 600;
-  const intervalSec = reqSec ? Math.max(600, reqSec) : 1200;
-  const target = args.filter((a) => !/^\d+$/.test(a)).join(" ").trim();
-  info(`\n# interval: ${intervalSec}s${floored ? ` (requested ${reqSec}s < 600s floor → clamped)` : reqSec ? "" : " (default — no interval given)"}`);
-  info(`# target: ${target || "(none → watch the current in-context background work / fleet / pods)"}`);
-  return 0;
-}
-
 export async function runBypass(_args: string[]): Promise<number> {
   return printTemplate("bypass");
 }

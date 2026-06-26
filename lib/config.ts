@@ -174,12 +174,6 @@ export interface SidecarConfig {
     stack?: string;
     delegate?: string;
   };
-  // poll heartbeat (c21) — a LIVE long-runner (GPU pod · ledger background agent)
-  // must be CHECKED at least every `maxSilenceSec` (default 600 = 10min). This is the
-  // INVERSE of the c19 over-poll floor: it catches NOT polling at all (fire-and-forget
-  // → idle-burn / unharvested result). heartbeat-guard stamps a lastPoll on status
-  // checks and warns past maxSilenceSec.
-  poll: { maxSilenceSec: number };
   ledger: { staleSec: number };
   // ing staleness (c6) — warn at session Stop when ≥ `editThreshold` code files were
   // edited since the ing board was last touched (add/next/done). 0 disables the nudge.
@@ -288,7 +282,6 @@ const DEFAULTS: SidecarConfig = {
   namingGuard: true,
   stateGuard: true,
   askqText: true,
-  poll: { maxSilenceSec: 600 },
   ledger: { staleSec: 3600 },
   ing: { editThreshold: 5, staleDays: 5, maxActive: 12 },
   worktree: { maxAgeDays: 3 },

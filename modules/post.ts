@@ -8,15 +8,6 @@ import { config } from "../lib/config.ts";
 import { postEditNudge } from "./folders.ts";
 import { codeLangViolation } from "./prefs.ts";
 import { lspRebuildOnEdit } from "./lsp.ts";
-import {
-  markPollActivity,
-  staleLongRunnerWarn,
-  liveMarkerSet,
-  activeAgentLabels,
-  detectBackgroundLaunch,
-  recordAutoRunner,
-} from "./heartbeat-guard.ts";
-import { liveLongRunnerLabels } from "./ing.ts";
 import { bumpEditIfCode } from "./ing-staleness.ts";
 import { existsSync, statSync, readFileSync } from "node:fs";
 
@@ -35,22 +26,6 @@ export async function postBash(args: string[]): Promise<number> {
   }
   appendJsonl(LOGS.observations, { kind: "post_bash", exit, cmd_len: cmd.length });
 
-  // c21 heartbeat — stamp on a status-check, then warn if a live long-runner has gone
-  // unchecked past poll.maxSilenceSec. Perf gate: only read the (git-backed) ing pod
-  // board when the .live-runner marker is set or a ledger agent is active.
-  markPollActivity(cmd);
-  // auto-track un-registered fire-and-forget launches (`&`/nohup over a long-runner)
-  // so c21 nags even when `ing pod add`/ledger registration was skipped (#2 strong).
-  const bgLabel = detectBackgroundLaunch(cmd);
-  if (bgLabel) recordAutoRunner(bgLabel, Date.now());
-  if (liveMarkerSet() || activeAgentLabels().length) {
-    const pods = await liveLongRunnerLabels().catch(() => [] as string[]);
-    const warnMsg = staleLongRunnerWarn(pods, config().poll.maxSilenceSec, Date.now());
-    if (warnMsg) {
-      process.stderr.write(`[sidecar warn POLL-HEARTBEAT] ${warnMsg}\n`);
-      appendJsonl(LOGS.observations, { kind: "pre_warn", rule_id: "POLL-HEARTBEAT" });
-    }
-  }
   if (exit !== 0) {
     appendJsonl(LOGS.mistakes, { kind: "bash_fail", exit, cmd: cmd.slice(0, 200) });
     routeError({

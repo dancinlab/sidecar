@@ -17,7 +17,6 @@ import { detectForcePush } from "./git-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
-import { detectShortPollLoop } from "./poll-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 // import { convergenceForFile } from "./architecture.ts"; // convergence-on-touch DISABLED (commented off)
 import { docWriteViolation } from "./docs.ts";
@@ -82,7 +81,7 @@ function loadConfig(): EnforcementConfig {
 // Each carrier may hold the full payload (unwrap `.tool_input`) OR the bare input
 // object directly (use as-is). The env path was the ONLY carrier read before, but
 // current CC does not populate that env var — it pipes JSON on stdin — so every
-// code-level guard (cloud-raw c11 · force-push · poll c19) silently no-op'd on an
+// code-level guard (cloud-raw c11 · force-push) silently no-op'd on an
 // empty command. Read stdin as the working carrier; keep env as back-compat.
 //
 function unwrapToolInput(j: unknown): Record<string, unknown> | null {
@@ -108,8 +107,8 @@ function parseToolInput(): Record<string, unknown> {
 
 // PreToolUse deny. Current Claude Code honors ONLY `hookSpecificOutput.permissionDecision`
 // for PreToolUse — the legacy top-level `decision:"block"` is ignored for this event,
-// so emitting only that made EVERY code-level guard (force-push · cloud-raw c11 · poll
-// c19) and every config `action:"block"` rule a silent no-op (stdout text, zero teeth).
+// so emitting only that made EVERY code-level guard (force-push · cloud-raw c11)
+// and every config `action:"block"` rule a silent no-op (stdout text, zero teeth).
 // We emit the current schema as the operative key and keep the legacy fields appended
 // for older CC builds (harmless — new builds read hookSpecificOutput, old read decision).
 function emitBlock(id: string, reason: string): number {
@@ -202,17 +201,6 @@ export async function preBash(_args: string[]): Promise<number> {
     emitWarn(
       "CLOUD-HANDROLLED-FANOUT",
       `${fanoutLabel} — if this targets a GPU pod, hand-rolling the fanout (then \`hexa cloud copy-to\` + remote run) bypasses structured dispatch, \`pods.json\` registration, and cost accounting. Use \`hexa cloud fire-shards\` (splits the job list into N shards + stagger-launches each as a registered detached job). Local CPU-only batches are fine — ignore if not pod-bound.`
-    );
-  }
-
-  // built-in poll-interval guard — code-level block (c19), runs before config
-  // rules, default-on. A short-interval bash poll loop over an external long-runner
-  // (pod/r2/cloud/training) must poll at ≥30min or be delegated to a sub-agent.
-  const pollLabel = detectShortPollLoop(cmd);
-  if (pollLabel) {
-    return emitBlock(
-      "POLL-INTERVAL",
-      `${pollLabel} — external long-running jobs (GPU pod · remote r2/measure · cloud) must be polled at ≥30min (1800s), not minute-by-minute (commons c19): short intervals bust the prompt cache (5min TTL) for no gain. Lengthen the sleep to ≥1800, or delegate the polling to a sub-agent (worktree-isolated), or register the job with \`sidecar ing pod add\` and check it ≥30min apart. (Fast local/CI waits are exempt — this only fires on external long-runners.)`
     );
   }
 

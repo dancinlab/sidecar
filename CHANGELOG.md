@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## feat(commons): retire the poll discipline — drop poll-min-30m/poll-max-10m rules, both guards, the /poll runbook
+
+🗣️ "해당 poll 규율 없애줘" — the poll-cadence discipline kept the agent self-limiting (refusing to retry
+a flapping host, capping check frequency), so the owner asked to remove it entirely.
+
+Removed the whole poll-discipline subsystem (was c19 `poll-min-30m` + c21/c22 `poll-max-10m`):
+- **commons rules dropped** — `poll-min-30m` (poll external long-runners ≥30min) and `poll-max-10m`
+  (check live long-runners ≥10min) deleted from `config/commons.md`.
+- **both enforcement guards deleted** — `modules/poll-guard.ts` (POLL-INTERVAL block on short bash poll
+  loops) and `modules/heartbeat-guard.ts` (POLL-HEARTBEAT stale-long-runner warn). Unwired from
+  `pre.ts` (POLL-INTERVAL), `post.ts` (heartbeat stamp/warn + bg-launch auto-track), `ing.ts` (live
+  marker + heartbeat warn — `ing pod add/rm` bookkeeping kept), and `lib/config.ts` (`poll.maxSilenceSec`).
+- **/poll runbook retired** — `commands/poll.md`, `templates/poll.md`, `runbooks.ts::runPoll`, the
+  `cli/index.ts` import/help/dispatch, and the ARCHITECTURE poll-guard/heartbeat/runbook cells +
+  the two convergence records (`NO_SHORT_POLL_LOOP`, `NO_ABANDONED_LONGRUNNER`). README + marketplace
+  guard lists and the ci-track `c19` parentheticals scrubbed of the now-dead rule ids.
+- Lean-trimmed the pre-existing over-cap `ci` ARCHITECTURE cell (743→<300 chars · surfaced by the
+  ARCH-BIG-CELL lint while shipping this) to keep the design tree green.
+
+`ci-track --watch` (remote PR/CI polling) is a CLI feature, not the poll discipline — it stays.
+
 ## feat(ci): scaffold cost-free fast CI path — self-hosted pool ▸ github-hosted fallback + warm cache (no Blacksmith)
 
 🗣️ "ci 플러그인 수정 / 기존에 blacksmith 했다가 요금때문에 취소했는데 그래도 최대한 빠른 ci 경로"

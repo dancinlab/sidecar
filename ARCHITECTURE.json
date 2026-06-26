@@ -33,7 +33,7 @@
         "id": "CI_TRACK_NATIVE",
         "state": "ossified",
         "value": "PR CI status is tracked by `sidecar ci-track` (gh pr checks --json → aggregate + verdict + optional --watch/--merge-on-green), not by hand-rolled `gh pr checks|grep` + /tmp monitor sleep loops",
-        "threshold": "merge-on-green campaigns repeatedly re-implemented CI polling inline (e.g. /tmp/pr3688_mon.sh) — no sidecar command tracked remote CI; this centralizes it (c19-compatible: the poll runs inside the CLI, not a bash sleep loop)",
+        "threshold": "merge-on-green campaigns repeatedly re-implemented CI polling inline (e.g. /tmp/pr3688_mon.sh) — no sidecar command tracked remote CI; this centralizes it (the poll runs inside the CLI, not a bash sleep loop)",
         "source": "modules/ci-track.ts"
       },
       {
@@ -114,13 +114,6 @@
         "source": "modules/git-guard.ts"
       },
       {
-        "id": "NO_ABANDONED_LONGRUNNER",
-        "state": "in_flight",
-        "value": "a live long-runner (pod/bg-agent) left unchecked >maxSilenceSec is WARNED (c21) — heartbeat stamped on status-check cmds, surfaced on activity + session start; the inverse of c19's over-poll cap",
-        "threshold": "sessions fired a pod/job then never polled it (idle-burn · result never harvested); c19 only capped over-polling, the under-polling/abandonment case had no guard",
-        "source": "modules/heartbeat-guard.ts"
-      },
-      {
         "id": "ING_STALENESS_NUDGE",
         "state": "in_flight",
         "value": "code edited ≫ ing untouched is WARNED at Stop (c6) — code edits bump a counter, ing add/next/done resets it, Stop warns once past editThreshold then resets; warn-only (forcing an ing update has no ground truth, so a hard block would be a false-positive factory)",
@@ -170,16 +163,9 @@
         "source": "modules/naming-guard.ts"
       },
       {
-        "id": "NO_SHORT_POLL_LOOP",
-        "state": "ossified",
-        "value": "a bash poll LOOP over an external long-runner (pod/r2/cloud/training) with sleep <1800s is blocked in code (c19) — poll at ≥30min or delegate to a sub-agent",
-        "threshold": "a session ran a short-interval background re-rent/poll loop; c19 was only a hint, ScheduleWakeup interval can't be code-guarded, but the bash sleep-loop can",
-        "source": "modules/poll-guard.ts"
-      },
-      {
         "id": "PRETOOLUSE_INPUT_FROM_STDIN",
         "state": "ossified",
-        "value": "PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push, poll) a silent pass",
+        "value": "PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push) a silent pass",
         "threshold": "a session ran raw `vastai`/`runpodctl` despite the ossified NO_RAW_CLOUD_CLI code guard because parseToolInput read an env var CC never set; verified by piping the real {tool_input:{command}} payload on stdin",
         "source": "modules/pre.ts"
       },
@@ -325,12 +311,6 @@
                 "상세": "c11 — 구조화 dispatch 를 우회하는 raw runpodctl/vastai/ssh/scp/curl 직접 호출을 가드(`hexa cloud`/pod 흐름으로 유도)"
               },
               {
-                "이름": "poll 가드",
-                "역할": "과다폴링 차단",
-                "구분": "guard",
-                "상세": "c19 — 짧은 간격 sleep 폴링 루프 차단(≥10분 floor 권고)"
-              },
-              {
                 "이름": "danger 가드",
                 "역할": "파괴적 명령 차단",
                 "구분": "guard",
@@ -378,7 +358,7 @@
             "이름": "PostToolUse",
             "역할": "도구 호출 직후 → post bash / edit",
             "구분": "surface",
-            "상세": "exit/파일경로로 실패 라우팅, L0 편집 경고, c22 heartbeat(live 장기잡 미확인 warn), c6 ing-staleness(코드 편집 카운트 bump). errors 큐 / stderr"
+            "상세": "exit/파일경로로 실패 라우팅, L0 편집 경고, c6 ing-staleness(코드 편집 카운트 bump). errors 큐 / stderr"
           },
           {
             "이름": "Stop",
@@ -648,7 +628,7 @@
                 "이름": "ci",
                 "역할": "검증 명령 병렬 실행 + CI scaffold",
                 "구분": "module",
-                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1·옛 `verify` 별칭). `ci scaffold` = `.github/workflows/ci.yml` 방출(create-if-absent·러너=config `ci.runner` 기본 ubuntu-latest·러너-브랜드 강제 없음). config `ci.fallback` 설정 시 cost-free fast 경로: `pick-runner` dispatch 잡(무료 github-hosted)이 `gh api .../actions/runners` 로 self-hosted pool ONLINE+idle probe → 있으면 self-hosted(public repo 무료 12-core)·없으면 fallback(무료 github-hosted) · `verify` 는 `fromJSON(needs.pick-runner.outputs.runs_on)` · safe-by-construction(probe 에러→fallback·큐 영구대기 0·실선호는 secret `RUNNER_PROBE_TOKEN` admin:read PAT) · Blacksmith 불요. config `ci.cachePaths` → `actions/cache@v4` warm 재사용 스텝. `ciWorkflowYaml`/`runnerToJson`/`defaultCiSetup` export → `init` 도 동일 생성기로 자동 scaffold"
+                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1). `ci scaffold` = `.github/workflows/ci.yml` 방출. `ci.fallback` = cost-free: `pick-runner` 가 self-hosted pool probe → 무료 self-hosted·없으면 github-hosted fallback. `ci.cachePaths` → `actions/cache@v4` warm"
               },
               {
                 "이름": "paper",
@@ -690,12 +670,6 @@
                 "역할": "hexa-lang gap-breakthrough/discovery 엔진 패스스루",
                 "구분": "module",
                 "상세": "`hexa kick --seed \"<seed>\"` 래퍼. bare 인자→--seed 합치기 · 선두 플래그(--rounds N·--engine mk9|mk10)→verbatim 패스스루. 긴 실행 → stdio inherit(라이브 스트림·timeout 없음). hexa PATH 없으면 127+안내"
-              },
-              {
-                "이름": "poll",
-                "역할": "자가-페이스 ≥10분 폴링 런북 (c19 승인 대안)",
-                "구분": "module",
-                "상세": "templates/poll.md 방출. 매 idle 반응/손수 짠 bash sleep 루프(c19 차단) 대신 타이머로 자가 wake → 1회 체크 → fire-on-arrival → 보고 → 재예약. interval 인자는 ≥600s floor 로 클램프(기본 1200s), 숫자 아닌 인자=watch target. CI는 ci-track --watch 우선·사이드카가 알림 주는 건 폴링 금지"
               },
               {
                 "이름": "fleet (+ lab/abstract/full)",
@@ -975,12 +949,6 @@
             "역할": "기타 모듈별 대상 선언",
             "구분": "config",
             "상세": ""
-          },
-          {
-            "이름": "poll.maxSilenceSec = 600",
-            "역할": "c22 방치가드 임계 (live 장기잡 미확인 max 침묵)",
-            "구분": "config",
-            "상세": "heartbeat-guard: 상태확인 cmd 에 lastPoll 스탬프, post bash·ing inject 에서 초과 시 warn. live 대상 = ing pods + ledger agents + 자동감지 bg런너(미등록 `&`/nohup/disown 의 long-runner 를 post bash 가 감지·기록, 2h TTL 자동만료). c19(min 간격)의 반대"
           },
           {
             "이름": "dojo {defaultLang,stack,delegate}",

@@ -5,7 +5,7 @@
 // exact pattern that recurs in long merge-on-green campaigns). Wraps
 // `gh pr checks --json` into a clean aggregate + a terminal verdict, with an
 // optional in-process `--watch` poll (so the agent does NOT write a bash sleep
-// loop — c19) and an optional `--merge-on-green` auto-squash-merge.
+// loop) and an optional `--merge-on-green` auto-squash-merge.
 //
 // Verdict (from gh's own `bucket` classification):
 //   any fail/cancel → 🔴 RED (exit 2) · any pending → 🟡 PENDING (exit 1)

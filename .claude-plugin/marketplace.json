@@ -6,7 +6,7 @@
     {
       "name": "sidecar",
       "source": ".",
-      "description": "sidecar — SELF-CONTAINED governance plugin: guards (force-push · tmp · handoff-scatter · doc-scatter · askq · cloud-raw c11 · poll c19) + injects (commons · recommend · prefs · easy · architecture) + SessionStart (worktree gc · ing) + the full /command set. The repo root IS the plugin (source `.`) so the sidecar CLI ships inside it — hooks run ${CLAUDE_PLUGIN_ROOT}/bin/sidecar; `/plugin update` + reload refreshes CLI+hooks+commands as one unit, no separate `sidecar self-update`."
+      "description": "sidecar — SELF-CONTAINED governance plugin: guards (force-push · tmp · handoff-scatter · doc-scatter · askq · cloud-raw c11) + injects (commons · recommend · prefs · easy · architecture) + SessionStart (worktree gc · ing) + the full /command set. The repo root IS the plugin (source `.`) so the sidecar CLI ships inside it — hooks run ${CLAUDE_PLUGIN_ROOT}/bin/sidecar; `/plugin update` + reload refreshes CLI+hooks+commands as one unit, no separate `sidecar self-update`."
     }
   ]
 }

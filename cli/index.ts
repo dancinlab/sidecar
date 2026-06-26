@@ -20,7 +20,7 @@ import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
 import { runShip } from "../modules/ship.ts";
-import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap, runPoll } from "../modules/runbooks.ts";
+import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runKick } from "../modules/kick.ts";
 import { runIng } from "../modules/ing.ts";
@@ -107,7 +107,6 @@ hook delegates (wire these into your agent's settings.json):
   demi                     design-architecture program runbook (7-verb spine)
   gap [full|list|<scope>]   multi-axis gap exploration — 40 breakthrough lenses (8 families) · triage→deepen runbook
   kick <seed…> | <flags>   wrap hexa kick --seed "<seed>" — hexa-lang gap-breakthrough/discovery engine (alias: drill; bare args→seed, leading flag→passthrough)
-  poll [interval=1200] [target]   self-paced ≥10-min polling runbook (c19-sanctioned) — wake on a timer, check once, fire-on-arrival; interval clamped to ≥600s. NO bash sleep loop
   pool {list|add|rm|on|status|specs}   host roster + remote exec + cores/mem/GPU probe (~/.sidecar/pool.json, global)
   mem-guard {status|check|install|uninstall}   OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
@@ -130,7 +129,7 @@ gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + doc-gate checks
   naming audit [path] [--ing] [--gate]   repo-wide non-canonical name audit (version/copy/dup suffix backlog the write-guard never saw) · --ing = land summary on THIS repo's board · --gate = exit 1 on any hit
   ci [all|fast|list|scaffold [--force]]   run configured verification commands in parallel (was verify; config key stays verify.checks) · scaffold = emit a .github/workflows/ci.yml that runs 'sidecar ci' on config ci.{runner,setup,fallback,cachePaths} (init writes it too) · ci.fallback on = cost-free fast path (self-hosted pool then github-hosted fallback, probe-fail-safe, no Blacksmith) + cachePaths = warm actions/cache
-  ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop · c19)
+  ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop)
   verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge)
   errors {route|list|drain_check|mark_fixed}
   ledger {register|complete|list|gc|dup_check}
@@ -205,8 +204,6 @@ async function main(): Promise<number> {
     case "kick":
     case "drill":
       return runKick(rest);
-    case "poll":
-      return runPoll(rest);
     case "demi":
     case "demiurge":
       return runDemi(rest);

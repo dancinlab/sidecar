@@ -91,10 +91,6 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - dont: 손으로 버전 bump/태그 중구난방 · 미검증 커밋에 태그 · 로컬 수동 빌드→수동 업로드 · 머지만 하고 릴리즈 안 하기
 
 
-## poll-min-30m — 외부 장기건 폴링은 ≥30분
-- do: 외부 long-run(GPU pod·원격 measure/bench) 을 메인세션이 직접 폴링하면 ≥30분(1800s) 간격·상태만 · 가능하면 서브에이전트(worktree)에 위임 · 의심되면 호스트 직접 실측(ground-truth)
-- dont: 분 단위로 깨우기(프롬프트 캐시 파괴) · live agent 재-ping/resume(진행 리셋 루프) · idle/빈 출력을 결과로 받기 · stale 통지 무검증 행동
-
 ## pi5-akida-anima — Pi5-Akida 는 anima 전용
 - do: Raspberry Pi 5 + Akida 뉴로모픽 칩(`pi5-akida`)은 anima 뉴로모픽 실험 컨텍스트에서만 사용
 - dont: 공유 `pool` 로스터 등록 · 일반 빌드/벤치/CI/GPU대체로 전용(轉用) · 재할당
@@ -102,10 +98,6 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 ## allgreen-promote — 멀티타깃은 all-green 일 때만 stable
 - do: 멀티타깃(OS·arch) stable 승격은 전 타깃 릴리즈잡 GREEN + 설치스모크 GREEN 일 때만(`needs:` 전체 건 `finalize` 잡이 Latest flip) · 실험은 edge 채널로 soak · 규칙은 `release.yml`(CI)이 강제
 - dont: 부분 릴리즈를 stable Latest 로 발행 · 한 타깃 그린으로 승격 · 타깃별 잡이 각자 `make_latest`
-
-## poll-max-10m — live 진행건은 ≥10분마다 확인
-- do: live tracked 진행건이 하나라도 있으면 ≥10분(600s)마다 상태 확인(`hexa cloud poll/tail`·`sidecar ing show`·`sidecar check`) · 끝나면 즉시 `down`/`ing done` 으로 마커 비우기
-- dont: fire-and-forget 방치(idle-burn) · 끝난 잡 안 닫기
 
 ## reference-match — 동등 재구현은 정답지를 보고 맞춘다
 - do: reference 가 열려있으면(오픈소스·공개스펙·관측가능) 정답지 직접 보고 맞춤 — 소스/스펙 정독(파일:라인 인용)→중간산출물 덤프→성분별 1:1 대조→첫 발산점만 정렬 · parity 후 '초월 축' 1개+ 명시해 전진 · 남는 잔차는 정직히 출처 기록

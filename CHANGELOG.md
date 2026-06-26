@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## fix(paths): a `.git` dir is a hard boundary for REPO_ROOT discovery
+
+`findRepoRoot()` walked the whole ancestry for a `harness.config.json` BEFORE falling back to the
+nearest `.git`, so a config in a non-git parent could hijack REPO_ROOT and break every git call.
+
+Hit in `dancinlab/`: sibling repos (`carbon-capture`, `lumen`, `rtsc`, `echoes`) each have their own
+`.git` but no per-repo `harness.config.json`, while the parent monorepo `dancinlab/harness.config.json`
+exists and is NOT a git repo. From any sibling, `REPO_ROOT` resolved to `/Users/.../dancinlab`, so
+`pr-cycle` ran git there → `fatal: not a git repository`, mis-counted the change set, and the doc gate
+fired spuriously. (`ing` was unaffected — it resolves git independently.)
+
+- **lib/paths.ts** — `findRepoRoot()` now returns the current dir as soon as it has EITHER a
+  `harness.config.json` (checked first, so an in-dir config still wins) OR a `.git` directory; it never
+  ascends past a git root. Dropped the `firstGit` deferral. Discovery-order comment updated.
+- Verified: from `carbon-capture` and `lumen`, `REPO_ROOT` now resolves to each repo's own root (was the
+  non-git parent); `~/.sidecar/cli` and the monorepo root itself are unchanged; a deep subdir climbs to its
+  `.git` boundary. End-to-end, `pr-cycle` from a sibling repo now reaches its real branch/doc logic.
+  (Typecheck CI `npx tsc` is unavailable in this environment — no global/local typescript; change is
+  type-trivial and `node --check` parses clean.)
+
 ## feat(ing): per-turn ING-status enforce — every response must carry a 🔵 ING line (Stop gate)
 
 The turn-close ING directive was advisory ("update the board if progress changed, else skip"), and the only

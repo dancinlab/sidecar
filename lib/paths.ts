@@ -17,10 +17,13 @@ function rp(p: string): string {
 //   SIDECAR_ROOT  — where this code lives (bundled config / defaults)
 //   REPO_ROOT     — the consuming project whose rules/logs we operate on
 //
-// REPO_ROOT discovery order:
+// REPO_ROOT discovery order (ascending from $PWD; a `.git` dir is a HARD boundary):
 //   1. $SIDECAR_REPO_ROOT env override (tests / non-standard layouts)
-//   2. nearest ancestor of $PWD that has a `harness.config.json`
-//   3. nearest ancestor that has a `.git` directory
+//   2. nearest ancestor with a `harness.config.json` AT OR BELOW the git root
+//   3. otherwise the nearest ancestor that has a `.git` directory — never ascend
+//      PAST a git root, so a `harness.config.json` in a non-git parent monorepo
+//      cannot hijack REPO_ROOT and break every git call (sibling repos under a
+//      shared parent each resolve to their own `.git`).
 //   4. $PWD fallback
 
 const __filename = fileURLToPath(import.meta.url);
@@ -32,15 +35,16 @@ export const SIDECAR_CONFIG_DIR = resolve(SIDECAR_ROOT, "config");
 function findRepoRoot(): string {
   if (process.env.SIDECAR_REPO_ROOT) return resolve(process.env.SIDECAR_REPO_ROOT);
   let d = process.env.PWD ? resolve(process.env.PWD) : process.cwd();
-  let firstGit = "";
   while (true) {
+    // harness.config.json at or below the git root wins (checked first in-dir).
     if (existsSync(resolve(d, "harness.config.json"))) return d;
-    if (!firstGit && existsSync(resolve(d, ".git"))) firstGit = d;
+    // A `.git` directory is a hard boundary: the git root is the repo root unless a
+    // config sits in the same dir. Never climb past it into a non-git parent.
+    if (existsSync(resolve(d, ".git"))) return d;
     const parent = dirname(d);
     if (parent === d) break;
     d = parent;
   }
-  if (firstGit) return firstGit;
   return process.cwd();
 }
 

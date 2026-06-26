@@ -70,6 +70,10 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - do: 벽은 먼저 분류(측정artifact·틀린방향·substrate인프라·진짜천장·투자부족) → MULTI-LENS(≥2–3 원리적 렌즈)+각 통제(shuffle/ablation/negative-control) → 그 뒤에만 terminal 🧱 · LAW 도 frozen-first 예측+falsify · dry 선언 전 직교 mechanism-family enumerate
 - dont: 1회 시도로 종착 · 게으른 천장(HW/성능 캡 1-pass 박제) · 같은 family 만 소진하고 dry 선언 · substrate/측정 벽을 과학 천장으로 박제 · tune-to-green
 
+## verdict-integrity — terminal 박기 전 측정경로부터 (negative 도 positive 와 동일 바)
+- do: terminal/천장 verdict 전에 **측정경로 무결성부터** — reference/mirror/다른엔진과 **발산하는 결과는 측정 의심 신호**(sampler·RNG·decode·serialize·OOM-미완·미배선), 정답지 대조(`reference-match`)로 artifact 배제한 뒤에만 terminal
+- dont: negative/FAIL 을 측정확인 없이 terminal 박기(GREEN 만 검증하고 RED 는 rubber-stamp) · 정답지와 발산을 모델/대상 결함으로 단정(측정 먼저 의심) · 박았다 철회 반복
+
 ## heavy-on-pool — 무거운 작업은 공유 pool
 - do: 빌드·테스트·대규모 스윕·장시간 연산은 `sidecar pool` 공유 호스트에 분산(`pool on/bg/route/status`) · GPU·학습은 `hexa cloud`/`hexa dojo`
 - dont: 로컬 단일 머신에 부하 몰기 · `shared:false` 제한 호스트를 공유 풀 컴퓨트로 사용

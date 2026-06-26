@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(commons): verdict-integrity slug — terminal 박기 전 측정경로 검증 (anima 세션 실패 로그 포팅)
+
+🗣️ "계속 실수하거나 해매는 부분 어떤식으로 방지할수 있을까" (anima 멀티-에이전트 세션 회고)
+
+- 그 세션의 반복 실패 = **측정 결함을 결론으로 박제**: clm303/ByteGPT G1 FAIL 을 terminal 로 박았다가 (a) OOM 측정-미완 (b) sampler RNG 버그 (c) 엔진↔torch 발산을 모델결함으로 오판 → 3회 철회. 정답지(torch 🟢)와 갈렸을 때 측정이 아니라 대상을 의심한 게 근본.
+- `break-walls`("측정 벽을 천장으로 박제 금지")가 이미 있었지만 안 먹힘 — "**발산 = 측정 의심**" 구체 렌즈가 없었던 게 갭. `verdict-integrity` slug 로 1급 체크포인트화: terminal/negative verdict 전에 reference/mirror 발산을 측정경로(sampler·RNG·decode·serialize·OOM·미배선) 의심으로 분류 → `reference-match` 대조로 artifact 배제 후에만 terminal. negative 도 positive 와 동일 검증 바(GREEN 만 검증하고 RED rubber-stamp 금지).
+- lean 유지(do/dont 각 cap 내, DODONT-LONG 그린). 기계 게이트(verdict-record 에 integrity 필드 강제)는 heavy follow-on.
 ## fix(recommend): stop-check 강제(decision:block) 복원 + 정밀화 — auto-proceed 이빨 회복, 에러는 무노이즈
 
 🗣️ "pr cycle 를 자동으로 해야되는데 풀린거 같아 · 자꾸 할지 물어보네" (옵션 B)

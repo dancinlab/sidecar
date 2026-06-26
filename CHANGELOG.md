@@ -1,6 +1,16 @@
 # CHANGELOG
 
-## feat(ci): GitHub Actions CI on Blacksmith — typecheck + smoke (gamebox/hexa-lang 참고)
+## feat(ci): 하네스가 모든 repo 에 Blacksmith CI 를 scaffold — `ci scaffold` + `init` 자동방출
+
+🗣️ "ci 플러그인 필요해 blacksmith 이용하도록 hexa-lang 참고" + "init 에도 반영" + "sidecar 하네스로 모두 ci 를 blacksmith 로 구축" + "ci 는 항상 blacksmith 로"
+
+- sidecar 는 CI 워크플로가 전무했다. dancinlab 의 Blacksmith 전환(hexa-lang `release.yml` · gamebox `ci.yml`)을 정답지로, **하네스가 어느 repo 든 Blacksmith CI 를 표준 방출**하게 일반화.
+- 신규 `ci scaffold [--force]` (modules/ci.ts): **Blacksmith** `.github/workflows/ci.yml` 생성(create-if-absent) — checkout@v6 → **stack setup**(config `ci.setup` · 없으면 package.json→node·hexa.toml→hexa·pyproject→python 자동감지) → sidecar 설치(install.sh) → **`sidecar ci`**(repo verify.checks · single source) + `sidecar lint`. 러너=config `ci.runner`.
+- **항상 Blacksmith**: 기본 러너 `blacksmith-4vcpu-ubuntu-2204`, 생성 YAML 은 github-hosted 러너를 절대 안 씀 · config 가 비-blacksmith 로 override 하면 경고.
+- `init` 배선: `ciWorkflowYaml`/`defaultCiSetup` export → `sidecar init` 이 동일 생성기로 `.github/workflows/ci.yml` 자동 scaffold(create-if-absent). 새 repo 는 init 만으로 Blacksmith CI 획득.
+- config: `ci: { runner, setup }` 블록 + `CiStep` 타입 추가(lib/config.ts).
+- sidecar 자기 repo 는 손튜닝 ci.yml(= `sidecar ci`(tsc) + help/toolkit 스모크) 유지(dogfood reference).
+- 검증: tsc clean · 생성 YAML yaml.safe_load 유효(runs-on=blacksmith · 6 steps) · help 로드 · `ci scaffold`(기존파일 skip-warn) · toolkit 71.
 
 🗣️ "ci 플러그인 필요해 blacksmith 이용하도록 hexa-lang 참고" (+ gamebox CI 도 blacksmith 전환중)
 

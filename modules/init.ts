@@ -12,6 +12,8 @@ import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, statS
 import { resolve, relative, basename, dirname } from "node:path";
 import { REPO_ROOT, SIDECAR_ROOT, SIDECAR_CONFIG_DIR } from "../lib/paths.ts";
 import { info, ok, warn } from "../lib/log.ts";
+import { config } from "../lib/config.ts";
+import { ciWorkflowYaml, defaultCiSetup } from "./ci.ts";
 
 interface Flags {
   force: boolean;
@@ -166,6 +168,16 @@ export async function runInit(args: string[]): Promise<number> {
 
   // 1. harness.config.json
   write(resolve(REPO_ROOT, "harness.config.json"), starterConfig(basename(REPO_ROOT), stack), "harness.config.json");
+
+  // 1b. CI workflow (Blacksmith) — create-if-absent. Runs `sidecar ci` (verify.checks)
+  // on a fast cloud runner so push-time checks stay off the dev machine. Runner/setup
+  // from config ci.{runner,setup}; setup falls back to the detected stack.
+  const ciCfg = config().ci;
+  write(
+    resolve(REPO_ROOT, ".github/workflows/ci.yml"),
+    ciWorkflowYaml(basename(REPO_ROOT), ciCfg.runner, ciCfg.setup.length ? ciCfg.setup : defaultCiSetup()),
+    ".github/workflows/ci.yml",
+  );
 
   // 2. .harness/*.json (copy bundled defaults)
   for (const name of ["enforcement.json", "keywords.json", "severity-map.json"]) {

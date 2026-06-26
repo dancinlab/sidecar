@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## chore(inject): commons·recommend 산문 정리 — 중복/근거 제거 (행동 불변)
+
+🗣️ "전부 산문 정리"
+
+- 매-턴 최대 inject `config/commons.md`(−159B)·`config/recommend.md`(−74B) 에서 순수 rationale·중복 재진술만 제거(ing-board do "직접수정 원칙" · upstream-fix dont "(반복되는 핵심 위반…)"+중복절 · recommend FIXED-AXIS "(user already set this axis…)" 괄호). **행동 지시·규칙·슬러그 전부 보존**(검수 완료).
+- 발견: 두 inject 는 이미 do/dont 로 lean → 안전 절감폭 작음(−233B). 진짜 부피는 architecture(트리 ~51KB · 이미 cell-cap 관리).
+- 검증: `sidecar lint` 그린 · 행동 불변.
 ## fix(lint): DODONT-LONG 이 들여쓰기 연속줄까지 합산 — 다중줄 do/dont 길이-cap 회피 차단
 
 🗣️ (anima a_install_canonical 처럼 `- do:` 를 `  ` 연속줄로 쪼개면) "길이 lint 가 안되는거같은데"

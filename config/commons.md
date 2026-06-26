@@ -35,7 +35,7 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - dont: 가이드 없이 폴더에 코드만 쌓기 · 옛 가이드 stale 방치 · 루트 CLAUDE.md 하나로 깊은 폴더 맥락 대체
 
 ## ing-board — 진행추적·인계는 한 보드
-- do: 다단계/장기작업 진행추적과 세션 인계를 repo-root `ING.jsonl`(전용 `ing` git ref) 한 보드로 — `sidecar ing add/next/done`(완료=scrub→CHANGELOG) · 상태변동마다 현행화 · 보드는 **내 현재 repo 전용**(cross-repo 전달 폐기 — 직접수정 원칙)
+- do: 다단계/장기작업 진행추적과 세션 인계를 repo-root `ING.jsonl`(전용 `ing` git ref) 한 보드로 — `sidecar ing add/next/done`(완료=scrub→CHANGELOG) · 상태변동마다 현행화 · 보드는 **내 현재 repo 전용**(cross-repo 전달 폐기)
 - dont: `HANDOFF.md`·`INBOX.md`·`inbox/*.md` 흩뿌리기 · 구 `handoff`/`trail` 사용 · 작업을 타 repo/세션 보드로 떠넘기기(직접 고쳐라 · `upstream-fix`)
 
 ## git-safety — 파괴적 git 금지
@@ -80,7 +80,7 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 
 ## upstream-fix — upstream 막힘은 그 세션에서 내 손으로 끝까지 고친다 (cross-repo 인계 금지)
 - do: 의존 upstream(`hexa`/`hexa-lang`/`demiurge` 등 **전부 dancinlab repo = 너의 쓰기권한 안**) 결함은 **막힌 바로 그 세션에서 직접** — clone/worktree 받아 원인 고치고 그 repo 의 빌드·CI 로 검증한 뒤 **그 repo 에서 `sidecar pr-cycle` 머지까지 완료** → 그 후 원작업 복귀. ING 은 오직 **내 현재 repo** 의 `↩resume …` 복원 메모로만(작업 끊김 방지). 고위험 substrate(codegen·runtime·toolchain)는 격리 worktree, 동시세션 활동(브랜치변동) 감지 시 STOP
-- dont: **upstream repo(hexa-lang 등)로 그 수정을 떠넘기기 — 절대 금지** (반복되는 핵심 위반: 고칠 수 있고 권한도 있는데 남에게 미룸) · 다른 세션/사람에게 cross-repo 인계 · "upstream 이라 여기선 못 고친다" 핑계 · 로컬 wrapper/shadow/fork/monkey-patch 로 덮기 · 고쳤다며 머지 안 하고 둠. (ING 의 cross-repo 전달(`--to`) 기능은 폐기됨 — 보드는 내 repo 전용 · 결함은 그 repo 에서 직접 고쳐 머지)
+- dont: **upstream repo(hexa-lang 등)로 그 수정을 떠넘기기 — 절대 금지** · 다른 세션/사람에게 cross-repo 인계 · "upstream 이라 여기선 못 고친다" 핑계 · 로컬 wrapper/shadow/fork/monkey-patch 로 덮기 · 고쳤다며 머지 안 하고 둠. (ING 의 cross-repo 전달(`--to`) 기능은 폐기됨 — 보드는 내 repo 전용)
 
 ## release-tag-ci — 릴리즈는 태그 → CI 배포
 - do: 배포 산출물 있는 repo 는 검증된 main 에 semver 태그(`vX.Y.Z`) → `release.yml`(CI)가 타깃별 빌드·GitHub release 업로드 · (선택) main push 마다 edge prerelease

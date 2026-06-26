@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(lint): INJECT-OVERSIZED — 매-턴 inject 소스 바이트 cap + easy 스타일 산문 −31%
+
+🗣️ "ai agent 에 inject 하는것들도 전부 lint · context 낭비 줄여야 · 산문 간결하게"
+
+- 새 lint **INJECT-OVERSIZED**(block): 매 UserPromptSubmit 재주입되는 inject 소스(`config/recommend.md` + `styles/*.md`)의 바이트 ≤ `lint.injectByteCap`(기본 9000 · 0=off). 산문 비대는 매 턴 context 로 치르는 낭비라 cap. `commons.md` 는 면제(거버넌스 SSOT — rule 수에 따라 정당히 커지고 do/dont 양식 lint 별도).
+- easy 응답스타일 5개 로케일(ko/ja/zh/en/ru) 에서 **순수 레퍼런스 3블록**(FOLD vs WEAVE 표 · 일반인 추가예시 2개 · 측정축 eval 표) 제거 — 행동 규칙(7-요소 패턴·ASCII 4템플릿·체크리스트·반례)은 보존. 합계 42065B→29227B(**−31%**), 매 턴 주입되는 ko 7807→5411B.
+- 동형 패턴(config 키·severity-map block)으로 cmdDescCap/archCellCap/dodontCap 과 일관. 검증: tsc clean · `sidecar lint` 그린.
 ## feat(architecture): ARCH-BIG-CELL cap 700→300 (config-driven) + 22개 산문 셀 커널 트림
 
 🗣️ "아키텍쳐 json 도 중요한 내용만 딱딱 남기도록 / 너무 산문인데" — 설계 트리 셀이 700자 cap 아래에서도 문단 덩어리로 남던 문제.

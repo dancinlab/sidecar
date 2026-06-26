@@ -70,6 +70,10 @@ export interface SidecarConfig {
     // it must decompose (ARCH-PILED). 0 = off.
     archCellCap?: number;
     archPiledMax?: number;
+    // byte cap for a per-turn inject SOURCE file (config/recommend.md, styles/*.md)
+    // — these are re-injected every UserPromptSubmit, so prose bloat is paid every
+    // turn. commons.md is exempt (governance SSOT). 0 = off.
+    injectByteCap?: number;
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
@@ -212,7 +216,7 @@ const DEFAULTS: SidecarConfig = {
   severityMapFile: ".harness/severity-map.json",
   verify: { checks: [] },
   ci: { runner: "blacksmith-4vcpu-ubuntu-2204", setup: [] },
-  lint: { freshnessFiles: [], dodontCap: 200, cmdDescCap: 320, archCellCap: 300, archPiledMax: 6 },
+  lint: { freshnessFiles: [], dodontCap: 200, cmdDescCap: 320, archCellCap: 300, archPiledMax: 6, injectByteCap: 9000 },
   upstreams: [{ name: "hexa-lang", repo: "dancinlab/hexa-lang" }],
   guides: ["CLAUDE.md", "AGENTS.md", "README.md"],
   folderGuides: {

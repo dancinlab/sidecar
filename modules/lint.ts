@@ -3,7 +3,7 @@
 //   • staged L0 files (git diff --cached) → flagged
 //   • freshness of tracked files (_updated field or mtime vs maxAgeDays)
 // Quiet on pass (H1); violations go to stderr + lint_log.jsonl + errors queue.
-import { existsSync, statSync, readFileSync } from "node:fs";
+import { existsSync, statSync, readFileSync, readdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl, info, loudFail, ok } from "../lib/log.ts";
@@ -253,6 +253,33 @@ export async function runLint(args: string[]): Promise<number> {
           }
         }
       });
+    }
+  }
+
+  // 4j. inject-oversized — sidecar's per-turn inject SOURCE files (the 4-axis
+  // recommend rubric + response-style docs) are re-injected EVERY UserPromptSubmit,
+  // so prose bloat is paid in context on every turn. Byte-cap each so injects stay
+  // lean (lint.injectByteCap, default 8000 · 0 = off). commons.md is EXEMPT — it is
+  // the governance SSOT whose size grows legitimately with rule count and already
+  // has its own do/dont format lint. Sidecar-repo-only (files exist there).
+  const injectCap = cfg.lint?.injectByteCap ?? 8000;
+  if (injectCap > 0) {
+    const injectSources: string[] = [];
+    if (existsSync(repoPath("config/recommend.md"))) injectSources.push("config/recommend.md");
+    const stylesDir = repoPath("styles");
+    if (existsSync(stylesDir)) {
+      for (const f of readdirSync(stylesDir)) if (f.endsWith(".md")) injectSources.push(`styles/${f}`);
+    }
+    for (const f of injectSources) {
+      let bytes = 0;
+      try {
+        bytes = Buffer.byteLength(readFileSync(repoPath(f), "utf8"), "utf8");
+      } catch {
+        continue;
+      }
+      if (bytes > injectCap) {
+        violations.push({ rule: "INJECT-OVERSIZED", file: f, msg: `${bytes}B > ${injectCap}B inject cap — re-injected every turn; trim prose (keep the rule + 1 example, drop redundant examples/reference tables) or raise lint.injectByteCap` });
+      }
     }
   }
 

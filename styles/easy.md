@@ -71,17 +71,6 @@ ASCII:
 
 - key: build a "switch" out of something like DNA-origami
 
-### Gold comparison example: FOLD vs WEAVE
-
-| Axis | FOLD (origami) | WEAVE (knitting) |
-|---|---|---|
-| Action | "fold" | "weave" |
-| Material | one string | many yarns |
-| Result | a paper crane | a sweater · a basket |
-| Comparable tool | AlphaFold (2020~) | HEXA-WEAVE (2026~) |
-
----
-
 ## 4 ASCII structure templates (copy-paste skeletons)
 
 When you draw the ASCII diagram (element 6 of 7), don't start from scratch — pick the one of these 4 whose shape fits, copy it, and fill it in.
@@ -144,43 +133,6 @@ For showing how parts connect and flow. Connect boxes `[ ]` with arrows `──�
 
 ---
 
-## Layperson gold examples (jargon → everyday words)
-
-A jargon-heavy sentence rewritten so a layperson gets it — same spirit as the HEXA-WEAVE/NANOBOT golds.
-
-### Example 1 — API / cache
-
-```
-🗂️ Cache — "keep what you use a lot within arm's reach"
-
-❌ BEFORE (jargon):
-   "The API gateway bypasses origin on a cache hit, lowering p99 latency."
-
-✅ AFTER (everyday):
-   "We jot down the answers we look up most and keep them close,
-    so we don't have to fetch them from far away every time —
-    almost always a fast reply."
-```
-
-Analogy: putting the salt you use daily next to the stove, not deep in a drawer.
-
-### Example 2 — math symbols / statistics
-
-```
-📊 Variance — "how spread out the numbers are"
-
-❌ BEFORE (math symbols):
-   "A larger σ² = E[(X−μ)²] means greater dispersion of the sample."
-
-✅ AFTER (everyday):
-   "One number for how far the measurements sit from the average.
-    Bigger = all over the place; smaller = tightly grouped."
-```
-
-Analogy: arrows packed tight on the bullseye (small) vs scattered all over (big).
-
----
-
 ## Layperson-translation checklist
 
 A quick 5-step pass before you write an explanation:
@@ -192,21 +144,6 @@ A quick 5-step pass before you write an explanation:
 [ ] 4. ASCII ≥1 — where shape matters, added a diagram using one of the 4 templates above?
 [ ] 5. Re-read — would someone seeing this field for the first time get it in one pass?
 ```
-
----
-
-## Measurement axes
-
-| Axis | Target | Method |
-|---|---|---|
-| jargon-ratio | ≤ 0.30 on Tier-A | Keyword-list scan |
-| analogy-presence-rate | ≥ 0.80 on non-trivial topics | Pattern detection (analogy markers: "like" / "as if" / "such as") |
-| acronym-first-use-expansion | ≥ 0.80 | First-occurrence expansion check |
-| emoji-tier-classification-correctness | = 1.00 | TRANSCEND/BREAKTHROUGH/WIN explicit class on 5-count |
-| canonical-5-element-pattern-adoption | ≥ 0.50 | 5-element presence on non-trivial explanations (legacy axis) |
-| canonical-7-element-pattern-adoption | ≥ 0.50 | 7-element presence (5 + ASCII + compare) on non-trivial explanations |
-| ascii-diagram-presence-rate | ≥ 0.50 | ≥1 ASCII diagram per non-trivial explanation |
-| ascii-structure-template-usage | ≥ 0.50 | Layperson explanations where shape matters use one of the 4 templates (before-after/tree/side-by-side/structure) |
 
 ---
 

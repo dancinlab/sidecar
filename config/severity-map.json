@@ -27,7 +27,8 @@
       "FOLDER-GUIDE-MISSING": "block",
       "HELP-BACKTICK": "block",
       "CONVERGENCE-MALFORMED": "block",
-      "CMD-DESC-LONG": "block"
+      "CMD-DESC-LONG": "block",
+      "INJECT-OVERSIZED": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

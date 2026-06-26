@@ -525,6 +525,12 @@
                     "상세": "commands/*.md description codepoint ≤ `lint.cmdDescCap`(기본 320)인지 — 1400 천장(SHADOW-DESC)과 별개의 빡빡한 '미니멀' 선. 초과면 차단: 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로. write-time 도 같은 cap deny(`shadow.ts:descWriteViolation`→pre.ts) · 0=off"
                   },
                   {
+                    "이름": "INJECT-OVERSIZED (4j)",
+                    "역할": "매-턴 inject 소스 바이트 cap (block)",
+                    "구분": "check",
+                    "상세": "매 UserPromptSubmit 재주입되는 inject 소스(config/recommend.md + styles/*.md)의 바이트 ≤ `lint.injectByteCap`(기본 9000)인지 — 산문 비대는 매 턴 context 낭비라 cap. commons.md 는 면제(거버넌스 SSOT · do/dont 양식 lint 별도). 초과면 차단: 규칙+예시 1개만 두고 중복 예시/레퍼런스 표 제거. 0=off"
+                  },
+                  {
                     "이름": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",
                     "역할": "commons·CLAUDE do/dont 양식 (block)",
                     "구분": "check",

@@ -388,9 +388,9 @@
             "children": [
               {
                 "이름": "recommend stop-check",
-                "역할": "4축 박스 종료 감지 → auto-proceed 리마인더 (warn-only)",
+                "역할": "박스로 종료 시 auto-proceed 강제 (정밀 decision:block)",
                 "구분": "guard",
-                "상세": "**warn-only(stderr·non-block)** — non-present default mode 인데 답변이 4축 박스/auto-pick 줄에서 끝나면 `[recommend]` advisory. 구 `decision:block` 은 Claude Code 가 'Stop hook error' 로 띄워 convergence/ing 처럼 warn-only 전환 — auto-proceed 강제는 매-턴 inject FIXED-axis 가 담당, 이건 넛지. (modules/recommend.ts)"
+                "상세": "non-present default mode 인데 답변이 **진짜 박스/auto-pick 줄로 끝나면**(endsOnBox=마지막 ~2 비어있지않은 줄 검사) `decision:block` 으로 모델 재호출=강제. 정밀: tail=2 라 박스 뒤 작업/요약 따라오면 무발화 → 정상 땐 'Stop hook error' 안 뜨고 진짜 박스-멈춤만 강제(에러≠노이즈). 루프가드=stop_hook_active. (modules/recommend.ts)"
               },
               {
                 "이름": "convergence stop-check",

@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## fix(recommend): stop-check 강제(decision:block) 복원 + 정밀화 — auto-proceed 이빨 회복, 에러는 무노이즈
+
+🗣️ "pr cycle 를 자동으로 해야되는데 풀린거 같아 · 자꾸 할지 물어보네" (옵션 B)
+
+- #220 에서 stop-check 를 warn-only 로 바꾸며 auto-proceed **강제 이빨**이 빠졌다(박스에서 멈춰도 그냥 알림만 → 모델이 되묻을 수 있음). 그게 '풀린' 원인. (recommend-default 설정 자체는 정상 = complete·global.)
+- B: `decision:block`(강제 재호출) 복원 + **endsOnBox 정밀화**(마지막 ~2 비어있지않은 줄만 검사, 기존 6→2). → 답변이 **진짜 박스/auto-pick 줄로 끝난** 경우만 강제하고, 박스 뒤에 작업/요약이 따라오는 정상 턴은 무발화. 정상 동작 땐 'Stop hook error' 가 안 떠서 #220 의 '에러 노이즈' 우려와 강제를 둘 다 만족.
+- 지시문(body() AUTO/FIXED HARD STOP RULE) "remind(advisory)" → "force you to continue" 복원.
+- QA: ①진짜 박스로 종료 → 🔒 block ②박스+작업/요약 follow → 무발화(무에러) ③박스 없음 → 무발화 ④stop_hook_active 루프가드 → 무재발화. tsc clean · lint 그린.
 ## chore(inject): commons·recommend 산문 정리 — 중복/근거 제거 (행동 불변)
 
 🗣️ "전부 산문 정리"

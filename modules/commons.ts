@@ -162,7 +162,19 @@ export function dodontEntries(text: string): DodontEntry[] {
     const k = `${slug}|${kind}`;
     const idx = counter[k] ?? 0;
     counter[k] = idx + 1;
-    out.push({ slug, kind, idx, content: m[2], len: cpLen(m[2]), line: i + 1 });
+    // The do/dont entry length is the WHOLE entry — the `- do:` line PLUS any
+    // `  `-prefixed continuation lines that wrap it (the commons/CLAUDE format
+    // permits wrapping a rule across indented lines). Count them all, else a long
+    // rule trivially evades the cap by splitting onto continuation lines.
+    let len = cpLen(m[2]);
+    for (let j = i + 1; j < lines.length; j++) {
+      const c = lines[j];
+      if (!c.startsWith("  ")) break; // not an indented continuation
+      const ct = c.trim();
+      if (ct === "" || /^- (do|dont):/.test(ct)) break; // blank / next entry ends it
+      len += cpLen(ct) + 1; // +1 for the line-join space
+    }
+    out.push({ slug, kind, idx, content: m[2], len, line: i + 1 });
   }
   return out;
 }

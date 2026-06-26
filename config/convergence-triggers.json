@@ -1,14 +1,16 @@
 {
   "_doc": "Recurrence-signal patterns scanned against the AI AGENT's OWN output (last assistant message) at session Stop — NOT the user prompt. A match only NUDGES (`sidecar architecture convergence stop-check` re-prompts); the AGENT judges whether it's a real recurrence (→ record into ARCHITECTURE.json `convergence.records[]`, commons root-cause) or a passing mention / false positive (→ just stop). So this is a deliberately WIDE net — precision lives in the agent's judgment, not the keyword. Plain substrings match literally (case-insensitive). The Stop hook nudges once PER DISTINCT MATCHED SIGNAL per session, so a broad false positive (e.g. '또' in '또는') does not consume the nudge for a different real signal later. Override per-repo at .harness/convergence-triggers.json.",
   "patterns": [
-    "또", "다시", "실패", "동일", "실수", "발생", "사망", "죽었", "죽음",
-    "또 터졌", "또 그러", "또 발생", "또 깨졌", "또 실패", "또 났", "다시 발생", "재발", "회귀", "재현됐",
-    "두 번째", "두번째", "똑같은 버그", "똑같은 문제", "똑같은 실수", "같은 결함", "같은 버그", "같은 실수",
-    "예전 버그", "전에도", "지난번에도", "previously fixed", "already fixed", "reintroduc", "reopened",
-    "same bug", "same defect", "same mistake", "same issue", "broke again", "again broke", "back again",
-    "yet again", "keeps breaking", "keeps failing", "regression", "recurr",
-    "OOM", "oom-kill", "out of memory", "메모리 부족", "SIGSEGV", "segfault", "segmentation fault",
-    "signal 11", "크래시", "core dump", "코어 덤프", "패닉", "panic", "⚠️", "🔴", "❌"
+    "또", "다시", "실수", "실패", "원인", "⚠️", "🔴", "❌",
+    "OOM", "oom-kill", "out of memory", "메모리 부족",
+    "SIGSEGV", "segfault", "segmentation fault", "signal 11",
+    "크래시", "crash", "코어 덤프", "core dump", "패닉", "panic",
+    "재발", "두 번째", "두번째", "똑같은", "예전 버그", "전에도", "지난번에도",
+    "낡은", "구버전", "옛 버전", "스테일", "회귀", "재현됐",
+    "broke again", "again broke", "back again", "yet again",
+    "same bug", "same defect", "same mistake", "same issue",
+    "keeps breaking", "keeps failing", "reintroduc", "reopened",
+    "previously fixed", "already fixed", "regression", "recurr", "stale"
   ],
   "hint": "재발 신호 — 같은 원인의 결함/실수가 또 보인다(첫 발생이 아니라 재발). 그 학습을 설계 SSOT 한곳에 박아 같은 결함 재도입을 막아라. ① 기존 기록 확인: `sidecar architecture convergence list` ② 추가/갱신(id-keyed upsert): `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심 학습>\" --threshold \"<재발조건/해결>\" --source <원인파일>`. 인라인 @convergence 주석·별도 incident 트래커로 흩지 말 것 (commons root-cause)."
 }

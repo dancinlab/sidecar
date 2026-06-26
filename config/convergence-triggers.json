@@ -1,7 +1,7 @@
 {
   "_doc": "Recurrence-signal patterns scanned against the AI AGENT's OWN output (last assistant message) at session Stop — NOT the user prompt. A match only NUDGES (`sidecar architecture convergence stop-check` re-prompts); the AGENT judges whether it's a real recurrence (→ record into ARCHITECTURE.json `convergence.records[]`, commons root-cause) or a passing mention / false positive (→ just stop). So this is a deliberately WIDE net — precision lives in the agent's judgment, not the keyword. Plain substrings match literally (case-insensitive). The Stop hook nudges once PER DISTINCT MATCHED SIGNAL per session, so a broad false positive (e.g. '또' in '또는') does not consume the nudge for a different real signal later. Override per-repo at .harness/convergence-triggers.json.",
   "patterns": [
-    "또", "다시", "실수", "실패", "원인", "동일", "발생", "사망", "죽었", "죽음", "⚠️", "🔴", "❌",
+    "또", "다시", "실수", "실패", "원인", "동일", "발생", "사망", "죽었", "죽음", "버그", "⚠️", "🔴", "❌",
     "OOM", "oom-kill", "out of memory", "메모리 부족",
     "SIGSEGV", "segfault", "segmentation fault", "signal 11",
     "크래시", "crash", "코어 덤프", "core dump", "패닉", "panic",

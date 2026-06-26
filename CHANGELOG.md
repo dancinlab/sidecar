@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## feat(architecture): retire 구분/type field → searchable per-node slug + `architecture search`
+
+🗣️ "type 은 굳이 필요없어 보이는데 slug 있으면 … 검색가능하게 하고 검색 서브커맨드 만들면될듯"
+
+The ARCHITECTURE.json tree nodes carried a `구분` (type/category) column that wasn't grep-friendly and
+the owner found dispensable. Replaced it with a stable, searchable `slug` per node + a search verb:
+- **Schema migration** — every tree node (126) now has a unique kebab-case `slug`; the `구분` field is
+  dropped and its category folded into the slug prefix (`force-push 가드` → `guard-force-push`, `ing` →
+  `module-ing`, …) so zero category info is lost and `search guard`/`search module`/`search config` work.
+  `columns` 구분→slug. The HTML viewer is column-driven, so it renders + searches the slug column with
+  no viewer change.
+- **`sidecar architecture search <query>`** — case-insensitive substring over slug / 이름 / 역할 / 상세,
+  prints each matching node's slug + breadcrumb path. Korean queries still match via 이름/상세 text.
+- **slug lint** — `lintArchitectureTree` now emits `ARCH-SLUG-MISSING` / `ARCH-SLUG-DUPE` /
+  `ARCH-SLUG-FORMAT` (block via severity-map fallback), so every node stays addressable and slugs stay
+  unique kebab-case. `init.ts` scaffolds the slug schema for new repos.
+
 ## feat(commons): retire the poll discipline — drop poll-min-30m/poll-max-10m rules, both guards, the /poll runbook
 
 🗣️ "해당 poll 규율 없애줘" — the poll-cadence discipline kept the agent self-limiting (refusing to retry

@@ -59,7 +59,7 @@ sidecar/
 | 컴팩션 생존 재주입 | 세션-스코프 inject(architecture·git-context·toolkit·companions·ing)는 SessionStart 에서만 떠 자동 컴팩션 시 증발 → **PreCompact+PostCompact** 에 그 6개를 재주입해 설계트리·명령카탈로그·ING 보드가 세션 중반 살아남게 함(sidecar `project-tape` 동형) | PreCompact · PostCompact |
 | `pre write` skill-desc 가드 | `commands/*.md`·`SKILL.md` 의 `description:` 이 1400자 skill-listing cap 초과면 **쓰기 차단**(`SKILL-DESC-CAP` deny — 초과 시 엔트리가 잘려 명령 인지가 죽음), 그 아래라도 `lint.cmdDescCap`(기본 320) 미니멀 cap 초과면 **차단**(`CMD-DESC-LONG` deny — 하는 일+`Triggers —` 만 두고 플래그표/카탈로그는 `--help`/`argument-hint` 로) · `Triggers —` 절 없으면 warn(`lint` 4f 가 커밋 백스톱). sidecar `skill-desc-guard` s18 이식 | PreToolUse(Write) |
 | `prompt <text>` | 키워드 트리거 + 프롬프트 힌트 주입 | UserPromptSubmit |
-| `architecture {inject\|show}` | repo-root `ARCHITECTURE.json`(우선)/`.md` 를 컨텍스트로 주입 — CLAUDE.md 처럼 설계 SSOT 상주 (80KB 초과 시 절단, 부재 시 무음). 트리 **뒤**에 턴-마감 게이트: 이번 턴 변경 시 노드 제자리 갱신 + `🏛️ ARCHITECTURE 갱신: …` 보고 의무화(`ing` 도 동형 `🔵 ING 갱신`) | SessionStart + 매 UserPromptSubmit |
+| `architecture {inject\|show\|search <q>}` | repo-root `ARCHITECTURE.json`(우선)/`.md` 를 컨텍스트로 주입 — CLAUDE.md 처럼 설계 SSOT 상주 (80KB 초과 시 절단, 부재 시 무음). 트리 **뒤**에 턴-마감 게이트: 이번 턴 변경 시 노드 제자리 갱신 + `🏛️ ARCHITECTURE 갱신: …` 보고 의무화(`ing` 도 동형 `🔵 ING 갱신`). **`search <q>`** = slug/이름/역할/상세 대소문자무시 substring → 매칭 노드 slug + breadcrumb (각 노드 고유 kebab-case slug = 검색키 · 구 `구분`/type 필드 폐기, 카테고리는 `guard-`/`module-`… slug prefix 로 흡수 · `lint` 가 slug 부재/중복/형식 block) | SessionStart + 매 UserPromptSubmit |
 | `claudemd {inject\|show}` | repo-root `CLAUDE.md`(프로젝트 규칙)를 **매 턴** 재주입 — commons 처럼 salience 유지해 규칙이 묻히지 않게 (선택적 `<!-- enforce:start/end -->` 블록만, 80KB 절단, 부재 시 무음) | UserPromptSubmit |
 | `toolkit {list\|inject\|json\|write\|check}` | **명령 카탈로그** — agent 가 전 명령을 인지·사용하게 SessionStart 에 `id — use ⟨triggers⟩` compact 주입(키워드 반응형 사각지대 보완). SSOT=`HELP`(파싱) → `write`=`TOOLKIT.jsonl` 산출, `check`=전 dispatch 명령 카탈로그 수록 **커버리지** + HELP↔파일 drift(`lint` 가 `TOOLKIT-DRIFT` warn) | SessionStart |
 | `companions {inject\|list}` | **이웃 CLI 명령 surface** — toolkit 의 자매(toolkit=sidecar 자신, companions=이웃 CLI). DOMAIN-AGNOSTIC: 띄울 CLI 는 데이터(repo `harness.config.json` 의 `companions` + host-wide `~/.sidecar/companions.json`, cmd union·repo 우선)라 엔진엔 hexa 미하드코딩 → 전역 1곳으로 모든 repo 가 `hexa cloud` 존재를 더듬지 않고 인지. 각 companion 의 카탈로그 명령(default `--help`)을 실행·절단해 주입, 부재/실패면 skip·전부 없으면 무음 | SessionStart |
@@ -226,7 +226,7 @@ bash .harness-engine/bin/sidecar ci list
 ## 더 읽기
 
 - [docs/languages.md](docs/languages.md) — 언어/플랫폼 범용성 (Python·Rust·C·Go·Swift·hexa 프리셋 + Node 런타임 요구)
-- [ARCHITECTURE.json](ARCHITECTURE.json) — 사이드카 아키텍처 트리 SSOT (컬럼형 노드: 이름·역할·구분·상세). 사람용 뷰어는 [ARCHITECTURE.html](ARCHITECTURE.html) — 로컬은 `python3 serve.py`(서버 + 브라우저 자동 오픈), 원격은 raw.githack.com / GitHub Pages
+- [ARCHITECTURE.json](ARCHITECTURE.json) — 사이드카 아키텍처 트리 SSOT (컬럼형 노드: 이름·역할·slug·상세 · 각 노드 고유 kebab-case slug=검색키, `sidecar architecture search <q>`). 사람용 뷰어는 [ARCHITECTURE.html](ARCHITECTURE.html) — 로컬은 `python3 serve.py`(서버 + 브라우저 자동 오픈), 원격은 raw.githack.com / GitHub Pages
 - [docs/install.md](docs/install.md) — repo 통합 상세 (submodule / vendor / 멀티 repo)
 - [docs/extending.md](docs/extending.md) — 규칙 추가, 도메인 모듈 확장 패턴
 

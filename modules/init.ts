@@ -223,19 +223,20 @@ export async function runInit(args: string[]): Promise<number> {
       columns: [
         { key: "이름", label: "이름", tree: true },
         { key: "역할", label: "역할" },
-        { key: "구분", label: "구분" },
+        { key: "slug", label: "slug" },
         { key: "상세", label: "상세" },
       ],
       tree: {
         이름: proj,
         역할: "(프로젝트 한 줄 역할)",
-        구분: "root",
+        slug: proj.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "root",
         상세:
           "현재상태 스냅샷 트리 — 변경 시 해당 노드를 제자리 교체(update-in-place)." +
-          " 이력/버전/날짜/previous/deprecated 노드 금지(이력은 CHANGELOG + git).",
+          " 이력/버전/날짜/previous/deprecated 노드 금지(이력은 CHANGELOG + git)." +
+          " 각 노드는 고유 kebab-case slug 보유(검색키 · `sidecar architecture search`).",
         children: [
-          { 이름: "src/", 역할: "소스 코드", 구분: "group", 상세: "(컴포넌트별 역할)" },
-          { 이름: "state/", 역할: "작업 산출물 단일 루트", 구분: "group", 상세: "실험·벤치·검증·스크래치 (git-tracked)" },
+          { 이름: "src/", 역할: "소스 코드", slug: "group-src", 상세: "(컴포넌트별 역할)" },
+          { 이름: "state/", 역할: "작업 산출물 단일 루트", slug: "group-state", 상세: "실험·벤치·검증·스크래치 (git-tracked)" },
         ],
       },
     };

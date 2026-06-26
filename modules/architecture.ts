@@ -118,7 +118,57 @@ export async function runArchitecture(args: string[]): Promise<number> {
     return hits.length ? 1 : 0;
   }
 
-  process.stdout.write("usage: sidecar architecture {inject|show|lint|convergence {list|add|rm|edit}}\n");
+  if (sub === "search") {
+    const q = args.slice(1).join(" ").trim().toLowerCase();
+    if (!found || !found.rel.endsWith(".json")) {
+      process.stdout.write("architecture: no ARCHITECTURE.json at repo root (search needs the JSON tree)\n");
+      return found ? 1 : 0;
+    }
+    if (!q) {
+      process.stdout.write(
+        "usage: sidecar architecture search <query> — substring (case-insensitive) over slug / 이름 / 역할 / 상세\n",
+      );
+      return 1;
+    }
+    interface TNode {
+      이름?: string;
+      역할?: string;
+      상세?: string;
+      slug?: string;
+      children?: TNode[];
+    }
+    let tree: TNode;
+    try {
+      tree = (JSON.parse(readFileSync(found.path, "utf8")) as { tree: TNode }).tree;
+    } catch {
+      process.stdout.write("architecture search: ARCHITECTURE.json is not valid JSON\n");
+      return 1;
+    }
+    const hits: { slug: string; name: string; role: string; crumb: string }[] = [];
+    const walk = (n: TNode, crumb: string[]): void => {
+      const name = n.이름 ?? "";
+      const here = name ? [...crumb, name] : crumb;
+      if (name) {
+        const hay = [n.slug, name, n.역할, n.상세].filter(Boolean).join(" ").toLowerCase();
+        if (hay.includes(q)) {
+          hits.push({ slug: n.slug ?? "(no slug)", name, role: n.역할 ?? "", crumb: crumb.join(" › ") });
+        }
+      }
+      for (const c of n.children ?? []) walk(c, here);
+    };
+    walk(tree, []);
+    if (!hits.length) {
+      process.stdout.write(`architecture search: no node matches "${q}"\n`);
+      return 0;
+    }
+    for (const h of hits) {
+      process.stdout.write(`  ${h.slug}\n      ${h.name} — ${h.role}\n      ↳ ${h.crumb || "(root)"}\n`);
+    }
+    process.stdout.write(`architecture search: ${hits.length} match(es) for "${q}"\n`);
+    return 0;
+  }
+
+  process.stdout.write("usage: sidecar architecture {inject|show|search <q>|lint|convergence {list|add|rm|edit}}\n");
   return 1;
 }
 
@@ -338,6 +388,7 @@ export function lintArchitectureTree(): ArchLintHit[] {
     return [];
   }
   const hits: ArchLintHit[] = [];
+  const slugSeen = new Map<string, string>(); // slug → first path that used it
   const walk = (node: unknown, path: string): void => {
     if (typeof node === "string") {
       if (MAX_CELL_CHARS > 0 && node.length > MAX_CELL_CHARS) {
@@ -358,7 +409,39 @@ export function lintArchitectureTree(): ArchLintHit[] {
     } else if (Array.isArray(node)) {
       node.forEach((v, i) => walk(v, `${path}[${i}]`));
     } else if (node && typeof node === "object") {
-      for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+      const obj = node as Record<string, unknown>;
+      // A tree node = any object carrying 이름. Each MUST have a unique kebab-case
+      // slug so `sidecar architecture search` can address it by a stable key (the
+      // 구분/type field was retired in favor of category-prefixed slugs). Skip the
+      // convergence store (id-keyed, no 이름) and columns (key/label, no 이름).
+      if (typeof obj["이름"] === "string" && !path.startsWith("root.convergence")) {
+        const slug = obj["slug"];
+        if (typeof slug !== "string" || !slug.trim()) {
+          hits.push({
+            rule: "ARCH-SLUG-MISSING",
+            path,
+            msg: `tree node "${obj["이름"]}" has no slug — every node needs a stable searchable slug (\`sidecar architecture search\`)`,
+          });
+        } else if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+          hits.push({
+            rule: "ARCH-SLUG-FORMAT",
+            path,
+            msg: `slug "${slug}" is not kebab-case ([a-z0-9-], no leading dash) — keep slugs grep-clean`,
+          });
+        } else {
+          const prev = slugSeen.get(slug);
+          if (prev) {
+            hits.push({
+              rule: "ARCH-SLUG-DUPE",
+              path,
+              msg: `slug "${slug}" duplicates ${prev} — slugs are the unique search key, must not repeat`,
+            });
+          } else {
+            slugSeen.set(slug, path);
+          }
+        }
+      }
+      for (const [k, v] of Object.entries(obj)) {
         // the top-level `convergence` array is the recurrence-learning store, NOT part
         // of the visual design tree — it has long value/threshold strings by design and
         // its own validator (lintConvergenceRecords); skip it from tree-hygiene checks.

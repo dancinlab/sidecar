@@ -79,7 +79,7 @@ hook delegates (wire these into your agent's settings.json):
   post edit <file>         PostToolUse(Write/Edit) — flag L0 edits
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
   commons {inject|show}    always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)
-  architecture {inject|show|lint|convergence ...}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart; lint = c4 tree hygiene; convergence {list|add|rm|edit} = 재발학습 store CRUD (id-keyed · add upsert · value/threshold '--value -'=stdin); convergence stop-check = Stop 훅 — 에이전트 출력의 재발-신호 키워드 스캔 → SSOT 기록 넛지(신호별 세션당 1회 · advisory · 패턴=config/convergence-triggers.json)
+  architecture {inject|show|search <q>|lint|convergence ...}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart; search <q> = substring over slug/이름/역할/상세 → matching node slugs+breadcrumb; lint = c4 tree hygiene + slug presence/uniqueness; convergence {list|add|rm|edit} = 재발학습 store CRUD (id-keyed · add upsert · value/threshold '--value -'=stdin); convergence stop-check = Stop 훅 — 에이전트 출력의 재발-신호 키워드 스캔 → SSOT 기록 넛지(신호별 세션당 1회 · advisory · 패턴=config/convergence-triggers.json)
   git-context {inject|show}   SessionStart: warn when HEAD is BEHIND origin/<default> (stale-branch trap — reading pre-merge code as current)
   claudemd {inject|show}   re-inject repo-root CLAUDE.md (project rules) EACH UserPromptSubmit so they stay enforced (optional <!-- enforce:start/end --> block)
   toolkit {list|inject|json|write|check}   command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift

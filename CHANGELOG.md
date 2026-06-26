@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## chore(ci): disable Blacksmith — sidecar CI 를 표준 GitHub 러너로, 강제 폐기
+
+🗣️ "blacksmith 사용 해제 해줘 sidecar 에서도"
+
+- sidecar 자체 `.github/workflows/ci.yml` `runs-on: blacksmith-4vcpu-ubuntu-2204` → `ubuntu-latest`.
+- config 기본 `ci.runner` → `ubuntu-latest` · `ci.enforceRunner` 기본 false. `ci scaffold`/`init` 은 이제 표준 러너로 ci.yml 방출(러너-브랜드 강제·경고 제거).
+- **CI-NON-BLACKSMITH lint(4i) 제거** + severity-map 엔트리 제거 + **commons `blacksmith-ci` 규칙 삭제** — Blacksmith 강제 전면 폐기. ci.ts/init.ts/config.ts/ci.yml 의 Blacksmith 문구도 generic 화.
+- 검증: tsc clean · 코드/config blacksmith 잔존 0 · `sidecar lint` 그린(toolkit 재생성).
+
+## chore(docs): 플러그인 산문 정리 — 런북·README de-bloat (기능 보존)
+
+🗣️ "sidecar 플러그인 모든 부분 산문 정리"
+
+- 2개 병렬 서브에이전트가 **잘라내기 금지·전 기능 보존** 원칙으로 정리: templates(런북) 3개(sbs −245·fleet-full −298·gap −55 B · §중복 재진술·정당화 산문만 제거, 40-lens·전 step/flag 무손상 · 나머지 15개 이미 crisp) + README −346B(self-hosted reaper·doc-gate·ff-sync 등 narrative 중복 제거 · 기능/lint 표 무손상). docs/*.md 는 이미 lean → 무변경.
+- 검증: `sidecar lint` 그린 · 기능/명령/플래그 커버리지 손실 0.
 ## fix(recommend): stop-check warn-only — 'Stop hook error' 제거 (decision:block → stderr advisory)
 
 🗣️ "hook error 안뜨고 처리되게 가능?"

@@ -129,7 +129,7 @@ hook delegates (wire these into your agent's settings.json):
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + doc-gate checks
   naming audit [path] [--ing] [--gate]   repo-wide non-canonical name audit (version/copy/dup suffix backlog the write-guard never saw) · --ing = land summary on THIS repo's board · --gate = exit 1 on any hit
-  ci [all|fast|list|scaffold [--force]]   run configured verification commands in parallel (was verify; config key stays verify.checks) · scaffold = emit a Blacksmith .github/workflows/ci.yml that runs 'sidecar ci' on config ci.{runner,setup} (init writes it too)
+  ci [all|fast|list|scaffold [--force]]   run configured verification commands in parallel (was verify; config key stays verify.checks) · scaffold = emit a .github/workflows/ci.yml that runs 'sidecar ci' on config ci.{runner,setup} (init writes it too)
   ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop · c19)
   verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge)
   errors {route|list|drain_check|mark_fixed}

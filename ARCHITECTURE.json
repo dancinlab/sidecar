@@ -543,12 +543,6 @@
                     "상세": "staged **commons.md + 루트 CLAUDE.md** 의 `- do:`/`- dont:` 줄 codepoint 길이가 `lint.dodontCap`(기본 200) 초과 신규/증가면 차단 — HEAD 와 diff-aware(slug|kind|idx 키)라 기존 긴 줄 grandfather, Write·Edit 모두 커버(write-가드는 Write 만). 서브폴더 CLAUDE.md(folder-docs 로컬 가이드)는 자유양식이라 제외. archive_sidecar tape-lint #2 포팅"
                   },
                   {
-                    "이름": "CI-NON-BLACKSMITH (4i)",
-                    "역할": "비-Blacksmith CI 러너 차단 (block)",
-                    "구분": "check",
-                    "상세": "staged `.github/workflows/*.yml` 의 `runs-on:` 이 `blacksmith-*` 가 아니면 차단(github-hosted `ubuntu-latest`·`macos-*` 등) — commons `blacksmith-ci` 의 기계적 이빨. `${{ }}` 표현식(matrix/var)은 정적 미해결이라 skip · 배열 `[a, b]` 는 라벨별 검사. config `ci.enforceRunner=false` 로 per-repo off. fix=`sidecar ci scaffold`"
-                  },
-                  {
                     "이름": "FOLDER-GUIDE-MISSING (4i)",
                     "역할": "폴더 가이드 (block)",
                     "구분": "check",
@@ -652,9 +646,9 @@
               },
               {
                 "이름": "ci",
-                "역할": "검증 명령 병렬 실행 + Blacksmith CI scaffold",
+                "역할": "검증 명령 병렬 실행 + CI scaffold",
                 "구분": "module",
-                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1·옛 `verify` 별칭). `ci scaffold` = Blacksmith `.github/workflows/ci.yml` 방출(create-if-absent·러너=config `ci.runner` 기본 blacksmith-4vcpu·항상 blacksmith). `ciWorkflowYaml`/`defaultCiSetup` export → `init` 도 동일 생성기로 자동 scaffold"
+                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1·옛 `verify` 별칭). `ci scaffold` = `.github/workflows/ci.yml` 방출(create-if-absent·러너=config `ci.runner` 기본 ubuntu-latest·러너-브랜드 강제 없음). `ciWorkflowYaml`/`defaultCiSetup` export → `init` 도 동일 생성기로 자동 scaffold"
               },
               {
                 "이름": "paper",

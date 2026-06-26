@@ -13,7 +13,7 @@ export interface VerifyCheck {
   slow?: boolean; // skipped by `verify fast`
 }
 
-// One step in the scaffolded Blacksmith CI workflow (`sidecar ci scaffold` / init).
+// One step in the scaffolded CI workflow (`sidecar ci scaffold` / init).
 // Serialized verbatim into .github/workflows/ci.yml between checkout and `sidecar ci`.
 export interface CiStep {
   name?: string;
@@ -44,7 +44,7 @@ export interface SidecarConfig {
   keywordsFile: string;
   severityMapFile: string;
   verify: { checks: VerifyCheck[] };
-  // CI scaffold (`sidecar ci scaffold` / `init`) — emits a Blacksmith GitHub
+  // CI scaffold (`sidecar ci scaffold` / `init`) — emits a GitHub
   // Actions workflow that runs `sidecar ci` (verify.checks) on `runner`. `setup`
   // = the stack-specific steps (node/hexa/python …) injected before the verify.
   ci: { runner: string; setup: CiStep[]; enforceRunner?: boolean };
@@ -220,7 +220,7 @@ const DEFAULTS: SidecarConfig = {
   keywordsFile: ".harness/keywords.json",
   severityMapFile: ".harness/severity-map.json",
   verify: { checks: [] },
-  ci: { runner: "blacksmith-4vcpu-ubuntu-2204", setup: [] },
+  ci: { runner: "ubuntu-latest", setup: [], enforceRunner: false },
   lint: {
     freshnessFiles: [],
     dodontCap: 200,

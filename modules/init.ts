@@ -169,7 +169,7 @@ export async function runInit(args: string[]): Promise<number> {
   // 1. harness.config.json
   write(resolve(REPO_ROOT, "harness.config.json"), starterConfig(basename(REPO_ROOT), stack), "harness.config.json");
 
-  // 1b. CI workflow (Blacksmith) — create-if-absent. Runs `sidecar ci` (verify.checks)
+  // 1b. CI workflow — create-if-absent. Runs `sidecar ci` (verify.checks)
   // on a fast cloud runner so push-time checks stay off the dev machine. Runner/setup
   // from config ci.{runner,setup}; setup falls back to the detected stack.
   const ciCfg = config().ci;

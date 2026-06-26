@@ -82,26 +82,24 @@ else the repo at the cwd — and proceed; do not stop to ask (commons c3).
    verdict: `gap` (a real shortfall) · `clean` (handled well) · `n/a` (lens does not
    apply). Keep it terse — one line per lens, grouped by family.
 2. **Collect hits.** A family is "hot" if it has ≥1 `gap` verdict.
-3. **Deepen the hot families.** Dispatch one subagent per hot family. With ≥3 hot
-   families, route them through a **single `Workflow` call** (one `agent()` per family
-   inside `parallel()`) — the concurrency cap + queue + shared token budget prevents the
-   rate-limit death that N simultaneous `Agent` streams cause (commons c27). With 1–2 hot
-   families, direct `Agent` calls in one message are fine. Each agent gets the target plus
-   that family's `gap` lenses, returning a concrete finding + a suggested fix per gap. Use
-   the `Explore` agentType for read-only investigation, `general-purpose` when a fix needs
-   cross-file reasoning.
+3. **Deepen the hot families.** Dispatch one subagent per hot family. With ≥3 hot families,
+   route them through a **single `Workflow` call** (one `agent()` per family inside
+   `parallel()`) — its concurrency cap + queue + shared token budget avoid the rate-limit
+   death N simultaneous `Agent` streams cause (commons c27). With 1–2, direct `Agent` calls in
+   one message are fine. Each agent gets the target + that family's `gap` lenses, returning a
+   concrete finding + suggested fix per gap. Use the `Explore` agentType for read-only
+   investigation, `general-purpose` when a fix needs cross-file reasoning.
 4. If **zero** families are hot, report "no gaps surfaced across 40 lenses" and stop —
    spawn nothing. (This is the `fixpoint` lens applied to `gap` itself.)
 
 ## Step 2′ — mode A (`gap full`): fan-out everything
 
-Skip triage. Dispatch **8 family subagents via a single `Workflow` call** (one `agent()`
-per family inside `parallel()`) — Workflow caps concurrency at min(16,cores−2), queues the
-overflow, and shares one token budget, so 8 simultaneous sweeps don't trigger a rate-limit
-death the way 8 direct background `Agent` streams would (commons c27). Each agent sweeps the
-target through all of its lenses (5 for F1·F2·F3·F5·F7·F8, 6 for F4 and F6 — `occams-razor`
-lives in both) and returns per-lens findings. Use this when triage might miss a latent gap
-and an exhaustive audit is worth the cost.
+Skip triage. Dispatch **8 family subagents via a single `Workflow` call** (one `agent()` per
+family inside `parallel()`) — Workflow caps concurrency at min(16,cores−2), queues overflow,
+and shares one token budget, so 8 simultaneous sweeps avoid the rate-limit death 8 direct
+`Agent` streams would cause (commons c27). Each agent sweeps the target through all its lenses
+(5 for F1·F2·F3·F5·F7·F8, 6 for F4 and F6 — `occams-razor` lives in both) and returns per-lens
+findings. Use this when triage might miss a latent gap and an exhaustive audit is worth the cost.
 
 ## Step 3 — aggregate
 

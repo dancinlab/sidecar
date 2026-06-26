@@ -1,14 +1,12 @@
-# sidecar CI — typecheck + smoke on a Blacksmith cloud runner.
+# sidecar CI — typecheck + smoke on a standard GitHub-hosted runner.
 #
 # WHY: sidecar is the project-agnostic AI coding sidecar (TypeScript run via tsx,
 # no build artifact). The meaningful gate is `tsc --noEmit` over the whole engine
-# + a help-load smoke that imports every module. Offloading to Blacksmith's fast
-# native Ubuntu runner keeps every push-time check off the dev Mac — the dev box
-# only ever does `git push` (mirrors gamebox/hexa-lang CI).
+# + a help-load smoke that imports every module. Running these in CI keeps every
+# push-time check off the dev Mac — the dev box only ever does `git push`.
 #
-# Runner: pure Node/TS work needs no Apple host, so we use the cheaper Ubuntu
-# Blacksmith runner. Pinned to ubuntu-2204 — the same stable glibc floor
-# hexa-lang's release.yml uses for its x86_64 jobs (avoid the 24.04 surprises).
+# Runner: pure Node/TS work needs no Apple host, so we use a standard
+# GitHub-hosted ubuntu-latest runner (config `ci.runner`).
 #
 # Verification is the canonical `sidecar ci` (runs harness.config.json verify.checks
 # = `tsc --noEmit`) so CI and the local `sidecar ci` gate stay one source of truth.
@@ -30,8 +28,8 @@ concurrency:
 
 jobs:
   verify:
-    name: typecheck + smoke (Blacksmith)
-    runs-on: blacksmith-4vcpu-ubuntu-2204
+    name: typecheck + smoke
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6

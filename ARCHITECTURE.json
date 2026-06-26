@@ -570,7 +570,7 @@
                 "이름": "lab",
                 "역할": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
                 "slug": "module-lab",
-                "상세": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]`. 토큰화 스켈레톤이 `templates/lab/` 에 살고(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`), 재귀로 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 후 타깃에 방출 — never-clobber(--force 시만 덮어씀)·--dry-run 보고전용. 방출물: src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger). git init/push 없음(files-only). 빈 dir 은 .gitkeep."
+                "상세": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]`. 토큰화 스켈레톤이 `templates/lab/` 에 살고(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`), 재귀로 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 후 타깃에 방출 — never-clobber(--force 시만 덮어씀)·--dry-run 보고전용. 방출물: src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger). git init/push 없음(files-only). 빈 dir 은 .gitkeep. 생성 CLAUDE.md 는 demiurge 교차-repo 규약 2개를 명시: hexa-lang stdlib(d3 — 구현코드=canonical hexa-lang stdlib, repo는 docs/manifest만 consume) + QFORGE 컴퓨트 기본엔진(d_qforge_default — DFT/el-ph 기본=QFORGE-native, QE는 미전환 조각 fallback·≤1% gate·deck는 hexa deck · non-compute lab은 skip)."
               },
               {
                 "이름": "shadow",

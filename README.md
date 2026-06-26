@@ -167,6 +167,8 @@ bash .harness-engine/bin/sidecar init
 
 생성 후 `harness.config.json` 의 `verify.checks` · `lockdown.files` 만 repo 에 맞게 채우면 된다.
 
+> 🧪 **연구/설계 캠페인 골격은 `sidecar lab init <dir>`**: lumen/rtsc/carbon-capture 자매-repo 스켈레톤(src·state·ARCHITECTURE+뷰어+serve·HYPOTHESES pre-register→falsify→run→verdict·tool/<slug>.py harness)을 한 방에 방출. 생성 `CLAUDE.md` 는 demiurge 교차-repo 규약을 명시한다 — **구현코드=canonical `hexa-lang` stdlib**(repo 는 docs/manifest 만 consume, d3) + **컴퓨트 기본엔진=`QFORGE`-native**(QE 는 미전환 조각 fallback·≤1% gate, d_qforge_default). `init`(거버넌스 설치)과 별개 · files-only(git init/push 없음).
+
 > 수동 설정도 가능: `.harness/*.json` 을 두지 않으면 번들 기본 규칙(`config/*.json`)이 자동 적용된다.
 >
 > 제거: `sidecar uninstall` (주입물만 제거, 사용자 콘텐츠 보존 · `--dry-run` 미리보기). 상세 [docs/install.md](docs/install.md#제거-uninstall).

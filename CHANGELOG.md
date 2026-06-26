@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## feat(lab): scaffolded CLAUDE.md documents the hexa-lang stdlib + QFORGE conventions
+
+🗣️ "demiurge 참고하면 hexa-lang 에서 stdlib 로 관리하도록 되있거든 … QFORGE 에 대해서도 기록 필요"
+
+`/lab init`'s generated `CLAUDE.md` now carries two demiurge cross-repo conventions up front,
+so every new lab repo states them from day one (lifted from `demiurge/CLAUDE.md` d3 / d_qforge_*):
+
+- **hexa-lang stdlib** (demiurge d3) — implementation code lives in the canonical `hexa-lang`
+  stdlib; this repo *consumes* it and never owns stdlib. Topical/domain folders hold docs /
+  manifests only — no duplicated implementation, not a code home. Reusable logic → upstream.
+- **QFORGE compute default** (demiurge d_qforge_default) — heavy compute (DFT/DFPT/el-ph/sim)
+  defaults to the from-scratch `QFORGE` stack, not QE/bespoke; QE is reference/fallback for
+  un-migrated pieces only, migrate piece-by-piece behind a ≤1 % gate, decks via `hexa deck`.
+  Marked *(skip for non-compute labs)*.
+- `tool/` gotcha clarified: thin verification harness only, not a home for reusable impl.
+
 ## feat(lab): `/lab init` — scaffold the lumen/rtsc/carbon-capture sibling-repo skeleton
 
 🗣️ "현재구조를 생성하도록 /lab init 사이드카 플러그인 구현"

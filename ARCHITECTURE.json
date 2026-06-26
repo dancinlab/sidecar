@@ -389,6 +389,12 @@
                 "역할": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
                 "slug": "guard-ing-staleness-check",
                 "상세": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
+              },
+              {
+                "이름": "ing stop-check",
+                "역할": "매턴 ING 상태 보고 강제 (decision:block)",
+                "slug": "guard-ing-stop-check",
+                "상세": "매 응답에 `🔵 ING` 줄(`🔵 ING 갱신: …` 또는 `🔵 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). sidecar-managed repo 한정·loop guard 1회/chain. (modules/ing.ts)"
               }
             ]
           },

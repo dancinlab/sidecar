@@ -1,5 +1,22 @@
 # CHANGELOG
 
+## feat(ing): per-turn ING-status enforce — every response must carry a 🔵 ING line (Stop gate)
+
+The turn-close ING directive was advisory ("update the board if progress changed, else skip"), and the only
+hard signal was a code-edit counter (`ing staleness-check`, warn-only). But progress changes WITHOUT a code
+edit too — a measurement, a verdict, a bench result, a background-agent landing — so an edit-counter misses
+those turns. Owner asked to enforce an ING update every turn.
+
+- **`ing stop-check`** (new Stop hook · `decision:block`) — mirrors `recommend stop-check`: reads the last
+  assistant text and blocks the turn if it carries no `🔵 ING` line, forcing the model to emit one. NOT tied
+  to file edits (captures measurement/verdict/agent-landing progress); the agent consciously reports either
+  `🔵 ING 갱신: <what>` (board mutated) or `🔵 ING: 변동 없음` (no-change). Scoped to sidecar-managed repos
+  (harness.config.json); native `stop_hook_active` loop-guard caps it at once per chain.
+- **turn-close directive** (`ing inject`) rewritten: every response must include one of the two `🔵 ING`
+  lines; progress explicitly includes non-code signals.
+- Wired into the plugin `hooks/hooks.json` Stop array and the global `~/.claude/settings.json`.
+- `ing staleness-check` (code-edit warn) stays as a secondary signal.
+
 ## chore(changelog+styles): retire the user-request quote convention + explicit slug-block severity
 
 The owner asked to drop the speaker-emoji user-request quote line that CHANGELOG entries had been opening

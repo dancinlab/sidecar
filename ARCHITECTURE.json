@@ -372,7 +372,7 @@
             "이름": "PreToolUse(Write)",
             "역할": "쓰기 직전 → pre write",
             "구분": "surface",
-            "상세": "경로·내용·우회패턴 매칭 + write-time hard-deny: SKILL-DESC-CAP(commands/*.md·SKILL.md desc cap), COMMONS-PROSE/COMMONS-NO-DODONT/COMMONS-DODONT-INCOMPLETE(**commons.md + 루트 CLAUDE.md** 전체-문서 Write 가 do/dont-only 이고 각 `## ` 섹션이 do+dont 둘 다 보유인지 — 첫 `## ` 앞 preamble 면제 · 서브폴더 CLAUDE.md 자유양식 제외 · 산문/한쪽-누락이면 쓰기 차단 · lint 4g backstop), DODONT-LONG(**commons.md + 루트 CLAUDE.md** 의 `- do:`/`- dont:` 줄이 `lint.dodontCap`(기본 200자) 초과 신규/증가면 차단 — diff-aware grandfather · 서브폴더 CLAUDE.md(folder-docs)는 자유양식이라 제외 · archive_sidecar tape-lint #2 포팅 · 전체-content Write 만, Edit 은 lint 4h), SECRET-LITERAL, HANDOFF-SCATTER. stdout JSON(deny) / stderr(warn)"
+            "상세": "경로·내용·우회패턴 매칭 + write-time hard-deny 묶음(상세는 각 4g/4h check 노드): SKILL-DESC-CAP · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE(commons.md+루트 CLAUDE.md do/dont-only 양식) · DODONT-LONG(do/dont 길이 cap) · SECRET-LITERAL · HANDOFF-SCATTER. stdout JSON(deny)/stderr(warn)"
           },
           {
             "이름": "PostToolUse",

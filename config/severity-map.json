@@ -26,7 +26,8 @@
       "ARCH-HISTORY": "block",
       "FOLDER-GUIDE-MISSING": "block",
       "HELP-BACKTICK": "block",
-      "CONVERGENCE-MALFORMED": "block"
+      "CONVERGENCE-MALFORMED": "block",
+      "CMD-DESC-LONG": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

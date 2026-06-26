@@ -336,7 +336,7 @@ export async function preWrite(_args: string[]): Promise<number> {
   const sd = descWriteViolation(filePath, content);
   if (sd) {
     if (sd.warn) emitWarn("SKILL-DESC-TRIGGERS", sd.warn);
-    if (sd.block) return emitBlock("SKILL-DESC-CAP", sd.block);
+    if (sd.block) return emitBlock(sd.blockRule ?? "SKILL-DESC-CAP", sd.block);
   }
 
   // commons do/dont format guard (write-time, sidecar-style) — a commons.md

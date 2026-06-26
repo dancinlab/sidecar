@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## feat(lint): CMD-DESC-LONG — 플러그인 커맨드 description 미니멀 cap (write+commit 강제)
+
+🗣️ "sidecar 내부에 구현된 플러그인 커맨드 주입등등도 전부 미니멀화 lint 적용" — CLAUDE.md/commons do/dont 미니멀화의 연장.
+
+- 새 lint 규칙 **CMD-DESC-LONG**(block): `commands/*.md`(·SKILL.md) frontmatter `description:` 의 codepoint 길이가 `lint.cmdDescCap`(기본 320) 초과면 차단. 기존 1400자 `SKILL-DESC-CAP`(Claude Code skill-listing 천장 = 인지가 죽는 기술적 상한)과 **별개의 빡빡한 '미니멀' 선** — 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로 내린다.
+- 2층 동형 강제(dodontCap 패턴 그대로): write-time deny(`shadow.ts:descWriteViolation`→`pre.ts`, blockRule 구분) + commit-time(`lintCommandDescriptions`→lint 4f) + `severity-map`(block) + config 키 `lint.cmdDescCap`(0=off).
+- "전부 미니멀화" 지시대로 grandfather 없이 **기존 17개 over-cap description 전부 트림**(max 1468→ ≤320; sbs·fleet-full·paper·ship 등). 의미+Triggers KO/EN 보존, 카탈로그는 `argument-hint`/`--help`/모듈에 이미 존재.
+- 주입 SSOT(commons·recommend-axes·easy 등)는 의도적으로 verbose 한 거버넌스 원문이라 범위 제외(이미 source 에서 do/dont 로 미니멀화 + 별도 강제).
+- 검증: tsc clean · `sidecar lint` 그린(17→0) · write-guard 스모크(over-cap→CMD-DESC-LONG deny · under-cap→통과) · `toolkit write` 71 엔트리 재생성.
 ## feat(commons): do/dont 양식 강제를 루트 CLAUDE.md 로 확장 (B — 전 섹션 do/dont-only)
 
 🗣️ "양식으로 무조건 고정해줘 ## SLUG, do, dont" + "B" (commons.md + 루트 CLAUDE.md 전 섹션 do/dont-only)

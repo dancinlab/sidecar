@@ -58,6 +58,12 @@ export interface SidecarConfig {
     // a new or LENGTHENED `- do:` / `- dont:` line over this is gated (diff-aware:
     // legacy long lines are grandfathered, only new/grown ones block). 0 = off.
     dodontCap?: number;
+    // minimal cap (chars/codepoints) for a `commands/*.md` (or SKILL.md)
+    // `description:` — keeps the plugin slash-command surface minimal (lead with
+    // what it does + a `Triggers —` clause; move flag tables / sub-verb catalogues
+    // into the body or `--help`). Separate from the 1400 Claude Code skill-listing
+    // ceiling (SHADOW-DESC): this is the much tighter "minimal" line. 0 = off.
+    cmdDescCap?: number;
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
@@ -200,7 +206,7 @@ const DEFAULTS: SidecarConfig = {
   severityMapFile: ".harness/severity-map.json",
   verify: { checks: [] },
   ci: { runner: "blacksmith-4vcpu-ubuntu-2204", setup: [] },
-  lint: { freshnessFiles: [], dodontCap: 200 },
+  lint: { freshnessFiles: [], dodontCap: 200, cmdDescCap: 320 },
   upstreams: [{ name: "hexa-lang", repo: "dancinlab/hexa-lang" }],
   guides: ["CLAUDE.md", "AGENTS.md", "README.md"],
   folderGuides: {

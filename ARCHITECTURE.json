@@ -372,7 +372,7 @@
             "이름": "PreToolUse(Write)",
             "역할": "쓰기 직전 → pre write",
             "구분": "surface",
-            "상세": "경로·내용·우회패턴 매칭 + write-time hard-deny 묶음(상세는 각 4g/4h check 노드): SKILL-DESC-CAP · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE(commons.md+루트 CLAUDE.md do/dont-only 양식) · DODONT-LONG(do/dont 길이 cap) · SECRET-LITERAL · HANDOFF-SCATTER. stdout JSON(deny)/stderr(warn)"
+            "상세": "경로·내용·우회패턴 매칭 + write-time hard-deny 묶음(상세는 각 4g/4h check 노드): SKILL-DESC-CAP/CMD-DESC-LONG(명령 desc 1400 천장 + 320 미니멀 cap) · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE(commons.md+루트 CLAUDE.md do/dont-only 양식) · DODONT-LONG(do/dont 길이 cap) · SECRET-LITERAL · HANDOFF-SCATTER. stdout JSON(deny)/stderr(warn)"
           },
           {
             "이름": "PostToolUse",
@@ -517,6 +517,12 @@
                     "역할": "명령 desc 인지 (warn)",
                     "구분": "check",
                     "상세": "commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(sidecar-repo 한정·commands/ 존재 시). sidecar s18 포팅"
+                  },
+                  {
+                    "이름": "CMD-DESC-LONG (4f-min)",
+                    "역할": "명령 desc 미니멀 cap (block)",
+                    "구분": "check",
+                    "상세": "commands/*.md description codepoint ≤ `lint.cmdDescCap`(기본 320)인지 — 1400 천장(SHADOW-DESC)과 별개의 빡빡한 '미니멀' 선. 초과면 차단: 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로. write-time 도 같은 cap deny(`shadow.ts:descWriteViolation`→pre.ts) · 0=off"
                   },
                   {
                     "이름": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",

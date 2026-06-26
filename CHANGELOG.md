@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## refactor(commons): verdict-integrity 일반화 — ML 어휘 제거, project-agnostic 화
+
+🗣️ "좀더 범용으로 기록해야될듯 commons"
+
+- 직전 신설 `verdict-integrity` 가 `sampler·RNG·decode·serialize·OOM` 같은 ML/anima 도메인 어휘를 흘림 — commons 는 **zero domain hardcoding** 원칙. 도구·하네스·환경·미완실행·미배선으로 일반화해 테스트·벤치·실험 어떤 repo 에도 먹히게. 규율 자체(발산=측정 의심·negative 동일 바)는 불변.
 ## feat(commons): verdict-integrity slug — terminal 박기 전 측정경로 검증 (anima 세션 실패 로그 포팅)
 
 🗣️ "계속 실수하거나 해매는 부분 어떤식으로 방지할수 있을까" (anima 멀티-에이전트 세션 회고)

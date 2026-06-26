@@ -19,7 +19,7 @@ import { lintCommandDescriptions } from "./shadow.ts";
 import { lintCommonsFormat, dodontLengthLint } from "./commons.ts";
 import { qualifiesMissing } from "./folders.ts";
 
-interface Violation {
+export interface Violation {
   rule: string;
   file: string;
   msg: string;
@@ -71,10 +71,15 @@ function fileAgeDays(absPath: string): number | null {
   return (Date.now() - base) / 86_400_000;
 }
 
-export async function runLint(args: string[]): Promise<number> {
+// Collect all lint violations (pure — no printing). Reused by `runLint` (commit-time
+// gate) AND by the PreToolUse(Bash) commit interceptor (pre.ts) so the SAME lint runs
+// globally on agent `git commit` in any sidecar-managed repo, not only where a git
+// pre-commit hook is installed. `stagedOverride` lets the commit interceptor widen the
+// fileset (e.g. `git commit -a` = staged + tracked-modified).
+export async function collectViolations(stagedOverride?: string[]): Promise<Violation[]> {
   const cfg = config();
   const violations: Violation[] = [];
-  const staged = await stagedFiles();
+  const staged = stagedOverride ?? (await stagedFiles());
 
   // 1. staged L0
   for (const f of staged) {
@@ -258,6 +263,17 @@ export async function runLint(args: string[]): Promise<number> {
     }
   }
 
+  return violations;
+}
+
+// Filter to BLOCK-severity violations (warn-severity like L0-LOCKDOWN is reported but
+// never vetoes). Shared by the commit interceptor so it blocks on the same bar.
+export function lintBlockers(violations: Violation[]): Violation[] {
+  return violations.filter((v) => classify("lint_rule", v.rule) === "block");
+}
+
+export async function runLint(args: string[]): Promise<number> {
+  const violations = await collectViolations();
   appendJsonl(LOGS.lint, { kind: "lint", mode: args[0] ?? "all", violations: violations.length, items: violations });
 
   if (violations.length === 0) {

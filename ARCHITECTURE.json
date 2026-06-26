@@ -345,6 +345,12 @@
                 "역할": "흩어진 문서 차단",
                 "slug": "guard-single-doc-scatter",
                 "상세": "scatter 파일명(`*-report/summary/notes/plan/guide.md`·`UPPERCASE.md`·날짜접두 `.md`) 생성 BLOCK(scope 무관·`DOC-SCATTER`) → ARCHITECTURE(SSOT)+CHANGELOG(append) 통합 · quickref 규율(`DOC-NO-QUICKREF`)은 scopeDirs 한정 warn · `docs.allow` 리스트·`docs.enforce:off` 로 면제 (commons single-doc)"
+              },
+              {
+                "이름": "commit-lint 게이트",
+                "역할": "agent git commit 에 lint 강제 (글로벌)",
+                "slug": "guard-commit-lint",
+                "상세": "`COMMIT-LINT` — agent `git commit` 감지 시 sidecar-managed repo(harness.config.json)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
               }
             ]
           },

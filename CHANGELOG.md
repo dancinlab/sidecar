@@ -1,5 +1,26 @@
 # CHANGELOG
 
+## feat(pre): global commit-lint gate — enforce the lint gate via settings.json, not a per-repo git hook
+
+🗣️ "enforce 게이트를 공용 settings.json 로 강제할수는 없나?"
+
+The lint commit-gate lived ONLY in a per-repo `.git/hooks/pre-commit` (installed by `sidecar init`), so a
+repo that was never init-ed (e.g. anima) committed completely un-gated — its 89 oversized ARCHITECTURE
+cells never blocked a commit. Since `sidecar pre bash` is already wired GLOBALLY via `~/.claude/settings.json`
+PreToolUse(Bash), an agent `git commit` can be intercepted there to run the SAME lint everywhere.
+
+- **`pre.ts` commit interceptor** (`COMMIT-LINT`) — detects an agent `git commit`, and in a sidecar-managed
+  repo (harness.config.json present) runs the lint gate, blocking on any block-severity violation with the
+  list + fix hint. `git commit -a/-am/--all` widens the lint scope to the auto-staged tracked-modified set
+  (precise `-a` detection, no over-match → no false block). Honors the same `--no-verify`/`# no-verify-ok`
+  escape the danger guard governs (one consistent opt-out, not a new hatch).
+- **`lint.ts` refactor** — extracted `collectViolations()` (pure, no printing) + `lintBlockers()` (block-severity
+  filter) from `runLint`, exported `Violation`. The git pre-commit hook and the global interceptor now share
+  ONE lint implementation (native-canonical-first, no reinvent).
+- Net: the enforce gate is now global — every sidecar-managed repo (anima included) gets agent-commit lint
+  enforcement from the shared settings.json, no per-repo `sidecar init --hooks` needed. The per-repo git hook
+  still covers non-agent (human/script) commits.
+
 ## feat(architecture): retire 구분/type field → searchable per-node slug + `architecture search`
 
 🗣️ "type 은 굳이 필요없어 보이는데 slug 있으면 … 검색가능하게 하고 검색 서브커맨드 만들면될듯"

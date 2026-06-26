@@ -9,10 +9,11 @@
 //
 // CLAUDE_TOOL_INPUT / CODEX_TOOL_INPUT is JSON: {"command":"...","file_path":"...","content":"..."}
 import { readJson } from "../lib/json.ts";
-import { readStdin } from "../lib/exec.ts";
+import { readStdin, execShell } from "../lib/exec.ts";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
-import { config, resolveRuleFile } from "../lib/config.ts";
+import { config, resolveRuleFile, repoPath } from "../lib/config.ts";
+import { collectViolations, lintBlockers } from "./lint.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
@@ -129,6 +130,40 @@ function emitWarn(id: string, reason: string): void {
   appendJsonl(LOGS.observations, { kind: "pre_warn", rule_id: id, reason });
 }
 
+// commit-lint gate — the GLOBAL enforcer. The lint commit-gate used to live ONLY in a
+// per-repo git pre-commit hook (installed by `sidecar init`), so a repo that was never
+// `init`-ed (e.g. anima) committed completely un-gated. `sidecar pre bash` is wired
+// GLOBALLY via ~/.claude/settings.json, so intercepting an agent `git commit` HERE runs
+// the SAME lint (`collectViolations` → `lintBlockers`) in EVERY sidecar-managed repo —
+// no per-repo hook needed. Scoped to repos carrying harness.config.json (sidecar-managed);
+// honors the --no-verify / `# no-verify-ok` escape the danger guard already governs, so
+// it is ONE consistent opt-out, not a new hatch. Returns a block reason or null.
+async function commitLintGate(cmd: string): Promise<string | null> {
+  if (!/(^|[\s;&|(])git\s+(-\S+\s+)*commit(?![\w-])/.test(cmd)) return null; // not a git commit
+  if (/--no-verify|(^|\s)-n(\s|$)|no-verify-ok/.test(cmd)) return null; // danger-guard-governed escape
+  if (!existsSync(repoPath("harness.config.json"))) return null; // sidecar-managed repos only
+  const split = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
+  const cached = split((await execShell("git diff --cached --name-only", { cwd: repoPath(".") })).stdout);
+  // `git commit -a/-am/--all` auto-stages tracked-modified files at commit time — widen
+  // the lint scope to match the about-to-commit set (precise -a detection, no over-match).
+  const after = cmd.slice((cmd.search(/\bcommit\b/) + 6) || 0).split(/\s+/);
+  const dashA = after.some((t) => t === "--all" || /^-[A-Za-z]*a[A-Za-z]*$/.test(t));
+  let scope = cached;
+  if (dashA) {
+    const tracked = split((await execShell("git diff --name-only", { cwd: repoPath(".") })).stdout);
+    scope = [...new Set([...cached, ...tracked])];
+  }
+  if (!scope.length) return null; // nothing to commit (e.g. message-only --amend) → let git handle it
+  const blockers = lintBlockers(await collectViolations(scope));
+  if (!blockers.length) return null;
+  const lines = blockers.map((v) => `  • [${v.rule}] ${v.file} — ${v.msg}`).join("\n");
+  return (
+    `git commit blocked by ${blockers.length} sidecar lint violation(s) (global gate via settings.json · commons cycle-docs-pr) —\n${lines}\n` +
+    `Fix them (add the CHANGELOG entry · refresh ARCHITECTURE/README · split the oversized cell · …), ` +
+    `or if a doc is genuinely N/A append \`# no-verify-ok <reason>\` and \`git commit --no-verify\`.`
+  );
+}
+
 export async function preBash(_args: string[]): Promise<number> {
   const input = parseToolInput();
   const cmd = String(input.command ?? "");
@@ -151,6 +186,13 @@ export async function preBash(_args: string[]): Promise<number> {
   // H-CURL-PIPE-SH so a profile edit can't disable them; honors inline `# ...-ok`.
   const danger = detectDangerousBash(cmd);
   if (danger) return emitBlock(danger.id, danger.reason);
+
+  // commit-lint gate — global enforcer (see commitLintGate). Runs the SAME lint the git
+  // pre-commit hook runs, but via the settings.json PreToolUse(Bash) hook → an agent
+  // `git commit` is gated in EVERY sidecar-managed repo, even ones without a per-repo
+  // pre-commit hook. After the danger guard so --no-verify is governed in one place.
+  const commitBlock = await commitLintGate(cmd).catch(() => null);
+  if (commitBlock) return emitBlock("COMMIT-LINT", commitBlock);
 
   // naming-guard (bash) — BLOCK a mv/cp/touch/mkdir that CREATES a version/copy-
   // suffixed name (`mv a a_v2.ts`, `touch report_final.md`, `mkdir model_v2`). The

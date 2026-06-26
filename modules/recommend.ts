@@ -10,7 +10,7 @@ import { homedir } from "node:os";
 import { SIDECAR_CONFIG_DIR, REPO_ROOT } from "../lib/paths.ts";
 import { resolveRuleFile } from "../lib/config.ts";
 import { readStdin } from "../lib/exec.ts";
-import { info } from "../lib/log.ts";
+import { info, warn } from "../lib/log.ts";
 
 // Standing default mode (one token), resolved with precedence:
 //   per-repo .harness/recommend-default  (committed = team-shared, wins)
@@ -55,21 +55,22 @@ function defaultDirective(): string {
   const mode = readDefault();
   if (mode === "present") return "";
   if (mode === "auto") {
-    return "\n# default mode: AUTO (4축 합의기준 자동) — score the candidate options on ALL four axes (완성도·단순·안전·표준, 1–5, weighted avg 1:1:1:1, tie→안전), auto-pick the consensus winner, render the r2 box THEN one conclusion line `🤖 4축 auto-pick: <안> (완성도=X 단순=Y 안전=Z 표준=W · weighted=<sum>)`; decide for the user, do NOT wait (r4). ALSO governs /sbs when no explicit mode token is given.\n# ⛔ HARD STOP RULE — the LAST thing in your reply MUST be the actual work (a tool call / the executed change / its result) — NEVER the box or the `🤖 ... auto-pick` line. Ending the turn right after the auto-pick conclusion is the bug: keep going and DO the picked winner now. A Stop-hook backstop (`recommend stop-check`) will force you to continue if you stop on the box.\n";
+    return "\n# default mode: AUTO (4축 합의기준 자동) — score the candidate options on ALL four axes (완성도·단순·안전·표준, 1–5, weighted avg 1:1:1:1, tie→안전), auto-pick the consensus winner, render the r2 box THEN one conclusion line `🤖 4축 auto-pick: <안> (완성도=X 단순=Y 안전=Z 표준=W · weighted=<sum>)`; decide for the user, do NOT wait (r4). ALSO governs /sbs when no explicit mode token is given.\n# ⛔ HARD STOP RULE — the LAST thing in your reply MUST be the actual work (a tool call / the executed change / its result) — NEVER the box or the `🤖 ... auto-pick` line. Ending the turn right after the auto-pick conclusion is the bug: keep going and DO the picked winner now. A Stop-hook backstop (`recommend stop-check`) will remind you (advisory · non-block) if you stop on the box.\n";
   }
   const a = axisLabel(mode);
   if (!a) return "";
-  return `\n# default mode: FIXED ${a} (STANDING SELECTION · auto-proceed) — ⚡ BEHAVIORAL MANDATE FIRST: a standing selection (${a}) is already set, so the 4-axis box is informational ONLY and is NEVER a stop point — in the SAME turn AUTO-PROCEED with this axis's champion and CONTINUE straight into executing it; do NOT end your turn on the box, do NOT ask "진행할까요?", do NOT wait for a re-pick (the user already chose this axis = the selection). Then render the box for trade-off visibility: ★-mark this axis line IN PLACE + append \`  ← 기본값\`, STILL render all four lines, + one conclusion line \`🤖 고정축 auto-pick: <안> (${a} 기준)\` immediately followed by the actual work (r4). ALSO governs /sbs with ${a} forced.\n# ⛔ HARD STOP RULE — the LAST thing in your reply MUST be the actual work (a tool call, the executed change, or its result) — NEVER the box or the \`🤖 ... auto-pick\` line. If you notice you are about to end the turn right after the auto-pick conclusion, THAT is the bug: keep going and DO the picked champion now. A Stop-hook backstop (\`recommend stop-check\`) will detect a turn that ends on the box and force you to continue — don't make it have to.\n`;
+  return `\n# default mode: FIXED ${a} (STANDING SELECTION · auto-proceed) — ⚡ BEHAVIORAL MANDATE FIRST: a standing selection (${a}) is already set, so the 4-axis box is informational ONLY and is NEVER a stop point — in the SAME turn AUTO-PROCEED with this axis's champion and CONTINUE straight into executing it; do NOT end your turn on the box, do NOT ask "진행할까요?", do NOT wait for a re-pick (the user already chose this axis = the selection). Then render the box for trade-off visibility: ★-mark this axis line IN PLACE + append \`  ← 기본값\`, STILL render all four lines, + one conclusion line \`🤖 고정축 auto-pick: <안> (${a} 기준)\` immediately followed by the actual work (r4). ALSO governs /sbs with ${a} forced.\n# ⛔ HARD STOP RULE — the LAST thing in your reply MUST be the actual work (a tool call, the executed change, or its result) — NEVER the box or the \`🤖 ... auto-pick\` line. If you notice you are about to end the turn right after the auto-pick conclusion, THAT is the bug: keep going and DO the picked champion now. A Stop-hook backstop (\`recommend stop-check\`) will detect a turn that ends on the box and remind you (advisory · non-block) — don't make it have to.\n`;
 }
 
-// ── stop-check: mechanical backstop for auto-proceed ─────────────────────────
-// The default-mode directive (above) is advisory — it TELLS the model to proceed
-// past the 4-axis box, but nothing forces it. In auto/fixed-axis mode the model
-// still sometimes renders the box + `🤖 ... auto-pick` line and then ENDS the turn
-// (the box reads as a stop point). This Stop hook is the teeth: it reads the final
-// assistant message; if the turn ended ON the box (auto-pick line / box border in
-// the trailing region) while a non-present default is active, it emits a Stop
-// `decision:block` so Claude Code re-invokes the model to actually do the work.
+// ── stop-check: advisory backstop for auto-proceed ───────────────────────────
+// The every-turn default-mode directive (above) is the PRIMARY enforcement — it
+// mandates proceeding past the 4-axis box in auto/fixed-axis mode. This Stop hook is
+// a soft backstop: it reads the final assistant message and, if the turn ended ON the
+// box (auto-pick line / box border in the trailing region) while a non-present default
+// is active, it emits a WARN-ONLY advisory (stderr · non-block). It used to emit a Stop
+// `decision:block`, but Claude Code surfaced that as a "Stop hook error" every time it
+// fired (same reason the convergence/ing staleness checks are warn-only) — so it now
+// just reminds, without erroring or force-re-invoking.
 //
 // Loop guard is NATIVE: Claude Code sets `stop_hook_active:true` on the payload of
 // a Stop that was itself triggered by a prior Stop-block — we bail on that, so we
@@ -142,11 +143,14 @@ function runStopCheck(): number {
   if (!endsOnBox(lastAssistantText(String(tp)))) return 0;
   const axis = AXES.has(mode) ? axisLabel(mode) : mode === "auto" ? "4축 합의" : mode;
   const reason =
-    `당신의 답변이 추천 4축 박스 / \`🤖 ... auto-pick\` 줄에서 끝났다 — 그건 멈출 지점이 아니다 ` +
-    `(default mode=${mode}${AXES.has(mode) ? ` · ${axis}` : ""}). 사용자는 이미 이 축을 standing selection 으로 골랐다. ` +
-    `지금 그 auto-pick 챔피언을 실제로 실행하라(되묻지 말 것) — 그 작업의 도구 호출/변경/결과로 이어가라. ` +
-    `로컬·가역·비파괴면 anti-punt 로 그냥 진행한다.`;
-  process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+    `다음 턴: 추천 4축 박스 / \`🤖 ... auto-pick\` 줄에서 끝내지 말 것 ` +
+    `(default mode=${mode}${AXES.has(mode) ? ` · ${axis}` : ""} = standing selection). ` +
+    `그 auto-pick 챔피언을 같은 턴에 바로 실행하라(되묻지 말 것 · 로컬·가역·비파괴면 anti-punt 로 그냥 진행).`;
+  // advisory · non-block (stderr) — `decision:block` was surfaced by Claude Code as a
+  // "Stop hook error" every time it fired; mirror the convergence/ing staleness warn-only
+  // pattern so the backstop reminds without erroring. The hard auto-proceed mandate already
+  // lives in the every-turn recommend inject (FIXED-axis directive); this is just a nudge.
+  warn(`[recommend] ${reason}`);
   return 0;
 }
 

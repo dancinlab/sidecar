@@ -388,9 +388,9 @@
             "children": [
               {
                 "이름": "recommend stop-check",
-                "역할": "4축 박스에서 멈춤 차단 → auto-proceed 강제",
+                "역할": "4축 박스 종료 감지 → auto-proceed 리마인더 (warn-only)",
                 "구분": "guard",
-                "상세": "decision:block — non-present default mode 인데 답변이 4축 박스/`🤖 ... auto-pick` 줄에서 끝났으면(endsOnBox: 실제 auto-pick 마커 + 트레일링 ~6줄에 박스 잔존) 모델을 강제로 깨워 챔피언 실행. 루프가드=네이티브 stop_hook_active(체인당 1회). present/박스없음/작업수행후 no-op · 파싱실패 silent. 유일하게 모델 재호출하는 메커니즘이라 block 사용. (modules/recommend.ts)"
+                "상세": "**warn-only(stderr·non-block)** — non-present default mode 인데 답변이 4축 박스/auto-pick 줄에서 끝나면 `[recommend]` advisory. 구 `decision:block` 은 Claude Code 가 'Stop hook error' 로 띄워 convergence/ing 처럼 warn-only 전환 — auto-proceed 강제는 매-턴 inject FIXED-axis 가 담당, 이건 넛지. (modules/recommend.ts)"
               },
               {
                 "이름": "convergence stop-check",

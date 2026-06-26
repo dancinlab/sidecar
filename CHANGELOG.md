@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## fix(recommend): stop-check warn-only — 'Stop hook error' 제거 (decision:block → stderr advisory)
+
+🗣️ "hook error 안뜨고 처리되게 가능?"
+
+- `recommend stop-check` 가 4축 박스에서 끝난 턴을 감지하면 `decision:block` 으로 모델을 강제 재호출했는데, Claude Code 가 이를 매번 **"Stop hook error"** 로 표시 — 노이즈. convergence/ing staleness 와 동일하게 **warn-only(stderr `[recommend]` advisory · non-block)** 로 전환 → 에러 표시 사라짐.
+- auto-proceed 강제는 매-턴 recommend inject 의 FIXED-axis 지시(BEHAVIORAL MANDATE)가 이미 담당. stop-check 는 깔끔한 넛지 백스톱으로 남음(force-re-invoke 제거).
+- 지시문 문구 정정: `body()` 2곳 "force you to continue" → "remind (advisory · non-block)".
+- 검증: tsc clean · 스모크(박스로 끝난 transcript → exit 0 · stdout decision 0건 · stderr `[recommend]` advisory) · `sidecar lint` 그린.
 ## docs(CLAUDE.md): inject-lint 규칙 — inject 잘라내기 금지, 작성 시 각자 lint
 
 🗣️ "잘라내면 안되고, 각 inject 별 작성할때 lint 가 있어야되 · CLAUDE.md 에 명시(기존 양식 따라가는 경향)"

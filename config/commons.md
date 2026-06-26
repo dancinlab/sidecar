@@ -86,6 +86,10 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - do: 배포 산출물 있는 repo 는 검증된 main 에 semver 태그(`vX.Y.Z`) → `release.yml`(CI)가 타깃별 빌드·GitHub release 업로드 · (선택) main push 마다 edge prerelease
 - dont: 손으로 버전 bump/태그 중구난방 · 미검증 커밋에 태그 · 로컬 수동 빌드→수동 업로드 · 머지만 하고 릴리즈 안 하기
 
+## blacksmith-ci — CI 는 Blacksmith 러너로
+- do: CI 워크플로는 항상 Blacksmith 러너(`runs-on: blacksmith-*`)로 — `sidecar ci scaffold`/`init` 이 표준 `ci.yml` 방출(검증=`sidecar ci` · 러너=config `ci.runner`)
+- dont: github-hosted 러너(`ubuntu-latest`·`macos-*`) 사용 · repo 마다 CI 손작성 · 비-blacksmith 로 override(Apple-native 필요시 `blacksmith-*-macos-15`)
+
 ## poll-min-30m — 외부 장기건 폴링은 ≥30분
 - do: 외부 long-run(GPU pod·원격 measure/bench) 을 메인세션이 직접 폴링하면 ≥30분(1800s) 간격·상태만 · 가능하면 서브에이전트(worktree)에 위임 · 의심되면 호스트 직접 실측(ground-truth)
 - dont: 분 단위로 깨우기(프롬프트 캐시 파괴) · live agent 재-ping/resume(진행 리셋 루프) · idle/빈 출력을 결과로 받기 · stale 통지 무검증 행동

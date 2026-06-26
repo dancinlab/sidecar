@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(commons): `blacksmith-ci` 규칙 추가 — CI 는 항상 Blacksmith 러너
+
+🗣️ "commons 기록해줘 CI 는 Blacksmith CI 사용"
+
+- 거버넌스 SSOT(config/commons.md)에 새 slug `blacksmith-ci` 추가: do=CI 워크플로는 항상 `runs-on: blacksmith-*`(`sidecar ci scaffold`/`init` 이 표준 ci.yml 방출 · 검증=`sidecar ci` · 러너=config `ci.runner`), dont=github-hosted 러너(`ubuntu-latest`·`macos-*`) 사용·repo 마다 CI 손작성·비-blacksmith override(Apple-native 필요시 `blacksmith-*-macos-15`).
+- always-on 규칙이라 전 repo 세션에 매 턴 주입 — `ci scaffold`/`init`(직전 사이클) 의 기본 Blacksmith 러너를 governance 로 못박음.
+- do 줄이 처음 207자라 자기 자신의 DODONT-LONG cap(200)에 걸려(dogfood), 디테일을 빼 줄여 통과.
 ## feat(ci): 하네스가 모든 repo 에 Blacksmith CI 를 scaffold — `ci scaffold` + `init` 자동방출
 
 🗣️ "ci 플러그인 필요해 blacksmith 이용하도록 hexa-lang 참고" + "init 에도 반영" + "sidecar 하네스로 모두 ci 를 blacksmith 로 구축" + "ci 는 항상 blacksmith 로"

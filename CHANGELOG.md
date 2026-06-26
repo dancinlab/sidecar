@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## fix(easy): emit-시점 꼬리절단(capTail) 철회 — inject 는 lint 로 강제, 런타임 손실 금지
+
+🗣️ "뒷부분 커팅은 절대 · lint 가 필요한거지" — emit 절단은 주입 내용을 조용히 버리는 손실이라 폐기.
+
+- PR #215 의 `easy.ts:capTail`(emit 시점 꼬리 절단) 제거 — easy inject 는 다시 문서 전체를 주입. 런타임 절단은 매 턴 내용 손실이라 부적합.
+- `INJECT-OVERSIZED` lint 스코프를 `config/recommend.md` + `styles/*.md` 로 복원(#214 동작) — inject 비대는 **소스를 lean 하게 유지하도록 작성자에게 강제**(block)하는 게 올바른 해법. commons.md 면제 유지.
+- 현재 styles 5개 + recommend 전부 cap(9000) 이하라 그린. 검증: tsc clean · capTail 잔재 0 · `sidecar lint` 그린.
 ## feat(easy): emit-시점 꼬리 자동절단(capTail) — inject 를 budget 으로 컷, 수동 트림 불필요
 
 🗣️ "그냥 컷팅하면안되 뒷부분" — inject 비대를 소스 손질이 아니라 emit 절단으로.

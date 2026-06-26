@@ -528,7 +528,7 @@
                     "이름": "INJECT-OVERSIZED (4j)",
                     "역할": "매-턴 inject 소스 바이트 cap (block)",
                     "구분": "check",
-                    "상세": "매 UserPromptSubmit 전체-주입되는 `config/recommend.md`(4축 rubric) 바이트 ≤ `lint.injectByteCap`(기본 9000)인지 — 산문 비대=매 턴 context 세금. 꼬리에 핵심 규칙(default-mode·hard-stop)이 있어 자동절단 불가라 소스-크기 lint. 면제: commons.md(거버넌스 SSOT) · styles/*.md(easy inject 가 emit 시 꼬리 자동절단=`easy.ts:capTail`). 0=off"
+                    "상세": "매 UserPromptSubmit 전체-주입되는 inject 소스(`config/recommend.md` + `styles/*.md`) 바이트 ≤ `lint.injectByteCap`(기본 9000)인지 — 산문 비대=매 턴 context 세금. 해법은 소스를 lean 하게(작성자 트림)이지 emit 절단(내용 조용히 손실)이 아니다. 초과면 차단: 규칙+예시 1개만, 중복 예시/표 제거. 면제: commons.md(거버넌스 SSOT). 0=off"
                   },
                   {
                     "이름": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",

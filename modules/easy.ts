@@ -12,29 +12,8 @@ import { SIDECAR_ROOT } from "../lib/paths.ts";
 import { info } from "../lib/log.ts";
 import { readStdin } from "../lib/exec.ts";
 import { loadPrefs } from "./prefs.ts";
-import { config } from "../lib/config.ts";
 
 const STYLES_DIR = resolve(SIDECAR_ROOT, "styles");
-
-// The easy style doc leads with the behavioral rules (7-element pattern + ASCII
-// templates) and trails with EXPENDABLE reference (extra examples, eval tables).
-// Since it's re-injected every turn, cut the tail to the per-turn byte budget
-// (lint.injectByteCap) at emit — the head (the rules) always survives, the
-// reference tail is dropped. The full doc stays on disk. 0 = off.
-function capTail(text: string): string {
-  const cap = config().lint?.injectByteCap ?? 9000;
-  if (cap <= 0 || Buffer.byteLength(text, "utf8") <= cap) return text;
-  let lo = 0, hi = text.length;
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1;
-    if (Buffer.byteLength(text.slice(0, mid), "utf8") <= cap) lo = mid;
-    else hi = mid - 1;
-  }
-  let cut = text.slice(0, lo);
-  const nl = cut.lastIndexOf("\n");
-  if (nl > cap / 2) cut = cut.slice(0, nl);
-  return cut.replace(/\s+$/, "") + "\n\n---\n…(easy reference tail cut to lint.injectByteCap — full doc on disk)\n";
-}
 
 // prefs response language → style file code (easy.md is the English base)
 function langCode(response: string): string {
@@ -184,7 +163,7 @@ export async function runEasy(args: string[]): Promise<number> {
       event === "UserPromptSubmit" && nlTrigger(prompt)
         ? "🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)\n\n"
         : "";
-    const context = capTail(header(file, banner) + body);
+    const context = header(file, banner) + body;
     process.stdout.write(
       JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: context } }) + "\n"
     );

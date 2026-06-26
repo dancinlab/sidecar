@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## chore(severity-map): ARCH-SLUG-MISSING/DUPE/FORMAT → explicit block (first-class slug enforcement)
+
+🗣️ "slug 사용안하는것도 enforce 강제해줘"
+
+The slug lint (added with `architecture search`) blocked a slug-less / dup / malformed-slug tree node only
+via the `fallback: block` default — not a declared rule. Mapped `ARCH-SLUG-MISSING`, `ARCH-SLUG-DUPE`,
+`ARCH-SLUG-FORMAT` to `block` explicitly in both `config/severity-map.json` and `.harness/severity-map.json`,
+alongside `ARCH-BIG-CELL`. So omitting a slug on a 이름-keyed tree node is now a first-class hard block at
+commit time (git pre-commit hook AND the global settings.json commit-lint gate) — not fallback-dependent.
+Verified: removing a node's slug → `[block] ARCH-SLUG-MISSING`, `sidecar lint` exit 1.
+
 ## feat(pre): global commit-lint gate — enforce the lint gate via settings.json, not a per-repo git hook
 
 🗣️ "enforce 게이트를 공용 settings.json 로 강제할수는 없나?"

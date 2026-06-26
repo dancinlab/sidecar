@@ -220,15 +220,19 @@ async function convergenceVerb(args: string[]): Promise<number> {
 // --- convergence stop-check: agent-OUTPUT recurrence trigger (Stop hook) -------
 // The trigger scans the AI agent's OWN last message (NOT the user prompt) for
 // recurrence-signal words; when the agent itself reports a recurring defect /
-// regression / crash-class signal, it nudges (once per session) to record the
-// root-cause learning into ARCHITECTURE.json `convergence.records[]` (root-cause).
+// regression / crash-class signal, it nudges to record the root-cause learning
+// into ARCHITECTURE.json `convergence.records[]` (root-cause). The keyword is a
+// WIDE net, not the decision — a match only re-prompts; the AGENT judges whether
+// it's a real recurrence (records) or a passing mention / false positive (just
+// stops). So broad patterns are fine: precision lives in the agent, not the list.
 // Patterns live as DATA (config/convergence-triggers.json · per-repo override at
 // .harness/convergence-triggers.json) — the engine never hardcodes them.
 // Mirrors `recommend stop-check`: reads the Stop stdin payload, pulls the last
-// assistant text, and on a hit emits decision:block ONCE to re-prompt the agent to
-// record. Native loop guard (stop_hook_active) + a per-transcript once-file keep it
-// from looping or re-nudging the same session every turn. Best-effort: any IO/parse
-// failure is a silent no-op (never wedge a session on this advisory backstop).
+// assistant text, and on a hit emits decision:block. Native loop guard
+// (stop_hook_active) + a once-file keyed PER DISTINCT MATCHED SIGNAL (not per
+// session) keep it from looping or re-nudging the SAME word every turn — a
+// dismissed false positive ("또는") does NOT consume the nudge for a later real
+// signal ("segfault"). Best-effort: any IO/parse failure is a silent no-op.
 interface ConvergenceTriggers {
   patterns?: string[];
   hint?: string;
@@ -245,18 +249,22 @@ function loadTriggers(): ConvergenceTriggers {
 
 const NUDGE_STATE = resolve(LOG_DIR, "convergence-nudge.json");
 
-function alreadyNudged(transcript: string): boolean {
+// Which recurrence signals already nudged in THIS session (transcript). Reset when
+// the transcript changes (= new session). Per-signal so a broad false positive
+// doesn't burn the nudge budget for a different, real signal later in the session.
+function nudgedSignals(transcript: string): Set<string> {
   try {
-    const j = JSON.parse(readFileSync(NUDGE_STATE, "utf8")) as { transcript?: string };
-    return j.transcript === transcript;
+    const j = JSON.parse(readFileSync(NUDGE_STATE, "utf8")) as { transcript?: string; seen?: string[] };
+    if (j.transcript === transcript) return new Set(j.seen ?? []);
   } catch {
-    return false;
+    /* no state yet → nothing nudged */
   }
+  return new Set();
 }
 
-function markNudged(transcript: string): void {
+function markNudged(transcript: string, seen: Set<string>): void {
   try {
-    writeFileSync(NUDGE_STATE, JSON.stringify({ transcript }) + "\n");
+    writeFileSync(NUDGE_STATE, JSON.stringify({ transcript, seen: [...seen] }) + "\n");
   } catch {
     /* best-effort — a missed mark only risks one extra nudge next turn */
   }
@@ -273,22 +281,25 @@ function convergenceStopCheck(): number {
   const tp = payload?.transcript_path ?? payload?.transcriptPath;
   if (!tp) return 0;
   const transcript = String(tp);
-  if (alreadyNudged(transcript)) return 0; // one convergence nudge per session, not per turn
   const text = lastAssistantText(transcript);
   if (!text) return 0;
 
   const { patterns, hint } = loadTriggers();
   if (!patterns?.length) return 0;
   const hay = text.toLowerCase();
-  const matched = patterns.find((p) => hay.includes(p.toLowerCase()));
+  const seen = nudgedSignals(transcript);
+  // First pattern that matched AND hasn't already nudged this session — so a
+  // dismissed false positive doesn't suppress a different, real signal later.
+  const matched = patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
   if (!matched) return 0;
 
-  markNudged(transcript);
+  seen.add(matched);
+  markNudged(transcript, seen);
   const reason =
     `재발 신호 감지 — 네 답변에 "${matched}" 가 보인다(에이전트-출력 트리거). ` +
     (hint ??
       "같은 원인의 결함이 두 번째라면, 그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라: `sidecar architecture convergence list` 로 기존 확인 후 `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심>\" --threshold \"<재발조건/해결>\" --source <원인파일>` (commons root-cause).") +
-    " (첫 발생·일반 언급이면 무시하고 그냥 멈춰도 된다 — 이 넛지는 세션당 1회 advisory.)";
+    " (이건 자동 기록이 아니라 advisory 넛지 — 진짜 재발이면 기록, 첫 발생·일반 언급·오탐이면 무시하고 그냥 멈춰라. 같은 신호는 세션당 1회만 뜬다.)";
   process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
   return 0;
 }

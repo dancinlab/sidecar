@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(convergence): 재발 트리거 넓은 그물화 — 단독어 추가 + once-가드 신호별 격상
+
+🗣️ "오탐되도 무조건 작동하는건 아니잖아? ai agent 가 판단하는거 아냐?"
+
+- 통찰(유저): 트리거 매치는 `decision:block` **넛지**일 뿐 자동 기록이 아니다 — 진짜 재발이냐는 **에이전트가 판단**(기록 or 무시). 따라서 키워드는 **넓은 그물**이어도 되고, 정밀도는 에이전트가 담당. (앞 사이클의 "오탐 폭증" 우려는 과대평가였음 — 정정.)
+- 키워드 확장 (`config/convergence-triggers.json`): 단독어 `또`·`다시`·`실패`·`동일`·`실수` 추가 (복합어와 병존). recall 우선.
+- **once-가드 신호별 격상** (`modules/architecture.ts`): 기존 "세션(transcript)당 1회" → **"신호별 1회"**(transcript+matched 패턴 키). 넓은 키워드의 유일한 실구멍 — 초반 오탐 `또`("또는")가 세션의 단일 넛지를 **소진**해 뒤의 진짜 `segfault` 재발을 가리는 문제 — 를 제거. `convergence-nudge.json` 이 `{transcript, seen:[...patterns]}` 로 누적, 각 distinct 신호가 세션당 1회 독립 발화.
+- 넛지 문구도 "자동 기록 아님 · 오탐이면 무시" 를 명시(에이전트 판단 강조).
+- 검증: tsc clean · 신호별 가드 스모크 PASS — 같은 transcript 에 `또`+`재현됐`+`segfault` → 1·2·3차가 각각 다른 신호로 발화, 4차 silent(셋 다 소진). 오탐 `또` 가 진짜 신호를 소진하지 않음 확인.
+
 ## feat(convergence): 에이전트-출력 재발 트리거 복원 — Stop 훅이 응답을 스캔 → SSOT 기록 넛지
 
 🗣️ "폐기된 컨버전스 플러그인 처럼 트리거도 있어야될듯" + "내가 입력하는게 아니라 ai agent 가 뱉는 에서 트리거"

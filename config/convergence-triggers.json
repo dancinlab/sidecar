@@ -1,6 +1,7 @@
 {
-  "_doc": "Recurrence-signal patterns scanned against the AI AGENT's OWN output (last assistant message) at session Stop — NOT the user prompt. When the agent's reply mentions a recurring defect/regression, `sidecar architecture convergence stop-check` surfaces a once-per-session nudge to record the root-cause learning into ARCHITECTURE.json `convergence.records[]` (commons root-cause). Plain substrings match literally (case-insensitive); warn-only, never blocks (recurrence words false-positive). Override per-repo at .harness/convergence-triggers.json.",
+  "_doc": "Recurrence-signal patterns scanned against the AI AGENT's OWN output (last assistant message) at session Stop — NOT the user prompt. A match only NUDGES (`sidecar architecture convergence stop-check` re-prompts); the AGENT judges whether it's a real recurrence (→ record into ARCHITECTURE.json `convergence.records[]`, commons root-cause) or a passing mention / false positive (→ just stop). So this is a deliberately WIDE net — precision lives in the agent's judgment, not the keyword. Plain substrings match literally (case-insensitive). The Stop hook nudges once PER DISTINCT MATCHED SIGNAL per session, so a broad false positive (e.g. '또' in '또는') does not consume the nudge for a different real signal later. Override per-repo at .harness/convergence-triggers.json.",
   "patterns": [
+    "또", "다시", "실패", "동일", "실수", "발생",
     "또 터졌", "또 그러", "또 발생", "또 깨졌", "또 실패", "또 났", "다시 발생", "재발", "회귀", "재현됐",
     "두 번째", "두번째", "똑같은 버그", "똑같은 문제", "똑같은 실수", "같은 결함", "같은 버그", "같은 실수",
     "예전 버그", "전에도", "지난번에도", "previously fixed", "already fixed", "reintroduc", "reopened",

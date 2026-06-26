@@ -1,10 +1,15 @@
-// sidecar research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang]}
+// sidecar research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang] | web <query> [--n N] | fetch <url>}
 // Fetch external research material, no API key:
 //   arxiv  search the official arXiv API by free-text (relevance-ranked, per-term AND),
 //          or fetch by id — returns title / authors / date / categories / pdf / abstract.
 //   yt     extract a YouTube caption transcript via the InnerTube `player` API
 //          (ANDROID client; the watch-page baseUrl serves empty timedtext, the
 //          ANDROID client's caption-track baseUrls still serve content).
+//   web    keyless web SEARCH via the DuckDuckGo lite endpoint — returns ranked
+//          title / url / snippet rows (the WebSearch half of an agent's web tools).
+//   fetch  keyless page FETCH — GET a url and strip HTML to readable text
+//          (the WebFetch half). Claude Code already has native WebSearch/WebFetch;
+//          these mirror them as a deterministic CLI usable from any agent runtime.
 // Network-dependent — fails gracefully when offline. Don't burst >5 arxiv/min.
 import { info, ok, loudFail } from "../lib/log.ts";
 
@@ -206,10 +211,102 @@ async function yt(args: string[]): Promise<number> {
   return 0;
 }
 
+// ── Web search (keyless · DuckDuckGo lite) ───────────────────────────────────
+// The WebSearch half of an agent's web tools. DDG's lite endpoint is keyless and
+// returns plain HTML rows: <a … class='result-link'>TITLE</a> + <td class='result-snippet'>…</td>.
+function stripTags(s: string): string {
+  return clean(decodeEntities(s.replace(/<[^>]+>/g, " ")));
+}
+
+async function web(args: string[]): Promise<number> {
+  let n = 8;
+  const rest: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if ((args[i] === "--n" || args[i] === "-n") && i + 1 < args.length) n = parseInt(args[++i], 10) || 8;
+    else rest.push(args[i]);
+  }
+  const q = rest.join(" ").trim();
+  if (!q) {
+    info("usage: sidecar research web <query> [--n N]");
+    return 1;
+  }
+  let page: string;
+  try {
+    const r = await fetch("https://lite.duckduckgo.com/lite/", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Mozilla/5.0" },
+      body: new URLSearchParams({ q }).toString(),
+    });
+    page = await r.text();
+  } catch (e) {
+    loudFail(`research web: network error — ${String(e).slice(0, 120)}`);
+    return 1;
+  }
+  // class quoting varies ('…' or "…"); match either. Links and snippets line up by order.
+  const links = [...page.matchAll(/<a[^>]*href="([^"]+)"[^>]*class=['"]result-link['"][^>]*>([\s\S]*?)<\/a>/g)];
+  const snips = [...page.matchAll(/class=['"]result-snippet['"][^>]*>([\s\S]*?)<\/td>/g)].map((m) => stripTags(m[1]));
+  if (!links.length) {
+    info(`research web: no results for '${q}'`);
+    return 0;
+  }
+  const shown = Math.min(links.length, n);
+  ok(`research web: '${q}' — ${shown} results (DuckDuckGo)`);
+  for (let i = 0; i < shown; i++) {
+    const url = decodeEntities(links[i][1]);
+    const title = stripTags(links[i][2]);
+    const snip = snips[i] ?? "";
+    info("");
+    info(`  ▸ ${title}`);
+    info(`    ${url}`);
+    if (snip) info(`    ${snip.slice(0, 300)}${snip.length > 300 ? "…" : ""}`);
+  }
+  return 0;
+}
+
+// ── Page fetch (keyless · HTML → readable text) ──────────────────────────────
+// The WebFetch half — GET a url, strip script/style + tags to readable text.
+async function fetchPage(args: string[]): Promise<number> {
+  const url = args[0];
+  if (!url || !/^https?:\/\//.test(url)) {
+    info("usage: sidecar research fetch <http(s)-url>");
+    return 1;
+  }
+  let body: string;
+  try {
+    const r = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; sidecar-research)" } });
+    if (!r.ok) {
+      loudFail(`research fetch: HTTP ${r.status} for ${url}`);
+      return 1;
+    }
+    body = await r.text();
+  } catch (e) {
+    loudFail(`research fetch: network error — ${String(e).slice(0, 120)}`);
+    return 1;
+  }
+  const titleM = body.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const text = decodeEntities(
+    body
+      .replace(/<script[\s\S]*?<\/script>/gi, " ")
+      .replace(/<style[\s\S]*?<\/style>/gi, " ")
+      .replace(/<\/(p|div|li|h[1-6]|tr|section|article|header|footer)>/gi, "\n")
+      .replace(/<br[^>]*>/gi, "\n")
+      .replace(/<[^>]+>/g, " "),
+  )
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  const CAP = 15000;
+  ok(`research fetch: ${url}${titleM ? ` — ${clean(titleM[1])}` : ""} (${text.length} chars)`);
+  process.stdout.write(text.slice(0, CAP) + (text.length > CAP ? "\n…[truncated]" : "") + "\n");
+  return 0;
+}
+
 export async function runResearch(args: string[]): Promise<number> {
   const sub = args[0];
   if (sub === "arxiv") return arxiv(args.slice(1));
   if (sub === "yt" || sub === "youtube") return yt(args.slice(1));
-  info("usage: sidecar research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang]}");
+  if (sub === "web" || sub === "search") return web(args.slice(1));
+  if (sub === "fetch" || sub === "url") return fetchPage(args.slice(1));
+  info("usage: sidecar research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang] | web <query> [--n N] | fetch <url>}");
   return 1;
 }

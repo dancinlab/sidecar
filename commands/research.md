@@ -1,6 +1,6 @@
 ---
-description: /research arxiv <query|id> [flags] | yt <url|id> [lang] — fetch arXiv papers (relevance/date-ranked or by-id) or a YouTube transcript — no API key. Returns text the agent can read. Triggers — "arxiv 검색", "논문 찾아줘", "유튜브 자막", "youtube transcript", "/research arxiv", "/research yt".
-argument-hint: "arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang]"
+description: /research arxiv|yt|web|fetch — keyless external fetch (no key): arXiv · YouTube transcript · web search (DuckDuckGo) · page→text. web/fetch mirror Claude Code's WebSearch/WebFetch. Triggers — "논문 찾아줘", "유튜브 자막", "웹 검색", "web search", "페이지 가져와", "/research web", "/research fetch", "/research arxiv".
+argument-hint: "arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang] | web <query> [--n N] | fetch <url>"
 allowed-tools: Bash
 ---
 

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## feat(research): web 검색 + fetch 페이지 서브커맨드 — Claude Code WebSearch/WebFetch 키리스 대응
+
+🗣️ "research 명령어 플러그인에 web 도 추가가능한가 그냥 claude code 가 하는거 그냥 붙이면 될듯"
+
+- Claude Code 의 WebSearch/WebFetch 는 세션 내장 도구라 갖다 붙일 공개 CLI API 가 없음 → arxiv·yt 와 동일한 **키 없는 자체 구현**으로 같은 결과를 냄. `research web <query> [--n N]` = DuckDuckGo lite 키리스 검색(title/url/snippet 행) · `research fetch <url>` = 페이지 GET → script/style 제거 후 HTML→읽기텍스트(15k 캡). 둘 다 어떤 에이전트 런타임에서도 쓰는 결정적 CLI. 별칭 `search`/`url`. 네트워크 의존·오프라인 graceful. 라이브 스모크: alphafold 검색 3건 · example.com fetch OK.
+
 ## refactor(commons): verdict-integrity 일반화 — ML 어휘 제거, project-agnostic 화
 
 🗣️ "좀더 범용으로 기록해야될듯 commons"

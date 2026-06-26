@@ -8,6 +8,15 @@
 import { readFileSync } from "node:fs";
 import { resolveRuleFile, config } from "../lib/config.ts";
 import { readStdin } from "../lib/exec.ts";
+import { REPO_ROOT } from "../lib/paths.ts";
+
+// A repo-ROOT CLAUDE.md (the project-rules SSOT, do/dont-disciplined) vs a SUBFOLDER
+// CLAUDE.md (folder-docs local guide, free-form). Path may be absolute (write-guard)
+// or repo-relative (commit lint) — strip REPO_ROOT then check it's the top-level one.
+function isRootClaudeMd(filePath: string): boolean {
+  const rel = filePath.startsWith(REPO_ROOT) ? filePath.slice(REPO_ROOT.length).replace(/^\/+/, "") : filePath;
+  return rel === "CLAUDE.md";
+}
 
 function body(): string {
   const f = resolveRuleFile(".harness/commons.md", "commons.md");
@@ -117,8 +126,8 @@ export function commonsWriteViolation(filePath: string, content: string): { rule
 // each do/dont line and is DIFF-AWARE: legacy long lines are grandfathered (keyed
 // by slug|kind|idx vs the baseline), only a NEW or LENGTHENED line blocks — so you
 // can edit around the long ones and shrink them, but can't add/grow over the cap.
-// Scope: commons.md only (bundled config/ or .harness/ override). cap=0 off.
-// (CLAUDE.md is free-form per folder-docs — not in scope.)
+// Scope: commons.md (bundled/override) + repo-ROOT CLAUDE.md. cap=0 off.
+// (SUBFOLDER CLAUDE.md is free-form per folder-docs — not in scope.)
 const DODONT_RE = /^- (do|dont):\s?(.*)$/;
 const cpLen = (s: string): number => [...s].length; // codepoints (Korean = 1/char)
 
@@ -163,12 +172,12 @@ export function newOverCapDodont(proposed: string, baseline: string, cap: number
 
 const dodontCap = (): number => config().lint?.dodontCap ?? 200;
 
-// In scope for the length cap: commons.md ONLY (bundled config/ or .harness/ override).
-// CLAUDE.md is deliberately OUT — folder-docs makes CLAUDE.md free-form ("do/dont 강제
-// 아님"), so a do/dont-specific length cap doesn't belong there (a repo's CLAUDE.md may
-// not use do/dont at all). do/dont discipline lives where do/dont is the format: commons.md.
+// In scope for the length cap: commons.md (bundled config/ or .harness/ override) +
+// the repo-ROOT CLAUDE.md (project-rules SSOT, do/dont-disciplined). A SUBFOLDER
+// CLAUDE.md (folder-docs local guide) is free-form ("do/dont 강제 아님") → OUT of scope.
 function dodontInScope(filePath: string): boolean {
-  return filePath.endsWith("config/commons.md") || filePath.endsWith(".harness/commons.md");
+  if (filePath.endsWith("config/commons.md") || filePath.endsWith(".harness/commons.md")) return true;
+  return isRootClaudeMd(filePath);
 }
 
 // Write-time guard — full-content Write only (an Edit passes new_string, not the

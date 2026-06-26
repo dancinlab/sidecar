@@ -209,12 +209,13 @@ export async function runLint(args: string[]): Promise<number> {
 
   // 4h. do/dont length cap (archive_sidecar tape-lint #2 port) — diff-aware vs HEAD,
   // so it catches BOTH Write and Edit (the write-guard only sees full-content Write).
-  // For each staged commons.md, compare the working file to its HEAD version: a NEW or
-  // LENGTHENED `- do:`/`- dont:` line over the cap blocks; legacy long lines are
-  // grandfathered. block. cap 0 = off. (CLAUDE.md is free-form per folder-docs — out of scope.)
+  // For each staged commons.md or repo-ROOT CLAUDE.md, compare the working file to its
+  // HEAD version: a NEW or LENGTHENED `- do:`/`- dont:` line over the cap blocks; legacy
+  // long lines are grandfathered. block. cap 0 = off. (A SUBFOLDER CLAUDE.md like
+  // `modules/CLAUDE.md` is free-form per folder-docs — out of scope.)
   for (const f of staged) {
     const base = f.split("/").pop() ?? "";
-    if (base !== "commons.md") continue;
+    if (base !== "commons.md" && f !== "CLAUDE.md") continue;
     let working = "";
     try {
       working = readFileSync(repoPath(f), "utf8");

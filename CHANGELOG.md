@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## fix(commons): do/dont 길이 cap scope 정정 — 루트 CLAUDE.md 포함, 서브폴더만 자유양식
+
+🗣️ "CLAUDE.md 도 자유양식 금지인데, 서브폴더 CLAUDE.md 만 자유양식"
+
+- 정정: 직전 변경이 CLAUDE.md 전체를 cap scope 에서 빼버린 과잉이었다. 올바른 구분 — **루트 CLAUDE.md**(프로젝트 규칙 SSOT · do/dont 사용)는 규율 대상, **서브폴더 CLAUDE.md**(folder-docs 로컬 가이드)만 자유양식.
+- 수정 (modules/commons.ts): `isRootClaudeMd(filePath)` 추가(REPO_ROOT 상대경로가 정확히 `CLAUDE.md` 일 때만 true) → `dodontInScope` = commons.md + 루트 CLAUDE.md. 서브폴더(`modules/CLAUDE.md` 등)는 false. lint.ts 4h staged 필터도 `f === "CLAUDE.md"`(루트)만 포함.
+- 검증: tsc clean · 스모크 — 루트 CLAUDE.md 긴 새 do줄→block · 서브폴더 modules/CLAUDE.md 긴 do줄→통과 · config/commons.md→block · lint ok.
+
+
 ## fix(commons): do/dont 길이 cap 을 commons.md 전용으로 — CLAUDE.md 는 자유양식(scope 제외)
 
 🗣️ "do , dont 를 안쓰는데" (anima·hexa-lang CLAUDE.md 는 do/dont 형식 미사용)

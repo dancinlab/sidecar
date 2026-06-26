@@ -350,9 +350,9 @@
               },
               {
                 "이름": "naming-guard",
-                "역할": "비-canonical 작명 차단",
+                "역할": "비-canonical 작명 차단(생성) + 터치 시 넛지",
                 "구분": "guard",
-                "상세": "버전/복사 접미사 파일·폴더명(`_v2`·`_final`·`_copy`·`foo 2`…) BLOCK → canonical 단일파일 update-in-place 강제 · Write/Edit(`detectVersionedName`) + Bash mv/cp/touch/mkdir(`detectVersionedNameBash`, 목적지만 검사) 양쪽 · c25 · 이력은 git history · `@canonical-ok`(write)/`# canonical-ok`(bash) 면제 · test/spec 제외"
+                "상세": "버전/복사 접미사 파일·폴더명(`_v2`·`_final`·`_copy`·`foo 2`…). **새 생성** BLOCK → canonical 단일파일 update-in-place 강제 · Write/Edit(`detectVersionedName`) + Bash mv/cp/touch/mkdir(`detectVersionedNameBash`, 목적지만 검사). **기존 비표준 파일 터치는 warn-only 넛지**(생성만 막던 갭 — backlog 가 손 안 닿음): preWrite 가 `existsSync` 면 block 대신 warn(편집은 허용해 고칠 수 있게) · preTouch(Read)도 `offendingToken(basename)` 로 warn(`NAMING-TOUCH-VERSION-SUFFIX`). c25 · 이력은 git history · `@canonical-ok`(write)/`# canonical-ok`(bash) 면제 · test/spec 제외"
               },
               {
                 "이름": "state-guard",

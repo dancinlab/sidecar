@@ -25,7 +25,9 @@ import { descWriteViolation } from "./shadow.ts";
 import { commonsWriteViolation, dodontLengthWriteViolation } from "./commons.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
-import { detectVersionedName, detectVersionedNameBash } from "./naming-guard.ts";
+import { detectVersionedName, detectVersionedNameBash, offendingToken } from "./naming-guard.ts";
+import { existsSync } from "node:fs";
+import { basename } from "node:path";
 import { detectBannedStateDir, detectBannedStateDirBash } from "./state-guard.ts";
 import { memPreflight } from "./mem-guard.ts";
 
@@ -290,11 +292,17 @@ export async function preWrite(_args: string[]): Promise<number> {
     emitWarn("TMP-VOLATILE", `${filePath} is in a volatile tmp dir (lost on reboot/reaper). Write progress/working data to ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
   }
 
-  // naming-guard — BLOCK version/copy-suffixed names; history is git's job, not the
+  // naming-guard — version/copy-suffixed names; history is git's job, not the
   // filename. Honors the `@canonical-ok` marker in content (real API versioning).
+  // NEW name (file doesn't exist yet) → BLOCK creation. EXISTING bad-named file
+  // being edited (touch) → WARN-only so you can still fix/rename it (advisory, like
+  // ing/convergence touch nudges) instead of being unable to edit it.
   if (config().namingGuard) {
     const nv = detectVersionedName(filePath, content);
-    if (nv) return emitBlock("NAMING-VERSION-SUFFIX", nv);
+    if (nv) {
+      if (existsSync(filePath)) emitWarn("NAMING-TOUCH-VERSION-SUFFIX", `${nv} — 기존 파일을 터치 중. 고치는 김에 canonical 이름으로 rename 고려 (\`sidecar naming audit\`).`);
+      else return emitBlock("NAMING-VERSION-SUFFIX", nv);
+    }
   }
 
   // state-guard — BLOCK writing output into a scatter dir (.verdicts/bench/…);
@@ -403,11 +411,19 @@ export async function preAskq(_args: string[]): Promise<number> {
 // preTouch — Read convergence surfacing — DISABLED (commented off · see preWrite).
 // Kept as a no-op so the Read hook matcher stays harmless; re-enable by uncommenting.
 export async function preTouch(_args: string[]): Promise<number> {
-  // const input = parseToolInput();
-  // const filePath = String(input.file_path ?? "");
-  // if (!filePath) return 0;
-  // const cv = convergenceForFile(filePath);
-  // if (cv) process.stderr.write(cv + "\n");
+  // naming-on-touch — WARN-only when the agent READS a file whose name carries a
+  // version/copy suffix (foo_v2.ts, report_final.md). Creation is blocked at write
+  // time; this surfaces the non-canonical name on every touch so the backlog gets
+  // noticed and renamed (mirrors the convergence-on-touch idea, warn-only).
+  if (config().namingGuard) {
+    const input = parseToolInput();
+    const filePath = String(input.file_path ?? "");
+    if (filePath) {
+      const token = offendingToken(basename(filePath));
+      if (token) emitWarn("NAMING-TOUCH-VERSION-SUFFIX", `${filePath} — 파일명에 비표준 접미사('${token}')가 있다. 이력은 git, 이름은 canonical 하나로 — rename 고려 (\`sidecar naming audit\`).`);
+    }
+  }
+  // convergence-on-touch (Read surfacing) remains DISABLED (see preWrite).
   return 0;
 }
 

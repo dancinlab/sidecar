@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## feat(naming-guard): 비표준 이름 파일 터치 시에도 발동 (생성 BLOCK + 터치 WARN)
+
+🗣️ "_v2 등 네이밍 관련도 생성말고도 터치시에도 발동되게"
+
+- 배경: 네이밍 가드가 **새 생성**(Write/Edit 새 이름·Bash mv/cp/touch/mkdir)만 막아, 이미 `_v2`/`_final`/`_copy` 로 커밋된 **기존 backlog 는 터치해도 무발동**이었다(`sidecar naming audit` 수동 스캔으로만 보임). anima/hexa-lang 세션 마이닝 + 유저 요청.
+- 추가 (modules/pre.ts): **터치-시 warn-only 넛지**.
+  - `preWrite`: 대상이 **이미 존재**하는 비표준-이름 파일이면 block 대신 `emitWarn`(`NAMING-TOUCH-VERSION-SUFFIX`) — 기존 파일 편집을 막지 않고(고칠 수 있게) rename 을 권고. **새 생성**(미존재)은 기존대로 BLOCK 유지.
+  - `preTouch`(Read): `offendingToken(basename(file_path))` 로 비표준 이름이면 warn — 읽을 때마다 표면화돼 backlog 가 눈에 띈다(컨버전스-온-터치 발상 · warn-only).
+- `offendingToken` 재사용(naming-guard 와 동일 판정) · `namingGuard` 토글 게이트 · `@canonical-ok` 면제 그대로.
+- 검증: tsc clean · 스모크 4축 PASS — Read 비표준→warn · Read 정상→silent · Edit 기존비표준→비차단+warn · Write 새비표준→block.
+
+
 ## fix(convergence): stop-check 를 warn-only(non-block) 로 — 매 턴 'stop hook error' 제거
 
 🗣️ (유저가 반복되는 Stop hook error 를 지적) — advisory 넛지가 매 턴 턴을 막는 결함.

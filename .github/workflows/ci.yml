@@ -1,0 +1,68 @@
+# sidecar CI — typecheck + smoke on a Blacksmith cloud runner.
+#
+# WHY: sidecar is the project-agnostic AI coding sidecar (TypeScript run via tsx,
+# no build artifact). The meaningful gate is `tsc --noEmit` over the whole engine
+# + a help-load smoke that imports every module. Offloading to Blacksmith's fast
+# native Ubuntu runner keeps every push-time check off the dev Mac — the dev box
+# only ever does `git push` (mirrors gamebox/hexa-lang CI).
+#
+# Runner: pure Node/TS work needs no Apple host, so we use the cheaper Ubuntu
+# Blacksmith runner. Pinned to ubuntu-2204 — the same stable glibc floor
+# hexa-lang's release.yml uses for its x86_64 jobs (avoid the 24.04 surprises).
+#
+# Verification is the canonical `sidecar ci` (runs harness.config.json verify.checks
+# = `tsc --noEmit`) so CI and the local `sidecar ci` gate stay one source of truth.
+
+name: sidecar-ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sidecar-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck + smoke (Blacksmith)
+    runs-on: blacksmith-4vcpu-ubuntu-2204
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install deps
+        run: npm ci
+
+      # ── Typecheck — the real gate. Uses the canonical `sidecar ci` so the cloud
+      # check and the local `sidecar ci` gate run the SAME verify.checks (tsc --noEmit).
+      - name: Typecheck (sidecar ci)
+        run: npx tsx cli/index.ts ci
+
+      # ── Smoke — `help` imports every module + builds the HELP literal; a broken
+      # import or a HELP-backtick break fails here before it reaches a user.
+      - name: Smoke — help loads (all modules import)
+        run: npx tsx cli/index.ts help >/dev/null
+
+      # ── Smoke — the agent-facing command catalog stays 100% (toolkit write is
+      # idempotent; a drift means a command was added without cataloging it).
+      - name: Smoke — toolkit catalog covers all commands
+        run: |
+          set -euo pipefail
+          npx tsx cli/index.ts toolkit write
+          if ! git diff --quiet -- TOOLKIT.jsonl; then
+            echo "::error::TOOLKIT.jsonl is stale — run \`sidecar toolkit write\` and commit."
+            git --no-pager diff -- TOOLKIT.jsonl | head -40
+            exit 1
+          fi

@@ -1,5 +1,25 @@
 # CHANGELOG
 
+## feat(ci): 하네스가 모든 repo 에 Blacksmith CI 를 scaffold — `ci scaffold` + `init` 자동방출
+
+🗣️ "ci 플러그인 필요해 blacksmith 이용하도록 hexa-lang 참고" + "init 에도 반영" + "sidecar 하네스로 모두 ci 를 blacksmith 로 구축" + "ci 는 항상 blacksmith 로"
+
+- sidecar 는 CI 워크플로가 전무했다. dancinlab 의 Blacksmith 전환(hexa-lang `release.yml` · gamebox `ci.yml`)을 정답지로, **하네스가 어느 repo 든 Blacksmith CI 를 표준 방출**하게 일반화.
+- 신규 `ci scaffold [--force]` (modules/ci.ts): **Blacksmith** `.github/workflows/ci.yml` 생성(create-if-absent) — checkout@v6 → **stack setup**(config `ci.setup` · 없으면 package.json→node·hexa.toml→hexa·pyproject→python 자동감지) → sidecar 설치(install.sh) → **`sidecar ci`**(repo verify.checks · single source) + `sidecar lint`. 러너=config `ci.runner`.
+- **항상 Blacksmith**: 기본 러너 `blacksmith-4vcpu-ubuntu-2204`, 생성 YAML 은 github-hosted 러너를 절대 안 씀 · config 가 비-blacksmith 로 override 하면 경고.
+- `init` 배선: `ciWorkflowYaml`/`defaultCiSetup` export → `sidecar init` 이 동일 생성기로 `.github/workflows/ci.yml` 자동 scaffold(create-if-absent). 새 repo 는 init 만으로 Blacksmith CI 획득.
+- config: `ci: { runner, setup }` 블록 + `CiStep` 타입 추가(lib/config.ts).
+- sidecar 자기 repo 는 손튜닝 ci.yml(= `sidecar ci`(tsc) + help/toolkit 스모크) 유지(dogfood reference).
+- 검증: tsc clean · 생성 YAML yaml.safe_load 유효(runs-on=blacksmith · 6 steps) · help 로드 · `ci scaffold`(기존파일 skip-warn) · toolkit 71.
+
+🗣️ "ci 플러그인 필요해 blacksmith 이용하도록 hexa-lang 참고" (+ gamebox CI 도 blacksmith 전환중)
+
+- sidecar 는 그동안 CI 워크플로가 **전무**했다. dancinlab 의 Blacksmith 전환 흐름(hexa-lang `release.yml` · gamebox `ci.yml`)을 정답지로 `.github/workflows/ci.yml` 신설.
+- Blacksmith = `runs-on:` 라벨 드롭인(특수 액션 불필요). sidecar 는 순수 TS/node 라 macOS 불필요 → 더 싼 **`blacksmith-4vcpu-ubuntu-2204`**(hexa-lang x86_64 잡과 같은 glibc 안정 floor).
+- 잡 `verify`: checkout@v6 → setup-node@v4(node 20·npm cache) → `npm ci` → ① **`sidecar ci`**(canonical = harness.config.json verify.checks = `tsc --noEmit`, 로컬 게이트와 single source) ② **help-smoke**(전 모듈 import + HELP 리터럴 빌드) ③ **toolkit 카탈로그 drift 검사**(`toolkit write` 후 `TOOLKIT.jsonl` diff 0). push(main/master)·PR·dispatch · concurrency cancel-in-progress · timeout 15m.
+- 검증: YAML 유효 · 잡 1개(verify) · 로컬 `sidecar ci`(tsc) GREEN · help-load GREEN · TOOLKIT 카탈로그 100%.
+
+
 ## fix(commons): do/dont 길이 cap scope 정정 — 루트 CLAUDE.md 포함, 서브폴더만 자유양식
 
 🗣️ "CLAUDE.md 도 자유양식 금지인데, 서브폴더 CLAUDE.md 만 자유양식"

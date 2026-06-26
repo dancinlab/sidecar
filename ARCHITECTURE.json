@@ -633,10 +633,10 @@
                 "상세": "명령은 config 선언"
               },
               {
-                "이름": "ci-track",
-                "역할": "원격 PR/CI 체크 추적 (gh)",
+                "이름": "ci",
+                "역할": "검증 명령 병렬 실행 + Blacksmith CI scaffold",
                 "구분": "module",
-                "상세": "gh pr checks --json → pass/fail/pending 집계 + 🟢/🔴/🟡/⚪ verdict(exit 0/2/1/0). --watch=CLI-내부 폴링(c19 — bash sleep 루프 대체) · --merge-on-green=GREEN시 자동 squash-merge. 손수 짠 gh-poll/monitor 루프를 대체"
+                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬 실행(실패 1개라도 exit 1 · 옛 `verify` 별칭). **`ci scaffold [--force]`** = **Blacksmith** GitHub Actions `.github/workflows/ci.yml` 방출(create-if-absent) — checkout → stack setup(config `ci.setup` · 없으면 package.json/hexa.toml/pyproject 자동감지) → sidecar 설치 → `sidecar ci`(repo verify.checks) + `sidecar lint`. 러너=config `ci.runner`(기본 `blacksmith-4vcpu-ubuntu-2204` · **항상 blacksmith**, 비-blacksmith override 시 경고). `ciWorkflowYaml`/`defaultCiSetup` export → `init` 도 동일 생성기로 ci.yml 자동 scaffold(single source). gamebox/hexa-lang 의 Blacksmith CI 를 하네스가 모든 repo 에 표준화. (modules/ci.ts)"
               },
               {
                 "이름": "paper",

@@ -13,6 +13,16 @@ export interface VerifyCheck {
   slow?: boolean; // skipped by `verify fast`
 }
 
+// One step in the scaffolded Blacksmith CI workflow (`sidecar ci scaffold` / init).
+// Serialized verbatim into .github/workflows/ci.yml between checkout and `sidecar ci`.
+export interface CiStep {
+  name?: string;
+  uses?: string;
+  with?: Record<string, string>;
+  run?: string;
+  shell?: string;
+}
+
 export interface FreshnessFile {
   path: string; // repo-relative
   maxAgeDays: number;
@@ -34,6 +44,10 @@ export interface SidecarConfig {
   keywordsFile: string;
   severityMapFile: string;
   verify: { checks: VerifyCheck[] };
+  // CI scaffold (`sidecar ci scaffold` / `init`) — emits a Blacksmith GitHub
+  // Actions workflow that runs `sidecar ci` (verify.checks) on `runner`. `setup`
+  // = the stack-specific steps (node/hexa/python …) injected before the verify.
+  ci: { runner: string; setup: CiStep[] };
   lint: {
     freshnessFiles: FreshnessFile[];
     // staged code changes REQUIRE the changelog file to also be staged
@@ -185,6 +199,7 @@ const DEFAULTS: SidecarConfig = {
   keywordsFile: ".harness/keywords.json",
   severityMapFile: ".harness/severity-map.json",
   verify: { checks: [] },
+  ci: { runner: "blacksmith-4vcpu-ubuntu-2204", setup: [] },
   lint: { freshnessFiles: [], dodontCap: 200 },
   upstreams: [{ name: "hexa-lang", repo: "dancinlab/hexa-lang" }],
   guides: ["CLAUDE.md", "AGENTS.md", "README.md"],

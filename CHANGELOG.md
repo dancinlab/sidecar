@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## fix(convergence): stop-check 를 warn-only(non-block) 로 — 매 턴 'stop hook error' 제거
+
+🗣️ (유저가 반복되는 Stop hook error 를 지적) — advisory 넛지가 매 턴 턴을 막는 결함.
+
+- 원인: convergence stop-check 가 `decision:block`(모델 강제 재호출)로 구현돼, 에이전트가 기능을 설명하며 재발어(또·발생·재발·버그…)를 쓸 때마다 Stop 훅이 매 턴 'stop hook error' 로 표면화 + 턴을 막았다. **advisory 인데 blocking** 이 root cause.
+- 수정: `ing staleness-check` 와 동형의 **warn-only(stderr · non-block)** 로 전환 (`modules/architecture.ts`). decision:block 발행 제거 → 넛지는 stderr 로만 표면화, 턴을 막지 않음. 에이전트가 보고 진짜 재발이면 스스로 기록(자동 기록 아님). stop_hook_active 루프가드는 불필요해져 제거(비차단이라 재진입 루프 없음).
+- 키워드 넓은 그물 + 신호별 once-가드는 유지. 문서(ARCHITECTURE·README·help) lockstep.
+- 검증: tsc clean · 스모크 PASS — stdout 비어있음(에러 안 뜸) · stderr warn 표면화 · exit 0.
+
+
 ## feat(convergence): 재발 트리거 넓은 그물화 — 단독어 추가 + once-가드 신호별 격상
 
 🗣️ "오탐되도 무조건 작동하는건 아니잖아? ai agent 가 판단하는거 아냐?"

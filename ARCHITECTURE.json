@@ -396,7 +396,7 @@
                 "이름": "convergence stop-check",
                 "역할": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
                 "구분": "guard",
-                "상세": "decision:block — **에이전트 자신의 마지막 메시지**(user 입력 아님)를 재발-신호 키워드(config/convergence-triggers.json · 또/다시/실패/동일/재발/segfault/panic/🔴… · per-repo .harness override)로 스캔 → 매치 시 SSOT 기록 넛지(`architecture convergence add`). 키워드=넓은 그물(정밀도는 에이전트 판단 — 매치는 re-prompt 일 뿐, 진짜 재발이면 기록·오탐이면 무시하고 멈춤). once-가드=**신호별 1회**(transcript+matched 키 · convergence-nudge.json) → 오탐 '또'가 진짜 'segfault' 넛지를 소진 안 함. 루프가드=stop_hook_active. 무매치/파싱실패 silent. 폐기된 구 prompt-scan recurrence-trigger(user 입력 + 인라인 @convergence 마커)를 에이전트-출력 surface + SSOT 기록으로 복원. (modules/architecture.ts)"
+                "상세": "**warn-only(stderr · non-block)** — `ing staleness-check` 와 동형(decision:block 아님 · advisory 가 매 턴 'stop hook error' 로 턴을 막던 문제 제거). **에이전트 자신의 마지막 메시지**(user 입력 아님)를 재발-신호 키워드(config/convergence-triggers.json · 또/다시/실패/동일/재발/segfault/panic/🔴… · per-repo .harness override)로 스캔 → 매치 시 SSOT 기록 넛지(`architecture convergence add`)를 stderr 로 표면화. 키워드=넓은 그물(정밀도는 에이전트 판단 — 진짜 재발이면 기록·오탐이면 무시). once-가드=**신호별 1회**(transcript+matched 키 · convergence-nudge.json) → 오탐 '또'가 진짜 'segfault' 넛지를 소진 안 함. 무매치/파싱실패 silent. 폐기된 구 prompt-scan recurrence-trigger(user 입력 + 인라인 @convergence 마커)를 에이전트-출력 surface + SSOT 기록으로 복원. (modules/architecture.ts)"
               },
               {
                 "이름": "ing staleness-check",

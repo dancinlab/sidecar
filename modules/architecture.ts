@@ -11,7 +11,7 @@ import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
 import { readStdin } from "../lib/exec.ts";
 import { resolveRuleFile } from "../lib/config.ts";
 import { lastAssistantText } from "./recommend.ts";
-import { info, ok, loudFail } from "../lib/log.ts";
+import { info, ok, loudFail, warn } from "../lib/log.ts";
 
 // Cap injected size so a huge tree never blows the context window. ~80 KB is
 // well under a typical CLAUDE.md budget; past it we inject the head + a pointer.
@@ -227,12 +227,12 @@ async function convergenceVerb(args: string[]): Promise<number> {
 // stops). So broad patterns are fine: precision lives in the agent, not the list.
 // Patterns live as DATA (config/convergence-triggers.json · per-repo override at
 // .harness/convergence-triggers.json) — the engine never hardcodes them.
-// Mirrors `recommend stop-check`: reads the Stop stdin payload, pulls the last
-// assistant text, and on a hit emits decision:block. Native loop guard
-// (stop_hook_active) + a once-file keyed PER DISTINCT MATCHED SIGNAL (not per
-// session) keep it from looping or re-nudging the SAME word every turn — a
-// dismissed false positive ("또는") does NOT consume the nudge for a later real
-// signal ("segfault"). Best-effort: any IO/parse failure is a silent no-op.
+// Reads the Stop stdin payload, pulls the last assistant text, and on a hit emits
+// a NON-BLOCKING stderr warning (warn-only · like `ing staleness-check`) — NOT
+// decision:block. An advisory nudge must not wedge the turn on a "stop hook error";
+// it surfaces the suggestion and lets the agent judge/record on its own. A once-file
+// keyed PER DISTINCT MATCHED SIGNAL keeps it from re-nudging the SAME word every
+// turn. Best-effort: any IO/parse failure is a silent no-op.
 interface ConvergenceTriggers {
   patterns?: string[];
   hint?: string;
@@ -277,7 +277,6 @@ function convergenceStopCheck(): number {
   } catch {
     return 0;
   }
-  if (payload?.stop_hook_active) return 0; // native loop guard — already nudged this chain
   const tp = payload?.transcript_path ?? payload?.transcriptPath;
   if (!tp) return 0;
   const transcript = String(tp);
@@ -296,11 +295,11 @@ function convergenceStopCheck(): number {
   seen.add(matched);
   markNudged(transcript, seen);
   const reason =
-    `재발 신호 감지 — 네 답변에 "${matched}" 가 보인다(에이전트-출력 트리거). ` +
+    `재발 신호 "${matched}" — 진짜 재발(첫 발생 아님)이면 ` +
     (hint ??
-      "같은 원인의 결함이 두 번째라면, 그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라: `sidecar architecture convergence list` 로 기존 확인 후 `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심>\" --threshold \"<재발조건/해결>\" --source <원인파일>` (commons root-cause).") +
-    " (이건 자동 기록이 아니라 advisory 넛지 — 진짜 재발이면 기록, 첫 발생·일반 언급·오탐이면 무시하고 그냥 멈춰라. 같은 신호는 세션당 1회만 뜬다.)";
-  process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+      "그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라: `sidecar architecture convergence list` 로 기존 확인 후 `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심>\" --threshold \"<재발조건/해결>\" --source <원인파일>` (commons root-cause).") +
+    " (일반 언급·오탐이면 무시. advisory · non-block · 같은 신호는 세션당 1회.)";
+  warn(`[convergence] ${reason}`);
   return 0;
 }
 

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## feat(ci): GitHub Actions CI on Blacksmith — typecheck + smoke (gamebox/hexa-lang 참고)
+
+🗣️ "ci 플러그인 필요해 blacksmith 이용하도록 hexa-lang 참고" (+ gamebox CI 도 blacksmith 전환중)
+
+- sidecar 는 그동안 CI 워크플로가 **전무**했다. dancinlab 의 Blacksmith 전환 흐름(hexa-lang `release.yml` · gamebox `ci.yml`)을 정답지로 `.github/workflows/ci.yml` 신설.
+- Blacksmith = `runs-on:` 라벨 드롭인(특수 액션 불필요). sidecar 는 순수 TS/node 라 macOS 불필요 → 더 싼 **`blacksmith-4vcpu-ubuntu-2204`**(hexa-lang x86_64 잡과 같은 glibc 안정 floor).
+- 잡 `verify`: checkout@v6 → setup-node@v4(node 20·npm cache) → `npm ci` → ① **`sidecar ci`**(canonical = harness.config.json verify.checks = `tsc --noEmit`, 로컬 게이트와 single source) ② **help-smoke**(전 모듈 import + HELP 리터럴 빌드) ③ **toolkit 카탈로그 drift 검사**(`toolkit write` 후 `TOOLKIT.jsonl` diff 0). push(main/master)·PR·dispatch · concurrency cancel-in-progress · timeout 15m.
+- 검증: YAML 유효 · 잡 1개(verify) · 로컬 `sidecar ci`(tsc) GREEN · help-load GREEN · TOOLKIT 카탈로그 100%.
+
+
 ## fix(commons): do/dont 길이 cap scope 정정 — 루트 CLAUDE.md 포함, 서브폴더만 자유양식
 
 🗣️ "CLAUDE.md 도 자유양식 금지인데, 서브폴더 CLAUDE.md 만 자유양식"

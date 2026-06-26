@@ -3,7 +3,7 @@
 //   • staged L0 files (git diff --cached) → flagged
 //   • freshness of tracked files (_updated field or mtime vs maxAgeDays)
 // Quiet on pass (H1); violations go to stderr + lint_log.jsonl + errors queue.
-import { existsSync, statSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync, statSync, readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl, info, loudFail, ok } from "../lib/log.ts";
@@ -256,20 +256,18 @@ export async function runLint(args: string[]): Promise<number> {
     }
   }
 
-  // 4j. inject-oversized — sidecar's per-turn inject SOURCE files (the 4-axis
-  // recommend rubric + response-style docs) are re-injected EVERY UserPromptSubmit,
-  // so prose bloat is paid in context on every turn. Byte-cap each so injects stay
-  // lean (lint.injectByteCap, default 8000 · 0 = off). commons.md is EXEMPT — it is
-  // the governance SSOT whose size grows legitimately with rule count and already
-  // has its own do/dont format lint. Sidecar-repo-only (files exist there).
-  const injectCap = cfg.lint?.injectByteCap ?? 8000;
+  // 4j. inject-oversized — sidecar's per-turn inject SOURCE files whose WHOLE body
+  // is re-injected verbatim every UserPromptSubmit must stay lean (prose bloat = a
+  // per-turn context tax). Byte-cap each (lint.injectByteCap, default 9000 · 0 = off).
+  // Scope = `config/recommend.md` (the 4-axis rubric — its TAIL holds critical rules
+  // so it can't be auto-truncated, hence a source-size lint). EXEMPT: `commons.md`
+  // (governance SSOT, grows with rule count, own do/dont lint) and `styles/*.md`
+  // (the easy inject self-truncates its expendable tail to the budget at emit —
+  // `easy.ts:capTail`). Sidecar-repo-only (files exist there).
+  const injectCap = cfg.lint?.injectByteCap ?? 9000;
   if (injectCap > 0) {
     const injectSources: string[] = [];
     if (existsSync(repoPath("config/recommend.md"))) injectSources.push("config/recommend.md");
-    const stylesDir = repoPath("styles");
-    if (existsSync(stylesDir)) {
-      for (const f of readdirSync(stylesDir)) if (f.endsWith(".md")) injectSources.push(`styles/${f}`);
-    }
     for (const f of injectSources) {
       let bytes = 0;
       try {

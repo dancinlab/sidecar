@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(easy): emit-시점 꼬리 자동절단(capTail) — inject 를 budget 으로 컷, 수동 트림 불필요
+
+🗣️ "그냥 컷팅하면안되 뒷부분" — inject 비대를 소스 손질이 아니라 emit 절단으로.
+
+- `easy inject` 가 (header+body)를 `lint.injectByteCap`(9000) 바이트로 emit 시점에 절단(`easy.ts:capTail`) — easy 문서는 머리=행동규칙(7-요소·ASCII 템플릿), 꼬리=expendable 레퍼런스라 꼬리만 잘리고 규칙은 항상 보존. 줄 경계로 컷 + 절단 마커, 전체 문서는 디스크 유지. 소스가 커져도 매-턴 주입은 자동으로 budget 이하.
+- `INJECT-OVERSIZED` lint 스코프를 `config/recommend.md` 로 한정 — recommend 는 꼬리에 핵심 규칙(default-mode·hard-stop)이 있어 자동절단 불가라 소스-크기 lint 가 적합. `styles/*.md` 는 emit 자동절단되므로 lint 면제(commons.md 도 면제 유지).
+- 검증: tsc clean · capTail 유닛(12389B→1492B·줄경계·마커) · easy inject 유효 JSON · `sidecar lint` 그린.
 ## feat(lint): INJECT-OVERSIZED — 매-턴 inject 소스 바이트 cap + easy 스타일 산문 −31%
 
 🗣️ "ai agent 에 inject 하는것들도 전부 lint · context 낭비 줄여야 · 산문 간결하게"

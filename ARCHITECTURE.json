@@ -382,9 +382,29 @@
           },
           {
             "이름": "Stop",
-            "역할": "에이전트 응답 종료 → recommend stop-check(auto-proceed 강제) + ing staleness-check",
+            "역할": "에이전트 응답 종료 → 마지막 assistant 메시지 기반 3 Stop 훅",
             "구분": "surface",
-            "상세": "recommend stop-check(decision:block): non-present default mode 인데 답변이 4축 박스/`🤖 ... auto-pick` 줄에서 끝났으면(endsOnBox — 실제 auto-pick 마커 + 트레일링 ~6줄에 박스 잔존) 모델을 강제로 깨워 챔피언 실행시킴. 루프 가드는 네이티브 `stop_hook_active` 플래그(체인당 1회). present/박스없음/작업수행후는 no-op · 파싱실패 silent. (modules/recommend.ts) — 유일하게 모델을 재호출하는 메커니즘이라 advisory 대신 block 사용. + c6 ing-staleness warn: 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋(warn-only · stderr · 강제 불가 — ground truth 없음)"
+            "상세": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 3 훅 (아래). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
+            "children": [
+              {
+                "이름": "recommend stop-check",
+                "역할": "4축 박스에서 멈춤 차단 → auto-proceed 강제",
+                "구분": "guard",
+                "상세": "decision:block — non-present default mode 인데 답변이 4축 박스/`🤖 ... auto-pick` 줄에서 끝났으면(endsOnBox: 실제 auto-pick 마커 + 트레일링 ~6줄에 박스 잔존) 모델을 강제로 깨워 챔피언 실행. 루프가드=네이티브 stop_hook_active(체인당 1회). present/박스없음/작업수행후 no-op · 파싱실패 silent. 유일하게 모델 재호출하는 메커니즘이라 block 사용. (modules/recommend.ts)"
+              },
+              {
+                "이름": "convergence stop-check",
+                "역할": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
+                "구분": "guard",
+                "상세": "decision:block — **에이전트 자신의 마지막 메시지**(user 입력 아님)를 재발-신호 키워드(config/convergence-triggers.json · 또/재발/회귀/segfault/panic/🔴… · per-repo .harness override)로 스캔 → 매치 시 세션당 1회 SSOT 기록 넛지(`architecture convergence add`). once-가드=transcript별 convergence-nudge.json, 루프가드=stop_hook_active. 무매치/재넛지/파싱실패 silent. 폐기된 구 prompt-scan recurrence-trigger(user 입력 + 인라인 @convergence 마커)를 에이전트-출력 surface + SSOT 기록으로 복원. (modules/architecture.ts)"
+              },
+              {
+                "이름": "ing staleness-check",
+                "역할": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
+                "구분": "guard",
+                "상세": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
+              }
+            ]
           },
           {
             "이름": "PreCompact·PostCompact",

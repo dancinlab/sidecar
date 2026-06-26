@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## feat(convergence): 에이전트-출력 재발 트리거 복원 — Stop 훅이 응답을 스캔 → SSOT 기록 넛지
+
+🗣️ "폐기된 컨버전스 플러그인 처럼 트리거도 있어야될듯" + "내가 입력하는게 아니라 ai agent 가 뱉는 에서 트리거"
+
+- 배경: 옛 `convergence` 모듈에 `convergence-recurrence` 트리거(또·재발·회귀·segfault·panic·🔴…)가 있었으나 `prompt-scan`(=user 입력)에 걸려 있었고, `#189` 이 모듈을 폐기하며 touch-time 주입으로 대체 → `#192`(841b27c)가 그 주입마저 끔. 결과: 재발-기록 트리거가 **전무**. 유저 핵심 정정 — 트리거는 user 입력이 아니라 **AI 에이전트의 응답 출력**을 스캔해야 한다.
+- 복원 (새 surface): `architecture convergence stop-check` — Stop 훅이 transcript 의 **마지막 assistant 메시지**를 읽어(=`recommend stop-check` 와 동일 리더 `lastAssistantText`, 이제 export) 재발-신호 키워드로 스캔. 매치 시 `decision:block` 으로 세션당 1회 깨워 SSOT(`architecture convergence add`) 기록을 넛지. 인라인 @convergence 마커(폐기)가 아니라 ARCHITECTURE.json `convergence.records[]` 한곳으로 (commons root-cause).
+- 데이터-주도: 패턴은 엔진 하드코딩이 아니라 `config/convergence-triggers.json`(per-repo `.harness/` override) — "rules=data" 원칙. 옛 recurrence 패턴 충실 복원 + 힌트만 SSOT 명령으로 갱신.
+- 가드: 루프=네이티브 `stop_hook_active` · 재넛지 억제=transcript별 `convergence-nudge.json`(세션당 1회) · 무매치/파싱실패 silent. warn-only 성격(재발 키워드는 오탐 잦음 → 첫발생·일반언급이면 무시 가능 안내 포함).
+- 배선: Stop 훅 3곳 lockstep — 글로벌 `~/.claude/settings.json` · 번들 `hooks/hooks.json`(plugin) · `setup.ts`(install-hooks). help 라인 + ARCHITECTURE Stop 노드 갱신.
+- 검증: tsc clean · 스모크 4축 ALL PASS — HIT(재발/segfault→block 넛지+matched 표면화) · once-가드(동일 transcript 재호출→silent) · 무매치(silent) · stop_hook_active(silent).
+
 ## feat(commons): do/dont 길이 cap + 사용 강제 — archive_sidecar tape-lint #2 포팅 (commons.md + CLAUDE.md)
 
 🗣️ "archive_sidecar 보면 do, dont 길이 강제 lint 있는데 우리도 CLAUDE.md, commons 용 필요" + "do, dont 사용도 강제"

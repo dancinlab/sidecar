@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## docs(CLAUDE.md): inject-lint 규칙 — inject 잘라내기 금지, 작성 시 각자 lint
+
+🗣️ "잘라내면 안되고, 각 inject 별 작성할때 lint 가 있어야되 · CLAUDE.md 에 명시(기존 양식 따라가는 경향)"
+
+- 루트 CLAUDE.md 에 `## inject-lint` 섹션(do/dont) 추가 — 각 inject 소스는 **작성·편집 시점에 자기 lint**(INJECT-OVERSIZED 개별 cap 또는 do/dont·ARCH-cell 양식)로 lean 유지, **emit/런타임 잘라내기(truncate·tail-cut) 절대 금지**(내용 손실). 새 inject 엔 그 lint 도 함께 추가.
+- 미래 작업이 기존 양식을 따라 capTail 류 절단을 재도입하지 않게 규칙으로 박제(#215 회귀 방지).
+- 검증: do/dont 양식·DODONT-LONG(≤200) 통과 · `sidecar lint` 그린.
 ## feat(lint): inject별 개별 cap 맵 — 각 inject 가 자기 lint 를 가짐 (공유 cap → per-inject)
 
 🗣️ "inject 되는 전체가 아니라 각각이 lint 여야 · 각각 lint 가 있어야함"

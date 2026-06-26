@@ -1,5 +1,23 @@
 # CHANGELOG
 
+## feat(lab): `/lab init` — scaffold the lumen/rtsc/carbon-capture sibling-repo skeleton
+
+🗣️ "현재구조를 생성하도록 /lab init 사이드카 플러그인 구현"
+
+The lumen / rtsc / carbon-capture sibling repos all share one skeleton (src/ · state/ · ARCHITECTURE.json +
+architecture.html viewer + serve.py · CLAUDE/README/CHANGELOG · HYPOTHESES/ pre-register→falsify→run→verdict ·
+tool/<slug>.py shared harness). It was hand-rebuilt each time. `/lab init` mints it in one shot.
+
+- **`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]`** (`modules/lab.ts` → `runLab`, dispatched
+  in `cli/index.ts`) — recursively renders the tokenized skeleton in `templates/lab/` (`{{NAME}}` /
+  `{{SLUG_SNAKE}}` / `{{DESC}}` / `{{DATE}}`, applied to file CONTENTS and the `tool/{{SLUG_SNAKE}}.py` path)
+  into a target repo. Never overwrites an existing file unless `--force`; `--dry-run` reports only. Name
+  auto-detects from `basename(dir)` (override with `--name`); default target = cwd. Files-only — no git
+  init/push (outward-facing git stays out of scope, matching `init`). Empty dirs kept via `.gitkeep`.
+- **`commands/lab.md`** delegator (shadowed to bare `/lab`); ARCHITECTURE.json + TOOLKIT.jsonl entries added.
+- Verified: dry-run lists 15 files writes nothing · real scaffold renders `tool/<slug>.py` · valid JSON ·
+  serve.py parses · harness imports · no unrendered tokens · non-clobber + `--force` both correct.
+
 ## feat(pre): global commit-lint gate — enforce the lint gate via settings.json, not a per-repo git hook
 
 🗣️ "enforce 게이트를 공용 settings.json 로 강제할수는 없나?"

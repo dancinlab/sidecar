@@ -13,6 +13,7 @@ import { runAudit } from "../modules/audit.ts";
 import { runGc } from "../modules/gc.ts";
 import { runSync } from "../modules/sync.ts";
 import { runInit } from "../modules/init.ts";
+import { runLab } from "../modules/lab.ts";
 import { runInstall, runInstallHooks, runSelfUpdate } from "../modules/setup.ts";
 import { runShadow } from "../modules/shadow.ts";
 import { runUninstall } from "../modules/uninstall.ts";
@@ -64,6 +65,8 @@ setup:
                                          curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
   init [--force] [--dry-run]   scaffold THIS repo: config + .harness rules + gitignore + wrapper (hooks are GLOBAL-ONLY → sidecar install)
                                          (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
+  lab init [dir] [--force] [--dry-run] [--name N] [--desc D]   scaffold the lumen/rtsc/carbon-capture sibling-repo "lab" skeleton into a target repo:
+                                         src/ · state/ · ARCHITECTURE.json + architecture.html viewer + serve.py · CLAUDE/README/CHANGELOG · HYPOTHESES/ (pre-register→falsify→run→verdict) · tool/<slug>.py shared harness (tokenized templates/lab/ · never-clobber-unless --force)
   uninstall [--dry-run] [--keep-logs]   remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
   install-hooks [--global]   merge sidecar hooks into the GLOBAL ~/.claude/settings.json (per-repo --repo is banned → double-inject)
@@ -167,6 +170,8 @@ async function main(): Promise<number> {
       return runInstall(rest);
     case "init":
       return runInit(rest);
+    case "lab":
+      return runLab(rest);
     case "uninstall":
       return runUninstall(rest);
     case "update":

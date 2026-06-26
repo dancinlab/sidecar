@@ -567,6 +567,12 @@
                 "상세": "SSOT=scripts/install.sh(curl 가능); `sidecar install`은 이를 위임. clone dancinlab/sidecar→~/.sidecar/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/sidecar · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
               },
               {
+                "이름": "lab",
+                "역할": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
+                "slug": "module-lab",
+                "상세": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]`. 토큰화 스켈레톤이 `templates/lab/` 에 살고(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`), 재귀로 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 후 타깃에 방출 — never-clobber(--force 시만 덮어씀)·--dry-run 보고전용. 방출물: src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger). git init/push 없음(files-only). 빈 dir 은 .gitkeep."
+              },
+              {
                 "이름": "shadow",
                 "역할": "sidecar commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
                 "slug": "module-shadow",

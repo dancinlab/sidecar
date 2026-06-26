@@ -1,0 +1,46 @@
+{
+  "$schema": "c4",
+  "role": "{{NAME}} — Architecture (JSON tree · SSOT)",
+  "title": "{{NAME}} — Architecture",
+  "updated": "{{DATE}}",
+  "ssot_note": "JSON=SSOT (AI/tool parse); humans view architecture.html via `python3 serve.py`. Update in-place (not append). History/decisions/dates → CHANGELOG.md + git (never in tree). Hierarchy decomposes via `children` (commons single-doc); one fact per node, deeper detail → child nodes.",
+  "children": [
+    {
+      "id": "overview",
+      "role": "{{DESC}}",
+      "children": [
+        { "id": "scope", "role": "(what this campaign covers — the system, not a single instance; the reference fields it draws on)" },
+        {
+          "id": "thesis",
+          "role": "(the one-line reframing this repo argues — a floor/ceiling reopened, a problem recast as engineering-and-volume rather than a fixed wall).",
+          "children": [
+            { "id": "thesis.claim", "role": "(the central falsifiable claim, with the expected direction/magnitude)" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "components",
+      "role": "(the design stack — each child a layer/module of the system, from base unit up to whole-system scope).",
+      "children": [
+        { "id": "L0.core", "role": "(first layer — the atomic/material/base unit the rest composes from)" }
+      ]
+    },
+    {
+      "id": "data-flow",
+      "role": "(how inputs move through the components to outputs — the end-to-end pipeline).",
+      "children": [
+        { "id": "flow.in", "role": "(entry — raw input → first transform)" },
+        { "id": "flow.out", "role": "(exit — final product / measured result)" }
+      ]
+    },
+    {
+      "id": "verification",
+      "role": "Hypothesis-verification system: pre-register → falsify → run → verdict. Flat registry + one rich card per hypothesis; shared deterministic harness in repo-root tool/.",
+      "children": [
+        { "id": "HYPOTHESES", "role": "HYPOTHESES/ — REGISTRY.jsonl (one JSON line per hypothesis) + cards/H_*.md (frozen pre-register + ≥5 falsifiers) + cards/_TEMPLATE.md skeleton." },
+        { "id": "tool", "role": "tool/{{SLUG_SNAKE}}.py — stdlib-only closed-form primitives + Falsifier/evaluate ledger. Per-hypothesis runs + result.json live under state/<hX>/." }
+      ]
+    }
+  ]
+}

@@ -526,9 +526,9 @@
                   },
                   {
                     "이름": "INJECT-OVERSIZED (4j)",
-                    "역할": "매-턴 inject 소스 바이트 cap (block)",
+                    "역할": "inject별 개별 바이트 cap (block)",
                     "구분": "check",
-                    "상세": "매 UserPromptSubmit 전체-주입되는 inject 소스(`config/recommend.md` + `styles/*.md`) 바이트 ≤ `lint.injectByteCap`(기본 9000)인지 — 산문 비대=매 턴 context 세금. 해법은 소스를 lean 하게(작성자 트림)이지 emit 절단(내용 조용히 손실)이 아니다. 초과면 차단: 규칙+예시 1개만, 중복 예시/표 제거. 면제: commons.md(거버넌스 SSOT). 0=off"
+                    "상세": "agent 에 주입되는 각 inject 소스가 **자기 cap** 이하인지 — `lint.injectCaps` 맵(path→budget · `/` 로 끝나면 그 dir 의 `*.md` 각각). 기본 recommend.md 7000·styles/*.md 각 9000·prefs.json 2000. 산문 비대=매 턴 context 세금이라 소스를 lean 하게(emit 절단=내용 손실 금지). commons/CLAUDE/ARCHITECTURE 는 각자 format lint(do/dont·do/dont·cell-cap)가 그들의 inject lint. 0=off"
                   },
                   {
                     "이름": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",

@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## feat(lint): inject별 개별 cap 맵 — 각 inject 가 자기 lint 를 가짐 (공유 cap → per-inject)
+
+🗣️ "inject 되는 전체가 아니라 각각이 lint 여야 · 각각 lint 가 있어야함"
+
+- `INJECT-OVERSIZED` 를 단일 공유 cap(`injectByteCap`)에서 **inject별 개별 budget 맵**(`lint.injectCaps`: path→bytes · `/` 끝나면 그 dir `*.md` 각각)으로 전환. 기본 `config/recommend.md`=7000·`styles/`=각 9000·`.harness/prefs.json`=2000. 각 inject 가 자기 cap 으로 개별 검사 → 비대가 그 inject 단위로 잡힘.
+- prefs inject(.harness/prefs.json) 갭 닫음(이전엔 lint 없음). commons.md/CLAUDE.md/ARCHITECTURE.json 은 각자 **format lint**(do/dont·do/dont·ARCH-cell-cap)가 그들의 inject lint — cross-repo governance 라 크기가 정당히 변해 byte-cap 대신 형식 규율. → **모든 inject 가 각자 lint 로 덮임**.
+- 검증: tsc clean · per-inject 스모크(recommend.md 를 자기 7000 초과시→그 파일만 INJECT-OVERSIZED, 복원시 그린) · `sidecar lint` 그린.
 ## fix(easy): emit-시점 꼬리절단(capTail) 철회 — inject 는 lint 로 강제, 런타임 손실 금지
 
 🗣️ "뒷부분 커팅은 절대 · lint 가 필요한거지" — emit 절단은 주입 내용을 조용히 버리는 손실이라 폐기.

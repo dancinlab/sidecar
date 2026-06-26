@@ -70,10 +70,15 @@ export interface SidecarConfig {
     // it must decompose (ARCH-PILED). 0 = off.
     archCellCap?: number;
     archPiledMax?: number;
-    // byte cap for a per-turn inject SOURCE file (config/recommend.md, styles/*.md)
-    // — these are re-injected every UserPromptSubmit, so prose bloat is paid every
-    // turn. commons.md is exempt (governance SSOT). 0 = off.
-    injectByteCap?: number;
+    // per-inject byte-cap MAP — EACH source sidecar injects to the agent (re-injected
+    // every turn/session) gets its OWN size lint (INJECT-OVERSIZED), so prose bloat is
+    // caught per inject, not as a lump. Keyed by repo-relative path; a key ending "/"
+    // caps every `*.md` directly under that dir INDIVIDUALLY at that value. Each entry
+    // = that inject's own budget. 0 (or absent) = that inject not size-capped here.
+    // (commons.md / CLAUDE.md / ARCHITECTURE.json are each linted by their OWN format
+    // lint — do/dont · do/dont · cell-cap — which is their inject lint; cross-repo
+    // governance docs vary in size legitimately, so they're not byte-capped here.)
+    injectCaps?: Record<string, number>;
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
@@ -216,7 +221,15 @@ const DEFAULTS: SidecarConfig = {
   severityMapFile: ".harness/severity-map.json",
   verify: { checks: [] },
   ci: { runner: "blacksmith-4vcpu-ubuntu-2204", setup: [] },
-  lint: { freshnessFiles: [], dodontCap: 200, cmdDescCap: 320, archCellCap: 300, archPiledMax: 6, injectByteCap: 9000 },
+  lint: {
+    freshnessFiles: [],
+    dodontCap: 200,
+    cmdDescCap: 320,
+    archCellCap: 300,
+    archPiledMax: 6,
+    // each sidecar inject source → its own size budget
+    injectCaps: { "config/recommend.md": 7000, "styles/": 9000, ".harness/prefs.json": 2000 },
+  },
   upstreams: [{ name: "hexa-lang", repo: "dancinlab/hexa-lang" }],
   guides: ["CLAUDE.md", "AGENTS.md", "README.md"],
   folderGuides: {

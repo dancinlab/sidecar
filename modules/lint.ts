@@ -256,30 +256,32 @@ export async function runLint(args: string[]): Promise<number> {
     }
   }
 
-  // 4j. inject-oversized — sidecar's per-turn inject SOURCE files (the 4-axis
-  // recommend rubric + the response-style docs) are re-injected verbatim every
-  // UserPromptSubmit, so prose bloat is a per-turn context tax. The fix is to keep
-  // the SOURCE lean (author trims it) — NOT to truncate at emit, which would silently
-  // drop content. Byte-cap each (lint.injectByteCap, default 9000 · 0 = off). EXEMPT:
-  // `commons.md` — the governance SSOT, grows legitimately with rule count and has its
-  // own do/dont format lint. Sidecar-repo-only (files exist there).
-  const injectCap = cfg.lint?.injectByteCap ?? 9000;
-  if (injectCap > 0) {
-    const injectSources: string[] = [];
-    if (existsSync(repoPath("config/recommend.md"))) injectSources.push("config/recommend.md");
-    const stylesDir = repoPath("styles");
-    if (existsSync(stylesDir)) {
-      for (const f of readdirSync(stylesDir)) if (f.endsWith(".md")) injectSources.push(`styles/${f}`);
+  // 4j. inject-oversized — EACH source sidecar injects to the agent (re-injected
+  // every turn/session) gets its OWN size lint, so prose bloat is caught per inject,
+  // not as a lump. The fix is to keep the SOURCE lean (author trims it) — NOT to
+  // truncate at emit, which would silently drop content. `lint.injectCaps` maps each
+  // inject path → its own byte budget; a key ending "/" caps every `*.md` directly
+  // under that dir individually. (commons.md / CLAUDE.md / ARCHITECTURE.json are each
+  // covered by their OWN format lint — do/dont · do/dont · cell-cap — so they're not
+  // re-checked here.) Sidecar-repo-only (these source files exist there).
+  for (const [key, cap] of Object.entries(cfg.lint?.injectCaps ?? {})) {
+    if (!cap || cap <= 0) continue;
+    const targets: string[] = [];
+    if (key.endsWith("/")) {
+      const dir = repoPath(key.slice(0, -1));
+      if (existsSync(dir)) for (const f of readdirSync(dir)) if (f.endsWith(".md")) targets.push(`${key}${f}`);
+    } else if (existsSync(repoPath(key))) {
+      targets.push(key);
     }
-    for (const f of injectSources) {
+    for (const f of targets) {
       let bytes = 0;
       try {
         bytes = Buffer.byteLength(readFileSync(repoPath(f), "utf8"), "utf8");
       } catch {
         continue;
       }
-      if (bytes > injectCap) {
-        violations.push({ rule: "INJECT-OVERSIZED", file: f, msg: `${bytes}B > ${injectCap}B inject cap — re-injected every turn; trim prose (keep the rule + 1 example, drop redundant examples/reference tables) or raise lint.injectByteCap` });
+      if (bytes > cap) {
+        violations.push({ rule: "INJECT-OVERSIZED", file: f, msg: `${bytes}B > ${cap}B inject cap — re-injected every turn; trim prose (keep the rule + 1 example, drop redundant examples/reference tables) or raise this inject's lint.injectCaps budget` });
       }
     }
   }

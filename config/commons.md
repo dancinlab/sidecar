@@ -14,6 +14,10 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - do: 증상 아닌 원인을 고친다 · 같은 결함이 재발하면 그 학습을 repo-root `ARCHITECTURE.json` 의 `convergence.records[]`(id·state·value·threshold·source · update-in-place) 단일 SSOT 에 기록 — `sidecar lint` 가 well-formed(id+유효 state) 강제, 그 `source` 파일을 터치(Read/Write/Edit)할 때마다 사이드카가 그 학습을 자동 표면화(같은 결함 재도입 차단)
 - dont: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만·shadow 가드 (정당하면 `@root-cause-ok <이유>`) · 재발 학습을 코드 인라인 주석(구 `@convergence` 마커 폐기)이나 별도 incident 트래커로 흩기 (ARCHITECTURE SSOT 한곳으로)
 
+## fix-the-tool — 언어·도구 벽은 우회 말고 그 도구를 고친다 (root-cause·upstream-fix 강화)
+- do: 의존 언어·컴파일러·런타임·툴체인 결함/한계(예약어 충돌·파서 갭·정수 i64 한계·stdlib 부재·codegen 버그·링크 실패)는 **그 도구를 직접 고친다**(전부 dancinlab repo=쓰기권한 안) — 막힌 그 세션에서 격리 worktree+빌드+CI 로 검증→머지까지 한 뒤 원작업 재개
+- dont: 언어/도구 벽을 타-언어 scratch 재구현(Python 등)·캐시바이너리 우회·심볼/이름 회피·fallback 분기·"측정종착" 조기선언으로 덮고 본 도구는 안 고치기(=wire-to-prod 위반·dead) (진짜 불가피하면 `@root-cause-ok <이유>`+사용자 opt-in)
+
 ## verify-done — "됐다" 전에 실제 검증
 - do: `sidecar ci`/build/test 를 돌려 **출력으로** 확인 · 기능구현/버그픽스 후 전 서브커맨드·엣지케이스 전수 QA(PASS/FAIL 집계 → 발견 버그 fix 후 닫기) · 증거는 `sidecar verdict record`
 - dont: LLM 자가판정 · 실패 은폐(실패는 실패라고) · 미검증 "완료"

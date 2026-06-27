@@ -13,9 +13,13 @@ import { resolveRuleFile, config } from "../lib/config.ts";
 import { lastAssistantText } from "./recommend.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
 
-// Cap injected size so a huge tree never blows the context window. ~80 KB is
-// well under a typical CLAUDE.md budget; past it we inject the head + a pointer.
-const CAP = 80_000;
+// Per-turn inject carries a SKELETON (title + summary + 2-level TOC), never the
+// full tree — the canonical large-doc pattern: keep a lean pointer salient and
+// let the agent pull detail on demand (`show`/`search`/Read). Dumping the whole
+// tree every turn blew the 10 KB additionalContext limit → harness file-fallback
+// → repeated token cost for content read once. The cap below only guards a
+// pathological skeleton; normal output is a few KB.
+const CAP = 12_000;
 
 // Repo-root design SSOT, JSON tree preferred over prose (c4 — JSON = AI/tool
 // parse target). Returns null when the repo ships neither.
@@ -25,6 +29,40 @@ function pick(): { path: string; rel: string } | null {
     if (existsSync(p)) return { path: p, rel };
   }
   return null;
+}
+
+type TNode = {
+  이름?: string;
+  역할?: string;
+  slug?: string;
+  상세?: string;
+  children?: TNode[];
+  [k: string]: unknown;
+};
+
+// Build a 2-level table-of-contents from the JSON tree — enough for the agent to
+// know the design's shape (and that the file exists) without carrying every cell.
+// Detail lives in the file, pulled via `show`/`search`/Read.
+function skeleton(root: { title?: string; summary?: string; tree?: TNode }): string {
+  const lines: string[] = [];
+  if (root.title) lines.push(root.title);
+  if (root.summary) lines.push(`요약: ${root.summary}`);
+  const top = root.tree?.children ?? [];
+  if (top.length) {
+    lines.push("");
+    lines.push("목차 (top-level · 2단계 · 전체 트리·`상세`셀은 파일에):");
+    for (const c of top) {
+      const name = c.이름 ?? c.slug ?? "?";
+      const role = c.역할 ? ` — ${c.역할}` : "";
+      lines.push(`- ${name}${role}`);
+      for (const g of c.children ?? []) {
+        const gn = g.이름 ?? g.slug ?? "?";
+        const gr = g.역할 ? ` — ${g.역할}` : "";
+        lines.push(`  - ${gn}${gr}`);
+      }
+    }
+  }
+  return lines.join("\n");
 }
 
 export async function runArchitecture(args: string[]): Promise<number> {
@@ -51,42 +89,42 @@ export async function runArchitecture(args: string[]): Promise<number> {
       return 0;
     }
     if (!text.trim()) return 0;
-    // Per-turn re-inject must NOT carry the `convergence` learning store — it can be
-    // large (one record per recurrence) and is delivered TARGETED on file-touch
-    // (convergenceForFile), so dumping all records every UserPromptSubmit is pure
-    // token waste. Strip it from the injected snapshot only (file/show/lint keep it).
-    if (found.rel.endsWith(".json")) {
-      try {
-        const obj = JSON.parse(text) as Record<string, unknown>;
-        if (obj.convergence) {
-          const n = (obj.convergence as { records?: unknown[] }).records?.length ?? 0;
-          delete obj.convergence;
-          text = JSON.stringify(obj, null, 2) + `\n(convergence: ${n} record(s) omitted — surfaced per-file on touch · \`sidecar architecture convergence list\`)`;
-        }
-      } catch {
-        /* invalid JSON → inject raw text as-is */
-      }
-    }
-    let tail = "";
-    if (text.length > CAP) {
-      text = text.slice(0, CAP);
-      tail = `\n… (truncated at ${CAP} chars — read ${found.rel} for the full tree)`;
-    }
     const isJson = found.rel.endsWith(".json");
-    const lang = isJson ? "json" : "markdown";
+    // Carry a SKELETON, not the full tree (large-doc canonical pattern). For JSON
+    // that is title + summary + a 2-level TOC; for prose, the head excerpt (its
+    // headings already form a TOC). Full detail — every `상세` cell, the whole
+    // tree, the convergence store — stays in the file, pulled on demand via
+    // `show`/`search`/Read. The convergence learning is delivered TARGETED on
+    // file-touch (convergenceForFile), so it is never in this snapshot at all.
+    let body: string;
+    let lang = "markdown";
+    if (isJson) {
+      try {
+        const root = JSON.parse(text) as { title?: string; summary?: string; tree?: TNode };
+        body = skeleton(root);
+      } catch {
+        body = text.slice(0, CAP); // invalid JSON → head excerpt as a fallback
+      }
+    } else {
+      body = text.length > CAP ? text.slice(0, CAP) + `\n… (head only — read ${found.rel} for the rest)` : text;
+    }
+    const pointer =
+      `📖 세부 설계는 온디맨드로 — \`sidecar architecture show\` (전체 트리) · ` +
+      `\`sidecar architecture search "<질의>"\` (노드 검색) · 또는 ${found.rel} 직접 Read (사람은 \`python3 serve.py\` HTML 뷰어).`;
     const snapshot =
       "⚠️ 현재상태 스냅샷이지 이력 로그 아님 — 변경 시 해당 노드를 제자리 교체(update-in-place)하고 옛 서술은 지운다. " +
       "트리에 변경이력·버전·날짜·`previous`/`이전엔…`/`deprecated` 노드 금지 (이력은 CHANGELOG + git · commons c4).";
-    const note = isJson
-      ? `설계 SSOT (JSON 트리 = AI·툴 파싱용 · 사람은 \`python3 serve.py\` HTML 뷰어). 코드/설계 변경 시 lockstep 갱신 (commons c4·c14). ${snapshot}`
-      : `설계 SSOT (최종 아키텍처 = 갱신형). 코드/설계 변경 시 lockstep 갱신 (commons c4·c14). ${snapshot}`;
-    // Turn-close gate placed AFTER the tree (recency = most-attended) so the model
-    // actually updates+reports per turn instead of only when the user asks.
+    const note = `설계 SSOT 스켈레톤 (전체는 ${found.rel} · 코드/설계 변경 시 lockstep 갱신 · commons c4·c14). ${snapshot}`;
+    // Turn-close gate placed AFTER the skeleton (recency = most-attended) so the
+    // model updates+reports when it touches design, not only when asked.
     // (recurrence learning ARCH_INJECT_IGNORED → ARCHITECTURE.json convergence array.)
     const gate =
-      "🏛️ 턴 마감 게이트 (코드·구조 변경 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** 위 트리의 해당 노드를 제자리 교체(update-in-place)하고 " +
+      "🏛️ 턴 마감 게이트 (코드·구조 변경 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** ARCHITECTURE.json 의 해당 노드를 제자리 교체(update-in-place)하고 " +
       "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — working tree 에 미커밋 코드/ARCHITECTURE 변경이 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단).";
-    const ctx = `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n\`\`\`${lang}\n${text}${tail}\n\`\`\`\n${gate}`;
+    const fence = isJson ? "" : `\n\n\`\`\`${lang}\n${body}\n\`\`\``;
+    const ctx = isJson
+      ? `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n${body}\n\n${pointer}\n${gate}`
+      : `🏛️ ARCHITECTURE — ${found.rel} (${note})${fence}\n\n${pointer}\n${gate}`;
     try {
       const j = JSON.parse(readStdin());
       const ev = String(j.hook_event_name ?? j.hookEventName ?? "");

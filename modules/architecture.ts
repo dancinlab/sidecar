@@ -8,7 +8,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
-import { readStdin } from "../lib/exec.ts";
+import { readStdin, execShell } from "../lib/exec.ts";
 import { resolveRuleFile, config } from "../lib/config.ts";
 import { lastAssistantText } from "./recommend.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
@@ -84,8 +84,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
     // actually updates+reports per turn instead of only when the user asks.
     // (recurrence learning ARCH_INJECT_IGNORED → ARCHITECTURE.json convergence array.)
     const gate =
-      "🏛️ 턴 마감 게이트 — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** 위 트리의 해당 노드를 제자리 교체(update-in-place)하고, " +
-      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로 보고하라. 안 바꿨으면 트리 그대로 두고 보고도 생략 (안 했으면서 했다고 말하지 말 것).";
+      "🏛️ 턴 마감 게이트 (코드·구조 변경 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** 위 트리의 해당 노드를 제자리 교체(update-in-place)하고 " +
+      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — working tree 에 미커밋 코드/ARCHITECTURE 변경이 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단).";
     const ctx = `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n\`\`\`${lang}\n${text}${tail}\n\`\`\`\n${gate}`;
     try {
       const j = JSON.parse(readStdin());
@@ -168,7 +168,44 @@ export async function runArchitecture(args: string[]): Promise<number> {
     return 0;
   }
 
-  process.stdout.write("usage: sidecar architecture {inject|show|search <q>|lint|convergence {list|add|rm|edit}}\n");
+  // stop-check (Stop hook) — design-report enforce. CONDITIONAL (unlike `ing stop-check`,
+  // which is every-turn): design rarely changes, so this fires ONLY when the working tree
+  // has uncommitted code/ARCHITECTURE changes AND the response carries no `🏛️ ARCHITECTURE`
+  // line — forcing the agent to update the design tree (or affirm `🏛️ ARCHITECTURE: 변동 없음`)
+  // before ending a turn that touched code/structure (catches code↔ARCHITECTURE drift,
+  // commons cycle-docs-pr). Clean tree (read-only turn) → no-op. sidecar-managed repos only.
+  if (sub === "stop-check") {
+    let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
+    try {
+      payload = JSON.parse(readStdin());
+    } catch {
+      return 0;
+    }
+    if (payload?.stop_hook_active) return 0; // already nudged this chain
+    if (!existsSync(resolve(REPO_ROOT, "harness.config.json"))) return 0; // sidecar-managed only
+    const tp = payload?.transcript_path ?? payload?.transcriptPath;
+    if (!tp) return 0;
+    const text = lastAssistantText(String(tp));
+    if (!text) return 0;
+    if (/🏛️\s*ARCHITECTURE/.test(text)) return 0; // a design-report line is present → ok
+    // deterministic per-turn trigger: uncommitted code/ARCHITECTURE changes in the tree.
+    let changed = "";
+    try {
+      changed = (await execShell("git diff --name-only && git diff --cached --name-only", { cwd: REPO_ROOT })).stdout;
+    } catch {
+      return 0;
+    }
+    const DESIGN_RELEVANT =
+      /(\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|c|h|cpp|hpp|cc|java|kt|swift|rb|php|sh|hexa)$)|(^|\/)ARCHITECTURE\.json$/i;
+    if (!changed.split("\n").some((f) => DESIGN_RELEVANT.test(f.trim()))) return 0; // no code/arch change → ok
+    const reason =
+      "이번 턴 코드·구조 변경(working tree 미커밋)이 있는데 응답에 `🏛️ ARCHITECTURE` 보고가 없다 — 설계가 바뀌었으면 ARCHITECTURE.json 해당 노드를 제자리 갱신하고 " +
+      "`🏛️ ARCHITECTURE 갱신: <무엇을>` 로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수 · commons cycle-docs-pr).";
+    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+    return 0;
+  }
+
+  process.stdout.write("usage: sidecar architecture {inject|show|search <q>|lint|stop-check|convergence {list|add|rm|edit}}\n");
   return 1;
 }
 

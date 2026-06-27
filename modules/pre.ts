@@ -15,6 +15,7 @@ import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile, repoPath } from "../lib/config.ts";
 import { collectViolations, lintBlockers } from "./lint.ts";
 import { detectForcePush } from "./git-guard.ts";
+import { detectBranchSwitch } from "./git-checkout-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
@@ -164,6 +165,18 @@ async function commitLintGate(cmd: string): Promise<string | null> {
   );
 }
 
+// True when `cwd` is the MAIN worktree of a git repo (the shared primary
+// checkout), false for a linked/temp worktree or outside any repo. A linked
+// worktree's git-dir lives under `<common>/.git/worktrees/<name>`; the main
+// worktree's absolute-git-dir is `<repo>/.git` with no `/worktrees/` segment.
+// Linked worktrees are MEANT to switch branches, so they are exempt from the
+// branch-switch guard — only the shared main checkout is protected.
+async function isMainWorktree(cwd: string): Promise<boolean> {
+  const r = await execShell("git rev-parse --absolute-git-dir", { cwd: cwd || "." }).catch(() => null);
+  if (!r || r.code !== 0) return false; // not a git repo → nothing to protect
+  return !/\.git\/worktrees\//.test(r.stdout.trim());
+}
+
 export async function preBash(_args: string[]): Promise<number> {
   const input = parseToolInput();
   const cmd = String(input.command ?? "");
@@ -178,6 +191,28 @@ export async function preBash(_args: string[]): Promise<number> {
         "GIT-FORCE-PUSH",
         `${label} — rewrites or bypasses shared history. No override; if a force-push is genuinely required, run it outside the agent.`
       );
+    }
+  }
+
+  // built-in git branch-switch guard — DENIES a HEAD-moving checkout/switch in
+  // the MAIN worktree (clobbers a parallel session's untracked work · #3559).
+  // Runs git only when a candidate is parsed (no per-bash latency otherwise);
+  // the ambiguous `git checkout <ref>` form is verified to be a real ref before
+  // blocking, so a file restore (`git checkout README.md`) falls through.
+  if (config().git.guardBranchSwitch) {
+    const bs = detectBranchSwitch(cmd);
+    if (bs && (await isMainWorktree(cwd))) {
+      let block = !bs.needsVerify;
+      if (bs.needsVerify && bs.target) {
+        const rev = await execShell(`git rev-parse --verify --quiet ${JSON.stringify(bs.target)}^{commit}`, { cwd: cwd || "." }).catch(() => null);
+        block = !!rev && rev.code === 0 && rev.stdout.trim().length > 0; // resolves to a commit → it's a switch, not a file
+      }
+      if (block) {
+        return emitBlock(
+          "GIT-BRANCH-SWITCH-MAIN",
+          `'${bs.label}' switches the MAIN worktree's branch — this clobbers a parallel session's untracked work and lands later commits on the wrong branch (the parallel-worktree incident, #3559). Do parallel work in an ISOLATED worktree instead: \`git worktree add <path> -b <branch>\` then \`cd\` there. No inline override; if a deliberate main-checkout switch is genuinely required, run it outside the agent.`
+        );
+      }
     }
   }
 

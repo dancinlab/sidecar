@@ -132,7 +132,12 @@ export interface SidecarConfig {
   // guardForcePush DENIES force-type push (--force / -f / --force-with-lease /
   // `git push <remote> +<refspec>`) which rewrites or bypasses shared history.
   // `--no-verify` is intentionally NOT blocked (left to user discipline).
-  git: { guardForcePush: boolean };
+  // guardBranchSwitch DENIES a HEAD-moving `git checkout`/`git switch` to a
+  // different branch when cwd is the MAIN worktree — switching the shared primary
+  // checkout out from under a parallel session/the user clobbers untracked work
+  // (the parallel-worktree incident, #3559). Linked/temp worktrees are exempt
+  // (they are MEANT to switch). Working-tree-only restores are left alone.
+  git: { guardForcePush: boolean; guardBranchSwitch: boolean };
   // tmpGuard warns (pre bash/write) when progress/working data is written to a
   // volatile tmp location (/tmp · /private/tmp · /var/folders · $TMPDIR) — that
   // data is discarded on reboot/reaper. Steer it to docs.scratchDir, which is
@@ -276,7 +281,7 @@ const DEFAULTS: SidecarConfig = {
     ],
     rebuild: true,
   },
-  git: { guardForcePush: true },
+  git: { guardForcePush: true, guardBranchSwitch: true },
   tmpGuard: true,
   handoffGuard: true,
   namingGuard: true,

@@ -312,6 +312,12 @@
                 "detail": "blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH 와 동일 정책"
               },
               {
+                "name": "branch-switch 가드",
+                "role": "메인 워크트리 브랜치 전환 차단",
+                "id": "guard-branch-switch",
+                "detail": "modules/git-checkout-guard.ts — MAIN 워크트리(git-dir 에 `/worktrees/` 없음)에서 HEAD 이동하는 `git checkout <branch>`/`-b`/`switch` 차단(공유 체크아웃을 갈아엎어 병렬 세션 untracked 작업 손실 = #3559). 링크드/임시 워크트리는 면제(전환이 목적). 파일복원(`checkout -- <path>`·`checkout <file>`·`<tree-ish> <path>`)은 통과 — 모호한 `checkout <ref>` 만 `git rev-parse` 로 실제 ref 확인 후 차단. 인라인 override 없음 · config `git.guardBranchSwitch` 토글(기본 ON)"
+              },
+              {
                 "name": "cloud-raw 가드",
                 "role": "raw 클라우드 CLI 직접 호출 차단",
                 "id": "guard-cloud-raw",

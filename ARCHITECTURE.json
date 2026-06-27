@@ -264,906 +264,906 @@
   },
   "columns": [
     {
-      "key": "이름",
-      "label": "이름",
+      "key": "name",
+      "label": "name",
       "tree": true
     },
     {
-      "key": "역할",
-      "label": "역할"
+      "key": "role",
+      "label": "role"
     },
     {
-      "key": "slug",
-      "label": "slug"
+      "key": "id",
+      "label": "id"
     },
     {
-      "key": "상세",
-      "label": "상세"
+      "key": "detail",
+      "label": "detail"
     }
   ],
   "tree": {
-    "이름": "sidecar",
-    "역할": "프로젝트-무관 AI 코딩 사이드카 — 작업 흐름에 끼어드는 게이트 집합",
-    "slug": "sidecar",
-    "상세": "엔진(.ts)은 모든 repo 공유, 규칙(JSON)만 주입. 1–4층은 5층(규칙 데이터)을 하드코딩하지 않는다.",
+    "name": "sidecar",
+    "role": "프로젝트-무관 AI 코딩 사이드카 — 작업 흐름에 끼어드는 게이트 집합",
+    "id": "sidecar",
+    "detail": "엔진(.ts)은 모든 repo 공유, 규칙(JSON)만 주입. 1–4층은 5층(규칙 데이터)을 하드코딩하지 않는다.",
     "children": [
       {
-        "이름": "surfaces — 5가지 통합 지점",
-        "역할": "에이전트가 무언가 하기 직전/직후 = 사이드카가 끼어들 자리",
-        "slug": "group-surfaces",
-        "상세": "어떤 에이전트 런타임이든 이 5 hook으로 환원된다.",
+        "name": "surfaces — 5가지 통합 지점",
+        "role": "에이전트가 무언가 하기 직전/직후 = 사이드카가 끼어들 자리",
+        "id": "group-surfaces",
+        "detail": "어떤 에이전트 런타임이든 이 5 hook으로 환원된다.",
         "children": [
           {
-            "이름": "UserPromptSubmit",
-            "역할": "사용자가 말함 → prompt",
-            "slug": "surface-userpromptsubmit",
-            "상세": "키워드→플레이북 매핑, 위험어→힌트. 결과: stderr(컨텍스트 주입)"
+            "name": "UserPromptSubmit",
+            "role": "사용자가 말함 → prompt",
+            "id": "surface-userpromptsubmit",
+            "detail": "키워드→플레이북 매핑, 위험어→힌트. 결과: stderr(컨텍스트 주입)"
           },
           {
-            "이름": "PreToolUse(Bash)",
-            "역할": "도구 호출 직전 → pre bash",
-            "slug": "surface-pretooluse-bash",
-            "상세": "코드레벨 가드(아래 children) 를 먼저 평가 → 그 뒤 config enforcement 정규식 매칭(backup). 코드 가드는 config 보다 먼저 실행되고 끌 수 없다(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr",
+            "name": "PreToolUse(Bash)",
+            "role": "도구 호출 직전 → pre bash",
+            "id": "surface-pretooluse-bash",
+            "detail": "코드레벨 가드(아래 children) 를 먼저 평가 → 그 뒤 config enforcement 정규식 매칭(backup). 코드 가드는 config 보다 먼저 실행되고 끌 수 없다(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr",
             "children": [
               {
-                "이름": "force-push 가드",
-                "역할": "히스토리 재작성 push 차단",
-                "slug": "guard-force-push",
-                "상세": "blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH 와 동일 정책"
+                "name": "force-push 가드",
+                "role": "히스토리 재작성 push 차단",
+                "id": "guard-force-push",
+                "detail": "blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH 와 동일 정책"
               },
               {
-                "이름": "cloud-raw 가드",
-                "역할": "raw 클라우드 CLI 직접 호출 차단",
-                "slug": "guard-cloud-raw",
-                "상세": "c11 — 구조화 dispatch 를 우회하는 raw runpodctl/vastai/ssh/scp/curl 직접 호출을 가드(`hexa cloud`/pod 흐름으로 유도)"
+                "name": "cloud-raw 가드",
+                "role": "raw 클라우드 CLI 직접 호출 차단",
+                "id": "guard-cloud-raw",
+                "detail": "c11 — 구조화 dispatch 를 우회하는 raw runpodctl/vastai/ssh/scp/curl 직접 호출을 가드(`hexa cloud`/pod 흐름으로 유도)"
               },
               {
-                "이름": "danger 가드",
-                "역할": "파괴적 명령 차단",
-                "slug": "guard-danger",
-                "상세": "no-verify·reset-hard·curl|sh 는 상시 always-on · rm-rf-root(루트 자체 /, /*, ~, $HOME, *)는 config `dangerGuard.rmRfRoot` 토글 · 기본 false=OFF(opt-out)"
+                "name": "danger 가드",
+                "role": "파괴적 명령 차단",
+                "id": "guard-danger",
+                "detail": "no-verify·reset-hard·curl|sh 는 상시 always-on · rm-rf-root(루트 자체 /, /*, ~, $HOME, *)는 config `dangerGuard.rmRfRoot` 토글 · 기본 false=OFF(opt-out)"
               },
               {
-                "이름": "hand-rolled-fanout 가드",
-                "역할": "손수 fanout 루프 경고",
-                "slug": "guard-hand-rolled-fanout",
-                "상세": "warn — copy-to 안의 손수 런처 fanout 은 구조화 dispatch·비용계상을 우회 → `fire-shards` 로 유도"
+                "name": "hand-rolled-fanout 가드",
+                "role": "손수 fanout 루프 경고",
+                "id": "guard-hand-rolled-fanout",
+                "detail": "warn — copy-to 안의 손수 런처 fanout 은 구조화 dispatch·비용계상을 우회 → `fire-shards` 로 유도"
               },
               {
-                "이름": "mem-guard",
-                "역할": "OOM 예방",
-                "slug": "guard-mem",
-                "상세": "background-spawn(`&`/nohup/disown) 직전 free-RAM 체크 → warnPct 이하 warn·blockPct 이하 block · OOM jetsam 예방"
+                "name": "mem-guard",
+                "role": "OOM 예방",
+                "id": "guard-mem",
+                "detail": "background-spawn(`&`/nohup/disown) 직전 free-RAM 체크 → warnPct 이하 warn·blockPct 이하 block · OOM jetsam 예방"
               },
               {
-                "이름": "naming-guard",
-                "역할": "비-canonical 작명 차단(생성) + 터치 시 넛지",
-                "slug": "guard-naming",
-                "상세": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · `@canonical-ok`/`# canonical-ok` 면제 · test/spec 제외"
+                "name": "naming-guard",
+                "role": "비-canonical 작명 차단(생성) + 터치 시 넛지",
+                "id": "guard-naming",
+                "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · `@canonical-ok`/`# canonical-ok` 면제 · test/spec 제외"
               },
               {
-                "이름": "state-guard",
-                "역할": "산출물 흩뿌림 차단",
-                "slug": "guard-state",
-                "상세": "scatter 디렉토리(`.verdicts`·`bench`·`experiments`·`scripts/scratch`…) 생성 BLOCK → 산출물은 단일 git-tracked `state/` 루트 강제(commons preserve-state)·Write/Edit + Bash mkdir/touch/cp/mv 양쪽·`state/`·`build/`·`.harness/` 하위 통과·`@state-ok`/`# state-ok` 면제"
+                "name": "state-guard",
+                "role": "산출물 흩뿌림 차단",
+                "id": "guard-state",
+                "detail": "scatter 디렉토리(`.verdicts`·`bench`·`experiments`·`scripts/scratch`…) 생성 BLOCK → 산출물은 단일 git-tracked `state/` 루트 강제(commons preserve-state)·Write/Edit + Bash mkdir/touch/cp/mv 양쪽·`state/`·`build/`·`.harness/` 하위 통과·`@state-ok`/`# state-ok` 면제"
               },
               {
-                "이름": "single-doc(scatter) 가드",
-                "역할": "흩어진 문서 차단",
-                "slug": "guard-single-doc-scatter",
-                "상세": "scatter 파일명(`*-report/summary/notes/plan/guide.md`·`UPPERCASE.md`·날짜접두 `.md`) 생성 BLOCK(scope 무관·`DOC-SCATTER`) → ARCHITECTURE(SSOT)+CHANGELOG(append) 통합 · quickref 규율(`DOC-NO-QUICKREF`)은 scopeDirs 한정 warn · `docs.allow` 리스트·`docs.enforce:off` 로 면제 (commons single-doc)"
+                "name": "single-doc(scatter) 가드",
+                "role": "흩어진 문서 차단",
+                "id": "guard-single-doc-scatter",
+                "detail": "scatter 파일명(`*-report/summary/notes/plan/guide.md`·`UPPERCASE.md`·날짜접두 `.md`) 생성 BLOCK(scope 무관·`DOC-SCATTER`) → ARCHITECTURE(SSOT)+CHANGELOG(append) 통합 · quickref 규율(`DOC-NO-QUICKREF`)은 scopeDirs 한정 warn · `docs.allow` 리스트·`docs.enforce:off` 로 면제 (commons single-doc)"
               },
               {
-                "이름": "commit-lint 게이트",
-                "역할": "agent git commit 에 lint 강제 (글로벌)",
-                "slug": "guard-commit-lint",
-                "상세": "`COMMIT-LINT` — agent `git commit` 감지 시 sidecar-managed repo(harness.config.json)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
+                "name": "commit-lint 게이트",
+                "role": "agent git commit 에 lint 강제 (글로벌)",
+                "id": "guard-commit-lint",
+                "detail": "`COMMIT-LINT` — agent `git commit` 감지 시 sidecar-managed repo(harness.config.json)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
               }
             ]
           },
           {
-            "이름": "PreToolUse(Write)",
-            "역할": "쓰기 직전 → pre write",
-            "slug": "surface-pretooluse-write",
-            "상세": "경로·내용·우회패턴 매칭 + write-time hard-deny(상세는 각 4g/4h 노드): SKILL-DESC-CAP/CMD-DESC-LONG(명령 desc 1400 천장+320 미니멀) · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE · DODONT-LONG · SECRET-LITERAL · HANDOFF-SCATTER. stdout JSON(deny)/stderr(warn)"
+            "name": "PreToolUse(Write)",
+            "role": "쓰기 직전 → pre write",
+            "id": "surface-pretooluse-write",
+            "detail": "경로·내용·우회패턴 매칭 + write-time hard-deny(상세는 각 4g/4h 노드): SKILL-DESC-CAP/CMD-DESC-LONG(명령 desc 1400 천장+320 미니멀) · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE · DODONT-LONG · SECRET-LITERAL · HANDOFF-SCATTER. stdout JSON(deny)/stderr(warn)"
           },
           {
-            "이름": "PostToolUse",
-            "역할": "도구 호출 직후 → post bash / edit",
-            "slug": "surface-posttooluse",
-            "상세": "exit/파일경로로 실패 라우팅, L0 편집 경고, c6 ing-staleness(코드 편집 카운트 bump). errors 큐 / stderr"
+            "name": "PostToolUse",
+            "role": "도구 호출 직후 → post bash / edit",
+            "id": "surface-posttooluse",
+            "detail": "exit/파일경로로 실패 라우팅, L0 편집 경고, c6 ing-staleness(코드 편집 카운트 bump). errors 큐 / stderr"
           },
           {
-            "이름": "Stop",
-            "역할": "에이전트 응답 종료 → 마지막 assistant 메시지 기반 3 Stop 훅",
-            "slug": "surface-stop",
-            "상세": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 3 훅 (아래). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
+            "name": "Stop",
+            "role": "에이전트 응답 종료 → 마지막 assistant 메시지 기반 3 Stop 훅",
+            "id": "surface-stop",
+            "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 3 훅 (아래). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
             "children": [
               {
-                "이름": "recommend stop-check",
-                "역할": "박스로 종료 시 auto-proceed 강제 (정밀 decision:block)",
-                "slug": "guard-recommend-stop-check",
-                "상세": "non-present default mode 인데 답변이 **진짜 박스/auto-pick 줄로 끝나면**(endsOnBox=마지막 ~2 비어있지않은 줄 검사) `decision:block` 으로 모델 재호출=강제. 정밀: tail=2 라 박스 뒤 작업/요약 따라오면 무발화 → 정상 땐 'Stop hook error' 안 뜨고 진짜 박스-멈춤만 강제(에러≠노이즈). 루프가드=stop_hook_active. (modules/recommend.ts)"
+                "name": "recommend stop-check",
+                "role": "박스로 종료 시 auto-proceed 강제 (정밀 decision:block)",
+                "id": "guard-recommend-stop-check",
+                "detail": "non-present default mode 인데 답변이 **진짜 박스/auto-pick 줄로 끝나면**(endsOnBox=마지막 ~2 비어있지않은 줄 검사) `decision:block` 으로 모델 재호출=강제. 정밀: tail=2 라 박스 뒤 작업/요약 따라오면 무발화 → 정상 땐 'Stop hook error' 안 뜨고 진짜 박스-멈춤만 강제(에러≠노이즈). 루프가드=stop_hook_active. (modules/recommend.ts)"
               },
               {
-                "이름": "convergence stop-check",
-                "역할": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
-                "slug": "guard-convergence-stop-check",
-                "상세": "warn-only(stderr·non-block) — `ing staleness-check` 동형(decision:block 아님). 에이전트 자신의 마지막 메시지를 재발-신호 키워드(config/convergence-triggers.json)로 스캔 → 매치 시 SSOT 기록 넛지를 stderr 표면화. 키워드=넓은 그물·정밀도는 에이전트 판단. once-가드=신호별 1회 → 오탐이 진짜 넛지 소진 안 함"
+                "name": "convergence stop-check",
+                "role": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
+                "id": "guard-convergence-stop-check",
+                "detail": "warn-only(stderr·non-block) — `ing staleness-check` 동형(decision:block 아님). 에이전트 자신의 마지막 메시지를 재발-신호 키워드(config/convergence-triggers.json)로 스캔 → 매치 시 SSOT 기록 넛지를 stderr 표면화. 키워드=넓은 그물·정밀도는 에이전트 판단. once-가드=신호별 1회 → 오탐이 진짜 넛지 소진 안 함"
               },
               {
-                "이름": "ing staleness-check",
-                "역할": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
-                "slug": "guard-ing-staleness-check",
-                "상세": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
+                "name": "ing staleness-check",
+                "role": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
+                "id": "guard-ing-staleness-check",
+                "detail": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
               },
               {
-                "이름": "ing stop-check",
-                "역할": "매턴 ING 상태 보고 강제 (decision:block)",
-                "slug": "guard-ing-stop-check",
-                "상세": "매 응답에 `🔄 ING` 줄(`🔄 ING 갱신: …` 또는 `🔄 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). sidecar-managed repo 한정·loop guard 1회/chain. (modules/ing.ts)"
+                "name": "ing stop-check",
+                "role": "매턴 ING 상태 보고 강제 (decision:block)",
+                "id": "guard-ing-stop-check",
+                "detail": "매 응답에 `🔄 ING` 줄(`🔄 ING 갱신: …` 또는 `🔄 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). sidecar-managed repo 한정·loop guard 1회/chain. (modules/ing.ts)"
               },
               {
-                "이름": "architecture stop-check",
-                "역할": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
-                "slug": "guard-architecture-stop-check",
-                "상세": "ing stop-check 의 설계판 — 단 **조건부**: working tree 에 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree(읽기전용 턴)=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). sidecar-managed repo 한정. (modules/architecture.ts)"
+                "name": "architecture stop-check",
+                "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
+                "id": "guard-architecture-stop-check",
+                "detail": "ing stop-check 의 설계판 — 단 **조건부**: working tree 에 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree(읽기전용 턴)=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). sidecar-managed repo 한정. (modules/architecture.ts)"
               }
             ]
           },
           {
-            "이름": "PreCompact·PostCompact",
-            "역할": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
-            "slug": "surface-precompact-postcompact",
-            "상세": "매-턴 inject(commons·recommend·prefs·easy)는 UserPromptSubmit 라 컴팩션 후 복귀하지만, 세션-스코프 inject(architecture·git-context·toolkit·companions·ing)는 SessionStart 에서만 떠 컴팩션 시 증발 → PreCompact(요약기가 보도록)+PostCompact(새 윈도우 직후)에 그 6개 재주입. additionalContext(`hookEventName` echo)"
+            "name": "PreCompact·PostCompact",
+            "role": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
+            "id": "surface-precompact-postcompact",
+            "detail": "매-턴 inject(commons·recommend·prefs·easy)는 UserPromptSubmit 라 컴팩션 후 복귀하지만, 세션-스코프 inject(architecture·git-context·toolkit·companions·ing)는 SessionStart 에서만 떠 컴팩션 시 증발 → PreCompact(요약기가 보도록)+PostCompact(새 윈도우 직후)에 그 6개 재주입. additionalContext(`hookEventName` echo)"
           },
           {
-            "이름": "체크포인트",
-            "역할": "commit/세션 → lint / verify / ing",
-            "slug": "surface-checkpoint",
-            "상세": "검증·신선도·인계. exit code + stderr"
+            "name": "체크포인트",
+            "role": "commit/세션 → lint / verify / ing",
+            "id": "surface-checkpoint",
+            "detail": "검증·신선도·인계. exit code + stderr"
           }
         ]
       },
       {
-        "이름": "layers — 층 구조",
-        "역할": "1=바닥(실행 입구) → 5=꼭대기(규칙 데이터)",
-        "slug": "group-layers",
-        "상세": "재사용성의 비밀: 1–4층이 5층을 하드코딩하지 않는다.",
+        "name": "layers — 층 구조",
+        "role": "1=바닥(실행 입구) → 5=꼭대기(규칙 데이터)",
+        "id": "group-layers",
+        "detail": "재사용성의 비밀: 1–4층이 5층을 하드코딩하지 않는다.",
         "children": [
           {
-            "이름": "L1 실행 입구",
-            "역할": "bin/sidecar — 런타임 자동탐색",
-            "slug": "layer-l1",
-            "상세": ""
+            "name": "L1 실행 입구",
+            "role": "bin/sidecar — 런타임 자동탐색",
+            "id": "layer-l1",
+            "detail": ""
           },
           {
-            "이름": "L2 디스패처",
-            "역할": "cli/index.ts — 명령 라우팅 진입점",
-            "slug": "layer-l2",
-            "상세": ""
+            "name": "L2 디스패처",
+            "role": "cli/index.ts — 명령 라우팅 진입점",
+            "id": "layer-l2",
+            "detail": ""
           },
           {
-            "이름": "L3 공용 부품",
-            "역할": "lib/ — 경로찾기·로깅·실행·직렬화",
-            "slug": "layer-l3",
-            "상세": "",
+            "name": "L3 공용 부품",
+            "role": "lib/ — 경로찾기·로깅·실행·직렬화",
+            "id": "layer-l3",
+            "detail": "",
             "children": [
               {
-                "이름": "paths.ts",
-                "역할": "repo-root 상향 탐색",
-                "slug": "lib-paths-ts",
-                "상세": "config.json→.git 순, SIDECAR_REPO_ROOT override"
+                "name": "paths.ts",
+                "role": "repo-root 상향 탐색",
+                "id": "lib-paths-ts",
+                "detail": "config.json→.git 순, SIDECAR_REPO_ROOT override"
               },
               {
-                "이름": "config.ts",
-                "역할": "harness.config.json 읽어 기본값과 머지",
-                "slug": "lib-config-ts",
-                "상세": "모든 모듈의 단일 설정원"
+                "name": "config.ts",
+                "role": "harness.config.json 읽어 기본값과 머지",
+                "id": "lib-config-ts",
+                "detail": "모든 모듈의 단일 설정원"
               },
               {
-                "이름": "log.ts",
-                "역할": "구조화 로그",
-                "slug": "lib-log-ts",
-                "상세": "info/ok/warn/loudFail"
+                "name": "log.ts",
+                "role": "구조화 로그",
+                "id": "lib-log-ts",
+                "detail": "info/ok/warn/loudFail"
               },
               {
-                "이름": "json.ts",
-                "역할": "JSON 직렬화 유틸",
-                "slug": "lib-json-ts",
-                "상세": ""
+                "name": "json.ts",
+                "role": "JSON 직렬화 유틸",
+                "id": "lib-json-ts",
+                "detail": ""
               },
               {
-                "이름": "exec.ts",
-                "역할": "셸/프로세스 실행",
-                "slug": "lib-exec-ts",
-                "상세": "execShell=bash -lc, execArgs=직접 spawn"
+                "name": "exec.ts",
+                "role": "셸/프로세스 실행",
+                "id": "lib-exec-ts",
+                "detail": "execShell=bash -lc, execArgs=직접 spawn"
               },
               {
-                "이름": "lockdown.ts",
-                "역할": "L0 잠금 파일 검사 (opt-in)",
-                "slug": "lib-lockdown-ts",
-                "상세": ""
+                "name": "lockdown.ts",
+                "role": "L0 잠금 파일 검사 (opt-in)",
+                "id": "lib-lockdown-ts",
+                "detail": ""
               }
             ]
           },
           {
-            "이름": "L4 기능 모듈",
-            "역할": "modules/*.ts — 언제·어떻게 검사할까",
-            "slug": "layer-l4",
-            "상세": "① 완전 범용 등급만 포함",
+            "name": "L4 기능 모듈",
+            "role": "modules/*.ts — 언제·어떻게 검사할까",
+            "id": "layer-l4",
+            "detail": "① 완전 범용 등급만 포함",
             "children": [
               {
-                "이름": "pre",
-                "역할": "정규식 규칙 엔진",
-                "slug": "module-pre",
-                "상세": "규칙은 전부 외부 JSON"
+                "name": "pre",
+                "role": "정규식 규칙 엔진",
+                "id": "module-pre",
+                "detail": "규칙은 전부 외부 JSON"
               },
               {
-                "이름": "post",
-                "역할": "exit/파일경로만 봄",
-                "slug": "module-post",
-                "상세": "도메인 지식 0"
+                "name": "post",
+                "role": "exit/파일경로만 봄",
+                "id": "module-post",
+                "detail": "도메인 지식 0"
               },
               {
-                "이름": "prompt",
-                "역할": "키워드→힌트 매핑",
-                "slug": "module-prompt",
-                "상세": "키워드는 외부 JSON"
+                "name": "prompt",
+                "role": "키워드→힌트 매핑",
+                "id": "module-prompt",
+                "detail": "키워드는 외부 JSON"
               },
               {
-                "이름": "lint",
-                "역할": "staged-L0·신선도·수렴 + doc-gate (commit 전 게이트)",
-                "slug": "module-lint",
-                "상세": "staged 변경에 대한 commit-time 게이트 모음. CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate). 개별 체크는 children.",
+                "name": "lint",
+                "role": "staged-L0·신선도·수렴 + doc-gate (commit 전 게이트)",
+                "id": "module-lint",
+                "detail": "staged 변경에 대한 commit-time 게이트 모음. CHANGELOG·ARCHITECTURE(.json|.md)·README 미동반=block (pr-cycle은 ing 보드 현행화도 gate). 개별 체크는 children.",
                 "children": [
                   {
-                    "이름": "SHADOW-DESC (4f)",
-                    "역할": "명령 desc 인지 (warn)",
-                    "slug": "check-shadow-desc-4f",
-                    "상세": "commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(sidecar-repo 한정·commands/ 존재 시). sidecar s18 포팅"
+                    "name": "SHADOW-DESC (4f)",
+                    "role": "명령 desc 인지 (warn)",
+                    "id": "check-shadow-desc-4f",
+                    "detail": "commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(sidecar-repo 한정·commands/ 존재 시). sidecar s18 포팅"
                   },
                   {
-                    "이름": "CMD-DESC-LONG (4f-min)",
-                    "역할": "명령 desc 미니멀 cap (block)",
-                    "slug": "check-cmd-desc-long-4f-min",
-                    "상세": "commands/*.md description codepoint ≤ `lint.cmdDescCap`(기본 320)인지 — 1400 천장(SHADOW-DESC)과 별개의 빡빡한 '미니멀' 선. 초과면 차단: 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로. write-time 도 같은 cap deny(`shadow.ts:descWriteViolation`→pre.ts) · 0=off"
+                    "name": "CMD-DESC-LONG (4f-min)",
+                    "role": "명령 desc 미니멀 cap (block)",
+                    "id": "check-cmd-desc-long-4f-min",
+                    "detail": "commands/*.md description codepoint ≤ `lint.cmdDescCap`(기본 320)인지 — 1400 천장(SHADOW-DESC)과 별개의 빡빡한 '미니멀' 선. 초과면 차단: 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로. write-time 도 같은 cap deny(`shadow.ts:descWriteViolation`→pre.ts) · 0=off"
                   },
                   {
-                    "이름": "INJECT-OVERSIZED (4j)",
-                    "역할": "inject별 개별 바이트 cap (block)",
-                    "slug": "check-inject-oversized-4j",
-                    "상세": "각 inject 소스가 **자기 cap** 이하인지 — `lint.injectCaps` 맵(path→budget · `/` 끝=그 dir `*.md` 각각 · 기본 recommend.md 7000·styles/ 9000·prefs.json 2000). 산문 비대=매 턴 context 세금이라 소스를 lean 하게(emit 절단=손실 금지). commons/CLAUDE/ARCHITECTURE 는 각자 format lint 가 그들의 inject lint. 0=off"
+                    "name": "INJECT-OVERSIZED (4j)",
+                    "role": "inject별 개별 바이트 cap (block)",
+                    "id": "check-inject-oversized-4j",
+                    "detail": "각 inject 소스가 **자기 cap** 이하인지 — `lint.injectCaps` 맵(path→budget · `/` 끝=그 dir `*.md` 각각 · 기본 recommend.md 7000·styles/ 9000·prefs.json 2000). 산문 비대=매 턴 context 세금이라 소스를 lean 하게(emit 절단=손실 금지). commons/CLAUDE/ARCHITECTURE 는 각자 format lint 가 그들의 inject lint. 0=off"
                   },
                   {
-                    "이름": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",
-                    "역할": "commons·CLAUDE do/dont 양식 (block)",
-                    "slug": "check-commons-prose-no-dodont-dodont-incomplete-4g",
-                    "상세": "**commons.md(또는 .harness override) + 루트 CLAUDE.md** 각 `## slug` 섹션이 `- do:` AND `- dont:` 줄만(둘 다 필수·산문 금지)인지 — 첫 `## ` 앞 preamble 면제 · 서브폴더 CLAUDE.md(folder-docs)는 자유양식 제외. 거버넌스/프로젝트규칙 SSOT 산문 재비대 + 한쪽-누락 차단(`commons.ts:lintCommonsFormat`+lintCommonsText)"
+                    "name": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",
+                    "role": "commons·CLAUDE do/dont 양식 (block)",
+                    "id": "check-commons-prose-no-dodont-dodont-incomplete-4g",
+                    "detail": "**commons.md(또는 .harness override) + 루트 CLAUDE.md** 각 `## slug` 섹션이 `- do:` AND `- dont:` 줄만(둘 다 필수·산문 금지)인지 — 첫 `## ` 앞 preamble 면제 · 서브폴더 CLAUDE.md(folder-docs)는 자유양식 제외. 거버넌스/프로젝트규칙 SSOT 산문 재비대 + 한쪽-누락 차단(`commons.ts:lintCommonsFormat`+lintCommonsText)"
                   },
                   {
-                    "이름": "DODONT-LONG (4h)",
-                    "역할": "do/dont 길이 cap (block)",
-                    "slug": "check-dodont-long-4h",
-                    "상세": "staged **commons.md + 루트 CLAUDE.md** 의 do/dont **엔트리**(=`- do:` 줄 + 뒤따르는 `  ` 연속줄 전부 합산 → 연속줄로 쪼개 cap 우회 차단) codepoint 길이가 `lint.dodontCap`(기본 200) 초과 신규/증가면 차단. HEAD diff-aware 라 기존 긴 줄 grandfather · Write·Edit 커버 · 서브폴더 CLAUDE.md 제외. archive_sidecar tape-lint #2 포팅"
+                    "name": "DODONT-LONG (4h)",
+                    "role": "do/dont 길이 cap (block)",
+                    "id": "check-dodont-long-4h",
+                    "detail": "staged **commons.md + 루트 CLAUDE.md** 의 do/dont **엔트리**(=`- do:` 줄 + 뒤따르는 `  ` 연속줄 전부 합산 → 연속줄로 쪼개 cap 우회 차단) codepoint 길이가 `lint.dodontCap`(기본 200) 초과 신규/증가면 차단. HEAD diff-aware 라 기존 긴 줄 grandfather · Write·Edit 커버 · 서브폴더 CLAUDE.md 제외. archive_sidecar tape-lint #2 포팅"
                   },
                   {
-                    "이름": "FOLDER-GUIDE-MISSING (4i)",
-                    "역할": "폴더 가이드 (block)",
-                    "slug": "check-folder-guide-missing-4i",
-                    "상세": "staged 폴더(folderGuides)에 CLAUDE.md 없으면 차단(존재만·folder-docs)"
+                    "name": "FOLDER-GUIDE-MISSING (4i)",
+                    "role": "폴더 가이드 (block)",
+                    "id": "check-folder-guide-missing-4i",
+                    "detail": "staged 폴더(folderGuides)에 CLAUDE.md 없으면 차단(존재만·folder-docs)"
                   },
                   {
-                    "이름": "HELP-BACKTICK (4j)",
-                    "역할": "HELP 백틱 위생 (block)",
-                    "slug": "check-help-backtick-4j",
-                    "상세": "cli/index.ts HELP 리터럴 내 이스케이프 안 된 백틱 차단(help/build 깨짐 재발 박제·텍스트스캔)"
+                    "name": "HELP-BACKTICK (4j)",
+                    "role": "HELP 백틱 위생 (block)",
+                    "id": "check-help-backtick-4j",
+                    "detail": "cli/index.ts HELP 리터럴 내 이스케이프 안 된 백틱 차단(help/build 깨짐 재발 박제·텍스트스캔)"
                   }
                 ]
               },
               {
-                "이름": "naming",
-                "역할": "repo 전수 비-canonical 이름 audit (write-guard 의 backlog 짝)",
-                "slug": "module-naming",
-                "상세": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름을 전수 스캔(`offendingToken` 재사용 = naming-guard 와 동일 판정). write-time naming-guard 는 새 파일만 막아 기존 backlog 를 못 보던 갭을 메움.",
+                "name": "naming",
+                "role": "repo 전수 비-canonical 이름 audit (write-guard 의 backlog 짝)",
+                "id": "module-naming",
+                "detail": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름을 전수 스캔(`offendingToken` 재사용 = naming-guard 와 동일 판정). write-time naming-guard 는 새 파일만 막아 기존 backlog 를 못 보던 갭을 메움.",
                 "children": [
                   {
-                    "이름": "출력 모드",
-                    "slug": "detail-output-mode",
-                    "상세": "기본 read-only 보고(exit 0) · `--gate`=위반 시 exit 1(commit/CI 게이트) · `--ing`=요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo 감사는 각 repo 안에서 돌려 그 repo ING 에 착지."
+                    "name": "출력 모드",
+                    "id": "detail-output-mode",
+                    "detail": "기본 read-only 보고(exit 0) · `--gate`=위반 시 exit 1(commit/CI 게이트) · `--ing`=요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo 감사는 각 repo 안에서 돌려 그 repo ING 에 착지."
                   },
                   {
-                    "이름": "생태계-native 면제 (오탐 방지)",
-                    "slug": "detail-native-exempt",
-                    "상세": "native-canonical-first: Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)."
+                    "name": "생태계-native 면제 (오탐 방지)",
+                    "id": "detail-native-exempt",
+                    "detail": "native-canonical-first: Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)."
                   }
                 ]
               },
               {
-                "이름": "install",
-                "역할": "공용(전역) 부트스트랩 — clone+래퍼+전역훅 (init=per-repo 와 별개)",
-                "slug": "module-install",
-                "상세": "SSOT=scripts/install.sh(curl 가능); `sidecar install`은 이를 위임. clone dancinlab/sidecar→~/.sidecar/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/sidecar · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
+                "name": "install",
+                "role": "공용(전역) 부트스트랩 — clone+래퍼+전역훅 (init=per-repo 와 별개)",
+                "id": "module-install",
+                "detail": "SSOT=scripts/install.sh(curl 가능); `sidecar install`은 이를 위임. clone dancinlab/sidecar→~/.sidecar/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/sidecar · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
               },
               {
-                "이름": "lab",
-                "역할": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
-                "slug": "module-lab",
-                "상세": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]` — lumen/rtsc/carbon-capture 형제 골격 1발 스캐폴드. files-only(git init/push 없음).",
+                "name": "lab",
+                "role": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
+                "id": "module-lab",
+                "detail": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]` — lumen/rtsc/carbon-capture 형제 골격 1발 스캐폴드. files-only(git init/push 없음).",
                 "children": [
                   {
-                    "이름": "스켈레톤 치환·방출",
-                    "역할": "토큰 템플릿 → 타깃",
-                    "slug": "detail-lab-skeleton",
-                    "상세": "`templates/lab/` 토큰화 스켈레톤(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`)을 재귀 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 방출. never-clobber(--force 만 덮어씀)·--dry-run 보고전용·빈 dir 은 .gitkeep"
+                    "name": "스켈레톤 치환·방출",
+                    "role": "토큰 템플릿 → 타깃",
+                    "id": "detail-lab-skeleton",
+                    "detail": "`templates/lab/` 토큰화 스켈레톤(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`)을 재귀 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 방출. never-clobber(--force 만 덮어씀)·--dry-run 보고전용·빈 dir 은 .gitkeep"
                   },
                   {
-                    "이름": "방출물",
-                    "역할": "생성되는 파일셋",
-                    "slug": "detail-lab-emitted",
-                    "상세": "src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger)"
+                    "name": "방출물",
+                    "role": "생성되는 파일셋",
+                    "id": "detail-lab-emitted",
+                    "detail": "src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger)"
                   },
                   {
-                    "이름": "생성 CLAUDE.md 규약",
-                    "역할": "demiurge 교차-repo 규약 2",
-                    "slug": "detail-lab-claude-conventions",
-                    "상세": "생성 CLAUDE.md 가 명시: hexa-lang stdlib(d3 — 구현코드=canonical hexa-lang stdlib, repo는 docs/manifest만 consume) + QFORGE 컴퓨트 기본엔진(d_qforge_default — DFT/el-ph 기본=QFORGE-native, QE는 미전환 fallback·≤1% gate·deck=hexa deck · non-compute lab은 skip)"
+                    "name": "생성 CLAUDE.md 규약",
+                    "role": "demiurge 교차-repo 규약 2",
+                    "id": "detail-lab-claude-conventions",
+                    "detail": "생성 CLAUDE.md 가 명시: hexa-lang stdlib(d3 — 구현코드=canonical hexa-lang stdlib, repo는 docs/manifest만 consume) + QFORGE 컴퓨트 기본엔진(d_qforge_default — DFT/el-ph 기본=QFORGE-native, QE는 미전환 fallback·≤1% gate·deck=hexa deck · non-compute lab은 skip)"
                   }
                 ]
               },
               {
-                "이름": "shadow",
-                "역할": "sidecar commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
-                "slug": "module-shadow",
-                "상세": "plan|remove|--force. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수작성 동명파일은 skip. 사이드카 무의존·재생성 가능(플러그인 미설치 폴백).",
+                "name": "shadow",
+                "role": "sidecar commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
+                "id": "module-shadow",
+                "detail": "plan|remove|--force. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수작성 동명파일은 skip. 사이드카 무의존·재생성 가능(플러그인 미설치 폴백).",
                 "children": [
                   {
-                    "이름": "--force heal",
-                    "역할": "마커-없는 stale 치유",
-                    "slug": "detail-force-heal",
-                    "상세": "`--force` 는 마커-없는 충돌도 source(SSOT)로 덮어써 마커 도입 *전* stale shadow 를 heal (@convergence SHADOW_PREMARKER_STALE: 마커없는 옛 shadow 가 손수작성 false-positive 로 skip 돼 source 의 `Triggers —` 줄을 잃으면 맨-텍스트 명령 인지가 죽는다)."
+                    "name": "--force heal",
+                    "role": "마커-없는 stale 치유",
+                    "id": "detail-force-heal",
+                    "detail": "`--force` 는 마커-없는 충돌도 source(SSOT)로 덮어써 마커 도입 *전* stale shadow 를 heal (@convergence SHADOW_PREMARKER_STALE: 마커없는 옛 shadow 가 손수작성 false-positive 로 skip 돼 source 의 `Triggers —` 줄을 잃으면 맨-텍스트 명령 인지가 죽는다)."
                   },
                   {
-                    "이름": "마커 위치",
-                    "역할": "frontmatter 뒤 삽입",
-                    "slug": "detail-marker-location",
-                    "상세": "마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로 앞에 붙이면 picker 가 마커를 desc 로 표시(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). desc 품질은 lint 4f(SHADOW-DESC) 게이트."
+                    "name": "마커 위치",
+                    "role": "frontmatter 뒤 삽입",
+                    "id": "detail-marker-location",
+                    "detail": "마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로 앞에 붙이면 picker 가 마커를 desc 로 표시(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). desc 품질은 lint 4f(SHADOW-DESC) 게이트."
                   },
                   {
-                    "이름": "hexa 위임자",
-                    "역할": "이웃 CLI 위임",
-                    "slug": "detail-hexa",
-                    "상세": "일부 commands/*.md 는 `hexa` 위임자(/hexa·/cloud·/dojo·/deck·/verify·/atlas — hexa 부재 시 graceful echo; sidecar 자체 dojo 는 /hdojo). ⚠️ frontmatter argument-hint 중첩 큰따옴표 금지(YAML 깨짐) — 안쪽은 작은따옴표."
+                    "name": "hexa 위임자",
+                    "role": "이웃 CLI 위임",
+                    "id": "detail-hexa",
+                    "detail": "일부 commands/*.md 는 `hexa` 위임자(/hexa·/cloud·/dojo·/deck·/verify·/atlas — hexa 부재 시 graceful echo; sidecar 자체 dojo 는 /hdojo). ⚠️ frontmatter argument-hint 중첩 큰따옴표 금지(YAML 깨짐) — 안쪽은 작은따옴표."
                   }
                 ]
               },
               {
-                "이름": "pr-cycle",
-                "역할": "push→PR→검증머지→로컬 base sync",
-                "slug": "module-pr-cycle",
-                "상세": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→로컬 base ff-sync→merged worktree sweep→stale-PR reaper. main/master 에선 거부.",
+                "name": "pr-cycle",
+                "role": "push→PR→검증머지→로컬 base sync",
+                "id": "module-pr-cycle",
+                "detail": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→로컬 base ff-sync→merged worktree sweep→stale-PR reaper. main/master 에선 거부.",
                 "children": [
                   {
-                    "이름": "로컬 ff-sync",
-                    "역할": "로컬 base 뒤처짐 방지",
-                    "slug": "detail-ff-sync",
-                    "상세": "`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부."
+                    "name": "로컬 ff-sync",
+                    "role": "로컬 base 뒤처짐 방지",
+                    "id": "detail-ff-sync",
+                    "detail": "`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부."
                   },
                   {
-                    "이름": "stale-PR reaper",
-                    "역할": "내 열린 PR 전수 정리",
-                    "slug": "detail-stale-pr-reaper",
-                    "상세": "내 다른 열린 PR 전수: MERGEABLE=자동 squash머지 · CONFLICTING/blocked=rebase/`gh pr close` 안내와 함께 큰소리 보고 · `--no-reap` 차단. 중단/실패한 머지가 영구 방치(충돌로 썩음)되던 누수 차단."
+                    "name": "stale-PR reaper",
+                    "role": "내 열린 PR 전수 정리",
+                    "id": "detail-stale-pr-reaper",
+                    "detail": "내 다른 열린 PR 전수: MERGEABLE=자동 squash머지 · CONFLICTING/blocked=rebase/`gh pr close` 안내와 함께 큰소리 보고 · `--no-reap` 차단. 중단/실패한 머지가 영구 방치(충돌로 썩음)되던 누수 차단."
                   },
                   {
-                    "이름": "worktree 누적 한계",
-                    "역할": "[gone] 못 거두는 워크트리",
-                    "slug": "detail-worktree",
-                    "상세": "sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 의 isolation:worktree 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적. SessionStart `worktree gc` 의 age 백스톱(HEAD>maxAgeDays 기본3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거."
+                    "name": "worktree 누적 한계",
+                    "role": "[gone] 못 거두는 워크트리",
+                    "id": "detail-worktree",
+                    "detail": "sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 의 isolation:worktree 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적. SessionStart `worktree gc` 의 age 백스톱(HEAD>maxAgeDays 기본3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거."
                   }
                 ]
               },
               {
-                "이름": "ship",
-                "역할": "구현 후 모든 설치 surface 에 한 번에 전파 (orchestrator)",
-                "slug": "module-ship",
-                "상세": "pr-cycle(검증 머지) → self-update(전역 CLI git-pull) → shadow(commands/ 재미러) 를 한 명령으로 올바른 순서 실행, 단계 실패 시 즉시 중단. shadow 빠뜨리면 새 슬래시가 picker 에 안 떠 '반영 안됨' 재발 → 셋을 묶어 락스텝. 플러그인(/plugin) 설치본은 별도 surface · `--no-doc` pr-cycle 로 forward"
+                "name": "ship",
+                "role": "구현 후 모든 설치 surface 에 한 번에 전파 (orchestrator)",
+                "id": "module-ship",
+                "detail": "pr-cycle(검증 머지) → self-update(전역 CLI git-pull) → shadow(commands/ 재미러) 를 한 명령으로 올바른 순서 실행, 단계 실패 시 즉시 중단. shadow 빠뜨리면 새 슬래시가 picker 에 안 떠 '반영 안됨' 재발 → 셋을 묶어 락스텝. 플러그인(/plugin) 설치본은 별도 surface · `--no-doc` pr-cycle 로 forward"
               },
               {
-                "이름": "verify",
-                "역할": "검증 명령 병렬 실행",
-                "slug": "module-verify",
-                "상세": "명령은 config 선언"
+                "name": "verify",
+                "role": "검증 명령 병렬 실행",
+                "id": "module-verify",
+                "detail": "명령은 config 선언"
               },
               {
-                "이름": "ci",
-                "역할": "검증 명령 병렬 실행 + CI scaffold",
-                "slug": "module-ci",
-                "상세": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1). `ci scaffold` = `.github/workflows/ci.yml` 방출. `ci.fallback` = cost-free: `pick-runner` 가 self-hosted pool probe → 무료 self-hosted·없으면 github-hosted fallback. `ci.cachePaths` → `actions/cache@v4` warm"
+                "name": "ci",
+                "role": "검증 명령 병렬 실행 + CI scaffold",
+                "id": "module-ci",
+                "detail": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1). `ci scaffold` = `.github/workflows/ci.yml` 방출. `ci.fallback` = cost-free: `pick-runner` 가 self-hosted pool probe → 무료 self-hosted·없으면 github-hosted fallback. `ci.cachePaths` → `actions/cache@v4` warm"
               },
               {
-                "이름": "paper",
-                "역할": "demiurge 하우스 논문 스캐폴드·표지·빌드·배포(Zenodo/arXiv)",
-                "slug": "module-paper",
-                "상세": "new(스캐폴드) → cover(imagine 표지) → build(xelatex+bibtex×3) → publish/update/unpublish/status(배포). NeuroLM 정답지 미러 + 하드 content-floor 게이트.",
+                "name": "paper",
+                "role": "demiurge 하우스 논문 스캐폴드·표지·빌드·배포(Zenodo/arXiv)",
+                "id": "module-paper",
+                "detail": "new(스캐폴드) → cover(imagine 표지) → build(xelatex+bibtex×3) → publish/update/unpublish/status(배포). NeuroLM 정답지 미러 + 하드 content-floor 게이트.",
                 "children": [
                   {
-                    "이름": "build content-floor 게이트",
-                    "slug": "detail-build-content-floor",
-                    "상세": "build=xelatex+bibtex×3 · pages/refs/result-figs 보고 · 하드 2게이트 ≥10p(g51) + ≥9 result figs(cover 제외 = NeuroLM바) · 둘다 `--min-*` 0 으로 해제 · 미달 exit3 · 깨진/빈 PDF 실패처리."
+                    "name": "build content-floor 게이트",
+                    "id": "detail-build-content-floor",
+                    "detail": "build=xelatex+bibtex×3 · pages/refs/result-figs 보고 · 하드 2게이트 ≥10p(g51) + ≥9 result figs(cover 제외 = NeuroLM바) · 둘다 `--min-*` 0 으로 해제 · 미달 exit3 · 깨진/빈 PDF 실패처리."
                   },
                   {
-                    "이름": "NeuroLM 정답지 미러",
-                    "slug": "detail-neurolm",
-                    "상세": "외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용) 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림(TikZ 아키텍처 + pgfplots 막대 · 캡션=결과연결) · g5 tier-badge · natbib. 마케팅 표지는 허용(의도된 divergence). 손조립 규율을 도구로 박제."
+                    "name": "NeuroLM 정답지 미러",
+                    "id": "detail-neurolm",
+                    "detail": "외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용) 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림(TikZ 아키텍처 + pgfplots 막대 · 캡션=결과연결) · g5 tier-badge · natbib. 마케팅 표지는 허용(의도된 divergence). 손조립 규율을 도구로 박제."
                   },
                   {
-                    "이름": "배포 수명주기 (Zenodo/arXiv)",
-                    "slug": "detail-zenodo-arxiv",
-                    "상세": "publish/update/unpublish/status `--to zenodo|arxiv|both` · 키는 secret · 원장 PAPERS/<slug>/publish.json. Zenodo=완전 REST(업로드→메타→발행→DOI · update=new-version · unpublish=DRAFT 삭제). arXiv=제출 API 없음(SWORD 폐지)→tar.gz 패키징 + 제출 가이드(가짜 자동제출 안 함)"
+                    "name": "배포 수명주기 (Zenodo/arXiv)",
+                    "id": "detail-zenodo-arxiv",
+                    "detail": "publish/update/unpublish/status `--to zenodo|arxiv|both` · 키는 secret · 원장 PAPERS/<slug>/publish.json. Zenodo=완전 REST(업로드→메타→발행→DOI · update=new-version · unpublish=DRAFT 삭제). arXiv=제출 API 없음(SWORD 폐지)→tar.gz 패키징 + 제출 가이드(가짜 자동제출 안 함)"
                   }
                 ]
               },
               {
-                "이름": "imagine",
-                "역할": "AI 이미지+영상 생성 (fal/openai · 키 secret 경유)",
-                "slug": "module-imagine",
-                "상세": "출력 확장자로 분기: 이미지(.png/.jpg)=fal `openai/gpt-image-2`(또는 -b openai); 영상(.mp4/.mov)=fal Seedance 2.0(`-i` 없으면 text-to-video·있으면 image-to-video). 동일 queue+poll · 프롬프트는 FILE · 키는 secret get·-K curl 로 argv 누출 방지 · -m override"
+                "name": "imagine",
+                "role": "AI 이미지+영상 생성 (fal/openai · 키 secret 경유)",
+                "id": "module-imagine",
+                "detail": "출력 확장자로 분기: 이미지(.png/.jpg)=fal `openai/gpt-image-2`(또는 -b openai); 영상(.mp4/.mov)=fal Seedance 2.0(`-i` 없으면 text-to-video·있으면 image-to-video). 동일 queue+poll · 프롬프트는 FILE · 키는 secret get·-K curl 로 argv 누출 방지 · -m override"
               },
               {
-                "이름": "email (alias mail)",
-                "역할": "Postmark 트랜잭션 메일 발송 (토큰 secret 경유)",
-                "slug": "module-email-alias-mail",
-                "상세": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
+                "name": "email (alias mail)",
+                "role": "Postmark 트랜잭션 메일 발송 (토큰 secret 경유)",
+                "id": "module-email-alias-mail",
+                "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
               },
               {
-                "이름": "kick (alias drill)",
-                "역할": "hexa-lang gap-breakthrough/discovery 엔진 패스스루",
-                "slug": "module-kick-alias-drill",
-                "상세": "`hexa kick --seed \"<seed>\"` 래퍼. bare 인자→--seed 합치기 · 선두 플래그(--rounds N·--engine mk9|mk10)→verbatim 패스스루. 긴 실행 → stdio inherit(라이브 스트림·timeout 없음). hexa PATH 없으면 127+안내"
+                "name": "kick (alias drill)",
+                "role": "hexa-lang gap-breakthrough/discovery 엔진 패스스루",
+                "id": "module-kick-alias-drill",
+                "detail": "`hexa kick --seed \"<seed>\"` 래퍼. bare 인자→--seed 합치기 · 선두 플래그(--rounds N·--engine mk9|mk10)→verbatim 패스스루. 긴 실행 → stdio inherit(라이브 스트림·timeout 없음). hexa PATH 없으면 127+안내"
               },
               {
-                "이름": "pod {poll|watch|unwatch|list}",
-                "역할": "GPU pod 자동 폴링 (>=10분 cadence)",
-                "slug": "module-pod-poll",
-                "상세": "modules/pod-poll.ts — 발사 후 수동 ssh 확인을 canonical 명령으로 일반화(runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북). 모든 원격 op 은 `hexa cloud` 경유(commons c11, 직접 ssh/curl 금지).",
+                "name": "pod {poll|watch|unwatch|list}",
+                "role": "GPU pod 자동 폴링 (>=10분 cadence)",
+                "id": "module-pod-poll",
+                "detail": "modules/pod-poll.ts — 발사 후 수동 ssh 확인을 canonical 명령으로 일반화(runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북). 모든 원격 op 은 `hexa cloud` 경유(commons c11, 직접 ssh/curl 금지).",
                 "children": [
                   {
-                    "이름": "hexa cloud 경유 op",
-                    "역할": "canonical-cli 재사용",
-                    "slug": "detail-pod-poll-cloud",
-                    "상세": "`alive` 생존(RUNNING/GONE)·`exec` 프로브(GPU-util 또는 `--ssh-check`)·`copy-from` pull·`rm` teardown. poll=one-shot, idle-streak `--done-after N`(기본 2)로 sustained-idle done 판정."
+                    "name": "hexa cloud 경유 op",
+                    "role": "canonical-cli 재사용",
+                    "id": "detail-pod-poll-cloud",
+                    "detail": "`alive` 생존(RUNNING/GONE)·`exec` 프로브(GPU-util 또는 `--ssh-check`)·`copy-from` pull·`rm` teardown. poll=one-shot, idle-streak `--done-after N`(기본 2)로 sustained-idle done 판정."
                   },
                   {
-                    "이름": "no-escape-hatch 기본값",
-                    "역할": "안전 비파괴 (read-only)",
-                    "slug": "detail-pod-poll-readonly",
-                    "상세": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
+                    "name": "no-escape-hatch 기본값",
+                    "role": "안전 비파괴 (read-only)",
+                    "id": "detail-pod-poll-readonly",
+                    "detail": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
                   },
                   {
-                    "이름": "watch cadence",
-                    "역할": "레지스트리 + 구동",
-                    "slug": "detail-pod-poll-cadence",
-                    "상세": "레지스트리 `~/.sidecar/pod-watch.json`(flat 전역 규약 · pool.json 동형) + cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(기본 비파괴 · crontab write 불가 환경 자동 fallback · interval >=600s c19)."
+                    "name": "watch cadence",
+                    "role": "레지스트리 + 구동",
+                    "id": "detail-pod-poll-cadence",
+                    "detail": "레지스트리 `~/.sidecar/pod-watch.json`(flat 전역 규약 · pool.json 동형) + cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(기본 비파괴 · crontab write 불가 환경 자동 fallback · interval >=600s c19)."
                   }
                 ]
               },
               {
-                "이름": "fleet (+ lab/abstract/full)",
-                "역할": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
-                "slug": "module-fleet-lab-abstract-full",
-                "상세": "MODES 맵(fleet·lab·abstract·full)이 엔진 1개를 공유 — roster 파일·런북·어휘만 다르다. 4모드 공통 go/stop/status, `/fleet <mode> …`는 sidecar 가 `$ARGUMENTS` forward.",
+                "name": "fleet (+ lab/abstract/full)",
+                "role": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
+                "id": "module-fleet-lab-abstract-full",
+                "detail": "MODES 맵(fleet·lab·abstract·full)이 엔진 1개를 공유 — roster 파일·런북·어휘만 다르다. 4모드 공통 go/stop/status, `/fleet <mode> …`는 sidecar 가 `$ARGUMENTS` forward.",
                 "children": [
                   {
-                    "이름": "fleet (기본)",
-                    "역할": "빌드/멀티레인",
-                    "slug": "mode-fleet",
-                    "상세": "roster `.harness/fleet/active` + templates/fleet.md. N개 독립 레인을 background Agent로, 각 레인은 착륙 즉시 다음 라운드를 스스로 발사(barrier 없음)."
+                    "name": "fleet (기본)",
+                    "role": "빌드/멀티레인",
+                    "id": "mode-fleet",
+                    "detail": "roster `.harness/fleet/active` + templates/fleet.md. N개 독립 레인을 background Agent로, 각 레인은 착륙 즉시 다음 라운드를 스스로 발사(barrier 없음)."
                   },
                   {
-                    "이름": "fleet lab",
-                    "역할": "research 특화",
-                    "slug": "mode-fleet-lab",
-                    "상세": "roster `lab` + fleet-lab.md. 레인=막힌 프론티어(벽). 싼 research gate→정당화 시만 비싼 implement/measure→측정(c2)→SSOT(blocking-frontiers)→재-research/벽(🧱 reopenable)."
+                    "name": "fleet lab",
+                    "role": "research 특화",
+                    "id": "mode-fleet-lab",
+                    "detail": "roster `lab` + fleet-lab.md. 레인=막힌 프론티어(벽). 싼 research gate→정당화 시만 비싼 implement/measure→측정(c2)→SSOT(blocking-frontiers)→재-research/벽(🧱 reopenable)."
                   },
                   {
-                    "이름": "fleet abstract",
-                    "역할": "추상화 특화",
-                    "slug": "mode-fleet-abstract",
-                    "상세": "roster `abstract` + fleet-abstract.md. 레인=누적 법칙군/천장. census LAWS→한 겹 peel해 공유 trade-off(메타법칙) 도출→escape 원리 발명→반증가능 예측으로 캐스팅해 compute/research 핸드오프. 메타법칙(🌌)은 새 lens로 reopen, 산출 전부 미검증(d6 좌표≠발견), lazy-ceiling 금지(c14 d)."
+                    "name": "fleet abstract",
+                    "role": "추상화 특화",
+                    "id": "mode-fleet-abstract",
+                    "detail": "roster `abstract` + fleet-abstract.md. 레인=누적 법칙군/천장. census LAWS→한 겹 peel해 공유 trade-off(메타법칙) 도출→escape 원리 발명→반증가능 예측으로 캐스팅해 compute/research 핸드오프. 메타법칙(🌌)은 새 lens로 reopen, 산출 전부 미검증(d6 좌표≠발견), lazy-ceiling 금지(c14 d)."
                   },
                   {
-                    "이름": "fleet full",
-                    "역할": "풀스택",
-                    "slug": "mode-fleet-full",
-                    "상세": "roster `full` + fleet-full.md. 프론티어가 3 페이즈 순환 research→implement→(벽)→abstract→falsify — implement 스킵 금지(약한 레버도 싼 probe 로 벽 측정 후 abstract). 기본 순차(afg)·`parallel` 일 때만 Workflow fan-out. 게이트는 비용 — 싼/로컬 자동·비싼(pool/GPU)만 4축+go. depletion=양축 dry"
+                    "name": "fleet full",
+                    "role": "풀스택",
+                    "id": "mode-fleet-full",
+                    "detail": "roster `full` + fleet-full.md. 프론티어가 3 페이즈 순환 research→implement→(벽)→abstract→falsify — implement 스킵 금지(약한 레버도 싼 probe 로 벽 측정 후 abstract). 기본 순차(afg)·`parallel` 일 때만 Workflow fan-out. 게이트는 비용 — 싼/로컬 자동·비싼(pool/GPU)만 4축+go. depletion=양축 dry"
                   }
                 ]
               },
               {
-                "이름": "errors",
-                "역할": "(kind,code)→severity 분류",
-                "slug": "module-errors",
-                "상세": "맵 로드 = bundled config/ defaults 위에 per-repo `.harness/` override 병합(repo 가 code별 우선) → 새 bundled 규칙이 stale repo 맵에서 fallback-block 으로 둔갑 방지"
+                "name": "errors",
+                "role": "(kind,code)→severity 분류",
+                "id": "module-errors",
+                "detail": "맵 로드 = bundled config/ defaults 위에 per-repo `.harness/` override 병합(repo 가 code별 우선) → 새 bundled 규칙이 stale repo 맵에서 fallback-block 으로 둔갑 방지"
               },
               {
-                "이름": "ledger",
-                "역할": "에이전트 작업 등록 (중복 방지)",
-                "slug": "module-ledger",
-                "상세": "도메인 무관"
+                "name": "ledger",
+                "role": "에이전트 작업 등록 (중복 방지)",
+                "id": "module-ledger",
+                "detail": "도메인 무관"
               },
               {
-                "이름": "ing",
-                "역할": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
-                "slug": "module-ing",
-                "상세": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다.",
+                "name": "ing",
+                "role": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
+                "id": "module-ing",
+                "detail": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다.",
                 "children": [
                   {
-                    "이름": "저장 = ing ref (worktree 아님)",
-                    "slug": "detail-ing-ref-worktree",
-                    "상세": "done=scrub. 보드는 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref) 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. 보드 cwd=`git rev-parse --show-toplevel`(REPO_ROOT fallback)로 해석 — config-less worktree 가 sibling repo ref 에 쓰던 누수 차단"
+                    "name": "저장 = ing ref (worktree 아님)",
+                    "id": "detail-ing-ref-worktree",
+                    "detail": "done=scrub. 보드는 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref) 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. 보드 cwd=`git rev-parse --show-toplevel`(REPO_ROOT fallback)로 해석 — config-less worktree 가 sibling repo ref 에 쓰던 누수 차단"
                   },
                   {
-                    "이름": "verb 의미 · stdin",
-                    "slug": "detail-verb-stdin",
-                    "상세": "add=work · next=다음 · done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 중단작업 복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피."
+                    "name": "verb 의미 · stdin",
+                    "id": "detail-verb-stdin",
+                    "detail": "add=work · next=다음 · done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 중단작업 복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피."
                   },
                   {
-                    "이름": "적체 방지 (나이 게이트)",
-                    "slug": "detail-pileup-gate",
-                    "상세": "inject/show 가 각 work 항목에 나이 `⏳Nd` 표시 + `ing.staleDays`(기본 5) 초과 묵음 또는 `ing.maxActive`(기본 12) 초과 시 매 턴 `🧹 ING 적체 — … 끝난 항목 지금 done 로 scrub` 강제 지시. 자동삭제 아님 — 완료분이 ACTIVE 로 썩는 것 차단(나이는 done-vs-active proxy)."
+                    "name": "적체 방지 (나이 게이트)",
+                    "id": "detail-pileup-gate",
+                    "detail": "inject/show 가 각 work 항목에 나이 `⏳Nd` 표시 + `ing.staleDays`(기본 5) 초과 묵음 또는 `ing.maxActive`(기본 12) 초과 시 매 턴 `🧹 ING 적체 — … 끝난 항목 지금 done 로 scrub` 강제 지시. 자동삭제 아님 — 완료분이 ACTIVE 로 썩는 것 차단(나이는 done-vs-active proxy)."
                   }
                 ]
               },
               {
-                "이름": "bitter-gate",
-                "역할": "JSONL 빈도 분석",
-                "slug": "module-bitter-gate",
-                "상세": "dormant 규칙 폐기 검토"
+                "name": "bitter-gate",
+                "role": "JSONL 빈도 분석",
+                "id": "module-bitter-gate",
+                "detail": "dormant 규칙 폐기 검토"
               },
               {
-                "이름": "audit",
-                "역할": "JSONL 카운트 기반 6축 스코어카드",
-                "slug": "module-audit",
-                "상세": ""
+                "name": "audit",
+                "role": "JSONL 카운트 기반 6축 스코어카드",
+                "id": "module-audit",
+                "detail": ""
               },
               {
-                "이름": "gc",
-                "역할": "마크다운 가이드 링크 drift 탐지",
-                "slug": "module-gc",
-                "상세": ""
+                "name": "gc",
+                "role": "마크다운 가이드 링크 drift 탐지",
+                "id": "module-gc",
+                "detail": ""
               },
               {
-                "이름": "changelog",
-                "역할": "이력 SSOT = CHANGELOG.jsonl (append + auto-prune)",
-                "slug": "module-changelog",
-                "상세": "이력을 `CHANGELOG.jsonl`(newest-first · {ts,title,body})로. `add`(body=stdin)+keep-N 자동 트림·`list`·`render`·`prune --keep N|--older-than D`·`autoprune`(SessionStart 배선·cap 초과시만)·`migrate`(md→jsonl). keep-N=lint.changelog.keep(기본 30)·옛 엔트리는 git 보존. CHANGELOG-MISSING 게이트는 .jsonl staged 요구"
+                "name": "changelog",
+                "role": "이력 SSOT = CHANGELOG.jsonl (append + auto-prune)",
+                "id": "module-changelog",
+                "detail": "이력을 `CHANGELOG.jsonl`(newest-first · {ts,title,body})로. `add`(body=stdin)+keep-N 자동 트림·`list`·`render`·`prune --keep N|--older-than D`·`autoprune`(SessionStart 배선·cap 초과시만)·`migrate`(md→jsonl). keep-N=lint.changelog.keep(기본 30)·옛 엔트리는 git 보존. CHANGELOG-MISSING 게이트는 .jsonl staged 요구"
               },
               {
-                "이름": "architecture",
-                "역할": "설계 SSOT 스켈레톤 주입 (SessionStart + Compact · detail 은 온디맨드)",
-                "slug": "module-architecture",
-                "상세": "스켈레톤(title+summary+2단계 목차)만 additionalContext 주입 — SessionStart + PreCompact/PostCompact(NOT per-turn · 정적 doc 의 매턴 풀-주입은 대용량-doc 안티패턴). 세부(`상세`셀·전체 트리·convergence)는 파일에 두고 `show`/`search`/Read 온디맨드. 턴-마감 게이트는 Stop 훅 `architecture stop-check` 강제(학습=convergence INJECT_DOC_SKELETON_ONDEMAND)",
+                "name": "architecture",
+                "role": "설계 SSOT 스켈레톤 주입 (SessionStart + Compact · detail 은 온디맨드)",
+                "id": "module-architecture",
+                "detail": "스켈레톤(title+summary+2단계 목차)만 additionalContext 주입 — SessionStart + PreCompact/PostCompact(NOT per-turn · 정적 doc 의 매턴 풀-주입은 대용량-doc 안티패턴). 세부(`detail`셀·전체 트리·convergence)는 파일에 두고 `show`/`search`/Read 온디맨드. 턴-마감 게이트는 Stop 훅 `architecture stop-check` 강제(학습=convergence INJECT_DOC_SKELETON_ONDEMAND)",
                 "children": [
                   {
-                    "이름": "lint (트리 위생 · c4 강제)",
-                    "역할": "fine-decomposition 게이트",
-                    "slug": "detail-lint-c4",
-                    "상세": "`architecture lint` = 셀 cap(ARCH-BIG-CELL · `lint.archCellCap` 300), piled>`archPiledMax`(6)(ARCH-PILED), history 키(ARCH-HISTORY), slug 부재/중복/형식(ARCH-SLUG-MISSING/DUPE/FORMAT)=block. 이름-노드 0 비-canonical 스키마=ARCH-SCHEMA-UNRECOGNIZED(warn · slug 게이트 silent no-op 표면화). 최상위 `convergence` 제외"
+                    "name": "lint (트리 위생 · c4 강제)",
+                    "role": "fine-decomposition 게이트",
+                    "id": "detail-lint-c4",
+                    "detail": "`architecture lint` = 셀 cap(ARCH-BIG-CELL · `lint.archCellCap` 300), piled>`archPiledMax`(6)(ARCH-PILED), history 키(ARCH-HISTORY), id 부재/중복/형식(ARCH-ID-MISSING/DUPE/FORMAT)=block. name-노드 0 비-canonical 스키마=ARCH-SCHEMA-UNRECOGNIZED(warn · id 게이트 silent no-op 표면화). 최상위 `convergence` 제외"
                   },
                   {
-                    "이름": "search (slug 검색)",
-                    "역할": "노드를 slug/텍스트로 찾기",
-                    "slug": "detail-search",
-                    "상세": "`architecture search <q>` = slug/이름/역할/상세 대소문자무시 substring 매칭 → 매칭 노드의 slug + breadcrumb 경로 출력. 각 트리 노드는 고유 kebab-case slug 보유(구 `구분`/type 필드 폐기 → 카테고리는 slug prefix `guard-`/`module-`/`config-`… 로 흡수), columns 의 `slug` 컬럼으로 표시·HTML 뷰어 검색에도 노출"
+                    "name": "search (id 검색)",
+                    "role": "노드를 id/텍스트로 찾기",
+                    "id": "detail-search",
+                    "detail": "`architecture search <q>` = id/name/role/detail 대소문자무시 substring 매칭 → 매칭 노드의 id + breadcrumb 경로 출력. 각 트리 노드는 고유 kebab-case id 보유(레거시 `slug`/한글키 read-fallback · 카테고리는 id prefix `guard-`/`module-`/`config-`… 로 흡수), columns 의 `id` 컬럼으로 표시·HTML 뷰어 검색에도 노출"
                   },
                   {
-                    "이름": "convergence 재발학습 store (구 convergence 모듈 흡수)",
-                    "역할": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
-                    "slug": "detail-convergence-store-convergence",
-                    "상세": "재발방지 학습은 인라인 마커가 아니라 ARCHITECTURE.json 최상위 `convergence.records[]`(id·state·value·threshold·source) 한곳에 산다(single-doc). CRUD=`architecture convergence {list|add|rm|edit}`(id-keyed·upsert). `lintConvergenceRecords`=커밋 게이트(CONVERGENCE-MALFORMED). `convergenceForFile`(터치 시 주입)은 현재 비활성(pre.ts 주석)"
+                    "name": "convergence 재발학습 store (구 convergence 모듈 흡수)",
+                    "role": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
+                    "id": "detail-convergence-store-convergence",
+                    "detail": "재발방지 학습은 인라인 마커가 아니라 ARCHITECTURE.json 최상위 `convergence.records[]`(id·state·value·threshold·source) 한곳에 산다(single-doc). CRUD=`architecture convergence {list|add|rm|edit}`(id-keyed·upsert). `lintConvergenceRecords`=커밋 게이트(CONVERGENCE-MALFORMED). `convergenceForFile`(터치 시 주입)은 현재 비활성(pre.ts 주석)"
                   }
                 ]
               },
               {
-                "이름": "model",
-                "역할": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축)",
-                "slug": "module-model",
-                "상세": "`model {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(single-doc SSOT)에 등록. 필드 id·arch·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재계산 대조, `prune`=HF+sha 확인 후 weight 삭제. writer=byte-불변 splice · `dataset` 평행"
+                "name": "model",
+                "role": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축)",
+                "id": "module-model",
+                "detail": "`model {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(single-doc SSOT)에 등록. 필드 id·arch·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재계산 대조, `prune`=HF+sha 확인 후 weight 삭제. writer=byte-불변 splice · `dataset` 평행"
               },
               {
-                "이름": "dataset",
-                "역할": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
-                "slug": "module-dataset",
-                "상세": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 ARCHITECTURE.json top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar model` 과 동일 splice writer·flag 파서로 미러(byte-불변 top-level splice)"
+                "name": "dataset",
+                "role": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
+                "id": "module-dataset",
+                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 ARCHITECTURE.json top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar model` 과 동일 splice writer·flag 파서로 미러(byte-불변 top-level splice)"
               },
               {
-                "이름": "git-context",
-                "역할": "stale-branch 함정 가드 (SessionStart inject)",
-                "slug": "module-git-context",
-                "상세": "HEAD vs origin/<default>(main|master) 를 LOCAL ref 로 비교(fetch 없음) → BEHIND 이거나 detached-stale 이면 ⚠️ 경고 주입: '이 위치 파일은 최신이 아닐 수 있다 · git log origin/<default> -- <file> 로 이미 머지됐는지 확인 후 코드 믿어라'. clean 한 default 브랜치면 무음(노이즈 0). 재발방지: 옛 feature 브랜치에서 옛 코드를 보고 이미 머지된 작업을 중복 구현한 사고(#3736 dup #3734) 차단"
+                "name": "git-context",
+                "role": "stale-branch 함정 가드 (SessionStart inject)",
+                "id": "module-git-context",
+                "detail": "HEAD vs origin/<default>(main|master) 를 LOCAL ref 로 비교(fetch 없음) → BEHIND 이거나 detached-stale 이면 ⚠️ 경고 주입: '이 위치 파일은 최신이 아닐 수 있다 · git log origin/<default> -- <file> 로 이미 머지됐는지 확인 후 코드 믿어라'. clean 한 default 브랜치면 무음(노이즈 0). 재발방지: 옛 feature 브랜치에서 옛 코드를 보고 이미 머지된 작업을 중복 구현한 사고(#3736 dup #3734) 차단"
               },
               {
-                "이름": "claudemd",
-                "역할": "프로젝트 규칙 매턴 재주입",
-                "slug": "module-claudemd",
-                "상세": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입(SessionStart 1회로는 긴 대화에서 묻힘) → 프로젝트 규칙을 commons급 salience 로 상주(MUST-FOLLOW 헤더 prepend). `<!-- enforce:start/end -->` 있으면 그 섹션만·없으면 전체·80KB 절단·부재 무음. 디렉토리·모듈 트리는 ARCHITECTURE.json SSOT 라 CLAUDE.md 에 중복 안 함"
+                "name": "claudemd",
+                "role": "프로젝트 규칙 매턴 재주입",
+                "id": "module-claudemd",
+                "detail": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입(SessionStart 1회로는 긴 대화에서 묻힘) → 프로젝트 규칙을 commons급 salience 로 상주(MUST-FOLLOW 헤더 prepend). `<!-- enforce:start/end -->` 있으면 그 섹션만·없으면 전체·80KB 절단·부재 무음. 디렉토리·모듈 트리는 ARCHITECTURE.json SSOT 라 CLAUDE.md 에 중복 안 함"
               },
               {
-                "이름": "load",
-                "역할": "매턴 macOS 자원 압박 readout 주입 (CPU+RAM+swap, ⚠️ on danger)",
-                "slug": "module-load",
-                "상세": "show|inject. 매 UserPromptSubmit 에 한 줄 readout 을 additionalContext 로 주입 — 답변 맨 위에 부하를 상주시켜 무거운 작업 전 자각시킴. 비-macOS 무음.",
+                "name": "load",
+                "role": "매턴 macOS 자원 압박 readout 주입 (CPU+RAM+swap, ⚠️ on danger)",
+                "id": "module-load",
+                "detail": "show|inject. 매 UserPromptSubmit 에 한 줄 readout 을 additionalContext 로 주입 — 답변 맨 위에 부하를 상주시켜 무거운 작업 전 자각시킴. 비-macOS 무음.",
                 "children": [
                   {
-                    "이름": "3축 신호등",
-                    "역할": "CPU·RAM·swap·wt readout",
-                    "slug": "detail-3",
-                    "상세": "CPU(load1÷cores·🟢<0.7 🟡<1.0 🔴≥1.0), RAM((active+wired+compressor)%+pressure), swap(🟢<2G 🟡<6G 🔴≥6G), wt(추가 worktree·🟢0-2 🟡3-9 🔴≥10). 어느 축이든 🔴/pressure≥warn 이면 선두 `⚠️` 마커 + 가드 노트(대량빌드·병렬agent·GPU 자제)"
+                    "name": "3축 신호등",
+                    "role": "CPU·RAM·swap·wt readout",
+                    "id": "detail-3",
+                    "detail": "CPU(load1÷cores·🟢<0.7 🟡<1.0 🔴≥1.0), RAM((active+wired+compressor)%+pressure), swap(🟢<2G 🟡<6G 🔴≥6G), wt(추가 worktree·🟢0-2 🟡3-9 🔴≥10). 어느 축이든 🔴/pressure≥warn 이면 선두 `⚠️` 마커 + 가드 노트(대량빌드·병렬agent·GPU 자제)"
                   },
                   {
-                    "이름": "동기·비용안전",
-                    "역할": "왜 MEMORY 를 보나",
-                    "slug": "detail-sync-cost-safety",
-                    "상세": "부하로 죽는 맥은 CPU 가 아니라 MEMORY(compressor+swap 폭증)로 죽으므로 RAM압박·swap 을 같이 본다. 비용안전: sysctl+vm_stat 만(즉답) — 전체 스캔으로 수초 걸리는 `memory_pressure` CLI 는 매턴 훅에 부적합이라 의도적 회피."
+                    "name": "동기·비용안전",
+                    "role": "왜 MEMORY 를 보나",
+                    "id": "detail-sync-cost-safety",
+                    "detail": "부하로 죽는 맥은 CPU 가 아니라 MEMORY(compressor+swap 폭증)로 죽으므로 RAM압박·swap 을 같이 본다. 비용안전: sysctl+vm_stat 만(즉답) — 전체 스캔으로 수초 걸리는 `memory_pressure` CLI 는 매턴 훅에 부적합이라 의도적 회피."
                   }
                 ]
               },
               {
-                "이름": "toolkit",
-                "역할": "명령 카탈로그 — agent 가 전 명령을 인지·사용하도록 SessionStart 주입 (sidecar TOOLKIT 패리티)",
-                "slug": "module-toolkit",
-                "상세": "list|inject|json|write|check. 단일 출처=cli/index.ts `HELP` 텍스트 파싱 + keyword 트리거 매핑. inject=SessionStart 에 전 명령을 compact 카탈로그(`id — use ⟨triggers⟩`)로 주입(키워드 사각지대 보완). write=TOOLKIT.jsonl 산출. check=dispatch case 커버리지 + 커밋본 drift(`lint` TOOLKIT-DRIFT warn)"
+                "name": "toolkit",
+                "role": "명령 카탈로그 — agent 가 전 명령을 인지·사용하도록 SessionStart 주입 (sidecar TOOLKIT 패리티)",
+                "id": "module-toolkit",
+                "detail": "list|inject|json|write|check. 단일 출처=cli/index.ts `HELP` 텍스트 파싱 + keyword 트리거 매핑. inject=SessionStart 에 전 명령을 compact 카탈로그(`id — use ⟨triggers⟩`)로 주입(키워드 사각지대 보완). write=TOOLKIT.jsonl 산출. check=dispatch case 커버리지 + 커밋본 drift(`lint` TOOLKIT-DRIFT warn)"
               },
               {
-                "이름": "companions",
-                "역할": "이웃 CLI 명령 surface 주입 — agent 가 sibling 툴체인(hexa 등)을 더듬지 않고 인지하게 SessionStart 주입",
-                "slug": "module-companions",
-                "상세": "toolkit 의 자매 — toolkit 이 sidecar 자신 명령을 주입하면 companions 는 이웃 CLI(hexa 등) 카탈로그를 주입. DOMAIN-AGNOSTIC: 어떤 CLI 는 데이터(harness.config.json `companions` + host `~/.sidecar/companions.json` union)라 엔진에 hexa 안 박음. 각 companion 카탈로그(default `--help`) 실행·절단·주입·부재/실패 skip"
+                "name": "companions",
+                "role": "이웃 CLI 명령 surface 주입 — agent 가 sibling 툴체인(hexa 등)을 더듬지 않고 인지하게 SessionStart 주입",
+                "id": "module-companions",
+                "detail": "toolkit 의 자매 — toolkit 이 sidecar 자신 명령을 주입하면 companions 는 이웃 CLI(hexa 등) 카탈로그를 주입. DOMAIN-AGNOSTIC: 어떤 CLI 는 데이터(harness.config.json `companions` + host `~/.sidecar/companions.json` union)라 엔진에 hexa 안 박음. 각 companion 카탈로그(default `--help`) 실행·절단·주입·부재/실패 skip"
               },
               {
-                "이름": "sync",
-                "역할": "공유파일 sync 셸 스크립트 래퍼",
-                "slug": "module-sync",
-                "상세": ""
+                "name": "sync",
+                "role": "공유파일 sync 셸 스크립트 래퍼",
+                "id": "module-sync",
+                "detail": ""
               },
               {
-                "이름": "pool",
-                "역할": "호스트 로스터 + 원격 실행 + 자원 프로브",
-                "slug": "module-pool",
-                "상세": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단(allow 마커가 cwd 일치 시 해제·status 🔓 표기). ssh=execArgs 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브해 캐시 · list·status 는 라이브 부하(CPU%·RAM%·GPU util)를 SSH 병렬 프로브 ⚡뱃지(status 는 이 프로브로 reachability 겸함 · 캐시 안 함 · RAM=total−available)"
+                "name": "pool",
+                "role": "호스트 로스터 + 원격 실행 + 자원 프로브",
+                "id": "module-pool",
+                "detail": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단(allow 마커가 cwd 일치 시 해제·status 🔓 표기). ssh=execArgs 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브해 캐시 · list·status 는 라이브 부하(CPU%·RAM%·GPU util)를 SSH 병렬 프로브 ⚡뱃지(status 는 이 프로브로 reachability 겸함 · 캐시 안 함 · RAM=total−available)"
               }
             ]
           },
           {
-            "이름": "L5 규칙 데이터",
-            "역할": "per-repo — 무엇을 막을까",
-            "slug": "layer-l5",
-            "상세": "이 층만 프로젝트별로 달라짐",
+            "name": "L5 규칙 데이터",
+            "role": "per-repo — 무엇을 막을까",
+            "id": "layer-l5",
+            "detail": "이 층만 프로젝트별로 달라짐",
             "children": [
               {
-                "이름": "enforcement.json",
-                "역할": "pre 정규식 규칙",
-                "slug": "data-enforcement-json",
-                "상세": "strict 기본(15룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음)."
+                "name": "enforcement.json",
+                "role": "pre 정규식 규칙",
+                "id": "data-enforcement-json",
+                "detail": "strict 기본(15룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음)."
               },
               {
-                "이름": "keywords.json",
-                "역할": "prompt 트리거 키워드",
-                "slug": "data-keywords-json",
-                "상세": ""
+                "name": "keywords.json",
+                "role": "prompt 트리거 키워드",
+                "id": "data-keywords-json",
+                "detail": ""
               },
               {
-                "이름": "severity-map.json",
-                "역할": "errors 분류 맵",
-                "slug": "data-severity-map-json",
-                "상세": "fallback=block · 낮은 unknown_threshold (strict 기본). bundled config/ 가 base, repo `.harness/` 가 code별 override (errors 가 병합 로드)"
+                "name": "severity-map.json",
+                "role": "errors 분류 맵",
+                "id": "data-severity-map-json",
+                "detail": "fallback=block · 낮은 unknown_threshold (strict 기본). bundled config/ 가 base, repo `.harness/` 가 code별 override (errors 가 병합 로드)"
               },
               {
-                "이름": "harness.config.json",
-                "역할": "repo 루트 설정",
-                "slug": "data-harness-config-json",
-                "상세": "project·lockdown·verify.checks 등"
+                "name": "harness.config.json",
+                "role": "repo 루트 설정",
+                "id": "data-harness-config-json",
+                "detail": "project·lockdown·verify.checks 등"
               }
             ]
           }
         ]
       },
       {
-        "이름": "plugin — 배포 (자기완결 · 공용셋)",
-        "역할": "sidecar 를 Claude Code 플러그인으로 배포 — 훅 + 슬래시 명령 + CLI 본체가 ONE 유닛. 프로젝트 무관·중앙 1곳",
-        "slug": "group-plugin",
-        "상세": "SELF-CONTAINED: marketplace.json(source=`.`=repo 루트가 플러그인) → plugin.json(`commands: []`=명령 네임스페이스 OFF, 중복 방지). 훅은 `${CLAUDE_PLUGIN_ROOT}/bin/sidecar` 실행 → `/plugin update`+reload 로 CLI+hooks 동시 갱신. 슬래시는 `shadow` 가 bare /cmd 미러·전역 `sidecar` 는 폴백",
+        "name": "plugin — 배포 (자기완결 · 공용셋)",
+        "role": "sidecar 를 Claude Code 플러그인으로 배포 — 훅 + 슬래시 명령 + CLI 본체가 ONE 유닛. 프로젝트 무관·중앙 1곳",
+        "id": "group-plugin",
+        "detail": "SELF-CONTAINED: marketplace.json(source=`.`=repo 루트가 플러그인) → plugin.json(`commands: []`=명령 네임스페이스 OFF, 중복 방지). 훅은 `${CLAUDE_PLUGIN_ROOT}/bin/sidecar` 실행 → `/plugin update`+reload 로 CLI+hooks 동시 갱신. 슬래시는 `shadow` 가 bare /cmd 미러·전역 `sidecar` 는 폴백",
         "children": [
           {
-            "이름": "hooks/hooks.json + hooks/run.sh",
-            "역할": "거버넌스 훅 배선 (guards + injects + SessionStart) → run.sh 디스패처",
-            "slug": "config-hooks-hooks-json-hooks-run-sh",
-            "상세": "run.sh = 단일 해석점: ${CLAUDE_PLUGIN_ROOT}/bin/sidecar(번들) 우선 → 전역 `sidecar` 폴백 → 둘 다 없으면 exit 0(무음). CC가 stdin 으로 주는 페이로드를 exec 로 상속(pre 가 stdin 에서 tool input 읽음)"
+            "name": "hooks/hooks.json + hooks/run.sh",
+            "role": "거버넌스 훅 배선 (guards + injects + SessionStart) → run.sh 디스패처",
+            "id": "config-hooks-hooks-json-hooks-run-sh",
+            "detail": "run.sh = 단일 해석점: ${CLAUDE_PLUGIN_ROOT}/bin/sidecar(번들) 우선 → 전역 `sidecar` 폴백 → 둘 다 없으면 exit 0(무음). CC가 stdin 으로 주는 페이로드를 exec 로 상속(pre 가 stdin 에서 tool input 읽음)"
           },
           {
-            "이름": "commands/*.md",
-            "역할": "슬래시-명령 위임자 셋 (bare /cmd · shadow 가 미러하는 SOURCE)",
-            "slug": "config-commands-md",
-            "상세": "프런트매터(description+Triggers+argument-hint+allowed-tools) + `!sidecar <cmd> $ARGUMENTS` 위임자. 플러그인 명령으로 로드 안 됨(plugin.json `commands: []` → bare /cmd 와 `/sidecar:cmd` picker 중복 방지). `shadow` 가 ~/.claude/commands/ 에 bare /cmd 미러. 공용셋·프로젝트 무관 · hook-내부 제외"
+            "name": "commands/*.md",
+            "role": "슬래시-명령 위임자 셋 (bare /cmd · shadow 가 미러하는 SOURCE)",
+            "id": "config-commands-md",
+            "detail": "프런트매터(description+Triggers+argument-hint+allowed-tools) + `!sidecar <cmd> $ARGUMENTS` 위임자. 플러그인 명령으로 로드 안 됨(plugin.json `commands: []` → bare /cmd 와 `/sidecar:cmd` picker 중복 방지). `shadow` 가 ~/.claude/commands/ 에 bare /cmd 미러. 공용셋·프로젝트 무관 · hook-내부 제외"
           }
         ]
       },
       {
-        "이름": "module-grading — 모듈 분류",
-        "역할": "'규칙을 JSON으로 빼면 다른 repo에서 그대로 도나?'",
-        "slug": "group-module-grading",
-        "상세": "YES면 ①, NO면 ③",
+        "name": "module-grading — 모듈 분류",
+        "role": "'규칙을 JSON으로 빼면 다른 repo에서 그대로 도나?'",
+        "id": "group-module-grading",
+        "detail": "YES면 ①, NO면 ③",
         "children": [
           {
-            "이름": "① 완전 범용",
-            "역할": "이 repo에 포함",
-            "slug": "grade-fully-generic",
-            "상세": "pre/post/prompt/lint/verify/errors/ledger/bitter-gate/audit/gc/ing/convergence/sync/pool/architecture/claudemd"
+            "name": "① 완전 범용",
+            "role": "이 repo에 포함",
+            "id": "grade-fully-generic",
+            "detail": "pre/post/prompt/lint/verify/errors/ledger/bitter-gate/audit/gc/ing/convergence/sync/pool/architecture/claudemd"
           },
           {
-            "이름": "② 부분 범용",
-            "역할": "패턴만 문서화, 코드 미포함",
-            "slug": "grade-partly-generic",
-            "상세": "구현이 특정 디렉토리 규약에 묶임 (extending.md)"
+            "name": "② 부분 범용",
+            "role": "패턴만 문서화, 코드 미포함",
+            "id": "grade-partly-generic",
+            "detail": "구현이 특정 디렉토리 규약에 묶임 (extending.md)"
           },
           {
-            "이름": "③ 도메인 전용",
-            "역할": "포함 금지",
-            "slug": "grade-domain-specific",
-            "상세": "deploy/db/ssh/health/site/정산 등 특정 인프라·비즈니스에 묶임"
+            "name": "③ 도메인 전용",
+            "role": "포함 금지",
+            "id": "grade-domain-specific",
+            "detail": "deploy/db/ssh/health/site/정산 등 특정 인프라·비즈니스에 묶임"
           }
         ]
       },
       {
-        "이름": "config-driven — config 주도 설계",
-        "역할": "lib/config.ts가 harness.config.json을 읽어 머지",
-        "slug": "group-config-driven",
-        "상세": "설정 0으로도 합리적 기본 동작 + 점진적 커스터마이즈",
+        "name": "config-driven — config 주도 설계",
+        "role": "lib/config.ts가 harness.config.json을 읽어 머지",
+        "id": "group-config-driven",
+        "detail": "설정 0으로도 합리적 기본 동작 + 점진적 커스터마이즈",
         "children": [
           {
-            "이름": "project",
-            "역할": "로그/리포트 라벨",
-            "slug": "config-project",
-            "상세": ""
+            "name": "project",
+            "role": "로그/리포트 라벨",
+            "id": "config-project",
+            "detail": ""
           },
           {
-            "이름": "lockdown.files",
-            "역할": "L0 잠금 파일",
-            "slug": "config-lockdown-files",
-            "상세": "opt-in, 기본 0개"
+            "name": "lockdown.files",
+            "role": "L0 잠금 파일",
+            "id": "config-lockdown-files",
+            "detail": "opt-in, 기본 0개"
           },
           {
-            "이름": "enforcementFile / keywordsFile / severityMapFile",
-            "역할": "규칙 파일 위치",
-            "slug": "config-enforcementfile-keywordsfile-severitymapfile",
-            "상세": "없으면 번들 기본 fallback"
+            "name": "enforcementFile / keywordsFile / severityMapFile",
+            "role": "규칙 파일 위치",
+            "id": "config-enforcementfile-keywordsfile-severitymapfile",
+            "detail": "없으면 번들 기본 fallback"
           },
           {
-            "이름": "verify.checks[]",
-            "역할": "검증 명령 선언",
-            "slug": "config-verify-checks",
-            "상세": "{id,cmd,timeoutMs,slow}"
+            "name": "verify.checks[]",
+            "role": "검증 명령 선언",
+            "id": "config-verify-checks",
+            "detail": "{id,cmd,timeoutMs,slow}"
           },
           {
-            "이름": "lint.freshnessFiles[] · convergence · guides[] · ledger.staleSec",
-            "역할": "기타 모듈별 대상 선언",
-            "slug": "config-lint-freshnessfiles-convergence-guides-ledger-stalesec",
-            "상세": ""
+            "name": "lint.freshnessFiles[] · convergence · guides[] · ledger.staleSec",
+            "role": "기타 모듈별 대상 선언",
+            "id": "config-lint-freshnessfiles-convergence-guides-ledger-stalesec",
+            "detail": ""
           },
           {
-            "이름": "dojo {defaultLang,stack,delegate}",
-            "역할": "dojo 스캐폴더 기본 스택 (선택)",
-            "slug": "config-dojo-defaultlang-stack-delegate",
-            "상세": "엔진 무하드코딩 — 선호 학습/커널 스택을 per-repo config 가 운반. delegate 설정+hexa 있으면 `hexa dojo <delegate>` 위임. 부재 시 제네릭 py stub"
+            "name": "dojo {defaultLang,stack,delegate}",
+            "role": "dojo 스캐폴더 기본 스택 (선택)",
+            "id": "config-dojo-defaultlang-stack-delegate",
+            "detail": "엔진 무하드코딩 — 선호 학습/커널 스택을 per-repo config 가 운반. delegate 설정+hexa 있으면 `hexa dojo <delegate>` 위임. 부재 시 제네릭 py stub"
           },
           {
-            "이름": "docs.scratchDir = state",
-            "역할": "산출물 단일 루트",
-            "slug": "config-docs-scratchdir-state",
-            "상세": "실험·벤치·검증(verdict/claim)·스크래치 등 모든 작업 산출물을 repo-root `state/` 하나로 통일(c5). 하위 디렉토리 안 쪼갬 — `state/<id>` 평면(verdict 는 `state/<slug>/<id>.txt`). verdict/verify/atlas 가 이 경로를 공유. 재생성 가능 `build/` 만 .gitignore · 머신 자동로그는 `.harness/`"
+            "name": "docs.scratchDir = state",
+            "role": "산출물 단일 루트",
+            "id": "config-docs-scratchdir-state",
+            "detail": "실험·벤치·검증(verdict/claim)·스크래치 등 모든 작업 산출물을 repo-root `state/` 하나로 통일(c5). 하위 디렉토리 안 쪼갬 — `state/<id>` 평면(verdict 는 `state/<slug>/<id>.txt`). verdict/verify/atlas 가 이 경로를 공유. 재생성 가능 `build/` 만 .gitignore · 머신 자동로그는 `.harness/`"
           }
         ]
       },
       {
-        "이름": "debt — 들어낸 비범용 부채 (교훈)",
-        "역할": "원본 도구 일반화 시 제거한 안티패턴",
-        "slug": "group-debt",
-        "상세": "이 도구에서 피할 것",
+        "name": "debt — 들어낸 비범용 부채 (교훈)",
+        "role": "원본 도구 일반화 시 제거한 안티패턴",
+        "id": "group-debt",
+        "detail": "이 도구에서 피할 것",
         "children": [
           {
-            "이름": "경로 하드코딩",
-            "역할": "절대경로 고정",
-            "slug": "debt-path-hardcode",
-            "상세": "→ repo-root 상향 탐색 + env override"
+            "name": "경로 하드코딩",
+            "role": "절대경로 고정",
+            "id": "debt-path-hardcode",
+            "detail": "→ repo-root 상향 탐색 + env override"
           },
           {
-            "이름": "L0 목록 하드코딩",
-            "역할": "fallback 배열에 실제 파일 박힘",
-            "slug": "debt-l0-list-hardcode",
-            "상세": "→ config.lockdown (opt-in)"
+            "name": "L0 목록 하드코딩",
+            "role": "fallback 배열에 실제 파일 박힘",
+            "id": "debt-l0-list-hardcode",
+            "detail": "→ config.lockdown (opt-in)"
           },
           {
-            "이름": "도메인 모듈 번들",
-            "역할": "배포/머니 모듈이 코어에 섞임",
-            "slug": "debt-domain-module-bundle",
-            "상세": "→ ①/③ 등급 분리, ③ 제외"
+            "name": "도메인 모듈 번들",
+            "role": "배포/머니 모듈이 코어에 섞임",
+            "id": "debt-domain-module-bundle",
+            "detail": "→ ①/③ 등급 분리, ③ 제외"
           },
           {
-            "이름": "SSOT 단일 repo 고정",
-            "역할": "두 repo가 한 repo의 JSON에 수렴",
-            "slug": "debt-ssot-single-repo",
-            "상세": "→ per-repo 로그, 공유는 sync로 명시"
+            "name": "SSOT 단일 repo 고정",
+            "role": "두 repo가 한 repo의 JSON에 수렴",
+            "id": "debt-ssot-single-repo",
+            "detail": "→ per-repo 로그, 공유는 sync로 명시"
           },
           {
-            "이름": "검증 명령 하드코딩",
-            "역할": "pnpm test 등 박제",
-            "slug": "debt-verify-cmd-hardcode",
-            "상세": "→ verify.checks[]로 선언"
+            "name": "검증 명령 하드코딩",
+            "role": "pnpm test 등 박제",
+            "id": "debt-verify-cmd-hardcode",
+            "detail": "→ verify.checks[]로 선언"
           }
         ]
       },
       {
-        "이름": "setup — 새 repo에 세우는 절차",
-        "역할": "참조: install.md(통합), extending.md(확장)",
-        "slug": "group-setup",
-        "상세": "",
+        "name": "setup — 새 repo에 세우는 절차",
+        "role": "참조: install.md(통합), extending.md(확장)",
+        "id": "group-setup",
+        "detail": "",
         "children": [
           {
-            "이름": "1. 엔진 추가",
-            "역할": "git submodule add …/sidecar .harness-engine",
-            "slug": "step-1",
-            "상세": ""
+            "name": "1. 엔진 추가",
+            "role": "git submodule add …/sidecar .harness-engine",
+            "id": "step-1",
+            "detail": ""
           },
           {
-            "이름": "2. config 작성",
-            "역할": "cp harness.config.example.json harness.config.json",
-            "slug": "step-2-config",
-            "상세": "→ 수정"
+            "name": "2. config 작성",
+            "role": "cp harness.config.example.json harness.config.json",
+            "id": "step-2-config",
+            "detail": "→ 수정"
           },
           {
-            "이름": "3. (선택) 규칙 추가",
-            "역할": "cp config/enforcement.json .harness/",
-            "slug": "step-3",
-            "상세": "→ repo 규칙 append"
+            "name": "3. (선택) 규칙 추가",
+            "role": "cp config/enforcement.json .harness/",
+            "id": "step-3",
+            "detail": "→ repo 규칙 append"
           },
           {
-            "이름": "4. hook 배선 (전역 1벌)",
-            "역할": "sidecar install — 전역 ~/.claude/settings.json 에만 배선",
-            "slug": "step-4-hook-1",
-            "상세": "GLOBAL-ONLY: per-repo .claude/settings.json 금지(전역과 중복돼 컨텍스트 2~3중 주입되던 버그). init 은 repo settings 를 안 쓰고, install-hooks --repo 는 거부. 훅은 호스트당 한 번 sidecar install 로 전역 배선 → 모든 repo 발사. (@convergence INIT-INJECT-DUP)"
+            "name": "4. hook 배선 (전역 1벌)",
+            "role": "sidecar install — 전역 ~/.claude/settings.json 에만 배선",
+            "id": "step-4-hook-1",
+            "detail": "GLOBAL-ONLY: per-repo .claude/settings.json 금지(전역과 중복돼 컨텍스트 2~3중 주입되던 버그). init 은 repo settings 를 안 쓰고, install-hooks --repo 는 거부. 훅은 호스트당 한 번 sidecar install 로 전역 배선 → 모든 repo 발사. (@convergence INIT-INJECT-DUP)"
           },
           {
-            "이름": "5. 검증",
-            "역할": "sidecar audit / sidecar ci list",
-            "slug": "step-5",
-            "상세": ""
+            "name": "5. 검증",
+            "role": "sidecar audit / sidecar ci list",
+            "id": "step-5",
+            "detail": ""
           },
           {
-            "이름": "6. 운영",
-            "역할": "commit 전 verify, 세션 끝 ing, 규칙 추가 전 bitter-gate",
-            "slug": "step-6",
-            "상세": ""
+            "name": "6. 운영",
+            "role": "commit 전 verify, 세션 끝 ing, 규칙 추가 전 bitter-gate",
+            "id": "step-6",
+            "detail": ""
           }
         ]
       },
       {
-        "이름": "viewer — 아키텍처 뷰어",
-        "역할": "이 트리(ARCHITECTURE.json)를 사람이 보는 도구",
-        "slug": "group-viewer-group",
-        "상세": "JSON이 SSOT, HTML/서버는 표시 수단",
+        "name": "viewer — 아키텍처 뷰어",
+        "role": "이 트리(ARCHITECTURE.json)를 사람이 보는 도구",
+        "id": "group-viewer-group",
+        "detail": "JSON이 SSOT, HTML/서버는 표시 수단",
         "children": [
           {
-            "이름": "ARCHITECTURE.html",
-            "역할": "의존성 0 자립형 뷰어",
-            "slug": "viewer-architecture-html",
-            "상세": "json fetch→컬럼 그리드 트리(접기·검색·다크모드·드롭 fallback)"
+            "name": "ARCHITECTURE.html",
+            "role": "의존성 0 자립형 뷰어",
+            "id": "viewer-architecture-html",
+            "detail": "json fetch→컬럼 그리드 트리(접기·검색·다크모드·드롭 fallback)"
           },
           {
-            "이름": "serve.py",
-            "역할": "python3 serve.py [port] [--no-open]",
-            "slug": "viewer-serve-py",
-            "상세": "로컬 정적 서버 + 브라우저 자동 오픈 — file:// fetch 차단 우회"
+            "name": "serve.py",
+            "role": "python3 serve.py [port] [--no-open]",
+            "id": "viewer-serve-py",
+            "detail": "로컬 정적 서버 + 브라우저 자동 오픈 — file:// fetch 차단 우회"
           }
         ]
       }

@@ -94,7 +94,7 @@ function colClass(key){
 
 function build(doc){
   DOC = doc;
-  COLS = doc.columns || [{key:"이름",tree:true},{key:"역할"}];
+  COLS = doc.columns || [{key:"name",tree:true},{key:"role"}];
   TREEKEY = (COLS.find(c=>c.tree) || COLS[0]).key;
   document.getElementById("title").textContent = doc.title || "아키텍처";
   document.getElementById("summary").textContent = doc.summary || "";

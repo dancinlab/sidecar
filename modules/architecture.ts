@@ -32,13 +32,25 @@ function pick(): { path: string; rel: string } | null {
 }
 
 type TNode = {
-  이름?: string;
-  역할?: string;
-  slug?: string;
-  상세?: string;
+  // English keys are canonical; the Korean/`slug` aliases are legacy and still READ
+  // so a mid-migration or other-repo tree keeps resolving.
+  name?: string;
+  role?: string;
+  detail?: string;
+  id?: string;
+  이름?: string; // legacy alias of name
+  역할?: string; // legacy alias of role
+  상세?: string; // legacy alias of detail
+  slug?: string; // legacy alias of id
   children?: TNode[];
   [k: string]: unknown;
 };
+
+// Field readers — canonical English key first, legacy alias as fallback.
+const nodeKey = (n: TNode): string | undefined => n.id ?? n.slug; // stable searchable key
+const nodeName = (n: TNode): string | undefined => n.name ?? n.이름;
+const nodeRole = (n: TNode): string | undefined => n.role ?? n.역할;
+const nodeDetail = (n: TNode): string | undefined => n.detail ?? n.상세;
 
 // Build a 2-level table-of-contents from the JSON tree — enough for the agent to
 // know the design's shape (and that the file exists) without carrying every cell.
@@ -50,14 +62,14 @@ function skeleton(root: { title?: string; summary?: string; tree?: TNode }): str
   const top = root.tree?.children ?? [];
   if (top.length) {
     lines.push("");
-    lines.push("목차 (top-level · 2단계 · 전체 트리·`상세`셀은 파일에):");
+    lines.push("목차 (top-level · 2단계 · 전체 트리·`detail`셀은 파일에):");
     for (const c of top) {
-      const name = c.이름 ?? c.slug ?? "?";
-      const role = c.역할 ? ` — ${c.역할}` : "";
+      const name = nodeName(c) ?? nodeKey(c) ?? "?";
+      const role = nodeRole(c) ? ` — ${nodeRole(c)}` : "";
       lines.push(`- ${name}${role}`);
       for (const g of c.children ?? []) {
-        const gn = g.이름 ?? g.slug ?? "?";
-        const gr = g.역할 ? ` — ${g.역할}` : "";
+        const gn = nodeName(g) ?? nodeKey(g) ?? "?";
+        const gr = nodeRole(g) ? ` — ${nodeRole(g)}` : "";
         lines.push(`  - ${gn}${gr}`);
       }
     }
@@ -164,16 +176,9 @@ export async function runArchitecture(args: string[]): Promise<number> {
     }
     if (!q) {
       process.stdout.write(
-        "usage: sidecar architecture search <query> — substring (case-insensitive) over slug / 이름 / 역할 / 상세\n",
+        "usage: sidecar architecture search <query> — substring (case-insensitive) over id / name / role / detail\n",
       );
       return 1;
-    }
-    interface TNode {
-      이름?: string;
-      역할?: string;
-      상세?: string;
-      slug?: string;
-      children?: TNode[];
     }
     let tree: TNode;
     try {
@@ -182,14 +187,14 @@ export async function runArchitecture(args: string[]): Promise<number> {
       process.stdout.write("architecture search: ARCHITECTURE.json is not valid JSON\n");
       return 1;
     }
-    const hits: { slug: string; name: string; role: string; crumb: string }[] = [];
+    const hits: { id: string; name: string; role: string; crumb: string }[] = [];
     const walk = (n: TNode, crumb: string[]): void => {
-      const name = n.이름 ?? "";
+      const name = nodeName(n) ?? "";
       const here = name ? [...crumb, name] : crumb;
       if (name) {
-        const hay = [n.slug, name, n.역할, n.상세].filter(Boolean).join(" ").toLowerCase();
+        const hay = [nodeKey(n), name, nodeRole(n), nodeDetail(n)].filter(Boolean).join(" ").toLowerCase();
         if (hay.includes(q)) {
-          hits.push({ slug: n.slug ?? "(no slug)", name, role: n.역할 ?? "", crumb: crumb.join(" › ") });
+          hits.push({ id: nodeKey(n) ?? "(no id)", name, role: nodeRole(n) ?? "", crumb: crumb.join(" › ") });
         }
       }
       for (const c of n.children ?? []) walk(c, here);
@@ -200,7 +205,7 @@ export async function runArchitecture(args: string[]): Promise<number> {
       return 0;
     }
     for (const h of hits) {
-      process.stdout.write(`  ${h.slug}\n      ${h.name} — ${h.role}\n      ↳ ${h.crumb || "(root)"}\n`);
+      process.stdout.write(`  ${h.id}\n      ${h.name} — ${h.role}\n      ↳ ${h.crumb || "(root)"}\n`);
     }
     process.stdout.write(`architecture search: ${hits.length} match(es) for "${q}"\n`);
     return 0;
@@ -463,12 +468,14 @@ export function lintArchitectureTree(): ArchLintHit[] {
     return [];
   }
   const hits: ArchLintHit[] = [];
-  const slugSeen = new Map<string, string>(); // slug → first path that used it
-  // The slug + tree-hygiene gates only recognize the canonical 이름/children tree
-  // (what `sidecar init` scaffolds). A file authored in a different schema (e.g.
-  // sections/blocks/title) carries ZERO 이름-nodes, so the slug gate finds nothing
-  // to check and silently passes — the "slug 없어도 통과" trap. Track whether we ever
-  // saw a canonical node; if not, surface it (warn) instead of staying a silent no-op.
+  const idSeen = new Map<string, string>(); // id → first path that used it
+  // The id + tree-hygiene gates only recognize the canonical name/children tree
+  // (what `sidecar init` scaffolds). Legacy trees use Korean keys (이름/역할/상세) and
+  // `slug`; both are still READ (name??이름, id??slug) so a mid-migration tree never
+  // goes dark, but English keys + `id` are canonical. A file in a wholly different
+  // schema (sections/blocks/title) carries ZERO name-nodes, so the gate finds nothing
+  // to check and silently passes — the "id 없어도 통과" trap. Track whether we ever saw
+  // a canonical node; if not, surface it (warn) instead of staying a silent no-op.
   let sawTreeNode = false;
   const walk = (node: unknown, path: string): void => {
     if (typeof node === "string") {
@@ -491,35 +498,36 @@ export function lintArchitectureTree(): ArchLintHit[] {
       node.forEach((v, i) => walk(v, `${path}[${i}]`));
     } else if (node && typeof node === "object") {
       const obj = node as Record<string, unknown>;
-      // A tree node = any object carrying 이름. Each MUST have a unique kebab-case
-      // slug so `sidecar architecture search` can address it by a stable key (the
-      // 구분/type field was retired in favor of category-prefixed slugs). Skip the
-      // convergence store (id-keyed, no 이름) and columns (key/label, no 이름).
-      if (typeof obj["이름"] === "string" && !path.startsWith("root.convergence")) {
+      // A tree node = any object carrying name (canonical) or 이름 (legacy). Each MUST
+      // have a unique kebab-case `id` (legacy alias: `slug`) so `sidecar architecture
+      // search` can address it by a stable key. Skip the convergence store (id-keyed,
+      // no name) and columns (key/label, no name).
+      const nodeName = obj["name"] ?? obj["이름"];
+      if (typeof nodeName === "string" && !path.startsWith("root.convergence")) {
         sawTreeNode = true;
-        const slug = obj["slug"];
-        if (typeof slug !== "string" || !slug.trim()) {
+        const id = obj["id"] ?? obj["slug"]; // id canonical, slug legacy fallback
+        if (typeof id !== "string" || !id.trim()) {
           hits.push({
-            rule: "ARCH-SLUG-MISSING",
+            rule: "ARCH-ID-MISSING",
             path,
-            msg: `tree node "${obj["이름"]}" has no slug — every node needs a stable searchable slug (\`sidecar architecture search\`)`,
+            msg: `tree node "${nodeName}" has no id — every node needs a stable searchable id (\`sidecar architecture search\`)`,
           });
-        } else if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+        } else if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
           hits.push({
-            rule: "ARCH-SLUG-FORMAT",
+            rule: "ARCH-ID-FORMAT",
             path,
-            msg: `slug "${slug}" is not kebab-case ([a-z0-9-], no leading dash) — keep slugs grep-clean`,
+            msg: `id "${id}" is not kebab-case ([a-z0-9-], no leading dash) — keep ids grep-clean`,
           });
         } else {
-          const prev = slugSeen.get(slug);
+          const prev = idSeen.get(id);
           if (prev) {
             hits.push({
-              rule: "ARCH-SLUG-DUPE",
+              rule: "ARCH-ID-DUPE",
               path,
-              msg: `slug "${slug}" duplicates ${prev} — slugs are the unique search key, must not repeat`,
+              msg: `id "${id}" duplicates ${prev} — ids are the unique search key, must not repeat`,
             });
           } else {
-            slugSeen.set(slug, path);
+            idSeen.set(id, path);
           }
         }
       }
@@ -540,15 +548,15 @@ export function lintArchitectureTree(): ArchLintHit[] {
     }
   };
   walk(tree, "root");
-  // A JSON ARCHITECTURE file with no canonical 이름-node means the slug + tree-hygiene
+  // A JSON ARCHITECTURE file with no canonical name/이름-node means the id + tree-hygiene
   // gates never engaged — flag the silent no-op so an off-schema design doc can't quietly
-  // dodge slug enforcement (warn, not block: a non-canonical doc shouldn't hard-fail
+  // dodge id enforcement (warn, not block: a non-canonical doc shouldn't hard-fail
   // commits, but the inactive gate must be visible). Convergence-only files are exempt.
   if (!sawTreeNode) {
     hits.push({
       rule: "ARCH-SCHEMA-UNRECOGNIZED",
       path: "root",
-      msg: "no 이름/children tree node — slug & tree-hygiene gates are INACTIVE (file is not in the canonical tree schema `sidecar init` scaffolds; `sidecar architecture` tooling won't address its nodes)",
+      msg: "no name/children tree node — id & tree-hygiene gates are INACTIVE (file is not in the canonical tree schema `sidecar init` scaffolds; `sidecar architecture` tooling won't address its nodes)",
     });
   }
   return hits;

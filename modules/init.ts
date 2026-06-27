@@ -221,22 +221,22 @@ export async function runInit(args: string[]): Promise<number> {
       viewer: "ARCHITECTURE.html",
       serve: "python3 serve.py",
       columns: [
-        { key: "이름", label: "이름", tree: true },
-        { key: "역할", label: "역할" },
-        { key: "slug", label: "slug" },
-        { key: "상세", label: "상세" },
+        { key: "name", label: "name", tree: true },
+        { key: "role", label: "role" },
+        { key: "id", label: "id" },
+        { key: "detail", label: "detail" },
       ],
       tree: {
-        이름: proj,
-        역할: "(프로젝트 한 줄 역할)",
-        slug: proj.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "root",
-        상세:
+        name: proj,
+        role: "(프로젝트 한 줄 역할)",
+        id: proj.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "root",
+        detail:
           "현재상태 스냅샷 트리 — 변경 시 해당 노드를 제자리 교체(update-in-place)." +
           " 이력/버전/날짜/previous/deprecated 노드 금지(이력은 CHANGELOG + git)." +
-          " 각 노드는 고유 kebab-case slug 보유(검색키 · `sidecar architecture search`).",
+          " 각 노드는 고유 kebab-case id 보유(검색키 · `sidecar architecture search`).",
         children: [
-          { 이름: "src/", 역할: "소스 코드", slug: "group-src", 상세: "(컴포넌트별 역할)" },
-          { 이름: "state/", 역할: "작업 산출물 단일 루트", slug: "group-state", 상세: "실험·벤치·검증·스크래치 (git-tracked)" },
+          { name: "src/", role: "소스 코드", id: "group-src", detail: "(컴포넌트별 역할)" },
+          { name: "state/", role: "작업 산출물 단일 루트", id: "group-state", detail: "실험·벤치·검증·스크래치 (git-tracked)" },
         ],
       },
     };

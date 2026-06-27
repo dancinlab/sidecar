@@ -426,6 +426,12 @@ export function lintArchitectureTree(): ArchLintHit[] {
   }
   const hits: ArchLintHit[] = [];
   const slugSeen = new Map<string, string>(); // slug → first path that used it
+  // The slug + tree-hygiene gates only recognize the canonical 이름/children tree
+  // (what `sidecar init` scaffolds). A file authored in a different schema (e.g.
+  // sections/blocks/title) carries ZERO 이름-nodes, so the slug gate finds nothing
+  // to check and silently passes — the "slug 없어도 통과" trap. Track whether we ever
+  // saw a canonical node; if not, surface it (warn) instead of staying a silent no-op.
+  let sawTreeNode = false;
   const walk = (node: unknown, path: string): void => {
     if (typeof node === "string") {
       if (MAX_CELL_CHARS > 0 && node.length > MAX_CELL_CHARS) {
@@ -452,6 +458,7 @@ export function lintArchitectureTree(): ArchLintHit[] {
       // 구분/type field was retired in favor of category-prefixed slugs). Skip the
       // convergence store (id-keyed, no 이름) and columns (key/label, no 이름).
       if (typeof obj["이름"] === "string" && !path.startsWith("root.convergence")) {
+        sawTreeNode = true;
         const slug = obj["slug"];
         if (typeof slug !== "string" || !slug.trim()) {
           hits.push({
@@ -495,6 +502,17 @@ export function lintArchitectureTree(): ArchLintHit[] {
     }
   };
   walk(tree, "root");
+  // A JSON ARCHITECTURE file with no canonical 이름-node means the slug + tree-hygiene
+  // gates never engaged — flag the silent no-op so an off-schema design doc can't quietly
+  // dodge slug enforcement (warn, not block: a non-canonical doc shouldn't hard-fail
+  // commits, but the inactive gate must be visible). Convergence-only files are exempt.
+  if (!sawTreeNode) {
+    hits.push({
+      rule: "ARCH-SCHEMA-UNRECOGNIZED",
+      path: "root",
+      msg: "no 이름/children tree node — slug & tree-hygiene gates are INACTIVE (file is not in the canonical tree schema `sidecar init` scaffolds; `sidecar architecture` tooling won't address its nodes)",
+    });
+  }
   return hits;
 }
 

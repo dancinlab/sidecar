@@ -59,7 +59,7 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - dont: raw curl/수동 runpod·vast·train 스크립트 습관 · repo 서브모듈의 stale 바이너리 사용
 
 ## cycle-docs-pr — 매 사이클 문서 + 머지
-- do: 매 사이클 ① 문서(CHANGELOG append + ARCHITECTURE·README·ING 현행화) ② `sidecar pr-cycle` 로 검증된 main 머지 · 매 턴 파일 변동은 그 턴에 닫기(미완은 `wip:` 커밋) · 갱신 시 `🏛️ ARCHITECTURE`/`🔵 ING` 한 줄 보고 · 새 작업은 최신 base 에서 분기
+- do: 매 사이클 ① 문서(CHANGELOG append + ARCHITECTURE·README·ING 현행화) ② `sidecar pr-cycle` 로 검증된 main 머지 · 매 턴 파일 변동은 그 턴에 닫기(미완은 `wip:` 커밋) · 갱신 시 `🏛️ ARCHITECTURE`/`🔄 ING` 한 줄 보고 · 새 작업은 최신 base 에서 분기
 - dont: 커밋만 쌓고 머지 안 하기 · 문서 없이 머지(`--no-doc` 는 진짜 불필요시만) · 변동 staged 인데 커밋 없이 턴 종료 · 안 했는데 했다고 보고 · 로컬 main 방치
 
 ## no-unsolicited-paper — 논문은 지시 전 언급 금지

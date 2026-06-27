@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## chore(ing): swap the ING status marker 🔵 → 🔄 (in-progress glyph)
+
+Owner picked 🔄 (in-progress/refresh) over the blue circle as the ING anchor. Swapped the marker everywhere
+the ING enforce reads/writes it: the `ing inject` board header + turn-close directive, the `ing stop-check`
+detection regex (`/🔵 ING/` → `/🔄 ING/`), and the ARCHITECTURE/README/commons docs that describe it. So the
+required per-turn line is now `🔄 ING 갱신: …` / `🔄 ING: 변동 없음`. The verify-tier 🔵 (SUPPORTED-FORMAL badge
+in `verify.ts`/templates) is a different semantic and was left untouched.
+
 ## feat(architecture): stop-check — enforce a 🏛️ ARCHITECTURE report when code/structure changed
 
 Companion to `ing stop-check`. ING is enforced EVERY turn (progress can shift invisibly); design changes are

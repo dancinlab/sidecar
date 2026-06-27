@@ -228,11 +228,11 @@ export async function runIng(args: string[]): Promise<number> {
       const parts: string[] = [];
       if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
       if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
-      let ctx = `🔵 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
+      let ctx = `🔄 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
       // Turn-close gate: make per-turn board upkeep + reporting actual, not on-request only.
       ctx +=
-        `\n🔵 턴 마감 게이트 (매턴 필수 · Stop 게이트 강제) — 진행상황이 바뀌었으면(코드 편집뿐 아니라 측정·verdict·벤치·에이전트 착륙도 포함) **지금** \`sidecar ing done <id>\`(완료=scrub→CHANGELOG)/\`add\`/\`next\` 로 보드를 갱신하고 응답에 \`🔵 ING 갱신: <무엇을>\` 한 줄로, ` +
-        "변동이 없으면 `🔵 ING: 변동 없음` 한 줄로 — 매 응답에 둘 중 하나를 반드시 포함하라 (`ing stop-check` 가 누락 시 차단).";
+        `\n🔄 턴 마감 게이트 (매턴 필수 · Stop 게이트 강제) — 진행상황이 바뀌었으면(코드 편집뿐 아니라 측정·verdict·벤치·에이전트 착륙도 포함) **지금** \`sidecar ing done <id>\`(완료=scrub→CHANGELOG)/\`add\`/\`next\` 로 보드를 갱신하고 응답에 \`🔄 ING 갱신: <무엇을>\` 한 줄로, ` +
+        "변동이 없으면 `🔄 ING: 변동 없음` 한 줄로 — 매 응답에 둘 중 하나를 반드시 포함하라 (`ing stop-check` 가 누락 시 차단).";
       // pileup gate: a finished-but-unscrubbed item shows its age every turn; once an
       // item is stale or the board overflows, shout for a scrub so it can't accumulate.
       const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
@@ -254,8 +254,8 @@ export async function runIng(args: string[]): Promise<number> {
 
   // stop-check (Stop hook) — per-turn ING enforce. Progress can change WITHOUT a code
   // edit (a measurement / verdict / bench result / background-agent landing), so this
-  // gate is NOT tied to file edits: it requires EVERY response to carry one `🔵 ING`
-  // status line — either `🔵 ING 갱신: …` (board mutated) or `🔵 ING: 변동 없음` (a
+  // gate is NOT tied to file edits: it requires EVERY response to carry one `🔄 ING`
+  // status line — either `🔄 ING 갱신: …` (board mutated) or `🔄 ING: 변동 없음` (a
   // conscious no-change affirmation). Mirrors `recommend stop-check`: reads the last
   // assistant text, `decision:block` if the marker is absent (forcing the model to add
   // it). Scoped to sidecar-managed repos; native loop guard caps it at once per chain.
@@ -272,11 +272,11 @@ export async function runIng(args: string[]): Promise<number> {
     if (!tp) return 0;
     const text = lastAssistantText(String(tp));
     if (!text) return 0;
-    if (/🔵\s*ING/.test(text)) return 0; // a status line is present → compliant
+    if (/🔄\s*ING/.test(text)) return 0; // a status line is present → compliant
     const reason =
-      "매턴 ING 상태 보고 필수 — 이번 응답에 `🔵 ING` 줄이 없다. 진행상황이 바뀌었으면(코드 편집뿐 아니라 " +
-      "측정·verdict·벤치·에이전트 착륙도 포함) `sidecar ing add/next/done` 으로 보드를 갱신하고 `🔵 ING 갱신: <무엇을>` 로, " +
-      "변동이 없으면 `🔵 ING: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수).";
+      "매턴 ING 상태 보고 필수 — 이번 응답에 `🔄 ING` 줄이 없다. 진행상황이 바뀌었으면(코드 편집뿐 아니라 " +
+      "측정·verdict·벤치·에이전트 착륙도 포함) `sidecar ing add/next/done` 으로 보드를 갱신하고 `🔄 ING 갱신: <무엇을>` 로, " +
+      "변동이 없으면 `🔄 ING: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수).";
     process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
     return 0;
   }

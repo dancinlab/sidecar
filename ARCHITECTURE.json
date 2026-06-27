@@ -394,7 +394,7 @@
                 "이름": "ing stop-check",
                 "역할": "매턴 ING 상태 보고 강제 (decision:block)",
                 "slug": "guard-ing-stop-check",
-                "상세": "매 응답에 `🔵 ING` 줄(`🔵 ING 갱신: …` 또는 `🔵 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). sidecar-managed repo 한정·loop guard 1회/chain. (modules/ing.ts)"
+                "상세": "매 응답에 `🔄 ING` 줄(`🔄 ING 갱신: …` 또는 `🔄 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). sidecar-managed repo 한정·loop guard 1회/chain. (modules/ing.ts)"
               },
               {
                 "이름": "architecture stop-check",

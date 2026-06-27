@@ -235,7 +235,7 @@ export async function runModel(args: string[]): Promise<number> {
       return 1;
     }
     const m: Model = { id };
-    for (const k of CORE) if (f[k] !== undefined) (m as Record<string, unknown>)[k === "sha" ? "sha256" : k] = f[k];
+    for (const k of CORE) if (f[k] !== undefined) (m as Record<string, unknown>)[k] = f[k];
     if (f.sha !== undefined) m.sha256 = f.sha;
     if (f.features) m.features = f.features.split(",").map((s) => s.trim()).filter(Boolean);
     rows.push(stamp(m));

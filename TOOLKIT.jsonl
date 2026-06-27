@@ -33,6 +33,7 @@
 {"id":"fleet-full","kind":"hook","usage":"fleet full [frontier:goal,…|parallel|go|…]","use":"full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped, weak lever still measures a wall before abstract) · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)"}
 {"id":"pr-cycle","kind":"hook","usage":"pr-cycle [--no-reap] [gh flags]","use":"push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (auto-merge mergeable · report conflicting · --no-reap skips)"}
 {"id":"pod","kind":"hook","usage":"pod","use":"GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)"}
+{"id":"pod-poll","kind":"hook","usage":"pod poll <id> [--ssh-check \"<cmd>\"|--done-match RE] [--teardown-on-done] [--pull \"<remote> <local>\"]","use":"one-shot auto-poll via hexa cloud (alive→util/probe→optional pull+teardown · READ-ONLY default · pull-then-destroy)"}
 {"id":"dojo","kind":"hook","usage":"dojo [<slug>] [--lang]","use":"cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)"}
 {"id":"micro-exp","kind":"hook","usage":"micro-exp [<scope>]","use":"context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)"}
 {"id":"bypass","kind":"hook","usage":"bypass","use":"anti-punt self-check runbook (proceed on local+reversible; ask only when outward/decision)"}
@@ -68,5 +69,7 @@
 {"id":"ing","kind":"report","usage":"ing [show|add|done|next|pod ...|inject]","use":"in-progress board → ING.jsonl (작업·POD·next · done=scrub · SessionStart inject · 내 repo 전용 — cross-repo 전달 폐기)","triggers":["handoff","인계","wrap up","마무리","끝내자","진행중","지금 뭐","작업 현황","in progress","pod 관리","돌고 있는","ING.md"]}
 {"id":"verdict","kind":"report","usage":"verdict {record <id> <cmd>|list|show <id>}","use":"verification evidence ledger → .verdicts/ (PASS/FAIL)"}
 {"id":"atlas","kind":"report","usage":"atlas {add <id> <claim>|link <id> <vid>|list}","use":"claim registry → ATLAS.md (verified via PASS verdict)"}
+{"id":"model","kind":"report","usage":"model {list|show|add|set|gate|feat|verify|prune|rm}","use":"model registry → ARCHITECTURE.json .models[] (id·arch·params·tier·sha256·path·hf + gates 검증충족도·progress·features · byte-invariant splice · verify=sha256 · prune=HF+sha guard)"}
+{"id":"dataset","kind":"report","usage":"dataset {list|show|add|set|feat|rm} [--lang ko|en] [--register general|sns]","use":"dataset registry → ARCHITECTURE.json .datasets[] (4-cell lang×register · byte-invariant top-level splice · parallel to models)"}
 {"id":"upstream","kind":"report","usage":"upstream {list|fix <name|repo>}","use":"in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)"}
 {"id":"sync","kind":"report","usage":"sync {run|diff}","use":"run configured shared-file sync script"}

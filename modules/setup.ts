@@ -156,11 +156,24 @@ const GLOBAL_CLI = resolve(homedir(), ".sidecar", "cli");
 
 // Fast-forward one clone to origin/main. Returns the outcome (for the caller to
 // report) or null when `dir` is not a git clone. before===after ⇒ already current.
-async function updateClone(dir: string): Promise<{ before: string; after: string } | null> {
+// NON-DESTRUCTIVE: a blind `reset --hard origin/main` silently destroys any local
+// commits/changes in the clone (root-cause of repeated loss — local feature commits
+// were wiped on every self-update). We fetch, then REFUSE to reset when the clone is
+// ahead of origin/main or dirty, returning `skipped` so the caller warns instead of
+// clobbering. Merge/push the local work → origin/main advances → ahead becomes 0 →
+// self-update resumes cleanly.
+async function updateClone(dir: string): Promise<{ before: string; after: string; skipped?: string } | null> {
   const inside = await execShell("git rev-parse --is-inside-work-tree 2>/dev/null", { cwd: dir });
   if (inside.stdout.trim() !== "true") return null;
   const before = (await execShell("git rev-parse --short HEAD", { cwd: dir })).stdout.trim();
-  const up = await execShell("git fetch -q origin && git reset -q --hard origin/main", { cwd: dir });
+  const fetched = await execShell("git fetch -q origin", { cwd: dir });
+  if (fetched.code !== 0) throw new Error(fetched.stderr.slice(0, 200));
+  const dirty = (await execShell("git status --porcelain", { cwd: dir })).stdout.trim();
+  const ahead = (await execShell("git rev-list --count origin/main..HEAD", { cwd: dir })).stdout.trim();
+  if (dirty || (ahead && ahead !== "0")) {
+    return { before, after: before, skipped: `${ahead || "0"} local commit(s)${dirty ? " + uncommitted changes" : ""}` };
+  }
+  const up = await execShell("git reset -q --hard origin/main", { cwd: dir });
   if (up.code !== 0) throw new Error(up.stderr.slice(0, 200));
   const after = (await execShell("git rev-parse --short HEAD", { cwd: dir })).stdout.trim();
   return { before, after };
@@ -171,7 +184,7 @@ async function selfUpdate(): Promise<number> {
     warn(`self-update: global install ${GLOBAL_CLI} not found — run \`sidecar install\` first.`);
     return 1;
   }
-  let res: { before: string; after: string } | null;
+  let res: { before: string; after: string; skipped?: string } | null;
   try {
     res = await updateClone(GLOBAL_CLI);
   } catch (e) {
@@ -181,6 +194,10 @@ async function selfUpdate(): Promise<number> {
   if (res === null) {
     warn(`self-update: ${GLOBAL_CLI} is not a git clone — update manually.`);
     return 1;
+  }
+  if (res.skipped) {
+    warn(`self-update: ${GLOBAL_CLI} has ${res.skipped} — NOT reset (protecting local work). Merge/push to main first, then re-run.`);
+    return 0;
   }
   ok(res.before === res.after
     ? `self-update: already current (${res.after}) — global ${GLOBAL_CLI}`

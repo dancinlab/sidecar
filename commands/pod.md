@@ -1,5 +1,5 @@
 ---
-description: /pod — GPU cloud pod dispatch runbook — preflight → fire → poll → harvest → down (cost-gated). Triggers — "GPU 포드", "클라우드 GPU", "pod 발사", "rent gpu", "/pod", "포드 띄워".
+description: /pod — GPU cloud pod dispatch runbook + auto-polling. `pod poll <id>` one-shot checks a pod via hexa cloud (alive→util) — READ-ONLY unless --teardown-on-done/--pull. `pod watch <id> [--cron]`/`unwatch`/`list` = ≥10-min cadence polling. Triggers — "GPU 포드", "pod 발사", "rent gpu", "pod 폴링", "watch pod", "/pod".
 allowed-tools: Bash
 ---
 

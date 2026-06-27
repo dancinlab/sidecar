@@ -52,6 +52,8 @@ import { runDocs } from "../modules/docs.ts";
 import { runLockdown } from "../modules/lockdown-cmd.ts";
 import { runCommons } from "../modules/commons.ts";
 import { runArchitecture } from "../modules/architecture.ts";
+import { runDataset } from "../modules/dataset.ts";
+import { runModel } from "../modules/model.ts";
 import { runChangelog } from "../modules/changelog.ts";
 import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
@@ -104,6 +106,8 @@ hook delegates (wire these into your agent's settings.json):
   fleet full [frontier:goal,…|parallel|go|…]  full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped, weak lever still measures a wall before abstract) · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)
   pr-cycle [--no-reap] [gh flags]   push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (auto-merge mergeable · report conflicting · --no-reap skips)
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
+  pod poll <id> [--ssh-check "<cmd>"|--done-match RE] [--teardown-on-done] [--pull "<remote> <local>"]   one-shot auto-poll via hexa cloud (alive→util/probe→optional pull+teardown · READ-ONLY default · pull-then-destroy)
+  pod {watch <id> [--interval 600] [--cron]|unwatch <id>|list}   register ≥10-min cadence polling (cron OR agent-wakeup fallback · ~/.sidecar/pod-watch.json)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
   micro-exp [<scope>]      context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)
   bypass                   anti-punt self-check runbook (proceed on local+reversible; ask only when outward/decision)
@@ -154,6 +158,8 @@ reports:
   ing [show|add|done|next|pod ...|inject]   in-progress board → ING.jsonl (작업·POD·next · done=scrub · SessionStart inject · 내 repo 전용 — cross-repo 전달 폐기)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
+  model {list|show|add|set|gate|feat|verify|prune|rm}   model registry → ARCHITECTURE.json .models[] (id·arch·params·tier·sha256·path·hf + gates 검증충족도·progress·features · byte-invariant splice · verify=sha256 · prune=HF+sha guard)
+  dataset {list|show|add|set|feat|rm} [--lang ko|en] [--register general|sns]   dataset registry → ARCHITECTURE.json .datasets[] (4-cell lang×register · byte-invariant top-level splice · parallel to models)
   upstream {list|fix <name|repo>}   in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)
   sync {run|diff}              run configured shared-file sync script
 
@@ -270,6 +276,10 @@ async function main(): Promise<number> {
       return runCommons(rest);
     case "architecture":
       return runArchitecture(rest);
+    case "model":
+      return runModel(rest);
+    case "dataset":
+      return runDataset(rest);
     case "changelog":
       return runChangelog(rest);
     case "git-context":

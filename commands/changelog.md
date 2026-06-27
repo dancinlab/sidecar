@@ -1,6 +1,6 @@
 ---
-description: /changelog {add|list|render|fold|prune|autoprune|migrate} — append-only history as CHANGELOG.jsonl (add appends+trims keep-N). Opt-in fragment mode: with a CHANGELOG.d/ dir, add writes one file per PR (conflict-free concurrent PRs); fold/render collect them. Triggers — "이력 정리", "/changelog".
-argument-hint: "{add \"<title>\"|list|render|fold|prune --keep N|autoprune|migrate}"
+description: /changelog {add|list|render|prune|autoprune|migrate} — append-only history as CHANGELOG.jsonl. add appends(body via stdin)+auto-trims to keep-N(default 30); prune/autoprune drop old entries (autoprune also runs at SessionStart). Triggers — "이력 정리", "오래된 changelog 삭제", "/changelog".
+argument-hint: "{add \"<title>\"|list|render|prune --keep N|autoprune|migrate}"
 allowed-tools: Bash
 ---
 

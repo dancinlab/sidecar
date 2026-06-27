@@ -716,6 +716,32 @@
                 "상세": "`hexa kick --seed \"<seed>\"` 래퍼. bare 인자→--seed 합치기 · 선두 플래그(--rounds N·--engine mk9|mk10)→verbatim 패스스루. 긴 실행 → stdio inherit(라이브 스트림·timeout 없음). hexa PATH 없으면 127+안내"
               },
               {
+                "이름": "pod {poll|watch|unwatch|list}",
+                "역할": "GPU pod 자동 폴링 (>=10분 cadence)",
+                "slug": "module-pod-poll",
+                "상세": "modules/pod-poll.ts — 발사 후 수동 ssh 확인을 canonical 명령으로 일반화(runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북). 모든 원격 op 은 `hexa cloud` 경유(commons c11, 직접 ssh/curl 금지).",
+                "children": [
+                  {
+                    "이름": "hexa cloud 경유 op",
+                    "역할": "canonical-cli 재사용",
+                    "slug": "detail-pod-poll-cloud",
+                    "상세": "`alive` 생존(RUNNING/GONE)·`exec` 프로브(GPU-util 또는 `--ssh-check`)·`copy-from` pull·`rm` teardown. poll=one-shot, idle-streak `--done-after N`(기본 2)로 sustained-idle done 판정."
+                  },
+                  {
+                    "이름": "no-escape-hatch 기본값",
+                    "역할": "안전 비파괴 (read-only)",
+                    "slug": "detail-pod-poll-readonly",
+                    "상세": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
+                  },
+                  {
+                    "이름": "watch cadence",
+                    "역할": "레지스트리 + 구동",
+                    "slug": "detail-pod-poll-cadence",
+                    "상세": "레지스트리 `~/.sidecar/pod-watch.json`(flat 전역 규약 · pool.json 동형) + cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(기본 비파괴 · crontab write 불가 환경 자동 fallback · interval >=600s c19)."
+                  }
+                ]
+              },
+              {
                 "이름": "fleet (+ lab/abstract/full)",
                 "역할": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
                 "slug": "module-fleet-lab-abstract-full",

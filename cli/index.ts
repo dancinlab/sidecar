@@ -104,6 +104,8 @@ hook delegates (wire these into your agent's settings.json):
   fleet full [frontier:goal,…|parallel|go|…]  full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped, weak lever still measures a wall before abstract) · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)
   pr-cycle [--no-reap] [gh flags]   push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (auto-merge mergeable · report conflicting · --no-reap skips)
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
+  pod poll <id> [--ssh-check "<cmd>"|--done-match RE] [--teardown-on-done] [--pull "<remote> <local>"]   one-shot auto-poll via hexa cloud (alive→util/probe→optional pull+teardown · READ-ONLY default · pull-then-destroy)
+  pod {watch <id> [--interval 600] [--cron]|unwatch <id>|list}   register ≥10-min cadence polling (cron OR agent-wakeup fallback · ~/.sidecar/pod-watch.json)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
   micro-exp [<scope>]      context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)
   bypass                   anti-punt self-check runbook (proceed on local+reversible; ask only when outward/decision)

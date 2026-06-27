@@ -8,3 +8,4 @@
 {"ts":"2026-06-17T18:48:10.442Z","kind":"next","id":"10","text":"hexa-lang state 통일 완성 — chore/state-unify 브랜치(b94bafd) push됨. 다른 세션이 main rt-native 사이클 이동중이라 PR 머지 보류 → 그 세션 종료 후 gh pr create+merge 안전하게"}
 {"kind":"work","id":"11","ts":"2026-06-23T12:37:20.139Z","text":"↪ .harness/ 디렉토리 + harness.config.json per-repo 관례 rename (.sidecar/ · sidecar.config.json) — 교차 20 repo 일괄 + sidecar CLI 기본값 변경. anima·hexa-lang 진행중 클린업 충돌 회피 위해 분리됨"}
 {"kind":"next","id":"13","ts":"2026-06-27T17:41:21.472Z","text":"12 edge ✅ 머지(PR#183). anima·hexa-lang 활동 정리되면 동일 변환(에이전트 a063d96 패턴 재사용)"}
+{"kind":"work","id":"14","ts":"2026-06-27T18:34:17.906Z","text":"ARCHITECTURE 스키마 통일 — ~/dancinedge 폴더 2 repo(api-telegram-auto·edgegigs)의 비canonical 스키마({$schema,name,title}·{project,doc,overview})를 canonical columns/tree 로 변환. edgegigs dirty575 → 격리 worktree 필수. 나머지 dancinedge repo 는 ARCHITECTURE.json 없음"}

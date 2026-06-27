@@ -252,6 +252,13 @@
         "value": "갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신 — 턴마감 게이트를 트리 뒤(recency)로 이동 + 갱신 시 보고 의무화",
         "threshold": "ARCHITECTURE inject 가 갱신을 능동적으로 안 하고 사용자 지시에만 반응",
         "source": "modules/architecture.ts"
+      },
+      {
+        "id": "INJECT_DOC_SKELETON_ONDEMAND",
+        "state": "ossified",
+        "value": "정적 참조 doc(설계 트리)은 매 UserPromptSubmit 풀-주입 금지 — Claude Code canonical 대용량-doc 패턴은 스켈레톤(요약+목차)+온디맨드 Read. 풀덤프는 10KB additionalContext 한도 초과→하네스가 파일-폴백(2KB 프리뷰만)+매 턴 토큰 재지불. 정적 doc=SessionStart/Compact 1회(캐시 prefix 재사용), per-turn 행동규칙(commons·recommend·prefs·easy·load·ing)만 매턴 유지. 턴마감 게이트는 Stop 훅으로 결정적 강제, 매턴 리마인더로 흩지 말 것",
+        "threshold": "inject 소스 편집 시 — 정적 doc 을 UserPromptSubmit 에 다시 걸거나 풀-주입으로 되돌리면 재발",
+        "source": "modules/architecture.ts"
       }
     ]
   },
@@ -808,9 +815,9 @@
               },
               {
                 "이름": "architecture",
-                "역할": "설계 SSOT 주입 (SessionStart + 매 UserPromptSubmit)",
+                "역할": "설계 SSOT 스켈레톤 주입 (SessionStart + Compact · detail 은 온디맨드)",
                 "slug": "module-architecture",
-                "상세": "ARCHITECTURE.json(우선)/.md 를 additionalContext 로 주입 — SessionStart 1회 + 매 UserPromptSubmit 재주입으로 설계 트리를 commons급 상주. 매-턴 재주입은 `convergence` 배열 제외(매 턴 ~21KB 절감)·80KB 절단·부재 무음. 트리 뒤에 턴-마감 게이트(`🏛️ ARCHITECTURE 갱신: …`) 부착",
+                "상세": "스켈레톤(title+summary+2단계 목차)만 additionalContext 주입 — SessionStart + PreCompact/PostCompact(NOT per-turn · 정적 doc 의 매턴 풀-주입은 대용량-doc 안티패턴). 세부(`상세`셀·전체 트리·convergence)는 파일에 두고 `show`/`search`/Read 온디맨드. 턴-마감 게이트는 Stop 훅 `architecture stop-check` 강제(학습=convergence INJECT_DOC_SKELETON_ONDEMAND)",
                 "children": [
                   {
                     "이름": "lint (트리 위생 · c4 강제)",

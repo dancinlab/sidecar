@@ -35,7 +35,11 @@ function hookSpec(): Record<string, unknown[]> {
       entry('sidecar prompt "$CLAUDE_USER_PROMPT"'),
       entry("sidecar commons inject"),
       entry("sidecar claudemd inject"),
-      entry("sidecar architecture inject"),
+      // NOTE: `architecture inject` is SESSION-scoped (SessionStart + Compact), NOT
+      // per-turn — the design tree is a static reference doc; re-injecting it every
+      // prompt is the large-doc anti-pattern (token cost for content read once). Its
+      // turn-close gate is enforced deterministically by `architecture stop-check`
+      // (Stop), not by a per-turn reminder. See ARCHITECTURE.json inject-strategy.
       entry("sidecar recommend inject"),
       entry("sidecar prefs inject"),
       entry("sidecar easy inject"),
@@ -53,7 +57,12 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar changelog autoprune"),
       entry("sidecar ing inject"),
     ],
-    Stop: [entry("sidecar recommend stop-check"), entry("sidecar architecture convergence stop-check"), entry("sidecar ing staleness-check")],
+    Stop: [
+      entry("sidecar recommend stop-check"),
+      entry("sidecar architecture stop-check"), // turn-close design-report gate (was missing here vs hooks.json)
+      entry("sidecar architecture convergence stop-check"),
+      entry("sidecar ing staleness-check"),
+    ],
     // Compaction survival — the per-turn injects (commons/recommend/prefs/easy) ride
     // UserPromptSubmit so they always return, but the SESSION-scoped injects
     // (architecture·git-context·toolkit·companions·ing) only fire at SessionStart and

@@ -41,7 +41,6 @@
 {"id":"brainstorm","kind":"hook","usage":"brainstorm","use":"iterative ideation rounds until depletion (breadth over selection)"}
 {"id":"demi","kind":"hook","usage":"demi","use":"design-architecture program runbook (7-verb spine)"}
 {"id":"gap","kind":"hook","usage":"gap [full|list|<scope>]","use":"multi-axis gap exploration — 40 breakthrough lenses (8 families) · triage→deepen runbook"}
-{"id":"kick","kind":"hook","usage":"kick <seed…> | <flags>","use":"wrap hexa kick --seed \"<seed>\" — hexa-lang gap-breakthrough/discovery engine (alias: drill; bare args→seed, leading flag→passthrough)"}
 {"id":"pool","kind":"hook","usage":"pool {list|add|rm|on|status|specs}","use":"host roster + remote exec + cores/mem/GPU probe (~/.sidecar/pool.json, global)","triggers":["호스트 로스터","host roster","원격 실행","원격에서 실행","어느 머신","어느 호스트","남는 머신","비는 머신","유휴 머신","idle host","원격 머신","다른 컴퓨터에서","pool list","pool status","머신 목록","호스트 목록","서버 목록","cpu 여유","gpu 여유","어디서 돌릴","ssh 로 돌"]}
 {"id":"mem-guard","kind":"hook","usage":"mem-guard {status|check|install|uninstall}","use":"OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog"}
 {"id":"secret","kind":"hook","usage":"secret <verb> [args]","use":"passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync) ⚠ `get` exposes the value in context — prefer inline `$(secret get <k>)` for tool args","triggers":["api key","API 키","api 키","키가 필요","키 필요","credential","자격증명","access token","비밀키","인증 정보","토큰 저장","secret get","secret set","키 저장"]}

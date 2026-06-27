@@ -95,7 +95,7 @@ sidecar/
 ## 슬래시 명령 (플러그인 · 공용셋)
 
 `commands/*.md` — 전체 사용자-대면 명령이 **bare `/cmd` 슬래시 명령**으로 노출된다(`/paper`·`/imagine`·
-`/pr-cycle`·`/ship`·`/sbs`·`/fleet`·`/fleet-lab`·`/fleet-abstract`·`/fleet-full`·`/ing`·`/ci`·`/kick` …). 일부는 이웃 CLI **`hexa` 위임자**다(`/hexa`·`/cloud`=`hexa cloud`·`/dojo`=`hexa dojo`·`/deck`=`hexa deck`·`/verify`·`/atlas` — hexa 부재 시 graceful echo; sidecar 자체 훈련잡 스캐폴더는 `/hdojo`). 각 `.md` 는 프런트매터(`description` +
+`/pr-cycle`·`/ship`·`/sbs`·`/fleet`·`/fleet-lab`·`/fleet-abstract`·`/fleet-full`·`/ing`·`/ci` …). 일부는 이웃 CLI **`hexa` 위임자**다(`/hexa`·`/cloud`=`hexa cloud`·`/dojo`=`hexa dojo`·`/deck`=`hexa deck`·`/verify`·`/atlas` — hexa 부재 시 graceful echo; sidecar 자체 훈련잡 스캐폴더는 `/hdojo`). 각 `.md` 는 프런트매터(`description` +
 **Triggers** 자연어구 + `argument-hint` + `allowed-tools: Bash`)와 `!`sidecar <cmd> $ARGUMENTS`` 본문의 얇은
 위임자 — Claude Code 가 description/Triggers 로 인지한다(한국어·영어 트리거 양쪽).
 

@@ -23,7 +23,6 @@ import { runPrCycle } from "../modules/pr-cycle.ts";
 import { runShip } from "../modules/ship.ts";
 import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
-import { runKick } from "../modules/kick.ts";
 import { runIng } from "../modules/ing.ts";
 import { runUpstream } from "../modules/upstream.ts";
 import { runVerdict } from "../modules/verdict.ts";
@@ -115,7 +114,6 @@ hook delegates (wire these into your agent's settings.json):
   brainstorm               iterative ideation rounds until depletion (breadth over selection)
   demi                     design-architecture program runbook (7-verb spine)
   gap [full|list|<scope>]   multi-axis gap exploration — 40 breakthrough lenses (8 families) · triage→deepen runbook
-  kick <seed…> | <flags>   wrap hexa kick --seed "<seed>" — hexa-lang gap-breakthrough/discovery engine (alias: drill; bare args→seed, leading flag→passthrough)
   pool {list|add|rm|on|status|specs}   host roster + remote exec + cores/mem/GPU probe (~/.sidecar/pool.json, global)
   mem-guard {status|check|install|uninstall}   OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
@@ -214,9 +212,6 @@ async function main(): Promise<number> {
       return runBrainstorm(rest);
     case "gap":
       return runGap(rest);
-    case "kick":
-    case "drill":
-      return runKick(rest);
     case "demi":
     case "demiurge":
       return runDemi(rest);

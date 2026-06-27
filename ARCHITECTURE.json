@@ -717,12 +717,6 @@
                 "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
               },
               {
-                "name": "kick (alias drill)",
-                "role": "hexa-lang gap-breakthrough/discovery 엔진 패스스루",
-                "id": "module-kick-alias-drill",
-                "detail": "`hexa kick --seed \"<seed>\"` 래퍼. bare 인자→--seed 합치기 · 선두 플래그(--rounds N·--engine mk9|mk10)→verbatim 패스스루. 긴 실행 → stdio inherit(라이브 스트림·timeout 없음). hexa PATH 없으면 127+안내"
-              },
-              {
                 "name": "pod {poll|watch|unwatch|list}",
                 "role": "GPU pod 자동 폴링 (>=10분 cadence)",
                 "id": "module-pod-poll",

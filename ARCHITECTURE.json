@@ -751,7 +751,7 @@
                 "이름": "errors",
                 "역할": "(kind,code)→severity 분류",
                 "slug": "module-errors",
-                "상세": "맵은 외부 JSON"
+                "상세": "맵 로드 = bundled config/ defaults 위에 per-repo `.harness/` override 병합(repo 가 code별 우선) → 새 bundled 규칙이 stale repo 맵에서 fallback-block 으로 둔갑 방지"
               },
               {
                 "이름": "ledger",
@@ -816,7 +816,7 @@
                     "이름": "lint (트리 위생 · c4 강제)",
                     "역할": "fine-decomposition 게이트",
                     "slug": "detail-lint-c4",
-                    "상세": "`architecture lint` = 셀 cap(ARCH-BIG-CELL · `lint.archCellCap` 300), piled>`archPiledMax`(6)(ARCH-PILED), history 키(ARCH-HISTORY), slug 부재/중복/형식(ARCH-SLUG-MISSING/DUPE/FORMAT). severity-map ARCH-*=block 라 `sidecar lint` 가 위반 차단. 최상위 `convergence` 제외"
+                    "상세": "`architecture lint` = 셀 cap(ARCH-BIG-CELL · `lint.archCellCap` 300), piled>`archPiledMax`(6)(ARCH-PILED), history 키(ARCH-HISTORY), slug 부재/중복/형식(ARCH-SLUG-MISSING/DUPE/FORMAT)=block. 이름-노드 0 비-canonical 스키마=ARCH-SCHEMA-UNRECOGNIZED(warn · slug 게이트 silent no-op 표면화). 최상위 `convergence` 제외"
                   },
                   {
                     "이름": "search (slug 검색)",
@@ -912,7 +912,7 @@
                 "이름": "severity-map.json",
                 "역할": "errors 분류 맵",
                 "slug": "data-severity-map-json",
-                "상세": "fallback=block · 낮은 unknown_threshold (strict 기본)."
+                "상세": "fallback=block · 낮은 unknown_threshold (strict 기본). bundled config/ 가 base, repo `.harness/` 가 code별 override (errors 가 병합 로드)"
               },
               {
                 "이름": "harness.config.json",

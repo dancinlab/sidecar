@@ -1,8 +1,9 @@
 // sidecar errors {route|list|drain_check|mark_fixed}
 // Classify error signals by (kind, code) → severity via a pluggable map, then
 // queue them in an append-only JSONL so gates (drain_check) can block on backlog.
+import { resolve } from "node:path";
 import { readJson } from "../lib/json.ts";
-import { LOGS } from "../lib/paths.ts";
+import { LOGS, SIDECAR_CONFIG_DIR } from "../lib/paths.ts";
 import { appendJsonl, info, loudFail, warn } from "../lib/log.ts";
 import { readJsonl } from "../lib/json.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
@@ -25,14 +26,41 @@ export interface ErrorRecord {
 }
 
 let _map: SeverityMap | null = null;
+const readMapOr = (file: string): SeverityMap | null => {
+  try {
+    return readJson<SeverityMap>(file);
+  } catch {
+    return null;
+  }
+};
 function severityMap(): SeverityMap {
   if (_map) return _map;
-  const file = resolveRuleFile(config().severityMapFile, "severity-map.json");
-  try {
-    _map = readJson<SeverityMap>(file);
-  } catch {
+  // Merge the BUNDLED defaults under the per-repo override (repo wins per rule code).
+  // resolveRuleFile returns the repo's .harness map when present, else the bundled
+  // file. Without this merge a NEW bundled rule is absent from a stale per-repo map,
+  // so classify() falls through to `fallback` ("block") — silently turning a warn-only
+  // rule into a hard block in every repo that hasn't re-init'd. Merging makes new
+  // bundled rules apply with their intended severity everywhere, while a repo can still
+  // override any code explicitly (omission never disables — that's still fallback).
+  const bundled = readMapOr(resolve(SIDECAR_CONFIG_DIR, "severity-map.json"));
+  const repoFile = resolveRuleFile(config().severityMapFile, "severity-map.json");
+  const repo = readMapOr(repoFile);
+  if (!bundled && !repo) {
     _map = { fallback: "defer", rules: {} };
+    return _map;
   }
+  const rules: Record<string, Record<string, Severity>> = {};
+  for (const src of [bundled?.rules, repo?.rules]) {
+    if (!src) continue;
+    for (const [kind, codes] of Object.entries(src)) {
+      rules[kind] = { ...(rules[kind] ?? {}), ...codes };
+    }
+  }
+  _map = {
+    fallback: repo?.fallback ?? bundled?.fallback ?? "defer",
+    unknown_threshold: repo?.unknown_threshold ?? bundled?.unknown_threshold,
+    rules,
+  };
   return _map;
 }
 

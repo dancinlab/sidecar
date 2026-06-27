@@ -26,6 +26,7 @@
       "ARCH-SLUG-MISSING": "block",
       "ARCH-SLUG-DUPE": "block",
       "ARCH-SLUG-FORMAT": "block",
+      "ARCH-SCHEMA-UNRECOGNIZED": "warn",
       "FOLDER-GUIDE-MISSING": "block",
       "HELP-BACKTICK": "block",
       "CONVERGENCE-MALFORMED": "block",

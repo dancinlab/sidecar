@@ -395,6 +395,12 @@
                 "역할": "매턴 ING 상태 보고 강제 (decision:block)",
                 "slug": "guard-ing-stop-check",
                 "상세": "매 응답에 `🔵 ING` 줄(`🔵 ING 갱신: …` 또는 `🔵 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). sidecar-managed repo 한정·loop guard 1회/chain. (modules/ing.ts)"
+              },
+              {
+                "이름": "architecture stop-check",
+                "역할": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
+                "slug": "guard-architecture-stop-check",
+                "상세": "ing stop-check 의 설계판 — 단 **조건부**: working tree 에 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree(읽기전용 턴)=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). sidecar-managed repo 한정. (modules/architecture.ts)"
               }
             ]
           },

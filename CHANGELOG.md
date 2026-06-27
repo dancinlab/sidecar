@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## feat(architecture): stop-check — enforce a 🏛️ ARCHITECTURE report when code/structure changed
+
+Companion to `ing stop-check`. ING is enforced EVERY turn (progress can shift invisibly); design changes are
+rarer, so the architecture enforce is CONDITIONAL — it must not demand a 🏛️ line on read-only turns.
+
+- **`architecture stop-check`** (new Stop hook · `decision:block`) — fires only when the working tree has
+  uncommitted code/ARCHITECTURE changes (deterministic `git diff` trigger) AND the last response carries no
+  `🏛️ ARCHITECTURE` line; blocks to force the agent to update the design tree in lockstep or affirm
+  `🏛️ ARCHITECTURE: 변동 없음`. Clean tree → no-op. Catches code↔ARCHITECTURE drift (commons cycle-docs-pr).
+  sidecar-managed repos only; `stop_hook_active` loop-guard.
+- turn-close `🏛️ 턴 마감 게이트` directive rewritten to require one of the two lines when code/structure
+  changed; wired into `hooks/hooks.json` Stop + global `~/.claude/settings.json`.
 ## fix(pr-cycle): fall back to `main` when the remote HEAD symref is unset
 
 The doc-gate base was `git rev-parse --abbrev-ref origin/HEAD` stripped of `origin/`, with a

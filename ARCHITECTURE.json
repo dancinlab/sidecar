@@ -315,7 +315,7 @@
                 "name": "branch-switch 가드",
                 "role": "메인 워크트리 브랜치 전환 차단",
                 "id": "guard-branch-switch",
-                "detail": "modules/git-checkout-guard.ts — MAIN 워크트리(git-dir 에 `/worktrees/` 없음)에서 HEAD 이동하는 `git checkout <branch>`/`-b`/`switch` 차단(공유 체크아웃을 갈아엎어 병렬 세션 untracked 작업 손실 = #3559). 링크드/임시 워크트리는 면제(전환이 목적). 파일복원(`checkout -- <path>`·`checkout <file>`·`<tree-ish> <path>`)은 통과 — 모호한 `checkout <ref>` 만 `git rev-parse` 로 실제 ref 확인 후 차단. git-level `-C <path>` 는 그 경로의 워크트리로 판정(딴 폴더서 `git -C <main> checkout` 으로 메인 전환하는 우회도 차단). 인라인 override 없음 · config `git.guardBranchSwitch` 토글(기본 ON)"
+                "detail": "modules/git-checkout-guard.ts — MAIN 워크트리에서 HEAD 이동하는 `git checkout <branch>`/`-b`/`switch` 차단(병렬 세션 untracked 작업 손실 #3559 방지). 링크드 워크트리·파일복원(`checkout -- path`)은 면제 · 모호한 `checkout <ref>` 는 rev-parse 확인 · `-C <path>` 우회도 차단 · config `git.guardBranchSwitch`(기본 ON)."
               },
               {
                 "name": "cloud-raw 가드",

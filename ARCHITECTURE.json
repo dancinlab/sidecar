@@ -401,7 +401,7 @@
                 "name": "convergence stop-check",
                 "role": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
                 "id": "guard-convergence-stop-check",
-                "detail": "warn-only(stderr·non-block) — `ing staleness-check` 동형(decision:block 아님). 에이전트 자신의 마지막 메시지를 재발-신호 키워드(config/convergence-triggers.json)로 스캔 → 매치 시 SSOT 기록 넛지를 stderr 표면화. 키워드=넓은 그물·정밀도는 에이전트 판단. once-가드=신호별 1회 → 오탐이 진짜 넛지 소진 안 함"
+                "detail": "응답의 재발신호(config/convergence-triggers.json) 감지 시 enforce(`convergenceEnforce` 기본 ON): `🧬 CONVERGENCE` 계정 줄 없으면 `decision:block` — 기록 id 또는 `해당 없음` 강제(ing/architecture stop-check 동형 marker 게이트 · stop_hook_active anti-wedge 체인당 1블록 · off=레거시 warn). 신호별 1회(convergence-nudge.json)."
               },
               {
                 "name": "ing staleness-check",

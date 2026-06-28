@@ -357,12 +357,14 @@ async function convergenceVerb(args: string[]): Promise<number> {
 // stops). So broad patterns are fine: precision lives in the agent, not the list.
 // Patterns live as DATA (config/convergence-triggers.json · per-repo override at
 // .harness/convergence-triggers.json) — the engine never hardcodes them.
-// Reads the Stop stdin payload, pulls the last assistant text, and on a hit emits
-// a NON-BLOCKING stderr warning (warn-only · like `ing staleness-check`) — NOT
-// decision:block. An advisory nudge must not wedge the turn on a "stop hook error";
-// it surfaces the suggestion and lets the agent judge/record on its own. A once-file
-// keyed PER DISTINCT MATCHED SIGNAL keeps it from re-nudging the SAME word every
-// turn. Best-effort: any IO/parse failure is a silent no-op.
+// Reads the Stop stdin payload, pulls the last assistant text, and on a hit ENFORCES
+// (config.convergenceEnforce, default on): if the response carries no `🧬 CONVERGENCE`
+// accounting marker it emits decision:block, demanding the agent either record the
+// learning (`🧬 CONVERGENCE 기록: <id>`) or dismiss it (`🧬 CONVERGENCE: 해당 없음`) —
+// the same response-marker gate as the ing/architecture Stop checks. stop_hook_active
+// bounds it to one block per stop-chain (anti-wedge). With enforce off it degrades to
+// the legacy non-blocking stderr warn. The marker, once present, consumes the signal
+// (keyed PER DISTINCT MATCHED SIGNAL) so it never re-fires. IO/parse failure = no-op.
 interface ConvergenceTriggers {
   patterns?: string[];
   hint?: string;
@@ -400,6 +402,12 @@ function markNudged(transcript: string, seen: Set<string>): void {
   }
 }
 
+// The `🧬 CONVERGENCE` accounting marker — the agent's per-signal acknowledgement,
+// either a record id (`🧬 CONVERGENCE 기록: <id>`) or an explicit dismissal
+// (`🧬 CONVERGENCE: 해당 없음`). Same response-marker enforcement shape as the
+// `🔄 ING` / `🏛️ ARCHITECTURE` Stop gates.
+const CONVERGENCE_MARKER = /🧬\s*CONVERGENCE/i;
+
 function convergenceStopCheck(): number {
   let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
   try {
@@ -417,19 +425,40 @@ function convergenceStopCheck(): number {
   if (!patterns?.length) return 0;
   const hay = text.toLowerCase();
   const seen = nudgedSignals(transcript);
-  // First pattern that matched AND hasn't already nudged this session — so a
-  // dismissed false positive doesn't suppress a different, real signal later.
+  // First recurrence signal that matched AND hasn't already been accounted-for this
+  // session — a dismissed false positive doesn't suppress a different, real signal later.
   const matched = patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
   if (!matched) return 0;
 
-  seen.add(matched);
-  markNudged(transcript, seen);
+  // ACCOUNTED: the response already carries the marker (recorded or dismissed). Consume
+  // the signal so it never re-fires — even on a stop_hook_active re-prompt, so the marker
+  // the agent just added in response to a block is what clears it. Pass.
+  if (CONVERGENCE_MARKER.test(text)) {
+    seen.add(matched);
+    markNudged(transcript, seen);
+    return 0;
+  }
+
   const reason =
-    `재발 신호 "${matched}" — 진짜 재발(첫 발생 아님)이면 ` +
+    `재발 신호 "${matched}" 감지 — 응답에 \`🧬 CONVERGENCE\` 계정 줄이 없다. 진짜 재발(첫 발생 아님)이면 ` +
     (hint ??
       "그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라: `sidecar architecture convergence list` 로 기존 확인 후 `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심>\" --threshold \"<재발조건/해결>\" --source <원인파일>` (commons root-cause).") +
-    " (일반 언급·오탐이면 무시. advisory · non-block · 같은 신호는 세션당 1회.)";
-  warn(`[convergence] ${reason}`);
+    " 그런 다음 응답에 `🧬 CONVERGENCE 기록: <ID>` 한 줄로, 첫 발생·오탐이면 `🧬 CONVERGENCE: 해당 없음` 한 줄로 명시하라 (둘 중 하나 필수).";
+
+  // ENFORCE (config.convergenceEnforce, default on) — BLOCK until the marker appears.
+  // stop_hook_active bounds it to ONE block per stop-chain (anti-wedge, like
+  // architecture stop-check); legacy advisory warn-only when enforce is off.
+  if (config().convergenceEnforce && !payload?.stop_hook_active) {
+    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+    return 0;
+  }
+  warn(`[convergence] ${reason} (advisory · 같은 신호는 세션당 1회.)`);
+  // advisory path consumes the signal (warn-once); enforce path leaves it unseen so a
+  // fresh chain re-blocks until the marker is supplied.
+  if (!config().convergenceEnforce) {
+    seen.add(matched);
+    markNudged(transcript, seen);
+  }
   return 0;
 }
 

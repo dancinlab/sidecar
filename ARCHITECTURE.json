@@ -899,7 +899,7 @@
                 "name": "load",
                 "role": "매턴 macOS 자원 압박 readout 주입 (CPU+RAM+swap, ⚠️ on danger)",
                 "id": "module-load",
-                "detail": "show|inject. 매 UserPromptSubmit 에 한 줄 readout 을 additionalContext 로 주입 — 답변 맨 위에 부하를 상주시켜 무거운 작업 전 자각시킴. 비-macOS 무음.",
+                "detail": "show|inject. 매 UserPromptSubmit 에 한 줄 readout(CPU·RAM·swap·wt·🕐 현재날짜시간)을 additionalContext 로 주입 — 답변 맨 위에 부하+현재시각을 상주시켜 무거운 작업 전 자각·시간감각 유지. 비-macOS 무음.",
                 "children": [
                   {
                     "name": "3축 신호등",

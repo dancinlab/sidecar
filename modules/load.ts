@@ -99,6 +99,16 @@ export function readSnapshot(): Snapshot | null {
   };
 }
 
+// Local-clock stamp appended to the readout — the agent has no real-time clock
+// otherwise (the session date in context is fixed at start), so surfacing the
+// actual current date+time every turn keeps time-sensitive reasoning honest.
+function nowStamp(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  const dow = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}(${dow}) ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function line(s: Snapshot): string {
   const swap = s.swapUsedGiB >= 1 ? `${s.swapUsedGiB.toFixed(1)}G` : `${Math.round(s.swapUsedGiB * 1024)}M`;
   const head = s.danger ? "⚠️ " : "";
@@ -106,7 +116,8 @@ function line(s: Snapshot): string {
     `${head}CPU ${s.load1.toFixed(2)}/${s.cores} ${s.cpuLight} · ` +
     `RAM ${s.ramUsedPct}%(${s.pressureLabel}) ${s.ramLight} · ` +
     `swap ${swap} ${s.swapLight} · ` +
-    `wt ${s.worktrees} ${light(s.worktrees, 3, 10)}`
+    `wt ${s.worktrees} ${light(s.worktrees, 3, 10)} · ` +
+    `🕐 ${nowStamp()}`
   );
 }
 
@@ -119,7 +130,8 @@ function body(s: Snapshot): string {
     line(s) + "\n" +
     "- CPU = load1/cores (🟢<0.7 🟡<1.0 🔴≥1.0) · RAM = active+wired+compressor used% + kernel pressure(normal/warn/critical) · swap used (🟢<2G 🟡<6G 🔴≥6G).\n" +
     "- A Mac that dies under load fails on MEMORY (compressor+swap), not CPU — when RAM/swap light is 🔴 or pressure≥warn, say so loudly.\n" +
-    "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10) — 누적되면 `sidecar worktree gc` 로 정리." +
+    "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10) — 누적되면 `sidecar worktree gc` 로 정리.\n" +
+    "- 🕐 = the machine's REAL current local date+time (the session-start date in context is fixed; trust this line for 'now')." +
     warn + "\n"
   );
 }

@@ -979,7 +979,7 @@
                 "name": "enforcement.json",
                 "role": "pre 정규식 규칙",
                 "id": "data-enforcement-json",
-                "detail": "strict 기본(15룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음)."
+                "detail": "strict 기본(16룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음). H-RAW-GPU-RENT: raw vastai/runpodctl GPU 렌트(create/rent/launch) 차단 → hexa cloud rent 단일진입 강제(미귀속 고아포드 방지) = NO_RAW_CLOUD_CLI 코드가드(c11)의 정규식-프로파일 2중방어, exceptions 빈배열(전면차단)."
               },
               {
                 "name": "keywords.json",

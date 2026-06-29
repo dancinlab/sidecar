@@ -63,6 +63,14 @@
       ],
       "action": "warn",
       "reason": "sudo 사용 감지 — 권한 상승은 신중히. 정당하면 `# sudo-ok <사유>`."
+    },
+    {
+      "id": "H-RAW-GPU-RENT",
+      "desc": "raw vastai/runpodctl GPU 렌트 차단 — GPU 렌트는 hexa cloud 단일진입만 (canonical-cli)",
+      "match": "(vastai|runpodctl|\\bvast)\\s+(create|rent|launch|provision|reserve)\\b",
+      "exceptions": [],
+      "action": "block",
+      "reason": "GPU 렌트는 `hexa cloud rent` 단일진입만 — raw `vastai create`/`runpodctl create`/`vast rent` 직접 렌트 금지. hexa cloud rent 는 project/purpose auto-tag→레지스트리 등록(down-guard 작동); raw 렌트는 미귀속 고아 포드 = 돈샘+추적불가. 진단용 read-only(`vastai show`)는 허용. 이미 떠있는 raw 포드는 `hexa cloud adopt <id>` 로 귀속."
     }
   ],
   "pre_write": [

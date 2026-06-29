@@ -56,6 +56,7 @@ import { runModel } from "../modules/model.ts";
 import { runChangelog } from "../modules/changelog.ts";
 import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
+import { runSwitch } from "../modules/switch.ts";
 
 export const HELP = `dancinlab/sidecar — project-agnostic AI coding sidecar
 
@@ -75,6 +76,9 @@ setup:
   self-update              git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main
   shadow [plan|remove|--force]  mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)
   ship [--no-doc]          one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation
+  switch {glm|claude|toggle|status}   swap Claude Code's backend between the OFFICIAL Anthropic API and Z.AI GLM by
+                                       rewriting the GLOBAL ~/.claude/settings.json env (ANTHROPIC_BASE_URL/AUTH_TOKEN + GLM model map) — Z.AI key from
+                                       'secret get zai.api_key' (never on argv); env loads at startup so a Claude Code restart is needed to take effect
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -187,6 +191,8 @@ async function main(): Promise<number> {
       return runInstallHooks(rest);
     case "self-update":
       return runSelfUpdate(rest);
+    case "switch":
+      return runSwitch(rest);
     case "shadow":
       return runShadow(rest);
     case "fleet":

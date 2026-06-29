@@ -296,22 +296,56 @@ async function convergenceVerb(args: string[]): Promise<number> {
     return 0;
   }
 
+  // `for <file>` — pull just THIS file's recorded learnings so the agent can review
+  // them before recording a new one (the 꺼내서-보고-수정 workflow). Same source-match
+  // semantics as convergenceForFile (the on-touch surfacer), so what `for` shows is
+  // exactly what a touch will inject. Read-only — the review step, not a mutation.
+  if (verb === "for") {
+    const file = args[1];
+    if (!file) return info("usage: sidecar architecture convergence for <file>"), 1;
+    const hits = records.filter((r) => r.source && (r.source === file || file.endsWith("/" + r.source) || r.source.endsWith("/" + file)));
+    if (!hits.length) return info(`convergence: ${file} 에 기록된 학습 없음 (새 학습이면 add)`), 0;
+    info(`convergence — ${file} 에 박힌 재발방지 학습 ${hits.length}건 (같은 결함이면 edit <id> 로 갱신):`);
+    for (const r of hits) info(`  [${r.state}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`);
+    return 0;
+  }
+
   if (verb === "add") {
-    const id = flag(args, "id");
+    const source = flag(args, "source");
     const state = flag(args, "state") ?? "ossified";
     const value = flag(args, "value");
-    if (!id || !value) {
-      info('usage: sidecar architecture convergence add --id <ID> --state <s> --value "<핵심>" [--threshold "<재발조건>"] [--source <file>]');
-      info("  (value/threshold 에 셸 특수문자: --value - 로 stdin 읽기)");
+    // source is now REQUIRED — the learning is keyed by (and surfaced on touch of) the
+    // file it guards; a record with no source can never be surfaced (convergenceForFile),
+    // so the learning would be silently lost. id is AUTO-assigned from the source name
+    // (no longer hand-picked) so records stay uniquely keyed by the file they protect.
+    if (!source || !value) {
+      info('usage: sidecar architecture convergence add --source <file> --value "<핵심>" [--state <s>] [--threshold "<재발조건/해결>"]');
+      info("  · id 는 source 파일명에서 자동 부여(--id 로 명시 upsert override 가능) · value/threshold 셸 특수문자는 --value - 로 stdin");
       return 1;
     }
     if (!CONV_STATES.has(state)) return loudFail(`invalid state '${state}' (allowed: ${[...CONV_STATES].join("·")})`), 1;
-    const rec: ConvergenceRecord = { id, state, value, threshold: flag(args, "threshold") ?? "", source: flag(args, "source") ?? "" };
+    // review-before-append (root-cause · single-doc) — records must not just pile up
+    // unclassified. If this source already carries learnings, refuse a BLIND append:
+    // surface them so the agent reviews and either refines an existing one (`edit <id>`
+    // / explicit `--id` upsert) or — only if it's a genuinely DISTINCT learning —
+    // re-runs with `--new` to consciously add. (--id / --new = the reviewed paths.)
+    const explicitId = flag(args, "id");
+    const isNew = args.includes("--new");
+    const sameSource = records.filter((r) => r.source === source);
+    if (sameSource.length && !explicitId && !isNew) {
+      loudFail(`convergence add: ${source} 에 이미 학습 ${sameSource.length}건 — 무작정 추가 말고 먼저 검토하라:`);
+      for (const r of sameSource) info(`  [${r.state}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`);
+      info("  · 같은 결함의 재발/연장이면 → `architecture convergence edit <id> --value … [--threshold …]` 로 그 레코드 갱신(update-in-place)");
+      info("  · 정말 별개의 새 학습이면 → 같은 명령에 `--new` 를 붙여 의식적으로 추가");
+      return 1;
+    }
+    const id = explicitId ?? nextConvergenceId(source, new Set(records.map((r) => r.id ?? "")));
+    const rec: ConvergenceRecord = { id, state, value, threshold: flag(args, "threshold") ?? "", source };
     const idx = records.findIndex((r) => r.id === id);
-    if (idx >= 0) records[idx] = rec; // upsert (update-in-place)
+    if (idx >= 0) records[idx] = rec; // upsert (update-in-place) when an explicit --id matches
     else records.push(rec);
     if (!writeConvergence(records)) return 1;
-    ok(`convergence: ${idx >= 0 ? "updated" : "added"} ${id} (${records.length} total)`);
+    ok(`convergence: ${idx >= 0 ? "updated" : "added"} ${id} (source=${source} · ${records.length} total)`);
     return 0;
   }
 
@@ -343,7 +377,7 @@ async function convergenceVerb(args: string[]): Promise<number> {
     return 0;
   }
 
-  info("usage: sidecar architecture convergence {list|add|rm <id>|edit <id> [--state|--value|--threshold|--source]|stop-check}");
+  info("usage: sidecar architecture convergence {list|for <file>|add --source <f> --value <v> [--state|--threshold|--new]|rm <id>|edit <id> [--state|--value|--threshold|--source]|stop-check}");
   return 1;
 }
 
@@ -442,7 +476,7 @@ function convergenceStopCheck(): number {
   const reason =
     `재발 신호 "${matched}" 감지 — 응답에 \`🧬 CONVERGENCE\` 계정 줄이 없다. 진짜 재발(첫 발생 아님)이면 ` +
     (hint ??
-      "그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라: `sidecar architecture convergence list` 로 기존 확인 후 `sidecar architecture convergence add --id <ID> --state ossified --value \"<핵심>\" --threshold \"<재발조건/해결>\" --source <원인파일>` (commons root-cause).") +
+      "그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라 — 먼저 `sidecar architecture convergence for <원인파일>` 로 그 파일의 기존 학습을 꺼내 보고: 같은 결함의 재발/연장이면 `sidecar architecture convergence edit <id> --value … [--threshold …]` 로 그 레코드를 갱신(중복 누적 금지), 정말 새 학습이면 `sidecar architecture convergence add --source <원인파일> --value \"<핵심>\" --threshold \"<재발조건/해결>\"` (id 자동 부여 · 파일 터치 시 자동 표면화 · commons root-cause).") +
     " 그런 다음 응답에 `🧬 CONVERGENCE 기록: <ID>` 한 줄로, 첫 발생·오탐이면 `🧬 CONVERGENCE: 해당 없음` 한 줄로 명시하라 (둘 중 하나 필수).";
 
   // ENFORCE (config.convergenceEnforce, default on) — BLOCK until the marker appears.
@@ -606,6 +640,19 @@ export interface ConvergenceRecord {
   value?: string;
   threshold?: string;
   source?: string;
+}
+
+// auto-assign a stable, readable id from the source filename: `<slug>-<n>`, where slug is
+// the sanitized basename and n is the smallest free numeric suffix (collision-free across
+// rm/re-add). ids are no longer hand-picked — `add` derives one so the agent supplies only
+// the file + the learning, and every record stays uniquely keyed to the file it guards.
+export function nextConvergenceId(source: string, existing: Set<string>): string {
+  const base = source.split("/").pop() ?? source;
+  const slug = base.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "conv";
+  for (let n = 1; ; n++) {
+    const id = `${slug}-${n}`;
+    if (!existing.has(id)) return id;
+  }
 }
 
 function loadConvergence(): ConvergenceRecord[] {

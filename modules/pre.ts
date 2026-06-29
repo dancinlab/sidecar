@@ -20,7 +20,7 @@ import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
-// import { convergenceForFile } from "./architecture.ts"; // convergence-on-touch DISABLED (commented off)
+import { convergenceForFile } from "./architecture.ts";
 import { docWriteViolation } from "./docs.ts";
 import { descWriteViolation } from "./shadow.ts";
 import { commonsWriteViolation, dodontLengthWriteViolation } from "./commons.ts";
@@ -130,6 +130,17 @@ function emitBlock(id: string, reason: string): number {
 function emitWarn(id: string, reason: string): void {
   process.stderr.write(`[sidecar warn ${id}] ${reason}\n`);
   appendJsonl(LOGS.observations, { kind: "pre_warn", rule_id: id, reason });
+}
+
+// emitContext injects advisory text into the model's context via the PreToolUse
+// `additionalContext` channel (NOT stderr) WITHOUT a permissionDecision — so the write
+// still goes through the normal allow/ask flow, it just arrives with extra context. Used
+// for convergence-on-touch: surface a file's recorded recurrence learnings as the agent
+// edits it. Emit on the NON-block path only (a block aborts the write → context is moot).
+function emitContext(ctx: string): void {
+  process.stdout.write(
+    JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", additionalContext: ctx } }) + "\n"
+  );
 }
 
 // commit-lint gate — the GLOBAL enforcer. The lint commit-gate used to live ONLY in a
@@ -339,11 +350,11 @@ export async function preWrite(_args: string[]): Promise<number> {
   const content = String(input.content ?? input.new_string ?? "");
   if (!filePath) return 0;
 
-  // convergence-on-touch — DISABLED (commented off): surfacing the file's recurrence
-  // learnings on every Write/Edit added per-touch noise/tokens of uncertain value.
-  // The store + CRUD + lint stay; re-enable by uncommenting (+ the preTouch/import).
-  // const cv = convergenceForFile(filePath);
-  // if (cv) process.stderr.write(cv + "\n");
+  // convergence-on-touch — surface this file's recorded recurrence-prevention learnings
+  // as INJECTED context (additionalContext, not stderr) so the agent doesn't reintroduce
+  // a defect already learned-from. Computed up-front; emitted on the non-block path at the
+  // end of this function (a block aborts the write, so the learning is moot for that try).
+  const convergenceCtx = config().convergenceOnTouch ? convergenceForFile(filePath) : "";
 
   // handoff-guard — block scattered HANDOFF.md / INBOX.md / inbox/*.md; route to handoff.jsonl.
   if (config().handoffGuard) {
@@ -454,6 +465,8 @@ export async function preWrite(_args: string[]): Promise<number> {
     if (rule.action === "block") return emitBlock(rule.id, rule.reason);
     if (rule.action === "warn") emitWarn(rule.id, rule.reason);
   }
+  // nothing blocked — inject the file's recurrence learnings (if any) as context.
+  if (convergenceCtx) emitContext(convergenceCtx);
   return 0;
 }
 

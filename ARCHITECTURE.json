@@ -867,7 +867,7 @@
                     "name": "convergence 재발학습 store (구 convergence 모듈 흡수)",
                     "role": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
                     "id": "detail-convergence-store-convergence",
-                    "detail": "재발방지 학습은 인라인 마커가 아니라 ARCHITECTURE.json 최상위 `convergence.records[]`(id·state·value·threshold·source) 한곳에 산다(single-doc). CRUD=`architecture convergence {list|add|rm|edit}`(id-keyed·upsert). `lintConvergenceRecords`=커밋 게이트(CONVERGENCE-MALFORMED). `convergenceForFile`(터치 시 주입)은 현재 비활성(pre.ts 주석)"
+                    "detail": "재발방지 학습 SSOT=`convergence.records[]`(id·state·value·threshold·source). `add`=`--source` 필수·id 자동(파일명 slug)·동일 source 레코드 있으면 BLOCK→`for <file>` 검토 후 `edit`/`--new`(중복누적 금지). 터치 시 `convergenceForFile` 가 그 학습을 PreToolUse `additionalContext` inject(`convergenceOnTouch` ON)"
                   }
                 ]
               },
@@ -875,13 +875,13 @@
                 "name": "model",
                 "role": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축)",
                 "id": "module-model",
-                "detail": "`model {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(single-doc SSOT)에 등록. 필드 id·arch·version(아키텍처-family SemVer)·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재계산 대조, `prune`=HF+sha 확인 후 weight 삭제. writer=byte-불변 splice · `dataset` 평행"
+                "detail": "`model {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(single-doc SSOT)에 등록. 필드 id·arch·version(family SemVer)·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재대조 · `prune`=HF+sha 확인 후 weight 삭제 · writer=byte-불변 splice(`dataset` 평행)"
               },
               {
                 "name": "dataset",
                 "role": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
                 "id": "module-dataset",
-                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 ARCHITECTURE.json top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·version(아키텍처-family SemVer)·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar model` 과 동일 splice writer·flag 파서로 미러(byte-불변 top-level splice)"
+                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·version(family SemVer)·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar model` 과 동일 splice writer·flag 파서 미러(byte-불변)"
               },
               {
                 "name": "git-context",

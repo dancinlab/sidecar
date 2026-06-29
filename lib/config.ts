@@ -219,6 +219,11 @@ export interface SidecarConfig {
   // stop-check marker gate; stop_hook_active bounds it to one block per chain (no
   // wedge). false = legacy advisory warn-only. See modules/architecture.ts.
   convergenceEnforce: boolean;
+  // convergenceOnTouch surfaces a file's recorded recurrence-prevention learnings as
+  // INJECTED context (PreToolUse additionalContext) the moment the agent Writes/Edits
+  // that file, so it can't reintroduce a defect already learned-from. Keyed by the
+  // record's `source` filename (see convergenceForFile). false = no per-touch inject.
+  convergenceOnTouch: boolean;
   // companions — sibling-CLI command catalogs surfaced at SessionStart (`sidecar
   // companions inject`). DOMAIN-AGNOSTIC engine: this lists adjacent project CLIs
   // (e.g. `hexa`) by DATA, never hardcoded, so an agent knows their command surface
@@ -311,6 +316,7 @@ const DEFAULTS: SidecarConfig = {
   dangerGuard: { rmRfRoot: false },
   annotationGuard: { enabled: true, file: ".harness/tool-annotations.json" },
   convergenceEnforce: true,
+  convergenceOnTouch: true,
 };
 
 function deepMerge<T>(base: T, over: Partial<T>): T {

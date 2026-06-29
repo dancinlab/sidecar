@@ -1,8 +1,12 @@
 // sidecar easy {show|inject|scaffold|lint}
 // Auto-inject the "easy" (friendly) response style.
-// `inject` reads styles/easy.<lang>.md for the prefs response language and emits
-// it as UserPromptSubmit/SessionStart additionalContext so the 7-element pattern
-// is active from turn 0. The NL substrings 설명 / 쉽게 prepend an activation banner.
+// `inject` reads styles/easy.<lang>.md for the prefs response language. Two-tier by event:
+//   · UserPromptSubmit → the LEAN per-turn directive (the <!-- easy:lean --> region only) —
+//     cheap, every turn, keeps the 7-element pattern active without re-dumping the sample.
+//   · SessionStart/PreCompact/PostCompact → the FULL canonical reference once (cached prefix,
+//     survives compaction). `show` also prints the full body on demand.
+// Files lacking the marker fall back to full (back-compat). The NL substrings 설명 / 쉽게
+// prepend an activation banner.
 // `scaffold "<q>"` emits the empty 7-element round skeleton (deterministic) for an
 // LLM to fill — the backbone /sbs chat-form rounds wrap. `lint <file|->` scores a
 // rendered round on the styles' measurement axes (advisory · always exit 0 · no LLM).
@@ -33,14 +37,31 @@ function styleFile(): string {
   return fallback;
 }
 
-function header(src: string, banner: string): string {
+function header(src: string, banner: string, tier: "lean" | "full"): string {
+  const lead =
+    tier === "lean"
+      ? "Apply the 7-element friendly pattern (per-turn directive below) to user-facing prose this turn — " +
+        "icon · name · alias · plain-line · analogy · ASCII · compare. Full reference (gold examples · 4 ASCII " +
+        "templates · checklist) is injected once at SessionStart/Compact and on-demand via `sidecar easy show`."
+      : "The full easy-style canonical reference below is injected ONCE this session (cached prefix · survives " +
+        "compaction). The per-turn directive rides UserPromptSubmit. Apply the 7-element pattern to user-facing prose.";
   return (
     banner +
     `# response style: easy (auto-injected by sidecar easy · ${src})\n\n` +
-    "Apply the 7-element friendly pattern below to user-facing prose this turn — " +
-    "icon · name · alias · plain-line · analogy · ASCII · compare. Scope/exclusions per the canonical reference.\n\n" +
-    "---\n\n"
+    lead +
+    "\n\n---\n\n"
   );
+}
+
+// The per-turn slice = the <!-- easy:lean --> … <!-- /easy:lean --> region of the
+// canonical file. UserPromptSubmit emits only this lean directive (cheap, every turn);
+// SessionStart/Compact emit the FULL body once (cached prefix). NOT runtime truncation —
+// the full content is still delivered, just on the session-scope surface (ARCHITECTURE
+// inject-strategy: static reference = SessionStart/Compact once, behavioral rule = per-turn).
+const LEAN_RE = /<!--\s*easy:lean\s*-->([\s\S]*?)<!--\s*\/easy:lean\s*-->/;
+function extractLean(body: string): string | null {
+  const m = body.match(LEAN_RE);
+  return m ? m[1].trim() : null;
 }
 
 function nlTrigger(prompt: string): boolean {
@@ -132,6 +153,10 @@ export async function runEasy(args: string[]): Promise<number> {
 
   if (sub === "show") {
     info(`easy style: ${existsSync(file) ? file : "(missing)"} (response=${loadPrefs().response})`);
+    // Print the FULL canonical reference on demand — this is what the lean per-turn
+    // directive points to ("📖 … sidecar easy show") so the gold examples + 4 ASCII
+    // templates + checklist are reachable without the per-turn dump.
+    if (existsSync(file)) process.stdout.write("\n" + readFileSync(file, "utf8") + "\n");
     return 0;
   }
   if (sub === "scaffold") {
@@ -159,11 +184,17 @@ export async function runEasy(args: string[]): Promise<number> {
     if (!event) return 0;
     if (!existsSync(file)) return 0;
     const body = readFileSync(file, "utf8");
+    // Two-tier: UserPromptSubmit → lean per-turn directive (the easy:lean region);
+    // SessionStart/PreCompact/PostCompact → the full canonical reference, once.
+    // Fallback to full when a style file lacks the marker (e.g. ja/zh/ru not yet split).
+    const lean = extractLean(body);
+    const tier: "lean" | "full" = event === "UserPromptSubmit" && lean ? "lean" : "full";
+    const payload = tier === "lean" ? (lean as string) : body;
     const banner =
       event === "UserPromptSubmit" && nlTrigger(prompt)
         ? "🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)\n\n"
         : "";
-    const context = header(file, banner) + body;
+    const context = header(file, banner, tier) + payload;
     process.stdout.write(
       JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: context } }) + "\n"
     );

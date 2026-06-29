@@ -50,6 +50,7 @@ function hookSpec(): Record<string, unknown[]> {
     SessionStart: [
       entry("sidecar commons inject"),
       entry("sidecar recommend inject"),
+      entry("sidecar easy inject"), // full easy reference once (per-turn rides UserPromptSubmit = lean directive only)
       entry("sidecar architecture inject"),
       entry("sidecar git-context inject"),
       entry("sidecar toolkit inject"),
@@ -64,15 +65,17 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar architecture convergence stop-check"),
       entry("sidecar ing staleness-check"),
     ],
-    // Compaction survival — the per-turn injects (commons/recommend/prefs/easy) ride
+    // Compaction survival — the per-turn injects (commons/recommend/prefs/easy-lean) ride
     // UserPromptSubmit so they always return, but the SESSION-scoped injects
-    // (architecture·git-context·toolkit·companions·ing) only fire at SessionStart and
-    // EVAPORATE on auto-compaction (the design tree / command catalog / ING board
-    // vanish mid-session). Re-inject them on PreCompact (so the summarizer still sees
-    // them) AND PostCompact (fresh after the new context window opens). Mirrors
-    // sidecar `project-tape` PreCompact+PostCompact re-injection.
+    // (architecture·git-context·toolkit·companions·ing + easy's FULL reference) only fire
+    // at SessionStart and EVAPORATE on auto-compaction (the design tree / command catalog /
+    // ING board / easy gold-examples+templates vanish mid-session). Re-inject them on
+    // PreCompact (so the summarizer still sees them) AND PostCompact (fresh after the new
+    // context window opens). Mirrors sidecar `project-tape` PreCompact+PostCompact re-inject.
+    // (easy inject auto-emits the full reference on these events, the lean slice on UserPromptSubmit.)
     PreCompact: [
       entry("sidecar commons inject"),
+      entry("sidecar easy inject"),
       entry("sidecar architecture inject"),
       entry("sidecar git-context inject"),
       entry("sidecar toolkit inject"),
@@ -81,6 +84,7 @@ function hookSpec(): Record<string, unknown[]> {
     ],
     PostCompact: [
       entry("sidecar commons inject"),
+      entry("sidecar easy inject"),
       entry("sidecar architecture inject"),
       entry("sidecar git-context inject"),
       entry("sidecar toolkit inject"),

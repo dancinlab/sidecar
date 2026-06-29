@@ -256,7 +256,7 @@
       {
         "id": "INJECT_DOC_SKELETON_ONDEMAND",
         "state": "ossified",
-        "value": "정적 참조 doc(설계 트리)은 매 UserPromptSubmit 풀-주입 금지 — Claude Code canonical 대용량-doc 패턴은 스켈레톤(요약+목차)+온디맨드 Read. 풀덤프는 10KB additionalContext 한도 초과→하네스가 파일-폴백(2KB 프리뷰만)+매 턴 토큰 재지불. 정적 doc=SessionStart/Compact 1회(캐시 prefix 재사용), per-turn 행동규칙(commons·recommend·prefs·easy·load·ing)만 매턴 유지. 턴마감 게이트는 Stop 훅으로 결정적 강제, 매턴 리마인더로 흩지 말 것",
+        "value": "정적 참조 doc(설계 트리)은 매 UserPromptSubmit 풀-주입 금지 — Claude Code canonical 대용량-doc 패턴은 스켈레톤(요약+목차)+온디맨드 Read. 풀덤프는 10KB additionalContext 한도 초과→하네스가 파일-폴백(2KB 프리뷰만)+매 턴 토큰 재지불. 정적 doc=SessionStart/Compact 1회(캐시 prefix 재사용), per-turn 행동규칙(commons·recommend·prefs·load·ing)만 매턴 유지. easy 는 둘을 가진 2-tier: lean 행동지침(styles/easy.<lang>.md 의 `<!-- easy:lean -->` 영역)만 UserPromptSubmit 매턴 + gold예시·4종ASCII템플릿·체크리스트 풀 레퍼런스는 SessionStart/Compact 1회 + `easy show` 온디맨드(event 분기 emit · 마커 없으면 풀-폴백 · 런타임 절단 아님). 턴마감 게이트는 Stop 훅으로 결정적 강제, 매턴 리마인더로 흩지 말 것",
         "threshold": "inject 소스 편집 시 — 정적 doc 을 UserPromptSubmit 에 다시 걸거나 풀-주입으로 되돌리면 재발",
         "source": "modules/architecture.ts"
       },
@@ -455,7 +455,7 @@
             "name": "PreCompact·PostCompact",
             "role": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
             "id": "surface-precompact-postcompact",
-            "detail": "매-턴 inject(commons·recommend·prefs·easy)는 UserPromptSubmit 라 컴팩션 후 복귀하지만, 세션-스코프 inject(architecture·git-context·toolkit·companions·ing)는 SessionStart 에서만 떠 컴팩션 시 증발 → PreCompact(요약기가 보도록)+PostCompact(새 윈도우 직후)에 그 6개 재주입. additionalContext(`hookEventName` echo)"
+            "detail": "매-턴 inject(commons·recommend·prefs·easy-lean·load·ing)는 UserPromptSubmit 라 컴팩션 후 복귀, 세션-스코프(architecture·git-context·toolkit·companions·ing + easy 풀-레퍼런스)는 SessionStart 전용→컴팩션 시 증발 → PreCompact+PostCompact 재주입. easy=2-tier(lean 매턴/풀 세션1회). additionalContext(`hookEventName` echo)"
           },
           {
             "name": "체크포인트",

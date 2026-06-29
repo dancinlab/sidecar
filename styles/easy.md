@@ -3,6 +3,20 @@
 > Canonical reference for the easy (friendly) user-facing-response style.
 > Activated by `/easy` or a natural-language trigger (`make it easier`, `friendly mode`, `explain it simply`, …).
 
+<!-- easy:lean -->
+## Per-turn directive (lean — only this block is injected each UserPromptSubmit)
+
+Apply the **7-element friendly pattern** to user-facing prose — for every non-trivial concept:
+🔹 ① icon · ② name · ③ alias · ④ one-line plain description · ⑤ everyday analogy · ⑥ ASCII diagram · ⑦ compare-vs the nearest existing tool.
+
+Pick the ASCII diagram by shape: change/improvement→**before/after**, hierarchy→**tree**, option A·B→**side-by-side**, part flow→**structure sketch**.
+
+In scope (Tier-A): interactive chat · narrative stdout/stderr · docs cold entries · error trailers (cause+fix).
+Excluded: code identifiers · math symbols · API names · paths · DOIs · commit SHAs · CI machine JSON/JSONL output.
+
+📖 Gold examples · full 4-template ASCII bodies · the plain-language checklist = **injected once at SessionStart/Compact** + on-demand `sidecar easy show` (never re-dumped per turn).
+<!-- /easy:lean -->
+
 ## Surfaces in scope (Tier-A)
 
 - Interactive CLI chat (Claude Code TUI)

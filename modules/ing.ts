@@ -267,7 +267,7 @@ export async function runIng(args: string[]): Promise<number> {
       return 0;
     }
     if (payload?.stop_hook_active) return 0; // already nudged this chain — don't wedge
-    if (!isManaged()) return 0; // sidecar-managed only (any durable marker, not just the config file)
+    if (!isManaged()) return 0; // sidecar-managed only (repo-root CLAUDE.md present)
     const tp = payload?.transcript_path ?? payload?.transcriptPath;
     if (!tp) return 0;
     const text = lastAssistantText(String(tp));

@@ -280,6 +280,13 @@
         "value": "preWrite section-aware write-guards (commonsWriteViolation·dodontLengthWriteViolation) run on full-content Write ONLY, never on Edit's new_string fragment — a fragment truncates its boundary ## section body and false-positives it as COMMONS-NO-DODONT (adding ## Project/## Tree to a do/dont CLAUDE.md while anchoring on the next rule's ## header hard-DENIED a legit edit). Edit fragments fall through to commit-time lint backstop (full-file + claudeMdExempt).",
         "threshold": "재발조건: pre.ts 가 input.content/input.new_string 을 한 content 로 합쳐 section-검증 가드에 넘기면 Edit fragment 가 잘린 섹션으로 오차단. 해결: isEditFragment 로 두 가드만 skip(#267); desc/doc/naming(단일줄·파일명) 가드는 계속 실행.",
         "source": "modules/pre.ts"
+      },
+      {
+        "id": "architecture-json-1",
+        "state": "ossified",
+        "value": "ARCHITECTURE.json detail 셀이 300자 ARCH-BIG-CELL cap 을 다시 넘기는 회귀 — 특히 게이트/enforce 노드(isManaged·ing/architecture stop-check)에 메커니즘·근거 산문을 욱여넣을 때 한 셀이 슬그머니 cap 초과 → 다음 사람의 lint/ship 게이트를 막는다.",
+        "threshold": "재발조건: detail 셀에 precedents/메커니즘 산문을 누적. 해결: 셀 편집 직후 'sidecar lint' 로 ARCH-BIG-CELL 확인 → kernel(요지)만 남기고 precedents/이력은 CHANGELOG+git 으로, 길면 자식 노드로 분해(commons single-doc c4).",
+        "source": "ARCHITECTURE.json"
       }
     ]
   },

@@ -29,8 +29,10 @@ const ZAI_BASE_URL = "https://api.z.ai/api/anthropic";
 const ZAI_ENV: Record<string, string> = {
   ANTHROPIC_BASE_URL: ZAI_BASE_URL,
   API_TIMEOUT_MS: "3000000",
-  ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-4.7",
-  ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-4.7",
+  // 1M-context auto-compaction window — pairs with the glm-5.2[1m] (1M) tier.
+  CLAUDE_CODE_AUTO_COMPACT_WINDOW: "1000000",
+  ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-5.2[1m]",
+  ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-5.2[1m]",
   ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.5-air",
 };
 // Every env key the GLM profile owns — `claude` strips exactly these (and nothing
@@ -102,6 +104,7 @@ async function toGlm(d: Record<string, unknown>): Promise<number> {
   saveSettings(d);
   ok(`${badge("glm")}  switch → GLM (Z.AI) ${already ? "(refreshed)" : ""}— ${ZAI_BASE_URL}`);
   info(`  models: opus/sonnet=${ZAI_ENV.ANTHROPIC_DEFAULT_OPUS_MODEL} · haiku=${ZAI_ENV.ANTHROPIC_DEFAULT_HAIKU_MODEL} · token=${mask(token)}`);
+  info(`  env:    API_TIMEOUT_MS=${ZAI_ENV.API_TIMEOUT_MS} · CLAUDE_CODE_AUTO_COMPACT_WINDOW=${ZAI_ENV.CLAUDE_CODE_AUTO_COMPACT_WINDOW}`);
   restartHint();
   return 0;
 }
@@ -129,6 +132,7 @@ async function status(d: Record<string, unknown>, existed: boolean): Promise<num
     info(`  base_url: ${env.ANTHROPIC_BASE_URL}`);
     info(`  token:    ${mask(env.ANTHROPIC_AUTH_TOKEN ?? "")}`);
     info(`  models:   opus/sonnet=${env.ANTHROPIC_DEFAULT_OPUS_MODEL ?? "?"} · haiku=${env.ANTHROPIC_DEFAULT_HAIKU_MODEL ?? "?"}`);
+    info(`  env:      API_TIMEOUT_MS=${env.API_TIMEOUT_MS ?? "?"} · CLAUDE_CODE_AUTO_COMPACT_WINDOW=${env.CLAUDE_CODE_AUTO_COMPACT_WINDOW ?? "?"}`);
   } else {
     info("  base_url: (default Anthropic)");
   }

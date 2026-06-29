@@ -273,6 +273,13 @@
         "value": "isManaged() 'managed repo' 게이트 기준은 모든 온보딩 repo 가 보편적으로 갖는 단일 마커(repo-root CLAUDE.md)로 키잉한다. 좁은/부분 마커(harness.config.json 단일 → 그 뒤 다중 마커 OR)로 키잉하면 그 마커 없는 repo 에서 progress Stop-게이트(ing 등)가 silent dead 가 되고, always-on inject 는 계속 떠서 '새 프로젝트에서 자동화가 안 된다'는 비대칭으로 재발한다.",
         "threshold": "게이트/거버넌스가 '새 repo 에서 조용히 아무것도 안 한다'는 신호 → 게이트 로직이 아니라 isManaged 의 marker 기준부터 의심. 새 활성-조건 마커 추가 유혹이 들면 보편 마커(CLAUDE.md) 하나로 수렴시킬 것 (마커 OR-리스트 확장 금지).",
         "source": "lib/config.ts"
+      },
+      {
+        "id": "pre-ts-1",
+        "state": "ossified",
+        "value": "preWrite section-aware write-guards (commonsWriteViolation·dodontLengthWriteViolation) run on full-content Write ONLY, never on Edit's new_string fragment — a fragment truncates its boundary ## section body and false-positives it as COMMONS-NO-DODONT (adding ## Project/## Tree to a do/dont CLAUDE.md while anchoring on the next rule's ## header hard-DENIED a legit edit). Edit fragments fall through to commit-time lint backstop (full-file + claudeMdExempt).",
+        "threshold": "재발조건: pre.ts 가 input.content/input.new_string 을 한 content 로 합쳐 section-검증 가드에 넘기면 Edit fragment 가 잘린 섹션으로 오차단. 해결: isEditFragment 로 두 가드만 skip(#267); desc/doc/naming(단일줄·파일명) 가드는 계속 실행.",
+        "source": "modules/pre.ts"
       }
     ]
   },

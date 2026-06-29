@@ -48,7 +48,6 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar ing inject"),
     ],
     SessionStart: [
-      entry("sidecar switch inject"),
       entry("sidecar commons inject"),
       entry("sidecar recommend inject"),
       entry("sidecar easy inject"), // full easy reference once (per-turn rides UserPromptSubmit = lean directive only)

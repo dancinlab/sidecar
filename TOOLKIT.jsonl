@@ -7,7 +7,7 @@
 {"id":"self-update","kind":"setup","usage":"self-update","use":"git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main"}
 {"id":"shadow","kind":"setup","usage":"shadow [plan|remove|--force]","use":"mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)"}
 {"id":"ship","kind":"setup","usage":"ship [--no-doc]","use":"one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation"}
-{"id":"switch","kind":"setup","usage":"switch {glm|claude|toggle|status|inject}","use":"swap Claude Code's backend between the OFFICIAL Anthropic API and Z.AI GLM by rewriting the GLOBAL ~/.claude/settings.json env (ANTHROPIC_BASE_URL/AUTH_TOKEN + GLM model map) — Z.AI key from 'secret get zai.api_key' (never on argv); env loads at startup so a restart is needed. inject = SessionStart 'MODEL : CLAUDE|GLM' readout"}
+{"id":"switch","kind":"setup","usage":"switch {glm|claude|toggle|status}","use":"swap Claude Code's backend between the OFFICIAL Anthropic API and Z.AI GLM by rewriting the GLOBAL ~/.claude/settings.json env (ANTHROPIC_BASE_URL/AUTH_TOKEN + GLM model map) — Z.AI key from 'secret get zai.api_key' (never on argv); env loads at startup so a Claude Code restart is needed to take effect"}
 {"id":"pre","kind":"hook","usage":"pre bash","use":"PreToolUse(Bash)  — enforcement match → block/warn"}
 {"id":"pre-write","kind":"hook","usage":"pre write","use":"PreToolUse(Write/Edit) — path/content rules"}
 {"id":"pre-askq","kind":"hook","usage":"pre askq","use":"PreToolUse(AskUserQuestion) — deny option-box → ask in plain chat (config.askqText)"}

@@ -1,4 +1,4 @@
-// sidecar switch [glm|claude|toggle|status|inject]
+// sidecar switch [glm|claude|toggle|status]
 //   Swap Claude Code's backend between the OFFICIAL Anthropic API and Z.AI's
 //   GLM models (Anthropic-compatible endpoint). Z.AI exposes an
 //   Anthropic-protocol gateway, so the switch is purely a matter of which
@@ -19,7 +19,6 @@ import { resolve, dirname } from "node:path";
 import { homedir } from "node:os";
 import { info, ok, warn } from "../lib/log.ts";
 import { secretGet, secretBin } from "./secret.ts";
-import { readStdin } from "../lib/exec.ts";
 
 type Profile = "glm" | "claude";
 
@@ -78,17 +77,6 @@ function mask(tok: string): string {
 // the active provider is the first thing the eye lands on.
 function badge(p: Profile): string {
   return p === "glm" ? "[ GLM ]" : "[ CLAUDE ]";
-}
-
-// The firing hook event name, echoed back so the additionalContext attaches to
-// the right event (SessionStart / PreCompact / PostCompact). Defaults to SessionStart.
-function eventName(): string {
-  try {
-    const j = JSON.parse(readStdin());
-    return String(j.hook_event_name ?? j.hookEventName ?? "SessionStart");
-  } catch {
-    return "SessionStart";
-  }
 }
 
 function restartHint(): void {
@@ -168,21 +156,10 @@ export async function runSwitch(args: string[]): Promise<number> {
     return activeProfile(env) === "glm" ? toClaude(d) : toGlm(d);
   }
   if (sub === "status" || sub === "show") return status(d, existed);
-  if (sub === "inject") {
-    // SessionStart hook: surface the active backend to the agent + user as
-    // `MODEL : CLAUDE` / `MODEL : GLM` (additionalContext on the firing event).
-    const env = (d.env ?? {}) as Record<string, string>;
-    const ctx = `MODEL : ${activeProfile(env) === "glm" ? "GLM" : "CLAUDE"}`;
-    process.stdout.write(
-      JSON.stringify({ hookSpecificOutput: { hookEventName: eventName(), additionalContext: ctx } }) + "\n"
-    );
-    return 0;
-  }
 
-  info("usage: sidecar switch {glm|claude|toggle|status|inject}");
+  info("usage: sidecar switch {glm|claude|toggle|status}");
   info("  glm    → Z.AI GLM (Anthropic-compatible · key from `secret get zai.api_key`)");
   info("  claude → official Anthropic API (strips the GLM env keys)");
   info("  toggle → flip to the other backend · status → show the active backend");
-  info("  inject → SessionStart additionalContext: 'MODEL : CLAUDE|GLM'");
   return 1;
 }

@@ -3,8 +3,11 @@
 // ARCHITECTURE.json as the top-level `models` array (a sibling key of
 // `meta`/`sections`/`convergence` — same single-doc home as the convergence
 // store), so the model registry is part of the design tree, not a scattered
-// side-file. One object per model tracks identity (arch · params · base · tier ·
-// sha256 · local path · HF repo) plus three living axes the user asked for —
+// side-file. One object per model tracks identity (arch · version · params ·
+// base · tier · sha256 · local path · HF repo) plus three living axes the user
+// asked for —
+//   version    아키텍처-family SemVer, e.g. ByteGPT 1.0 · ConvMoE 2.1 (registry
+//              META field — NOT a filename suffix; canonical-naming stays clean)
 //   gates{}    검증 충족도  gate-satisfaction, e.g. {"C1":"pass","C4":"fail","heldout":"4/4 DESCENT"}
 //   progress   진행척도     free-text lifecycle, e.g. "trained·serialized·DIRECTIONAL(engine-native pending)"
 //   features[] 특징         tags, e.g. ["ko","en","sns","ConvMoE","303M"]
@@ -32,6 +35,7 @@ const ARCH = resolve(REPO_ROOT, ARCH_REL);
 type Model = {
   id: string;
   arch?: string;
+  version?: string; // 아키텍처-family SemVer, e.g. ByteGPT 1.0 · ConvMoE 2.1
   params?: string;
   base?: string;
   tier?: string;
@@ -47,7 +51,7 @@ type Model = {
   updated?: string; // ISO timestamp
 };
 
-const CORE = ["arch", "params", "base", "tier", "sha256", "path", "hf", "visibility", "progress", "note"] as const;
+const CORE = ["arch", "version", "params", "base", "tier", "sha256", "path", "hf", "visibility", "progress", "note"] as const;
 
 // Read the repo-root ARCHITECTURE.json `.models[]`. Missing file or absent key → [].
 function load(): Model[] {
@@ -172,8 +176,8 @@ function usage(): number {
       "sidecar model — per-repo model registry (SSOT = ARCHITECTURE.json .models[])",
       "  list [--tier T] [--json]            모든 모델 (검증 충족도·진행·특징)",
       "  show <id>                           한 모델 전체",
-      "  add  <id> [--arch --params --base --tier --sha --path --hf --visibility --progress --note --features a,b,c]",
-      "  set  <id> <field> <value...>        핵심 필드 갱신 (arch/params/base/tier/sha256/path/hf/visibility/progress/note)",
+      "  add  <id> [--arch --version --params --base --tier --sha --path --hf --visibility --progress --note --features a,b,c]",
+      "  set  <id> <field> <value...>        핵심 필드 갱신 (arch/version/params/base/tier/sha256/path/hf/visibility/progress/note)",
       "  gate <id> <K=V> [K=V...]            검증 충족도 기록 (예: C1=pass C4=fail heldout='4/4 DESCENT')",
       "  feat <id> <tag...> [--add]          특징 태그 set (또는 --add 로 추가)",
       "  verify <id>                         weight 파일 sha256 재계산 → 기록값과 대조 (무결성)",
@@ -203,8 +207,9 @@ export async function runModel(args: string[]): Promise<number> {
     info(`MODELS — ${rows.length} (SSOT ${ARCH_REL} .models[])`);
     for (const m of rows) {
       const tags = (m.features ?? []).join(",");
+      const ver = m.version ? ` v${m.version}` : "";
       process.stdout.write(
-        `  ${m.pruned ? "📦" : "·"} ${m.id.padEnd(22)} ${m.arch ?? "?"}/${m.params ?? "?"}  [${m.tier ?? "-"}]\n` +
+        `  ${m.pruned ? "📦" : "·"} ${m.id.padEnd(22)} ${m.arch ?? "?"}${ver}/${m.params ?? "?"}  [${m.tier ?? "-"}]\n` +
           `     검증 ${gateBadge(m.gates)}\n` +
           `     진행 ${m.progress ?? "—"}\n` +
           (tags ? `     특징 ${tags}\n` : "") +

@@ -875,13 +875,13 @@
                 "name": "model",
                 "role": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축)",
                 "id": "module-model",
-                "detail": "`model {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(single-doc SSOT)에 등록. 필드 id·arch·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재계산 대조, `prune`=HF+sha 확인 후 weight 삭제. writer=byte-불변 splice · `dataset` 평행"
+                "detail": "`model {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(single-doc SSOT)에 등록. 필드 id·arch·version(아키텍처-family SemVer)·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재계산 대조, `prune`=HF+sha 확인 후 weight 삭제. writer=byte-불변 splice · `dataset` 평행"
               },
               {
                 "name": "dataset",
                 "role": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
                 "id": "module-dataset",
-                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 ARCHITECTURE.json top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar model` 과 동일 splice writer·flag 파서로 미러(byte-불변 top-level splice)"
+                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 ARCHITECTURE.json top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·version(아키텍처-family SemVer)·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar model` 과 동일 splice writer·flag 파서로 미러(byte-불변 top-level splice)"
               },
               {
                 "name": "git-context",

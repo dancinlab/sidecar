@@ -3,8 +3,10 @@
 // live in the repo-root ARCHITECTURE.json as the top-level `datasets` array (a
 // sibling key of `models`/`meta`/`sections`/`convergence` — same single-doc home
 // as the model registry), so corpora are part of the design tree, not a
-// scattered side-file. One object per dataset tracks identity (repo_id · lang ·
-// register · rows · size · visibility · role) plus two flexible axes —
+// scattered side-file. One object per dataset tracks identity (repo_id · version ·
+// lang · register · rows · size · visibility · role) plus two flexible axes —
+//   version        아키텍처-family SemVer (registry META field — NOT a filename
+//                  suffix; canonical-naming stays clean)
 //   lang_verified  언어검증  is the ko/en claim MEASURED (a_chat_registers), not just intended?
 //   features[]     특징      tags, e.g. ["ko","general","fineweb2"]
 // Generic across repos: sidecar fixes the core fields + the flexible axes; each
@@ -28,6 +30,7 @@ const ARCH = resolve(REPO_ROOT, ARCH_REL);
 type Dataset = {
   id: string;
   repo_id?: string; // HF repo_id, e.g. dancinlab/anima-corpus-ko-general
+  version?: string; // 아키텍처-family SemVer, e.g. 1.0 · 2.1
   lang?: string; // ko | en
   register?: string; // general | sns
   rows?: number | string;
@@ -40,7 +43,7 @@ type Dataset = {
   updated?: string; // ISO timestamp
 };
 
-const CORE = ["repo_id", "lang", "register", "rows", "size", "visibility", "role", "note"] as const;
+const CORE = ["repo_id", "version", "lang", "register", "rows", "size", "visibility", "role", "note"] as const;
 
 // Read the repo-root ARCHITECTURE.json `.datasets[]`. Missing file or absent key → [].
 function load(): Dataset[] {
@@ -175,8 +178,8 @@ function usage(): number {
       "sidecar dataset — per-repo dataset registry (SSOT = ARCHITECTURE.json .datasets[])",
       "  list [--lang ko|en] [--register general|sns] [--json]   모든 데이터셋 + 4칸 lang×register 그리드",
       "  show <id>                            한 데이터셋 전체 JSON",
-      "  add  <id> [--repo_id --lang --register --rows --size --visibility --role --note --lang-verified --features a,b,c]",
-      "  set  <id> <field> <value...>         핵심 필드 갱신 (repo_id/lang/register/rows/size/visibility/role/note)",
+      "  add  <id> [--repo_id --version --lang --register --rows --size --visibility --role --note --lang-verified --features a,b,c]",
+      "  set  <id> <field> <value...>         핵심 필드 갱신 (repo_id/version/lang/register/rows/size/visibility/role/note)",
       "  feat <id> <tag...> [--add]           특징 태그 set (또는 --add 로 추가)",
       "  rm <id> --yes                        registry 항목 제거",
     ].join("\n"),
@@ -204,8 +207,9 @@ export async function runDataset(args: string[]): Promise<number> {
     info(`DATASETS — ${rows.length} (SSOT ${ARCH_REL} .datasets[])`);
     for (const d of rows) {
       const tags = (d.features ?? []).join(",");
+      const ver = d.version ? ` v${d.version}` : "";
       process.stdout.write(
-        `  · ${d.id.padEnd(26)} ${d.lang ?? "?"}/${d.register ?? "?"}  (${badge(d)})\n` +
+        `  · ${d.id.padEnd(26)} ${d.lang ?? "?"}/${d.register ?? "?"}${ver}  (${badge(d)})\n` +
           (tags ? `     특징 ${tags}\n` : "") +
           (d.repo_id ? `     hf   ${d.repo_id}\n` : ""),
       );

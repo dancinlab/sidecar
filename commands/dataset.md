@@ -9,7 +9,7 @@ allowed-tools: Bash
 프로젝트(repo)마다 **자체** 데이터셋/코퍼스 관리 — `sidecar model` 의 데이터-짝. SSOT = repo-root `ARCHITECTURE.json` 의 top-level `datasets` 배열(설계 SSOT 한곳 · `models`/`meta`/`sections`/`convergence` 와 형제 키 · 별도 jsonl scatter 없음). sidecar는 핵심 필드 + 유연축만 고정하고, register/role 라벨·특징 태그는 각 repo가 자기 도메인대로 채운다(프로젝트 결합 0).
 
 ## 데이터셋 레코드
-핵심: `id` · `repo_id`(HF) · `lang`(ko|en) · `register`(general|sns) · `rows` · `size` · `visibility` · `role`(예 chat-4cell).
+핵심: `id` · `repo_id`(HF) · `version`(아키텍처-family SemVer, 예 1.0 · 2.1 — 레지스트리 META 필드지 파일명 접미사 아님) · `lang`(ko|en) · `register`(general|sns) · `rows` · `size` · `visibility` · `role`(예 chat-4cell).
 유연축:
 - **`lang_verified` — 언어검증**: ko/en 주장이 *측정*된 것인지(a_chat_registers — 의도만 아님). `✓lang`/`✗lang` 표시.
 - **`features[]` — 특징**: 태그. 예 `["ko","general","fineweb2"]`.
@@ -18,7 +18,7 @@ allowed-tools: Bash
 ```
 sidecar dataset list [--lang ko|en] [--register general|sns] [--json]   모든 데이터셋 + 4칸 lang×register 그리드
 sidecar dataset show <id>                      한 데이터셋 전체 JSON
-sidecar dataset add  <id> [--repo_id --lang --register --rows --size --visibility --role --note --lang-verified --features a,b,c]
+sidecar dataset add  <id> [--repo_id --version --lang --register --rows --size --visibility --role --note --lang-verified --features a,b,c]
 sidecar dataset set  <id> <field> <value...>   핵심 필드 갱신
 sidecar dataset feat <id> <tag...> [--add]     특징 set (--add=추가)
 sidecar dataset rm <id> --yes                  registry 항목 제거 (데이터 파일은 그대로)

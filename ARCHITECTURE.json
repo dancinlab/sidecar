@@ -434,13 +434,13 @@
                 "name": "ing stop-check",
                 "role": "매턴 ING 상태 보고 강제 (decision:block)",
                 "id": "guard-ing-stop-check",
-                "detail": "매 응답에 `🔄 ING` 줄(`🔄 ING 갱신: …` 또는 `🔄 ING: 변동 없음`)이 없으면 차단. 코드편집 아닌 측정·verdict·에이전트착륙 진행도 포착(파일-edit 무관·response-marker 기반, recommend stop-check 동형). 게이트=`isManaged()`(lib/config.ts): 내구성 거버넌스 마커(harness/sidecar.config.json·ARCHITECTURE.json/.md·.harness/.sidecar dir) 중 하나라도 있으면 발화 — config-파일 단일 의존 폐기(대다수 repo 가 config 없이 ARCHITECTURE/보드만 가져 게이트가 죽던 결함). loop guard 1회/chain. (modules/ing.ts)"
+                "detail": "매 응답에 `🔄 ING` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. 코드편집뿐 아니라 측정·verdict·에이전트착륙도 포착(response-marker 기반·recommend stop-check 동형). 게이트=`isManaged()`(lib/config.ts): 내구성 거버넌스 마커(config.json·ARCHITECTURE·.harness/.sidecar dir·repo-root CLAUDE.md) 중 하나라도 있으면 발화. loop guard 1회/chain. (modules/ing.ts)"
               },
               {
                 "name": "architecture stop-check",
                 "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
                 "id": "guard-architecture-stop-check",
-                "detail": "ing stop-check 의 설계판 — 단 **조건부**: working tree 에 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree(읽기전용 턴)=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). 게이트=`pick()`(ARCHITECTURE.json/.md 존재)=설계 SSOT subject-게이트 — 없으면 '갱신하라' nag 가 무의미하므로 no-op(inject 도 동일 침묵), repo 가 설계파일을 가지는 순간 자동 발화(harness.config.json 무관). (modules/architecture.ts)"
+                "detail": "ing stop-check 의 설계판 — **조건부**: 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). 게이트=`pick()`(ARCHITECTURE.json/.md 존재)=설계 SSOT subject-게이트, 설계파일 생기는 순간 자동 발화. (modules/architecture.ts)"
               }
             ]
           },

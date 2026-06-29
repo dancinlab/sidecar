@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { info, ok, warn, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
-import { config } from "../lib/config.ts";
+import { config, isManaged } from "../lib/config.ts";
 import { ingStalenessWarn, resetIngStaleness } from "./ing-staleness.ts";
 import { lastAssistantText } from "./recommend.ts";
 
@@ -267,7 +267,7 @@ export async function runIng(args: string[]): Promise<number> {
       return 0;
     }
     if (payload?.stop_hook_active) return 0; // already nudged this chain — don't wedge
-    if (!existsSync(resolve(REPO_ROOT, "harness.config.json"))) return 0; // sidecar-managed only
+    if (!isManaged()) return 0; // sidecar-managed only (any durable marker, not just the config file)
     const tp = payload?.transcript_path ?? payload?.transcriptPath;
     if (!tp) return 0;
     const text = lastAssistantText(String(tp));

@@ -363,6 +363,22 @@ export function config(): SidecarConfig {
   return _cfg;
 }
 
+// Is this repo "sidecar-managed" — i.e. should the progress Stop-gates (ing /
+// architecture drift enforcement) fire here? Keyed NOT on a single config file but on
+// any DURABLE governance marker: an explicit config (either the legacy harness.config.json
+// or the post-rename sidecar.config.json — ING #11), a design SSOT (ARCHITECTURE.json/.md),
+// or a state dir (.harness/.sidecar). Most onboarded repos grow an ARCHITECTURE.json or an
+// ING board long before anyone drops a config file, so keying solely on harness.config.json
+// left those gates silently dead in ~3/4 of dancinlab repos while the always-on injects
+// (commons/recommend/…) still fired — the asymmetry that read as "auto-update doesn't work
+// in new projects". Archives without any marker stay quiet.
+export function isManaged(): boolean {
+  for (const f of ["harness.config.json", "sidecar.config.json", "ARCHITECTURE.json", "ARCHITECTURE.md"]) {
+    if (existsSync(resolve(REPO_ROOT, f))) return true;
+  }
+  return existsSync(resolve(REPO_ROOT, ".harness")) || existsSync(resolve(REPO_ROOT, ".sidecar"));
+}
+
 // Resolve a rule-config file: prefer the repo override, else the bundled default.
 export function resolveRuleFile(repoRelOrAbs: string, bundledName: string): string {
   const candidate = isAbsolute(repoRelOrAbs) ? repoRelOrAbs : resolve(REPO_ROOT, repoRelOrAbs);

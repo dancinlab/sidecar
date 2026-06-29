@@ -216,7 +216,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
   // has uncommitted code/ARCHITECTURE changes AND the response carries no `🏛️ ARCHITECTURE`
   // line — forcing the agent to update the design tree (or affirm `🏛️ ARCHITECTURE: 변동 없음`)
   // before ending a turn that touched code/structure (catches code↔ARCHITECTURE drift,
-  // commons cycle-docs-pr). Clean tree (read-only turn) → no-op. sidecar-managed repos only.
+  // commons cycle-docs-pr). Clean tree (read-only turn) → no-op. Gated on ARCHITECTURE.json
+  // presence (the design SSOT it protects), not on harness.config.json.
   if (sub === "stop-check") {
     let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
     try {
@@ -225,7 +226,7 @@ export async function runArchitecture(args: string[]): Promise<number> {
       return 0;
     }
     if (payload?.stop_hook_active) return 0; // already nudged this chain
-    if (!existsSync(resolve(REPO_ROOT, "harness.config.json"))) return 0; // sidecar-managed only
+    if (!pick()) return 0; // gate on the design SSOT itself — no ARCHITECTURE.json ⇒ nothing to drift from (and the "update it" nag would be nonsensical). Auto-activates the moment a repo grows one, no harness.config.json needed.
     const tp = payload?.transcript_path ?? payload?.transcriptPath;
     if (!tp) return 0;
     const text = lastAssistantText(String(tp));

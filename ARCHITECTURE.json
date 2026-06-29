@@ -266,6 +266,13 @@
         "value": "agent-facing nudge text lives in the DATA file (config/convergence-triggers.json hint field), which OVERRIDES the code fallback in architecture.ts convergenceStopCheck. Editing only the code fallback leaves the live nudge stale (the user spotted the old --id wording still showing).",
         "threshold": "Updating a nudge/guard message: change the config JSON hint (the authoritative live string the Stop hook reads), not just the code fallback — grep the repo for the old phrasing to catch every copy.",
         "source": "config/convergence-triggers.json"
+      },
+      {
+        "id": "config-ts-1",
+        "state": "ossified",
+        "value": "isManaged() 'managed repo' 게이트 기준은 모든 온보딩 repo 가 보편적으로 갖는 단일 마커(repo-root CLAUDE.md)로 키잉한다. 좁은/부분 마커(harness.config.json 단일 → 그 뒤 다중 마커 OR)로 키잉하면 그 마커 없는 repo 에서 progress Stop-게이트(ing 등)가 silent dead 가 되고, always-on inject 는 계속 떠서 '새 프로젝트에서 자동화가 안 된다'는 비대칭으로 재발한다.",
+        "threshold": "게이트/거버넌스가 '새 repo 에서 조용히 아무것도 안 한다'는 신호 → 게이트 로직이 아니라 isManaged 의 marker 기준부터 의심. 새 활성-조건 마커 추가 유혹이 들면 보편 마커(CLAUDE.md) 하나로 수렴시킬 것 (마커 OR-리스트 확장 금지).",
+        "source": "lib/config.ts"
       }
     ]
   },

@@ -29,15 +29,26 @@ const ZAI_BASE_URL = "https://api.z.ai/api/anthropic";
 const ZAI_ENV: Record<string, string> = {
   ANTHROPIC_BASE_URL: ZAI_BASE_URL,
   API_TIMEOUT_MS: "3000000",
-  // 1M-context auto-compaction window — pairs with the glm-5.2[1m] (1M) tier.
-  CLAUDE_CODE_AUTO_COMPACT_WINDOW: "1000000",
-  ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-5.2[1m]",
-  ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-5.2[1m]",
+  // z.ai's gateway exposes PLAIN model ids — the Anthropic-style `[1m]` suffix is
+  // rejected with `[1211] Unknown Model` (verified live against /v1/models +
+  // /v1/messages on 2026-06-30). The GLM Coding Plan is a 5-hour rolling-window
+  // quota, so we deliberately do NOT pin CLAUDE_CODE_AUTO_COMPACT_WINDOW to 1M:
+  // that would defer compaction and pump the whole running transcript into every
+  // request, draining the window quota fast. Let Claude Code's default compaction
+  // run. opus/sonnet → glm-5.2, haiku → glm-4.5-air (all present in z.ai /models).
+  ANTHROPIC_DEFAULT_OPUS_MODEL: "glm-5.2",
+  ANTHROPIC_DEFAULT_SONNET_MODEL: "glm-5.2",
   ANTHROPIC_DEFAULT_HAIKU_MODEL: "glm-4.5-air",
 };
 // Every env key the GLM profile owns — `claude` strips exactly these (and nothing
-// else), so a user's unrelated env entries survive a switch.
-const ZAI_ENV_KEYS = [...Object.keys(ZAI_ENV), "ANTHROPIC_AUTH_TOKEN"];
+// else), so a user's unrelated env entries survive a switch. Includes legacy keys
+// the profile USED to set (e.g. a pinned 1M auto-compact window) so a stale value
+// from an older switch can't linger in the user's env across either direction.
+const ZAI_ENV_KEYS = [
+  ...Object.keys(ZAI_ENV),
+  "ANTHROPIC_AUTH_TOKEN",
+  "CLAUDE_CODE_AUTO_COMPACT_WINDOW", // legacy — no longer pinned, but always stripped
+];
 const SECRET_KEY = "zai.api_key";
 
 function settingsPath(): string {
@@ -99,12 +110,13 @@ async function toGlm(d: Record<string, unknown>): Promise<number> {
   }
   const env = (d.env ?? (d.env = {})) as Record<string, string>;
   const already = activeProfile(env) === "glm";
+  for (const k of ZAI_ENV_KEYS) delete env[k]; // clear stale/legacy GLM keys before re-applying
   Object.assign(env, ZAI_ENV);
   env.ANTHROPIC_AUTH_TOKEN = token;
   saveSettings(d);
   ok(`${badge("glm")}  switch → GLM (Z.AI) ${already ? "(refreshed)" : ""}— ${ZAI_BASE_URL}`);
   info(`  models: opus/sonnet=${ZAI_ENV.ANTHROPIC_DEFAULT_OPUS_MODEL} · haiku=${ZAI_ENV.ANTHROPIC_DEFAULT_HAIKU_MODEL} · token=${mask(token)}`);
-  info(`  env:    API_TIMEOUT_MS=${ZAI_ENV.API_TIMEOUT_MS} · CLAUDE_CODE_AUTO_COMPACT_WINDOW=${ZAI_ENV.CLAUDE_CODE_AUTO_COMPACT_WINDOW}`);
+  info(`  env:    API_TIMEOUT_MS=${ZAI_ENV.API_TIMEOUT_MS} · auto-compact=Claude Code default (GLM 5h-window quota friendly)`);
   restartHint();
   return 0;
 }
@@ -132,7 +144,7 @@ async function status(d: Record<string, unknown>, existed: boolean): Promise<num
     info(`  base_url: ${env.ANTHROPIC_BASE_URL}`);
     info(`  token:    ${mask(env.ANTHROPIC_AUTH_TOKEN ?? "")}`);
     info(`  models:   opus/sonnet=${env.ANTHROPIC_DEFAULT_OPUS_MODEL ?? "?"} · haiku=${env.ANTHROPIC_DEFAULT_HAIKU_MODEL ?? "?"}`);
-    info(`  env:      API_TIMEOUT_MS=${env.API_TIMEOUT_MS ?? "?"} · CLAUDE_CODE_AUTO_COMPACT_WINDOW=${env.CLAUDE_CODE_AUTO_COMPACT_WINDOW ?? "?"}`);
+    info(`  env:      API_TIMEOUT_MS=${env.API_TIMEOUT_MS ?? "?"} · auto-compact=Claude Code default`);
   } else {
     info("  base_url: (default Anthropic)");
   }

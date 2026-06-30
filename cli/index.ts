@@ -21,6 +21,7 @@ import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
 import { runShip } from "../modules/ship.ts";
+import { runQa } from "../modules/qa.ts";
 import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runIng } from "../modules/ing.ts";
@@ -78,7 +79,8 @@ setup:
                                          ~/.pi/agent/extensions/ + add ~/.claude/skills to Pi settings. Same engine as the CC plugin; governance parity (Stop-gates CC-only)
   self-update              git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main
   shadow [plan|remove|--force]  mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)
-  ship [--no-doc]          one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation
+  ship [--no-doc]          one-shot propagate to ALL surfaces: qa (all-PASS pre-flight) → pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation
+  qa [--min <n>]           formal all-PASS QA bar — ci (verify) + lint (L0/injectCaps/CHANGELOG/convergence) + audit (NO axis at 0 · --min raises the total floor). ship's pre-flight gate (no bypass); exit 1 on any red so CI can gate too
   switch {glm|claude|toggle|status}   swap Claude Code's backend between the OFFICIAL Anthropic API and Z.AI GLM by
                                        rewriting the GLOBAL ~/.claude/settings.json env (ANTHROPIC_BASE_URL/AUTH_TOKEN + GLM model map) — Z.AI key from
                                        'secret get zai.api_key' (never on argv); env loads at startup so a Claude Code restart is needed to take effect
@@ -206,6 +208,8 @@ async function main(): Promise<number> {
       return runPrCycle(rest);
     case "ship":
       return runShip(rest);
+    case "qa":
+      return runQa(rest);
     case "pod":
       return runPod(rest);
     case "mem-guard":

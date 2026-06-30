@@ -480,9 +480,9 @@
           },
           {
             "name": "체크포인트",
-            "role": "commit/세션 → lint / verify / ing",
+            "role": "commit/세션 → lint / ci / qa / ing",
             "id": "surface-checkpoint",
-            "detail": "검증·신선도·인계. exit code + stderr"
+            "detail": "검증·신선도·인계. exit code + stderr. `qa`=정식 all-PASS 바(ci+lint+audit 무-0축)=`ship` pre-flight 게이트(우회불가)→red 면 전파 STOP"
           }
         ]
       },

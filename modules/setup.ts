@@ -18,6 +18,7 @@ import { homedir } from "node:os";
 import { SIDECAR_ROOT } from "../lib/paths.ts";
 import { execShell } from "../lib/exec.ts";
 import { info, ok, warn } from "../lib/log.ts";
+import { runPi } from "./pi.ts";
 
 const G = (c: string) => `command -v sidecar >/dev/null 2>&1 && ${c} || true`;
 const entry = (cmd: string) => ({ hooks: [{ type: "command", command: G(cmd) }] });
@@ -240,6 +241,12 @@ export async function runInstall(args: string[]): Promise<number> {
   const r = await execShell(`bash ${JSON.stringify(script)} ${passthru}`, { timeoutMs: 300_000 });
   if (r.stdout) process.stdout.write(r.stdout);
   if (r.stderr) process.stderr.write(r.stderr);
+  // Multi-agent: if the Pi coding agent is present on this host, wire its bridge too,
+  // so one `sidecar install` covers BOTH Claude Code (hooks) and Pi (extension).
+  if (r.code === 0 && existsSync(resolve(homedir(), ".pi", "agent"))) {
+    info("install: Pi detected (~/.pi/agent) — wiring the Pi bridge extension…");
+    await runPi(["install"]);
+  }
   return r.code;
 }
 

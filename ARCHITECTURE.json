@@ -1007,7 +1007,7 @@
         "name": "plugin — 배포 (자기완결 · 공용셋)",
         "role": "sidecar 를 Claude Code 플러그인으로 배포 — 훅 + 슬래시 명령 + CLI 본체가 ONE 유닛. 프로젝트 무관·중앙 1곳",
         "id": "group-plugin",
-        "detail": "SELF-CONTAINED: marketplace.json(source=`.`=repo 루트가 플러그인) → plugin.json(`commands: []`=명령 네임스페이스 OFF, 중복 방지). 훅은 `${CLAUDE_PLUGIN_ROOT}/bin/sidecar` 실행 → `/plugin update`+reload 로 CLI+hooks 동시 갱신. 슬래시는 `shadow` 가 bare /cmd 미러·전역 `sidecar` 는 폴백",
+        "detail": "sidecar 를 에이전트 하네스에 배포 — 거버넌스 엔진(modules/*.ts)은 한 벌, 배선만 에이전트별. Claude Code = hooks/hooks.json+run.sh 플러그인 · Pi = pi/sidecar.ts 확장. 프로젝트 무관·중앙 1곳",
         "children": [
           {
             "name": "hooks/hooks.json + hooks/run.sh",
@@ -1020,6 +1020,12 @@
             "role": "슬래시-명령 위임자 셋 (bare /cmd · shadow 가 미러하는 SOURCE)",
             "id": "config-commands-md",
             "detail": "프런트매터(description+Triggers+argument-hint+allowed-tools) + `!sidecar <cmd> $ARGUMENTS` 위임자. 플러그인 명령으로 로드 안 됨(plugin.json `commands: []` → bare /cmd 와 `/sidecar:cmd` picker 중복 방지). `shadow` 가 ~/.claude/commands/ 에 bare /cmd 미러. 공용셋·프로젝트 무관 · hook-내부 제외"
+          },
+          {
+            "name": "pi/sidecar.ts (+ modules/pi.ts)",
+            "role": "Pi 코딩에이전트 브리지 확장 — 같은 sidecar CLI 를 Pi 라이프사이클에 배선",
+            "id": "config-pi-sidecar-ts",
+            "detail": "Pi 이벤트→sidecar verb 번역: before_agent_start=매턴 inject+prompt-scan(UserPromptSubmit 대응) · session_start=worktree gc · tool_call=pre guards(permissionDecision:deny→{block}) · tool_result=post edit(advisory). inject 동사엔 {hook_event_name} stdin 합성, 텍스트는 stdout JSON additionalContext+stderr 평문 양쪽 흡수. Stop 하드게이트는 Pi 에 blocking stop 훅이 없어 CC 전용(매턴 inject 가 규칙 재주입). 설치 `sidecar pi install`=~/.pi/agent/extensions/ 심링크+settings.skills[]+=~/.claude/skills"
           }
         ]
       },

@@ -57,6 +57,7 @@ import { runChangelog } from "../modules/changelog.ts";
 import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
 import { runSwitch } from "../modules/switch.ts";
+import { runPi } from "../modules/pi.ts";
 
 export const HELP = `dancinlab/sidecar — project-agnostic AI coding sidecar
 
@@ -73,6 +74,8 @@ setup:
   uninstall [--dry-run] [--keep-logs]   remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
   install-hooks [--global]   merge sidecar hooks into the GLOBAL ~/.claude/settings.json (per-repo --repo is banned → double-inject)
+  pi {install|status|remove}   wire sidecar into the Pi coding agent — symlink the bridge extension (pi/sidecar.ts) into
+                                         ~/.pi/agent/extensions/ + add ~/.claude/skills to Pi settings. Same engine as the CC plugin; governance parity (Stop-gates CC-only)
   self-update              git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main
   shadow [plan|remove|--force]  mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)
   ship [--no-doc]          one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation
@@ -189,6 +192,8 @@ async function main(): Promise<number> {
       return runUpdate(rest);
     case "install-hooks":
       return runInstallHooks(rest);
+    case "pi":
+      return runPi(rest);
     case "self-update":
       return runSelfUpdate(rest);
     case "switch":

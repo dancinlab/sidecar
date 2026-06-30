@@ -4,6 +4,7 @@
 {"id":"uninstall","kind":"setup","usage":"uninstall [--dry-run] [--keep-logs]","use":"remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content"}
 {"id":"update","kind":"setup","usage":"update [--hooks]","use":"bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh"}
 {"id":"install-hooks","kind":"setup","usage":"install-hooks [--global]","use":"merge sidecar hooks into the GLOBAL ~/.claude/settings.json (per-repo --repo is banned → double-inject)"}
+{"id":"pi","kind":"setup","usage":"pi {install|status|remove}","use":"wire sidecar into the Pi coding agent — symlink the bridge extension (pi/sidecar.ts) into ~/.pi/agent/extensions/ + add ~/.claude/skills to Pi settings. Same engine as the CC plugin; governance parity (Stop-gates CC-only)"}
 {"id":"self-update","kind":"setup","usage":"self-update","use":"git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main"}
 {"id":"shadow","kind":"setup","usage":"shadow [plan|remove|--force]","use":"mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)"}
 {"id":"ship","kind":"setup","usage":"ship [--no-doc]","use":"one-shot propagate to ALL surfaces: pr-cycle (verified merge) → self-update (global CLI) → shadow (slash mirror). Run after every implementation"}

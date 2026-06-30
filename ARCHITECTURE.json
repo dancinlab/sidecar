@@ -291,8 +291,8 @@
       {
         "id": "pr-cycle-ts-1",
         "state": "ossified",
-        "value": "worktree 에서 pr-cycle/ship 실행 시 'merge failed' 는 오해 — GitHub squash-merge 는 성공하고 실패한 건 머지 후 로컬 main ff-sync 단계(main 이 주 워크트리에 체크아웃돼 'main is already used by worktree' 로 거부). PR 은 실제 MERGED 이니 gh 로 상태 먼저 확인 후 수동 마무리(git -C <주워크트리> merge --ff-only origin/main → self-update → shadow).",
-        "threshold": "재발 2회(#278·#279). 진짜 fix=pr-cycle 의 로컬 base ff 가 체크아웃 없이 ref 갱신(git fetch origin main:main 류)하거나 main 이 다른 워크트리면 그 워크트리에서 ff. 그 전까진 worktree-ship 후 위 수동 마무리.",
+        "value": "worktree 에서 pr-cycle/ship 시 'merge failed' 오해 — GitHub squash-merge 는 성공·실패는 gh --delete-branch 의 머지후 로컬 checkout(main 이 주 워크트리 점유→거부). [FIXED] merge loop 가 worktree 오류면 gh pr view state=MERGED verify 후 성공처리 + step4.5 가 main 이 타 worktree 면 git -C <mainWt> merge --ff-only 로 ff (수동 마무리 불필요).",
+        "threshold": "재발 3회(#278·#279 + 이번세션 4회 수동). 진짜 fix 코드 배선 완료(pr-cycle.ts merge-verify + main-wt ff). 재발조건: gh CLI 가 --delete-branch 후처리 방식 바꾸거나 worktree 오류 문구 변경 시 정규식 갱신",
         "source": "modules/pr-cycle.ts"
       },
       {
@@ -482,7 +482,7 @@
             "name": "체크포인트",
             "role": "commit/세션 → lint / ci / ing",
             "id": "surface-checkpoint",
-            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용(self-update+shadow=sidecar 설치 대상 · 타 repo 는 `pr-cycle`) · 0단계 inject-bloat 가드(injectCaps 소스별+injectBudgetBytes 총합 byte천장 = context-rot/AI멍청 재발방지 · lint↔ship 공유)"
+            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용 · 0단계 inject-bloat 가드(injectCaps 소스별+injectBudgetBytes 총합천장, injectBudgetExtra 로 CLAUDE.md 등 재주입파일도 합산 = context-rot/AI멍청 재발방지 · lint↔ship 공유). `pr-cycle` 은 worktree 머지시 gh 로컬checkout 실패를 PR-MERGED verify 로 자동복구(pr-cycle-ts-1)"
           }
         ]
       },

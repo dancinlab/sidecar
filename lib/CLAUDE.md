@@ -1,28 +1,28 @@
-# lib — 공용 부품 (engine shared primitives)
+# lib — shared primitives (engine shared primitives)
 
-> 이 폴더에서 작업하는 AI/사람을 위한 로컬 가이드. 상위 설계는 repo-root [ARCHITECTURE.json](../ARCHITECTURE.json).
+> Local guide for the AI/human working in this folder. Higher-level design lives in repo-root [ARCHITECTURE.json](../ARCHITECTURE.json).
 
-## 목적
-`modules/` 의 모든 기능이 공유하는 저수준 부품. repo-root 탐색·설정 로드·로깅·JSONL·셸 실행·잠금판정. 도메인 무지(domain-agnostic) — 여기엔 규칙(무엇을 검사)을 하드코딩하지 않는다.
+## Purpose
+Low-level primitives shared by every feature in `modules/`. repo-root discovery, config load, logging, JSONL, shell exec, lockdown judgment. Domain-agnostic — no rules (what to check) are hardcoded here.
 
-## 핵심 파일
-| 파일 | 역할 |
+## Key files
+| File | Role |
 |------|------|
-| `paths.ts` | repo-root 자동탐색(harness.config.json/.git 상향) + `LOGS`(.harness/logs/*.jsonl 경로) |
-| `config.ts` | `config()` = harness.config.json 로드 + 기본값 머지 (모든 가드 토글·임계의 SSOT) · `repoPath()` |
-| `lockdown.ts` | L0(잠금) 파일 판정 (config + 🔴 마크다운 블록 파싱) |
-| `log.ts` | `info`/`ok`/`warn`/`loudFail` + `appendJsonl` (H1: 성공 조용·실패 시끄럽게) |
-| `json.ts` | `readJsonl`/`readJsonOr` 안전 파싱 |
-| `exec.ts` | `execShell`/`execArgs` 셸·argv 실행 래퍼 |
+| `paths.ts` | repo-root auto-discovery (walk up for harness.config.json/.git) + `LOGS` (.harness/logs/*.jsonl paths) |
+| `config.ts` | `config()` = load harness.config.json + merge defaults (SSOT for all guard toggles/thresholds) · `repoPath()` |
+| `lockdown.ts` | L0 (lockdown) file judgment (config + 🔴 markdown block parsing) |
+| `log.ts` | `info`/`ok`/`warn`/`loudFail` + `appendJsonl` (H1: success quiet, failure loud) |
+| `json.ts` | `readJsonl`/`readJsonOr` safe parsing |
+| `exec.ts` | `execShell`/`execArgs` shell/argv exec wrappers |
 
-## 규칙 / 컨벤션
-- 새 가드 토글·임계값은 **여기 `config.ts` 인터페이스 + 기본값**에 추가하고 `modules/` 는 `config().<key>` 로만 읽는다 (엔진 무하드코딩 · H4 config-driven).
-- 경로는 `repoPath()`/`REPO_ROOT` 경유 (cwd 가정 금지 — linked worktree 안전).
-- 출력은 `log.ts` 헬퍼로 (raw `console.log` 금지 · H1 일관성).
+## Rules / conventions
+- Add new guard toggles/thresholds to **the `config.ts` interface + defaults here**, and have `modules/` read them only via `config().<key>` (no engine hardcoding · H4 config-driven).
+- Go through `repoPath()`/`REPO_ROOT` for paths (no cwd assumptions — linked-worktree safe).
+- Emit output via the `log.ts` helpers (no raw `console.log` · H1 consistency).
 
-## 주의 (gotchas)
-- `config()` 는 매 호출 머지 — 빈번 호출 비용 의식.
-- `paths.ts` 의 root 탐색이 config-less worktree 를 지나칠 수 있다 (ing.ts 는 그래서 `git rev-parse --show-toplevel` 별도 사용).
+## Gotchas
+- `config()` merges on every call — be mindful of the cost of frequent calls.
+- The root discovery in `paths.ts` can walk past a config-less worktree (that's why ing.ts separately uses `git rev-parse --show-toplevel`).
 
-## 관련
-- 소비자: [modules/](../modules/CLAUDE.md) · 설계 SSOT: [ARCHITECTURE.json](../ARCHITECTURE.json)
+## Related
+- Consumers: [modules/](../modules/CLAUDE.md) · design SSOT: [ARCHITECTURE.json](../ARCHITECTURE.json)

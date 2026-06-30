@@ -32,7 +32,8 @@
       "HELP-BACKTICK": "block",
       "CONVERGENCE-MALFORMED": "block",
       "CMD-DESC-LONG": "block",
-      "INJECT-OVERSIZED": "block"
+      "INJECT-OVERSIZED": "block",
+      "INJECT-NON-ENGLISH": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

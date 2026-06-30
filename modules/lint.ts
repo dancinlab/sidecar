@@ -290,6 +290,48 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
   // 4j. inject-oversized — the context-rot guard, shared with ship's pre-flight gate.
   violations.push(...injectCapViolations());
 
+  // 4k. inject-non-english — Korean (Hangul) PROSE in a governance doc sidecar RE-INJECTS
+  // every turn. Korean costs ~3 bytes/char (2-3x the token budget of english per turn) and
+  // prefs mandate english docs, so Hangul here silently taxes EVERY future turn. block.
+  // Resolve targets = exact repo-relative paths that exist + (bare-filename entries) every
+  // tracked file with that basename (git ls-files). Korean literals inside `backticks` are
+  // EXEMPT (code-spans stripped first). diff-aware (dodontLengthLint pattern): only a target
+  // among THIS commit's staged files blocks — untouched legacy Korean files are grandfathered.
+  const englishOnly = cfg.lint?.injectEnglishOnly ?? [];
+  if (englishOnly.length > 0) {
+    const targets = new Set<string>();
+    let tracked: string[] | null = null;
+    for (const entry of englishOnly) {
+      if (entry.includes("/")) {
+        if (existsSync(repoPath(entry))) targets.add(entry);
+      } else {
+        if (tracked === null) {
+          tracked = (await execShell("git ls-files", { cwd: repoPath(".") })).stdout
+            .split("\n").map((s) => s.trim()).filter(Boolean);
+        }
+        for (const f of tracked) if ((f.split("/").pop() ?? "") === entry) targets.add(f);
+      }
+    }
+    for (const f of targets) {
+      if (!staged.includes(f)) continue; // diff-aware: only newly-touched files block
+      let text = "";
+      try {
+        text = readFileSync(repoPath(f), "utf8");
+      } catch {
+        continue; // staged deletion → nothing to scan
+      }
+      const stripped = text.replace(/`[^`]*`/g, ""); // exempt Korean literals inside code-spans
+      const hangul = stripped.match(/[\uAC00-\uD7A3]/g);
+      if (hangul && hangul.length > 0) {
+        violations.push({
+          rule: "INJECT-NON-ENGLISH",
+          file: f,
+          msg: `${hangul.length} Korean (Hangul) char(s) in re-injected governance doc — re-injected every turn, Korean costs ~3 bytes/char (2-3x token budget) and prefs mandate english docs → translate to English (Korean literals allowed only inside \`backticks\`).`,
+        });
+      }
+    }
+  }
+
   return violations;
 }
 

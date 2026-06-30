@@ -90,6 +90,12 @@ export interface SidecarConfig {
     // injectCaps) but still spend the per-turn token budget — counted toward the SUM
     // only (e.g. ["CLAUDE.md"]). Makes injectBudgetBytes reflect the TRUE per-turn total.
     injectBudgetExtra?: string[];
+    // english-only governance docs (INJECT-NON-ENGLISH · block). Each entry is either an
+    // exact repo-relative path, OR a bare filename with no "/" meaning "every tracked file
+    // with that basename in the tree". Korean (Hangul) PROSE in a re-injected doc costs
+    // ~3 bytes/char (2-3x token budget every turn) and prefs mandate english docs; Korean
+    // literals inside `backticks` are exempt. diff-aware: only a STAGED target blocks.
+    injectEnglishOnly?: string[];
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };

@@ -482,7 +482,7 @@
             "name": "체크포인트",
             "role": "commit/세션 → lint / ci / ing",
             "id": "surface-checkpoint",
-            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용 · 0단계 inject-bloat 가드(injectCaps 소스별+injectBudgetBytes 총합천장, injectBudgetExtra 로 CLAUDE.md 등 재주입파일도 합산 = context-rot/AI멍청 재발방지 · lint↔ship 공유). `pr-cycle` 은 worktree 머지시 gh 로컬checkout 실패를 PR-MERGED verify 로 자동복구(pr-cycle-ts-1)"
+            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용 · 0단계 inject-bloat 가드: injectCaps(소스별)+injectBudgetBytes(총합)+injectBudgetExtra(CLAUDE.md 합산)+INJECT-NON-ENGLISH(injectEnglishOnly docs 한글 차단·백틱면제·staged) = context-rot/AI멍청 재발방지 · lint↔ship 공유 (pr-cycle worktree-merge 자동복구=pr-cycle-ts-1)"
           }
         ]
       },

@@ -191,6 +191,20 @@ export async function runPrCycle(args: string[]): Promise<number> {
       await execShell("sleep 20");
       continue;
     }
+    if (/worktree|already used|checked out/i.test(m.out)) {
+      // gh's --delete-branch post-merge step does a LOCAL `git checkout <base>`, which
+      // fails in a LINKED worktree (the base is checked out in the MAIN worktree). The
+      // MERGE itself + the REMOTE branch delete already succeeded on GitHub — only the
+      // local checkout failed. Verify the PR actually merged, then treat it as success
+      // (the local feature branch is swept below). This is the worktree-ship ff-sync
+      // gotcha (convergence pr-cycle-ts-1) — fixed at the source instead of by hand.
+      const st = (await git(`gh pr view ${b} --json state -q .state`)).out.trim();
+      if (/MERGED/i.test(st)) {
+        info(`  ✓ merged (gh local checkout skipped — base held by main worktree)`);
+        merged = true;
+        break;
+      }
+    }
     break; // a real, non-transient failure
   }
   if (!merged) {
@@ -250,10 +264,15 @@ export async function runPrCycle(args: string[]): Promise<number> {
       if (ff.code === 0) {
         info(`  ✓ 로컬 ${base} ← origin/${base} sync (ff)`);
       } else if (/worktree|checked out|is already used/i.test(ff.out)) {
-        // local <base> is checked out in ANOTHER worktree (e.g. a concurrent live session) —
-        // git refuses to update a ref checked out elsewhere. Expected + harmless: the merge is
-        // already verified on origin/<base> above, and that worktree fast-forwards on its own pull.
-        info(`  ℹ 로컬 ${base} 는 다른 worktree 가 사용 중 — ref 업데이트 건너뜀 (머지는 origin/${base} 에 검증됨)`);
+        // local <base> is checked out in the MAIN worktree (we ran from a linked one). git
+        // refuses to update a ref checked out elsewhere — so ff-sync it IN that worktree
+        // instead of leaving local <base> stale (the "로컬 main 뒤처짐" leak · pr-cycle-ts-1).
+        const list = (await git("git worktree list --porcelain")).out;
+        const mainWt = (list.match(/^worktree (.+)$/m) || [])[1];
+        await git(`git fetch origin ${JSON.stringify(base)}`);
+        const ff2 = mainWt ? await git(`git merge --ff-only ${JSON.stringify("origin/" + base)}`, mainWt) : { code: 1, out: "" };
+        if (ff2.code === 0) info(`  ✓ 로컬 ${base} ← origin/${base} sync (main worktree)`);
+        else info(`  ℹ 로컬 ${base} 는 다른 worktree 가 사용 중 — 머지는 origin/${base} 에 검증됨 (그 worktree 가 pull 시 ff)`);
       } else {
         info(`  ⚠ 로컬 ${base} sync 실패(non-ff?) — 수동 확인`);
       }

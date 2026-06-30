@@ -110,12 +110,23 @@ export function injectCapViolations(): Violation[] {
       }
     }
   }
+  // also count files re-injected every turn that carry their OWN format lint (so they
+  // aren't in injectCaps) but still spend the per-turn token budget — e.g. repo-root
+  // CLAUDE.md (claudemd inject). Listed in lint.injectBudgetExtra; counted toward the
+  // SUM only, never per-source capped here.
+  for (const f of cfg.lint?.injectBudgetExtra ?? []) {
+    try {
+      if (existsSync(repoPath(f))) total += Buffer.byteLength(readFileSync(repoPath(f), "utf8"), "utf8");
+    } catch {
+      /* unreadable → skip */
+    }
+  }
   // aggregate budget — per-source caps stop ONE file ballooning; this stops death-by-a-
   // thousand-cuts (many sources each under cap but summing huge = context rot is about the
   // TOTAL tokens, not any single file). Opt-in via lint.injectBudgetBytes.
   const budget = cfg.lint?.injectBudgetBytes ?? 0;
   if (budget > 0 && total > budget) {
-    out.push({ rule: "INJECT-BUDGET", file: "lint.injectCaps", msg: `re-injected sources total ${total}B > ${budget}B aggregate budget — the SUM drives context-rot (every turn); trim a source or split the work, do not just raise the budget` });
+    out.push({ rule: "INJECT-BUDGET", file: "lint.injectBudgetBytes", msg: `per-turn re-injected total ${total}B > ${budget}B aggregate budget — the SUM drives context-rot (every turn); trim a source, do not just raise the budget` });
   }
   return out;
 }

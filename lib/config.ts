@@ -86,6 +86,10 @@ export interface SidecarConfig {
     // aggregate ceiling on the SUM of single-file inject sources (per-turn re-injection
     // total = context-rot driver). per-source caps stop one file; this stops the sum.
     injectBudgetBytes?: number;
+    // extra files re-injected every turn that have their OWN format lint (so not in
+    // injectCaps) but still spend the per-turn token budget — counted toward the SUM
+    // only (e.g. ["CLAUDE.md"]). Makes injectBudgetBytes reflect the TRUE per-turn total.
+    injectBudgetExtra?: string[];
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };

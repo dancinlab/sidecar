@@ -30,7 +30,10 @@
       "config/commons.md": 15000,
       "config/recommend.md": 6500
     },
-    "injectBudgetBytes": 22000,
+    "injectBudgetBytes": 26000,
+    "injectBudgetExtra": [
+      "CLAUDE.md"
+    ],
     "changelog": {
       "file": "CHANGELOG.jsonl",
       "keep": 30,

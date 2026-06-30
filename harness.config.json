@@ -26,6 +26,10 @@
   },
   "lint": {
     "freshnessFiles": [],
+    "injectCaps": {
+      "config/commons.md": 15000,
+      "config/recommend.md": 6500
+    },
     "changelog": {
       "file": "CHANGELOG.jsonl",
       "keep": 30,

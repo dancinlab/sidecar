@@ -294,6 +294,13 @@
         "value": "worktree 에서 pr-cycle/ship 실행 시 'merge failed' 는 오해 — GitHub squash-merge 는 성공하고 실패한 건 머지 후 로컬 main ff-sync 단계(main 이 주 워크트리에 체크아웃돼 'main is already used by worktree' 로 거부). PR 은 실제 MERGED 이니 gh 로 상태 먼저 확인 후 수동 마무리(git -C <주워크트리> merge --ff-only origin/main → self-update → shadow).",
         "threshold": "재발 2회(#278·#279). 진짜 fix=pr-cycle 의 로컬 base ff 가 체크아웃 없이 ref 갱신(git fetch origin main:main 류)하거나 main 이 다른 워크트리면 그 워크트리에서 ff. 그 전까진 worktree-ship 후 위 수동 마무리.",
         "source": "modules/pr-cycle.ts"
+      },
+      {
+        "id": "commons-md-1",
+        "state": "ossified",
+        "value": "harness 매턴 inject 누적 = context-rot: 입력 토큰↑ → transformer 어텐션 분산 → 에이전트 열화(Chroma 18-model 실측 200K창이 50K에서 정확도 손실 · 구조적 속성, 학습으로 해결 안 됨). sidecar 는 매턴 ~7.5K tok(commons 14.6K+recommend 5.8K+CLAUDE+ing+easy) 재주입 → INJECT-OVERSIZED 게이트(lint.injectCaps)가 inject 소스별 byte 천장 강제. 잘라내기(emit-truncate) 금지 — 소스를 직접 트림해 통과.",
+        "threshold": "injectCaps 키 부재/빈값이면 lint.ts:243 루프가 무순회 = dead gate(무제한 비대; 이번에 발견·배선). 재발조건: ① 새 inject 소스 추가 시 injectCaps 항목 동반 누락 ② commons/recommend byte 가 천장 근접(여유<500B) → 소스 트림 먼저, 천장 상향은 최후수단",
+        "source": "config/commons.md"
       }
     ]
   },

@@ -1,10 +1,9 @@
 # commons — cross-project governance (MUST FOLLOW · hard rules, not hints)
 
 Always-on, project-agnostic rules — the sidecar governance SSOT. Project-specific rules live in
-`.harness/enforcement.json` / `.harness/keywords.json`; a repo may override this file at
-`.harness/commons.md`. Most rules are mechanically enforced by sidecar hooks — this block keeps
-them salient. Rules are keyed by **stable slug** (order may change · never reference by number).
-Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code + CHANGELOG + git.
+`.harness/enforcement.json` / `.harness/keywords.json`; override this file at `.harness/commons.md`.
+Mostly hook-enforced; this block keeps them salient. Keyed by **stable slug** (never reference by number).
+Each rule = one `do:` / `dont:` pair; mechanism & precedents live in code + CHANGELOG + git.
 
 > 🏛️ 프로젝트 설계는 먼저 repo-root `ARCHITECTURE.json`(설계 SSOT · `single-doc`)을 읽어라 —
 > `sidecar architecture inject` 가 SessionStart 에 주입한다. 구조·모듈·데이터흐름을 추측 말고 그
@@ -12,10 +11,10 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 
 ## root-cause — 원인을 고친다, workaround 아님
 - do: 증상 아닌 원인을 고친다 · 같은 결함 재발 시 학습을 `ARCHITECTURE.json` `convergence.records[]` SSOT 에 기록 — `lint` well-formed 강제 + Stop 훅이 재발신호 시 `🧬 CONVERGENCE` 계정 줄(기록 id/`해당 없음`) 누락 차단(`convergenceEnforce`)
-- dont: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만·shadow 가드 (정당하면 `@root-cause-ok <이유>`) · 재발 학습을 코드 인라인 주석(구 `@convergence` 마커 폐기)이나 별도 incident 트래커로 흩기 (ARCHITECTURE SSOT 한곳으로)
+- dont: `@ts-ignore`·`eslint-disable`·빈 catch·`if(false)`·TODO-만·shadow 가드 (정당하면 `@root-cause-ok <이유>`) · 재발 학습을 코드 인라인 주석·별도 incident 트래커로 흩기 (SSOT 한곳으로)
 
 ## fix-the-tool — 언어·도구 벽은 우회 말고 그 도구를 고친다 (root-cause·upstream-fix 강화)
-- do: 의존 언어·컴파일러·런타임·툴체인 결함/한계(예약어 충돌·파서 갭·정수 i64 한계·stdlib 부재·codegen 버그·링크 실패)는 **그 도구를 직접 고친다**(전부 dancinlab repo=쓰기권한 안) — 막힌 그 세션에서 격리 worktree+빌드+CI 로 검증→머지까지 한 뒤 원작업 재개
+- do: 의존 언어·컴파일러·런타임·툴체인 결함/한계(예약어·파서갭·정수한계·stdlib·codegen·링크 등)는 **그 도구를 직접 고친다**(전부 dancinlab repo=쓰기권한 안) — 막힌 그 세션에서 격리 worktree+빌드+CI 로 검증→머지까지 한 뒤 원작업 재개
 - dont: 언어/도구 벽을 타-언어 scratch 재구현(Python 등)·캐시바이너리 우회·심볼/이름 회피·fallback 분기·"측정종착" 조기선언으로 덮고 본 도구는 안 고치기(=wire-to-prod 위반·dead) (진짜 불가피하면 `@root-cause-ok <이유>`+사용자 opt-in)
 
 ## verify-done — "됐다" 전에 실제 검증
@@ -27,7 +26,7 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - dont: 되돌리기 어려움/외부노출/유저결정이 아닌데 되묻기 · 선택지 박스로 punt
 
 ## single-doc — 산출 문서는 둘로 통합
-- do: AI 산출물은 **ARCHITECTURE**(갱신형 SSOT · `.md`/`.json`+`.html` 뷰어 · 제자리 update-in-place · `children` 트리) + **CHANGELOG.jsonl**(append·prune) 둘로 · README 도 현재상태 SSOT update-in-place
+- do: AI 산출물은 **ARCHITECTURE**(갱신형 SSOT · 제자리 update-in-place · `children` 트리) + **CHANGELOG.jsonl**(append·prune) 둘로 · README 도 현재상태 update-in-place
 - dont: 흩어진 `*-report/summary/notes` · 트리/README 에 변경이력·버전·날짜·`이전엔`/`deprecated` 누적 · 한 셀(특히 `상세`)에 여러 사실 욱여넣기(= 자식 노드로 분해 신호)
 
 ## preserve-state — 산출물은 `state/` 하나로
@@ -87,7 +86,7 @@ Each rule = one `do:` / `dont:` pair; mechanism detail & precedents live in code
 - dont: 지시 전 우회경로(`# *-ok` 류 마커·opt-out 플래그·skip 조건·fallback 분기·가드 무력화) 끼워넣기 (기존 마커 탈출구는 유지, 새 가드엔 구멍 X)
 
 ## upstream-fix — upstream 막힘은 그 세션에서 내 손으로 끝까지 고친다 (cross-repo 인계 금지)
-- do: 의존 upstream(`hexa`/`hexa-lang`/`demiurge` 등 **전부 dancinlab repo = 너의 쓰기권한 안**) 결함은 **막힌 바로 그 세션에서 직접** — clone/worktree 받아 원인 고치고 그 repo 의 빌드·CI 로 검증한 뒤 **그 repo 에서 `sidecar pr-cycle` 머지까지 완료** → 그 후 원작업 복귀. ING 은 오직 **내 현재 repo** 의 `↩resume …` 복원 메모로만(작업 끊김 방지). 고위험 substrate(codegen·runtime·toolchain)는 격리 worktree, 동시세션 활동(브랜치변동) 감지 시 STOP
+- do: 의존 upstream(`hexa`/`hexa-lang`/`demiurge` 등 **전부 dancinlab repo = 너의 쓰기권한 안**) 결함은 **막힌 바로 그 세션에서 직접** — clone/worktree 받아 원인 고치고 그 repo 의 빌드·CI 로 검증한 뒤 **그 repo 에서 `sidecar pr-cycle` 머지까지 완료** → 그 후 원작업 복귀. ING 은 오직 **내 현재 repo** 의 `↩resume …` 복원 메모로만. 고위험 substrate(codegen·runtime·toolchain)는 격리 worktree, 동시세션 활동(브랜치변동) 감지 시 STOP
 - dont: **upstream repo(hexa-lang 등)로 그 수정을 떠넘기기 — 절대 금지** · 다른 세션/사람에게 cross-repo 인계 · "upstream 이라 여기선 못 고친다" 핑계 · 로컬 wrapper/shadow/fork/monkey-patch 로 덮기 · 고쳤다며 머지 안 하고 둠. (ING 의 cross-repo 전달(`--to`) 기능은 폐기됨 — 보드는 내 repo 전용)
 
 ## release-tag-ci — 릴리즈는 태그 → CI 배포

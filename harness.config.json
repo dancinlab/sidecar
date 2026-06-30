@@ -27,10 +27,10 @@
   "lint": {
     "freshnessFiles": [],
     "injectCaps": {
-      "config/commons.md": 15000,
+      "config/commons.md": 14600,
       "config/recommend.md": 6500
     },
-    "injectBudgetBytes": 26000,
+    "injectBudgetBytes": 25500,
     "injectBudgetExtra": [
       "CLAUDE.md"
     ],

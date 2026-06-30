@@ -301,6 +301,13 @@
         "value": "harness 매턴 inject 누적 = context-rot: 입력 토큰↑ → transformer 어텐션 분산 → 에이전트 열화(Chroma 18-model 실측 200K창이 50K에서 정확도 손실 · 구조적 속성, 학습으로 해결 안 됨). sidecar 는 매턴 ~7.5K tok(commons 14.6K+recommend 5.8K+CLAUDE+ing+easy) 재주입 → INJECT-OVERSIZED 게이트(lint.injectCaps)가 inject 소스별 byte 천장 강제. 잘라내기(emit-truncate) 금지 — 소스를 직접 트림해 통과.",
         "threshold": "injectCaps 키 부재/빈값이면 lint.ts:243 루프가 무순회 = dead gate(무제한 비대; 이번에 발견·배선). 재발조건: ① 새 inject 소스 추가 시 injectCaps 항목 동반 누락 ② commons/recommend byte 가 천장 근접(여유<500B) → 소스 트림 먼저, 천장 상향은 최후수단",
         "source": "config/commons.md"
+      },
+      {
+        "id": "audit-ts-1",
+        "state": "ossified",
+        "value": "self-scorecard ratio 축은 평생 누적 로그를 읽으면 영구 0 으로 saturate = artifact. quality_gate 는 per-violation errors ÷ per-run lints(차원불일치), cost 는 pre_block 가드발동(=하네스 정상작동)을 ×50 페널티(부호역전). 수정: 최근 WINDOW_DAYS(14d) 창 + 부호교정(가드 catch/block 은 일하는 것이지 결함 아님) → 0→참값(quality_gate 9·cost 10). 로그는 삭제 안 함(증거보존), 읽기만 window.",
+        "threshold": "0/10 축 발견 시: 로그 prune 으로 점수 올리기 금지(tune-to-green·은폐). 공식이 누적로그·역부호 artifact 인지부터 검증 후 metric 자체를 root-cause 교정. literal 만점 강요 금지 — 실제 dev 이력(위반 catch)은 정직히 반영",
+        "source": "modules/audit.ts"
       }
     ]
   },

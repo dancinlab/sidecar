@@ -39,7 +39,8 @@ sidecar/
 ## 작업 규칙 (this repo)
 - do: **어떤 구현·수정이든 완료되면 사용자가 따로 시키지 않아도 그 턴에 자동으로 `sidecar ship`** (deterministic 명령 = direct-execute · 4축 박스/확인 없이 즉시) = 전 설치 surface 한 번에 전파(pr-cycle 검증머지 → self-update 전역 CLI → shadow 슬래시 미러) · 직전에 매 사이클 문서(CHANGELOG + 설계변경 시 ARCHITECTURE · README 는 손댄 김에 비강제) → 검증 선행 · config/data-only 는 `sidecar ship --no-doc` (commons `cycle-docs-pr`)
 - do: 새 명령은 `modules/<name>.ts` + `cli/index.ts` 등록 + help 라인 + CHANGELOG (+ 런북형 `templates/<name>.md` · 슬래시 노출 `commands/<name>.md`) → `npx tsx cli/index.ts help` 로드 + `sidecar toolkit write`(카탈로그 100%) + 관련 스모크로 검증
-- dont: `shadow` 를 빠뜨리고 `pr-cycle`+`self-update` 만 돌리기 — 새 슬래시가 picker 에 안 떠 "반영 안됨" 이 재발한다(그래서 셋을 `ship` 한 명령으로 묶었다)
+- do: **훅에 배선되는 기능(가드·inject·라이프사이클)을 구현·수정하면 두 agent surface 모두 배선** — CC 플러그인(`hooks/hooks.json`+`hooks/run.sh`)과 Pi 확장(`pi/sidecar.ts`) 둘 다 (CLI 본체는 공유 · 배선만 surface 별). 한쪽만 고치면 다른 에이전트에서 미반영(`wire-to-prod`)
+- dont: `shadow` 를 빠뜨리고 `pr-cycle`+`self-update` 만 돌리기 — 새 슬래시가 picker 에 안 떠 "반영 안됨" 이 재발한다(그래서 셋을 `ship` 한 명령으로 묶었다) · 한 surface(CC 만/Pi 만)만 배선하고 끝내기
 
 ## inject-lint — 잘라내기 금지, 작성 시 lint (왜: 매턴 inject 비대 = context-rot → 에이전트 열화 · `commons-md-1`)
 - do: 각 inject 소스(commons·recommend·easy·prefs 등)는 **작성·편집 시점에** lean 유지 — 매턴 재주입(현 ~7.5K tok) 누적 = 입력토큰↑ → 어텐션 분산 → **에이전트 멍청해짐**(transformer 구조적 · Chroma 18-model 실측)이라 lean 이 곧 성능 · INJECT-OVERSIZED 개별 cap(`lint.injectCaps`, 소스별 byte 천장 · 항목 없으면 게이트 dead) 또는 do/dont·ARCH-cell 양식 · 새 inject 추가 시 그 cap/lint 도 함께 추가

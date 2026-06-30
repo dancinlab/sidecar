@@ -287,6 +287,13 @@
         "value": "ARCHITECTURE.json detail 셀이 300자 ARCH-BIG-CELL cap 을 다시 넘기는 회귀 — 특히 게이트/enforce 노드(isManaged·ing/architecture stop-check)에 메커니즘·근거 산문을 욱여넣을 때 한 셀이 슬그머니 cap 초과 → 다음 사람의 lint/ship 게이트를 막는다.",
         "threshold": "재발조건: detail 셀에 precedents/메커니즘 산문을 누적. 해결: 셀 편집 직후 'sidecar lint' 로 ARCH-BIG-CELL 확인 → kernel(요지)만 남기고 precedents/이력은 CHANGELOG+git 으로, 길면 자식 노드로 분해(commons single-doc c4).",
         "source": "ARCHITECTURE.json"
+      },
+      {
+        "id": "pr-cycle-ts-1",
+        "state": "ossified",
+        "value": "worktree 에서 pr-cycle/ship 실행 시 'merge failed' 는 오해 — GitHub squash-merge 는 성공하고 실패한 건 머지 후 로컬 main ff-sync 단계(main 이 주 워크트리에 체크아웃돼 'main is already used by worktree' 로 거부). PR 은 실제 MERGED 이니 gh 로 상태 먼저 확인 후 수동 마무리(git -C <주워크트리> merge --ff-only origin/main → self-update → shadow).",
+        "threshold": "재발 2회(#278·#279). 진짜 fix=pr-cycle 의 로컬 base ff 가 체크아웃 없이 ref 갱신(git fetch origin main:main 류)하거나 main 이 다른 워크트리면 그 워크트리에서 ff. 그 전까진 worktree-ship 후 위 수동 마무리.",
+        "source": "modules/pr-cycle.ts"
       }
     ]
   },

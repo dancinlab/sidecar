@@ -1,0 +1,33 @@
+# verdict pi-compat-qa
+# cmd: bash state/pi-compat-qa/run.sh
+# tier: PASS  exit=0  at 2026-06-30T07:56:08.269Z
+# ── captured stdout+stderr (verbatim) ──
+  PASS  T7 jiti load + 4 events (session_start,before_agent_start,tool_call,tool_result)
+=== A. CLI / install ===
+  PASS  T1 pi status exit 0 (wired) — exit=0
+  PASS  T2 install idempotent (skills entry not duplicated) — claude-skills entries=1
+  PASS  T3 symlink → global clone — → /Users/mini/.sidecar/cli/pi/sidecar.ts
+  PASS  T4 remove unwires (symlink+skills gone) — skills?false link?false
+  PASS  T5 reinstall restores (status exit 0)
+  PASS  T6 bad subcommand → usage, exit 1
+=== C. inject bridge (global binary) ===
+  PASS  T8 all per-turn injects emit
+  PASS  T9 session injects emit (arch/toolkit/companions) — arch=3345 tk=9305 co=1540
+  PASS  T10 inject silent WITHOUT hook_event_name carrier — len=0
+=== D. guard bridge (tool_call) ===
+  PASS  T11 bash force-push → block — [GIT-FORCE-PUSH] git push --force / -f —
+  PASS  T12 bash benign → no block
+  PASS  T13 write Pi{path}→file_path alias, versioned-name guard blocks — [NAMING-VERSION-SUFFIX] 'helper_v2.ts' (
+  PASS  T14 read→pre touch no crash
+  PASS  T15 mcp tool→pre tool no crash
+=== E. post + prompt ===
+  PASS  T16 post edit runs (advisory)
+  PASS  T17 prompt-scan emits on trigger — len=409
+=== F. parse-logic edge ===
+  PASS  T18 extractContext JSON additionalContext
+  PASS  T19 extractContext plain-text stdout
+  PASS  T20 extractContext stderr carrier
+  PASS  T21 extractBlock deny
+
+=== TALLY: 20 PASS / 0 FAIL ===
+

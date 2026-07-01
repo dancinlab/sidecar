@@ -193,6 +193,13 @@ export interface SidecarConfig {
   // to git, not the filename. Steer to one canonical file updated in place. The
   // `@canonical-ok` (Write/Edit content) / `# canonical-ok` (bash) marker overrides.
   namingGuard: boolean;
+  // portablePathGuard WARNS (pre write) when a SHIPPED runtime script (under a
+  // hooks/·commands/·skills/·bin/·pi/ dir, ext .sh/.py/.hexa/.ts/.js/.rb/.pl)
+  // hardcodes an absolute machine home path (`/Users/<you>/…` · `/home/<you>/…`)
+  // instead of resolving at runtime ($HOME · ${CLAUDE_PLUGIN_ROOT} · PATH) — a
+  // hardcode breaks the moment the plugin runs on another host/user. Advisory
+  // (non-block) — a nudge to the portable form. Ported from archive portable-path-guard.
+  portablePathGuard: boolean;
   // askqText DENIES the AskUserQuestion option-box tool (PreToolUse) and tells
   // the agent to ask in plain CHAT text instead (options inline, mark the
   // recommended one, accept a free-form answer). A FORM redirect, not anti-punt.
@@ -345,6 +352,7 @@ const DEFAULTS: SidecarConfig = {
   tmpGuard: true,
   handoffGuard: true,
   namingGuard: true,
+  portablePathGuard: true,
   askqText: true,
   ledger: { staleSec: 3600 },
   ing: { editThreshold: 5, staleDays: 5, maxActive: 12 },

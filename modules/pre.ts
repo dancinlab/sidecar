@@ -26,6 +26,7 @@ import { descWriteViolation } from "./shadow.ts";
 import { commonsWriteViolation, dodontLengthWriteViolation } from "./commons.ts";
 import { isTmpPath, detectTmpBashWrite } from "./tmp-guard.ts";
 import { detectHandoffScatter } from "./handoff-guard.ts";
+import { detectHardcodedHomePath } from "./portable-path-guard.ts";
 import { probeGitContext } from "./git-context.ts";
 import { detectVersionedName, detectVersionedNameBash, offendingToken } from "./naming-guard.ts";
 import { existsSync } from "node:fs";
@@ -407,6 +408,15 @@ export async function preWrite(_args: string[]): Promise<number> {
   // tmp-guard — writing a file into a volatile tmp dir loses it; steer to scratch.
   if (config().tmpGuard && isTmpPath(filePath)) {
     emitWarn("TMP-VOLATILE", `${filePath} is in a volatile tmp dir (lost on reboot/reaper). Write progress/working data to ${config().docs.scratchDir}/ (git-tracked) and commit it so it persists on GitHub.`);
+  }
+
+  // portable-path-guard — a SHIPPED runtime script (hooks/·commands/·skills/·bin/·pi/)
+  // that hardcodes an absolute home path (`/Users/…`·`/home/…`) breaks on another
+  // host/user. Advisory (runs on Write AND Edit fragments — a fragment adding the
+  // literal is just as broken; NOT gated on isEditFragment). Ported from archive.
+  if (config().portablePathGuard) {
+    const pp = detectHardcodedHomePath(filePath, content);
+    if (pp) emitWarn("PORTABLE-PATH", pp);
   }
 
   // naming-guard — version/copy-suffixed names; history is git's job, not the

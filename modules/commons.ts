@@ -6,6 +6,7 @@
 // bypass · docs · tmp-guard · handoff-guard · git-guard · recommend · askq);
 // this is the salient single SSOT, re-injected like recommend.
 import { readFileSync, existsSync } from "node:fs";
+import { emitInject } from "../lib/inject.ts";
 import { resolve } from "node:path";
 import { resolveRuleFile, config } from "../lib/config.ts";
 import { readStdin } from "../lib/exec.ts";
@@ -261,7 +262,7 @@ export async function runCommons(args: string[]): Promise<number> {
       const j = JSON.parse(readStdin());
       const ev = String(j.hook_event_name ?? j.hookEventName ?? "");
       if (!ev) return 0;
-      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: text } }) + "\n");
+      emitInject("commons", ev, text);
     } catch {
       return 0;
     }

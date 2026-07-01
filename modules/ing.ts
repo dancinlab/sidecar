@@ -7,6 +7,7 @@
 // `done` SCRUBS (completed work graduates to CHANGELOG; ING holds only what's ACTIVE).
 // SessionStart `inject` surfaces open work + running pods so the board is seen.
 import { execFileSync } from "node:child_process";
+import { emitInject } from "../lib/inject.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
@@ -237,7 +238,7 @@ export async function runIng(args: string[]): Promise<number> {
       // item is stale or the board overflows, shout for a scrub so it can't accumulate.
       const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
       if (bloat) ctx += `\n${bloat}`;
-      process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: ctx } }) + "\n");
+      emitInject("ing", ev, ctx);
     } catch {
       return 0;
     }

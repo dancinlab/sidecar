@@ -301,6 +301,13 @@
         "value": "self-scorecard ratio 축은 평생 누적 로그를 읽으면 영구 0 으로 saturate = artifact. quality_gate 는 per-violation errors ÷ per-run lints(차원불일치), cost 는 pre_block 가드발동(=하네스 정상작동)을 ×50 페널티(부호역전). 수정: 최근 WINDOW_DAYS(14d) 창 + 부호교정(가드 catch/block 은 일하는 것이지 결함 아님) → 0→참값(quality_gate 9·cost 10). 로그는 삭제 안 함(증거보존), 읽기만 window.",
         "threshold": "0/10 축 발견 시: 로그 prune 으로 점수 올리기 금지(tune-to-green·은폐). 공식이 누적로그·역부호 artifact 인지부터 검증 후 metric 자체를 root-cause 교정. literal 만점 강요 금지 — 실제 dev 이력(위반 catch)은 정직히 반영",
         "source": "modules/audit.ts"
+      },
+      {
+        "id": "inject-ts-1",
+        "state": "ossified",
+        "value": "매턴 inject 가 2 CC surface(settings.json=sidecar install + plugin hooks.json=/plugin)에 동시 배선돼 둘 다 활성이면 같은 블록을 매턴 2× emit = per-turn 토큰 2배 = context-rot(AI 멍청). emitInject 가 프롬프트키 dedup(atomic mkdir락 · 30s TTL)로 매턴 1회만 emit. 잘라내기 아님(전체 1회 emit).",
+        "threshold": "새 UserPromptSubmit inject 는 raw process.stdout.write 대신 emitInject 사용 필수(안 그러면 이중발화 재발). vanish 방지=TTL(빈 프롬프트키로 크로스턴 collide 시 재emit). 재발신호: 컨텍스트에 같은 inject 2번 보이면 dedup 미적용 의심",
+        "source": "lib/inject.ts"
       }
     ]
   },
@@ -463,7 +470,7 @@
             "name": "PreCompact·PostCompact",
             "role": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
             "id": "surface-precompact-postcompact",
-            "detail": "매-턴 inject(commons·recommend·prefs·easy-lean·load·ing)는 UserPromptSubmit 라 컴팩션 후 복귀, 세션-스코프(architecture·git-context·toolkit·companions·ing + easy 풀-레퍼런스)는 SessionStart 전용→컴팩션 시 증발 → PreCompact+PostCompact 재주입. easy=2-tier(lean 매턴/풀 세션1회). additionalContext(`hookEventName` echo)"
+            "detail": "매-턴 inject(commons·recommend·prefs·easy·load·ing)=UserPromptSubmit(컴팩션 후 복귀) · 세션-스코프(architecture·git-context·toolkit·companions+easy풀)=SessionStart→컴팩션 증발→PreCompact+PostCompact 재주입. `lib/inject.ts` emitInject=이중배선(settings+plugin) 2× 주입을 프롬프트키 dedup(TTL)로 매턴 1회(context-rot 반감·inject-ts-1)"
           },
           {
             "name": "체크포인트",

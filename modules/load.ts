@@ -11,6 +11,7 @@
 // `memory_pressure` CLI — it does a full system scan and can take seconds, which
 // is unacceptable for a hook that fires on every prompt.
 import { execSync } from "node:child_process";
+import { emitInject } from "../lib/inject.ts";
 import { info } from "../lib/log.ts";
 import { readStdin } from "../lib/exec.ts";
 
@@ -152,9 +153,7 @@ export async function runLoad(args: string[]): Promise<number> {
   if (sub === "inject") {
     if (!snap) return 0; // non-macOS: silently no-op
     const ev = eventName();
-    process.stdout.write(
-      JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: body(snap) } }) + "\n"
-    );
+    emitInject("load", ev, body(snap));
     return 0;
   }
   if (sub === "show") {

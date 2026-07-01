@@ -6,6 +6,7 @@
 // governance SSOT salient — so project rules stay enforced instead of scrolling
 // off. Silent when the repo has no CLAUDE.md.
 import { existsSync, readFileSync } from "node:fs";
+import { emitInject } from "../lib/inject.ts";
 import { resolve } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { readStdin } from "../lib/exec.ts";
@@ -47,9 +48,7 @@ export async function runClaudemd(args: string[]): Promise<number> {
       const ev = String(j.hook_event_name ?? j.hookEventName ?? "");
       if (!ev) return 0;
       const text = HEADER + extract(readFileSync(p, "utf8"));
-      process.stdout.write(
-        JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: text } }) + "\n",
-      );
+      emitInject("claudemd", ev, text);
     } catch {
       return 0;
     }

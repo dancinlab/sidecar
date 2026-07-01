@@ -5,6 +5,7 @@
 // directive as additionalContext. `resolve-mode` is the deterministic mode
 // resolver consumed by `sidecar sbs` (LOCKED precedence in code, not prose).
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
+import { emitInject } from "../lib/inject.ts";
 import { resolve, dirname } from "node:path";
 import { homedir } from "node:os";
 import { SIDECAR_CONFIG_DIR, REPO_ROOT } from "../lib/paths.ts";
@@ -292,9 +293,7 @@ export async function runRecommend(args: string[]): Promise<number> {
       const j = JSON.parse(readStdin());
       const ev = String(j.hook_event_name ?? j.hookEventName ?? "");
       if (!ev) return 0;
-      process.stdout.write(
-        JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: body() } }) + "\n"
-      );
+      emitInject("recommend", ev, body());
     } catch {
       return 0;
     }

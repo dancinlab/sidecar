@@ -11,6 +11,7 @@
 // LLM to fill — the backbone /sbs chat-form rounds wrap. `lint <file|->` scores a
 // rendered round on the styles' measurement axes (advisory · always exit 0 · no LLM).
 import { existsSync, readFileSync } from "node:fs";
+import { emitInject } from "../lib/inject.ts";
 import { resolve } from "node:path";
 import { SIDECAR_ROOT } from "../lib/paths.ts";
 import { info } from "../lib/log.ts";
@@ -195,9 +196,7 @@ export async function runEasy(args: string[]): Promise<number> {
         ? "🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)\n\n"
         : "";
     const context = header(file, banner, tier) + payload;
-    process.stdout.write(
-      JSON.stringify({ hookSpecificOutput: { hookEventName: event, additionalContext: context } }) + "\n"
-    );
+    emitInject("easy", event, context);
     return 0;
   }
   info("usage: sidecar easy {show|inject|scaffold \"<q>\"|lint <file|->}");

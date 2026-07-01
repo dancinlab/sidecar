@@ -5,6 +5,7 @@
 // additionalContext block so the agent is reminded every turn; the
 // post-edit guard additionally flags code that violates the code-authoring axis.
 import { existsSync, mkdirSync } from "node:fs";
+import { emitInject } from "../lib/inject.ts";
 import { resolve, dirname } from "node:path";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { readJsonOr, writeJson } from "../lib/json.ts";
@@ -66,9 +67,7 @@ export async function runPrefs(args: string[]): Promise<number> {
 
   if (sub === "inject") {
     const ev = eventName();
-    process.stdout.write(
-      JSON.stringify({ hookSpecificOutput: { hookEventName: ev, additionalContext: body(p) } }) + "\n"
-    );
+    emitInject("prefs", ev, body(p));
     return 0;
   }
   if (sub === "show") {

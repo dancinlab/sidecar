@@ -339,6 +339,31 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
     }
   }
 
+  // 4l. claude-md-oversized — every tracked CLAUDE.md is re-injected EVERY turn (claudemd
+  // inject) in every repo, so an oversized one silently taxes ALL future turns (context-rot
+  // · agent degradation). ALWAYS-ON byte cap (lint.claudeMdCap, built-in default) applied to
+  // any STAGED CLAUDE.md (root + subfolder guides). diff-aware: an untouched legacy bloated
+  // file never blocks — only a staged one over cap does (so it's paid down on next edit).
+  const mdCap = cfg.lint?.claudeMdCap ?? 0;
+  if (mdCap > 0) {
+    for (const f of staged) {
+      if ((f.split("/").pop() ?? "") !== "CLAUDE.md") continue;
+      let bytes = 0;
+      try {
+        bytes = Buffer.byteLength(readFileSync(repoPath(f), "utf8"), "utf8");
+      } catch {
+        continue; // staged deletion → nothing to scan
+      }
+      if (bytes > mdCap) {
+        violations.push({
+          rule: "CLAUDE-MD-OVERSIZED",
+          file: f,
+          msg: `${bytes}B > ${mdCap}B cap — CLAUDE.md is re-injected EVERY turn, so its size taxes all future turns (context-rot). Trim to the lean essentials (project blurb + orientation tree + hard rules); move deep structure to ARCHITECTURE.json and detail to subfolder guides. Raise lint.claudeMdCap only if the size is genuinely irreducible.`,
+        });
+      }
+    }
+  }
+
   return violations;
 }
 

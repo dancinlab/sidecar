@@ -508,7 +508,7 @@
             "name": "체크포인트",
             "role": "commit/세션 → lint / ci / ing",
             "id": "surface-checkpoint",
-            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용 · inject-bloat 가드: injectCaps+injectBudgetBytes+injectBudgetExtra+INJECT-NON-ENGLISH(재주입 doc 한글차단·백틱면제·staged · ALWAYS-ON baseline=CLAUDE.md·commons.md 모든repo·config불필요) = context-rot 재발방지 · lint↔ship 공유"
+            "detail": "검증·신선도·인계. exit+stderr. `ship`=sidecar-repo 전용 · inject-bloat 가드: injectCaps+injectBudget+INJECT-NON-ENGLISH(재주입 doc 한글차단)+CLAUDE-MD-OVERSIZED(CLAUDE.md byte cap 8000) — ALWAYS-ON·모든repo·config불필요·diff-aware = context-rot 재발방지 · lint↔ship 공유"
           }
         ]
       },

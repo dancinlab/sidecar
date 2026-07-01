@@ -33,7 +33,8 @@
       "CONVERGENCE-MALFORMED": "block",
       "CMD-DESC-LONG": "block",
       "INJECT-OVERSIZED": "block",
-      "INJECT-NON-ENGLISH": "block"
+      "INJECT-NON-ENGLISH": "block",
+      "CLAUDE-MD-OVERSIZED": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

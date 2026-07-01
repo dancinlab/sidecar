@@ -79,9 +79,9 @@ export interface SidecarConfig {
     // caught per inject, not as a lump. Keyed by repo-relative path; a key ending "/"
     // caps every `*.md` directly under that dir INDIVIDUALLY at that value. Each entry
     // = that inject's own budget. 0 (or absent) = that inject not size-capped here.
-    // (commons.md / CLAUDE.md / ARCHITECTURE.json are each linted by their OWN format
-    // lint — do/dont · do/dont · cell-cap — which is their inject lint; cross-repo
-    // governance docs vary in size legitimately, so they're not byte-capped here.)
+    // (commons.md / ARCHITECTURE.json are each linted by their OWN format lint — do/dont ·
+    // cell-cap — which is their inject lint. CLAUDE.md gets a dedicated ALWAYS-ON byte cap
+    // below (claudeMdCap) since it is re-injected EVERY turn in every repo.)
     injectCaps?: Record<string, number>;
     // aggregate ceiling on the SUM of single-file inject sources (per-turn re-injection
     // total = context-rot driver). per-source caps stop one file; this stops the sum.
@@ -98,6 +98,13 @@ export interface SidecarConfig {
     // ~3 bytes/char (2-3x token budget every turn) and prefs mandate english docs; Korean
     // literals inside `backticks` are exempt. diff-aware: only a STAGED target blocks.
     injectEnglishOnly?: string[];
+    // ALWAYS-ON byte cap on EVERY tracked CLAUDE.md (root + subfolder guides) — it is
+    // re-injected every turn (claudemd inject) in every repo, so an oversized one silently
+    // taxes ALL future turns (context-rot · the "agent gets dumber" failure). Default below;
+    // a per-repo override extends but the default applies with no config. diff-aware: only a
+    // STAGED CLAUDE.md over cap blocks (legacy bloated files grandfathered until touched).
+    // 0 = off (explicit opt-out only). CLAUDE-MD-OVERSIZED.
+    claudeMdCap?: number;
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
@@ -272,6 +279,9 @@ const DEFAULTS: SidecarConfig = {
     cmdDescCap: 320,
     archCellCap: 300,
     archPiledMax: 6,
+    // ALWAYS-ON byte cap for every tracked CLAUDE.md (re-injected every turn → context-rot).
+    // ~2x a lean governance CLAUDE.md; diff-aware so legacy bloated ones block only on touch.
+    claudeMdCap: 8000,
     // each sidecar inject source → its own size budget
     injectCaps: { "config/recommend.md": 7000, "styles/": 9000, ".harness/prefs.json": 2000 },
   },

@@ -13,7 +13,7 @@ import { readStdin, execShell } from "../lib/exec.ts";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile, repoPath, inGitRepo } from "../lib/config.ts";
-import { collectViolations, lintBlockers } from "./lint.ts";
+import { collectViolations, lintBlockers, governanceDocWriteViolation } from "./lint.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { detectBranchSwitch, detectMainRefMove } from "./git-checkout-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
@@ -405,6 +405,14 @@ export async function preWrite(_args: string[]): Promise<number> {
       emitWarn(dv.rule, dv.msg);
     }
   }
+
+  // governance-doc SAVE-time guard — block Korean prose (CLAUDE.md · commons.md · runs on
+  // Write AND Edit) or an oversized CLAUDE.md (full Write) the moment it is saved, instead
+  // of deferring to the commit-time lint (which a user's own terminal commit never hits).
+  // english-only is NOT section-aware, so it is fragment-safe (pre-ts-1); the byte cap skips
+  // Edit fragments (can't size the final file → commit-time lint is the backstop).
+  const gdv = governanceDocWriteViolation(filePath, content, isEditFragment);
+  if (gdv) return emitBlock(gdv.rule, gdv.msg);
 
   // skill/command description-recognition guard (sidecar `skill-desc-guard` s18,
   // write-time). A commands/*.md or SKILL.md `description:` over the skill-listing

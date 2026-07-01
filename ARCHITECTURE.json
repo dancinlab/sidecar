@@ -434,7 +434,7 @@
             "name": "PreToolUse(Write)",
             "role": "쓰기 직전 → pre write",
             "id": "surface-pretooluse-write",
-            "detail": "경로·내용·우회패턴 매칭 + write-time hard-deny(상세는 각 4g/4h 노드): SKILL-DESC-CAP/CMD-DESC-LONG(명령 desc 1400 천장+320 미니멀) · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE · DODONT-LONG · SECRET-LITERAL · HANDOFF-SCATTER. stdout JSON(deny)/stderr(warn)"
+            "detail": "경로·내용·우회패턴 매칭 + write-time hard-deny(상세 4g/4h): SKILL-DESC-CAP/CMD-DESC-LONG · COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE · DODONT-LONG/SECRET-LITERAL/HANDOFF-SCATTER · INJECT-NON-ENGLISH+CLAUDE-MD-OVERSIZED(CLAUDE.md/commons.md 저장시점 한글+byte cap · commit 백스톱). stdout JSON(deny)/stderr(warn)"
           },
           {
             "name": "PreToolUse(MCP)",

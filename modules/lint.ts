@@ -367,6 +367,47 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
   return violations;
 }
 
+// Write-time (SAVE-time) governance-doc guard — the immediate teeth for the commit-time
+// INJECT-NON-ENGLISH + CLAUDE-MD-OVERSIZED lints, so the moment a re-injected governance
+// doc is SAVED with Korean prose (baseline docs: CLAUDE.md · commons.md) or an oversized
+// CLAUDE.md, the Write/Edit is BLOCKED — not deferred to commit. english-only runs on BOTH
+// Write (full content) and Edit (new_string fragment): NEW Korean is caught as it is typed.
+// The byte cap needs the WHOLE document, so it runs on a full Write only (an Edit fragment
+// can't reveal the final file size → the commit-time lint is its backstop). Korean inside
+// `backticks` is exempt. Returns the first violation or null.
+export function governanceDocWriteViolation(
+  filePath: string,
+  content: string,
+  isEditFragment: boolean,
+): { rule: string; msg: string } | null {
+  const base = filePath.split("/").pop() ?? "";
+  // english-only baseline docs (same set as the commit-time BUILTIN_ENGLISH_ONLY baseline)
+  if (base === "CLAUDE.md" || base === "commons.md") {
+    const stripped = content.replace(/`[^`]*`/g, ""); // exempt Korean inside code-spans
+    const hangul = stripped.match(/[가-힣]/g);
+    if (hangul && hangul.length > 0) {
+      return {
+        rule: "INJECT-NON-ENGLISH",
+        msg: `${hangul.length} Korean (Hangul) char(s) written into a re-injected governance doc (${base}) — it re-injects EVERY turn (context-rot) and prefs mandate english docs → write it in English (Korean allowed only inside \`backticks\`).`,
+      };
+    }
+  }
+  // CLAUDE.md byte cap — full Write only (a fragment can't tell the final file size)
+  if (base === "CLAUDE.md" && !isEditFragment) {
+    const cap = config().lint?.claudeMdCap ?? 0;
+    if (cap > 0) {
+      const bytes = Buffer.byteLength(content, "utf8");
+      if (bytes > cap) {
+        return {
+          rule: "CLAUDE-MD-OVERSIZED",
+          msg: `${bytes}B > ${cap}B cap — CLAUDE.md re-injects every turn, so keep it lean (project blurb + orientation tree + hard rules; deep structure → ARCHITECTURE.json, detail → subfolder guides). Raise lint.claudeMdCap only if genuinely irreducible.`,
+        };
+      }
+    }
+  }
+  return null;
+}
+
 // Filter to BLOCK-severity violations (warn-severity like L0-LOCKDOWN is reported but
 // never vetoes). Shared by the commit interceptor so it blocks on the same bar.
 export function lintBlockers(violations: Violation[]): Violation[] {

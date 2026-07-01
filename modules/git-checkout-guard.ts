@@ -113,3 +113,42 @@ export function detectBranchSwitch(rawCmd: string): BranchSwitch | null {
   if (positionals.length === 1) return { needsVerify: true, target: positionals[0], label: `git checkout ${positionals[0]}`, dir };
   return null;
 }
+
+// Protected default-branch names. Force-repointing / renaming / deleting one of these
+// via `git branch` hijacks the SHARED main ref out from under the main checkout and any
+// parallel session — the same [[feedback_parallel_agents_isolated_worktree]] class as a
+// branch switch (#3559), just through `git branch` instead of checkout. A ref mutation
+// hits the shared ref store, so it is dangerous from ANY worktree: the caller does NOT
+// gate this on isMainWorktree (unlike detectBranchSwitch). Legit main advance is a
+// fast-forward (`git fetch origin main:main` / `merge --ff-only`), which never names a
+// mutating flag here, so pr-cycle's own local-main sync is not caught.
+const PROTECTED_BRANCHES = new Set(["main", "master"]);
+
+// Detect a `git branch` invocation that force-repoints, renames, deletes, or copies over
+// a protected branch. Returns the offending label, or null when no protected branch is
+// mutated (plain feature-branch delete/rename/create all fall through to allow).
+export function detectMainRefMove(rawCmd: string): { label: string } | null {
+  const toks = tokens(stripQuotes(rawCmd));
+  const n = toks.length;
+  let sc = -1;
+  for (let i = 0; i < n; i++) {
+    if (toks[i] !== "git") continue;
+    let j = i + 1;
+    while (j < n && toks[j].startsWith("-")) {
+      if (toks[j] === "-c" || toks[j] === "--config" || toks[j] === "-C") j++; // git-level value-taking (-C <path>)
+      j++;
+    }
+    if (j < n && toks[j] === "branch") { sc = j; break; }
+  }
+  if (sc < 0) return null;
+  const args = toks.slice(sc + 1);
+  if (args.includes("--help") || args.includes("-h")) return null;
+  // A mutating op on the protected branch: -f/--force (repoint), -m/-M/--move (rename),
+  // -d/-D/--delete, -c/-C/--copy. Bare `git branch main` (create when absent) is left alone.
+  const MUT = new Set(["-f", "--force", "-m", "-M", "--move", "-d", "-D", "--delete", "-c", "-C", "--copy"]);
+  const op = args.find((t) => MUT.has(t));
+  if (!op) return null;
+  const positionals = args.filter((t) => !t.startsWith("-"));
+  if (!positionals.some((p) => PROTECTED_BRANCHES.has(p))) return null;
+  return { label: `git branch ${op} ${positionals.join(" ")}`.trim() };
+}

@@ -14,8 +14,8 @@ Each rule = one `do:` / `dont:` pair; mechanism & precedents live in code + CHAN
 - dont: `@ts-ignore`·`eslint-disable`·empty catch·`if(false)`·TODO-only·shadow guards (justified→`@root-cause-ok <reason>`) · scattering repeat-lessons in inline comments·separate incident trackers (one SSOT)
 
 ## fix-the-tool — don't bypass a language/tool wall, fix that tool (reinforces root-cause·upstream-fix)
-- do: Dependent language·compiler·runtime·toolchain defect/limit (parser gaps·int limits·codegen·link…) → **fix that tool** (all dancinlab repos writable) — in-session verify via worktree+build+CI→merge
-- dont: Cover a wall: other-lang reimpl (Python)·cached-binary bypass·symbol/name dodge·fallback branch·premature "measurement-terminal" (=wire-to-prod·dead) (if unavoidable `@root-cause-ok <reason>`+opt-in)
+- do: Dependent language·compiler·runtime·toolchain defect/limit (parser gaps·int limits·codegen·link…) → **fix that tool** (all dancinlab repos writable) — land in the tool's **CANONICAL repo** (dev clone/upstream e.g. `~/dancinlab/hexa-lang`), merge via **that repo's own pr-cycle/ship** (survives reinstall/self-update) — in-session verify via worktree+build+CI→merge
+- dont: Cover a wall: other-lang reimpl (Python)·cached-binary bypass·symbol/name dodge·fallback branch·premature "measurement-terminal" (=wire-to-prod·dead) · patching only the **INSTALLED/vendored copy** (`~/.hx/src`·`node_modules`·site-packages·cache) = bandaid a `self-update`/reinstall reverts — a NOW-unblock edit STILL lands upstream same cycle (if unavoidable `@root-cause-ok <reason>`+opt-in)
 
 ## verify-done — actually verify before "done"
 - do: Run `sidecar ci`/build/test, confirm **by output** · after a feature/bugfix exhaustively QA all subcommands·edge cases (tally PASS/FAIL → fix bugs then close) · evidence via `sidecar verdict record`

@@ -40,6 +40,7 @@ sidecar/
 - do: **any impl/fix done → auto `sidecar ship`** (no 4-axis box): all surfaces (pr-cycle→self-update→shadow) · docs first (CHANGELOG+ARCHITECTURE) · config-only=`--no-doc` (`cycle-docs-pr`)
 - do: new command = `modules/<name>.ts` + `cli/index.ts` register + help line + CHANGELOG (+ `templates/`·`commands/` md) → `help` loads + `sidecar toolkit write` (catalog 100%) + smoke-verify
 - do: **hook-wired feature (guard·inject·lifecycle) → wire BOTH surfaces**: CC (`hooks/`) AND Pi (`pi/sidecar.ts`) — CLI shared, wiring per-surface · one side only = other agent unaffected (`wire-to-prod`)
+- do: **new Stop/lifecycle hook → wire in BOTH `hooks/hooks.json` AND `modules/setup.ts` Stop[]** — the LIVE hooks are `~/.claude/settings.json` (calls `sidecar <cmd>` directly, NOT the plugin cache); `install-hooks` writes setup.ts's list there. hooks.json-only = never fires (reload/`/plugin update` are red herrings) → after adding: `install-hooks --global` + `grep <hook> ~/.claude/settings.json` to verify (`setup-ts-1`)
 - dont: running only `pr-cycle`+`self-update`, skipping `shadow` — new slash won't show in picker, "not reflected" recurs (so all three bundle into `ship`) · wiring one surface only
 
 ## inject-lint — no truncation, lint at authoring time (why: per-turn inject bloat = context-rot → agent degradation · `commons-md-1`)

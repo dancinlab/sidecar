@@ -293,7 +293,7 @@ async function convergenceVerb(args: string[]): Promise<number> {
 
   if (verb === "list") {
     if (!records.length) return info("convergence: no records"), 0;
-    for (const r of records) info(`  [${r.state}] ${r.id}  (${r.source ?? "-"})  ${r.value ?? ""}`);
+    for (const r of records) info(`  [${convStateLabel(r.state)}] ${r.id}  (${r.source ?? "-"})  ${r.value ?? ""}`);
     info(`convergence: ${records.length} record(s)`);
     return 0;
   }
@@ -308,24 +308,24 @@ async function convergenceVerb(args: string[]): Promise<number> {
     const hits = records.filter((r) => r.source && (r.source === file || file.endsWith("/" + r.source) || r.source.endsWith("/" + file)));
     if (!hits.length) return info(`convergence: ${file} 에 기록된 학습 없음 (새 학습이면 add)`), 0;
     info(`convergence — ${file} 에 박힌 재발방지 학습 ${hits.length}건 (같은 결함이면 edit <id> 로 갱신):`);
-    for (const r of hits) info(`  [${r.state}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`);
+    for (const r of hits) info(`  [${convStateLabel(r.state)}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`);
     return 0;
   }
 
   if (verb === "add") {
     const source = flag(args, "source");
-    const state = flag(args, "state") ?? "ossified";
+    const state = flag(args, "state") ?? "pos-conv";
     const value = flag(args, "value");
     // source is now REQUIRED — the learning is keyed by (and surfaced on touch of) the
     // file it guards; a record with no source can never be surfaced (convergenceForFile),
     // so the learning would be silently lost. id is AUTO-assigned from the source name
     // (no longer hand-picked) so records stay uniquely keyed by the file they protect.
     if (!source || !value) {
-      info('usage: sidecar architecture convergence add --source <file> --value "<핵심>" [--state <s>] [--threshold "<재발조건/해결>"]');
+      info('usage: sidecar architecture convergence add --source <file> --value "<핵심>" [--state pos-conv|in-prog|neg-conv] [--threshold "<재발조건/해결>"]');
       info("  · id 는 source 파일명에서 자동 부여(--id 로 명시 upsert override 가능) · value/threshold 셸 특수문자는 --value - 로 stdin");
       return 1;
     }
-    if (!CONV_STATES.has(state)) return loudFail(`invalid state '${state}' (allowed: ${[...CONV_STATES].join("·")})`), 1;
+    if (!CONV_STATES.has(normalizeConvState(state))) return loudFail(`invalid state '${state}' (allowed: ${[...CONV_STATES].join("·")} · legacy ossified/in_flight/failed accepted)`), 1;
     // review-before-append (root-cause · single-doc) — records must not just pile up
     // unclassified. If this source already carries learnings, refuse a BLIND append:
     // surface them so the agent reviews and either refines an existing one (`edit <id>`
@@ -336,13 +336,13 @@ async function convergenceVerb(args: string[]): Promise<number> {
     const sameSource = records.filter((r) => r.source === source);
     if (sameSource.length && !explicitId && !isNew) {
       loudFail(`convergence add: ${source} 에 이미 학습 ${sameSource.length}건 — 무작정 추가 말고 먼저 검토하라:`);
-      for (const r of sameSource) info(`  [${r.state}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`);
+      for (const r of sameSource) info(`  [${convStateLabel(r.state)}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`);
       info("  · 같은 결함의 재발/연장이면 → `architecture convergence edit <id> --value … [--threshold …]` 로 그 레코드 갱신(update-in-place)");
       info("  · 정말 별개의 새 학습이면 → 같은 명령에 `--new` 를 붙여 의식적으로 추가");
       return 1;
     }
     const id = explicitId ?? nextConvergenceId(source, new Set(records.map((r) => r.id ?? "")));
-    const rec: ConvergenceRecord = { id, state, value, threshold: flag(args, "threshold") ?? "", source };
+    const rec: ConvergenceRecord = { id, state: normalizeConvState(state), value, threshold: flag(args, "threshold") ?? "", source };
     const idx = records.findIndex((r) => r.id === id);
     if (idx >= 0) records[idx] = rec; // upsert (update-in-place) when an explicit --id matches
     else records.push(rec);
@@ -357,8 +357,8 @@ async function convergenceVerb(args: string[]): Promise<number> {
     if (!rec) return loudFail(`convergence edit: no record id=${id ?? "?"}`), 1;
     const st = flag(args, "state");
     if (st !== undefined) {
-      if (!CONV_STATES.has(st)) return loudFail(`invalid state '${st}'`), 1;
-      rec.state = st;
+      if (!CONV_STATES.has(normalizeConvState(st))) return loudFail(`invalid state '${st}' (allowed: ${[...CONV_STATES].join("·")})`), 1;
+      rec.state = normalizeConvState(st);
     }
     for (const f of ["value", "threshold", "source"] as const) {
       const v = flag(args, f);
@@ -642,9 +642,26 @@ export function lintArchitectureTree(): ArchLintHit[] {
 // code markers. Each record: { id, state, value, threshold, source }. Two consumers:
 //   • lintConvergenceRecords — commit gate (well-formed id + valid state)
 //   • convergenceForFile     — surfaced when the agent touches `source` (pre hook)
-const CONV_STATES = new Set([
-  "ossified", "stable", "in_flight", "pending", "completed", "completed_gap", "failed", "blocked",
-]);
+// Convergence-state = the 3-stage CONVERGENCE classification, not a lifecycle flag:
+//   pos-conv (🟢 포지티브 수렴)  = the fix/lesson converged POSITIVE — locked in, recurrence held
+//   in-prog  (🔄 진행·검토)      = still converging — being worked / under review
+//   neg-conv (🧱 네거티브 수렴)  = converged NEGATIVE — the prevention hit a wall / the fix failed
+// Legacy lifecycle values (ossified/in_flight/failed…) are still ACCEPTED and normalized on
+// read+display, so pre-migration records never hard-fail; `add`/`edit` store the canonical form.
+const CONV_STATES = new Set(["pos-conv", "in-prog", "neg-conv"]);
+const LEGACY_STATE_ALIAS: Record<string, string> = {
+  ossified: "pos-conv", stable: "pos-conv", completed: "pos-conv",
+  in_flight: "in-prog", pending: "in-prog", completed_gap: "in-prog",
+  failed: "neg-conv", blocked: "neg-conv",
+};
+export function normalizeConvState(s: string | undefined): string {
+  return (s && LEGACY_STATE_ALIAS[s]) || s || "";
+}
+// display: icon + canonical name (POS-CONV 🟢 · IN-PROG 🔄 · NEG-CONV 🧱), legacy mapped first.
+export function convStateLabel(s: string | undefined): string {
+  const n = normalizeConvState(s);
+  return n === "pos-conv" ? "🟢 POS-CONV" : n === "in-prog" ? "🔄 IN-PROG" : n === "neg-conv" ? "🧱 NEG-CONV" : (s ?? "?");
+}
 
 export interface ConvergenceRecord {
   id?: string;
@@ -689,7 +706,7 @@ export function lintConvergenceRecords(): string[] {
     else if (seen.has(r.id)) out.push(`convergence ${at} — duplicate id (records are id-keyed, update in place)`);
     else seen.add(r.id);
     if (!r.state) out.push(`convergence ${at} — missing required key: state`);
-    else if (!CONV_STATES.has(r.state)) out.push(`convergence ${at} — invalid state '${r.state}' (allowed: ${[...CONV_STATES].join("·")})`);
+    else if (!CONV_STATES.has(normalizeConvState(r.state))) out.push(`convergence ${at} — invalid state '${r.state}' (allowed: ${[...CONV_STATES].join("·")} · legacy ossified/in_flight/failed accepted)`);
   });
   return out;
 }
@@ -702,7 +719,7 @@ export function convergenceForFile(file: string): string {
   const hits = loadConvergence().filter((r) => r.source && (r.source === rel || rel.endsWith("/" + r.source)));
   if (!hits.length) return "";
   const lines = hits.map(
-    (r) => `  • [${r.state}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`,
+    (r) => `  • [${convStateLabel(r.state)}] ${r.id} — ${r.value}${r.threshold ? `  (재발조건/해결: ${r.threshold})` : ""}`,
   );
   return (
     `🛡️ convergence — ${rel} 에 박힌 재발방지 학습 ${hits.length}건 (ARCHITECTURE.json · 같은 결함 재도입 금지):\n` +

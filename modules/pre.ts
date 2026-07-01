@@ -346,15 +346,26 @@ function checkBypassPatterns(content: string, patterns: string[], exemptions: st
 export async function preWrite(_args: string[]): Promise<number> {
   const input = parseToolInput();
   const filePath = String(input.file_path ?? "");
-  const content = String(input.content ?? input.new_string ?? "");
+  // MultiEdit has NO top-level content/new_string — its shape is {file_path, edits:[{old_string,
+  // new_string},…]}. Gather every edit's new_string so the fragment-safe guards (english-only ·
+  // secret · portable-path · naming) scan MultiEdit like Write/Edit; otherwise Korean prose slips
+  // through an empty-string content (the CLAUDE.md-Korean-via-MultiEdit bypass). The CLI is shared,
+  // so this one fix covers BOTH the CC and Pi surfaces.
+  const editText = Array.isArray(input.edits)
+    ? (input.edits as unknown[])
+        .map((e) => (e && typeof e === "object" ? String((e as Record<string, unknown>).new_string ?? "") : ""))
+        .join("\n")
+    : "";
+  const content = String(input.content ?? input.new_string ?? "") || editText;
   // Edit supplies new_string (a PARTIAL fragment); Write supplies content (the FULL
-  // document). The section-aware write-guards below (commons do/dont · dodont-length)
-  // can only validate a complete document — a fragment truncates its boundary section's
-  // body and false-positives it as "no do/dont" (e.g. an edit anchored on the next
-  // `## ` header). They are Write-only by design (Edit fragments fall through to the
-  // commit-time lint backstop, which has full-file context + claudeMdExempt). Detect
-  // the fragment case so those two guards skip it.
-  const isEditFragment = input.content === undefined && input.new_string !== undefined;
+  // document); MultiEdit supplies edits[].new_string (also PARTIAL fragments). The section-aware
+  // write-guards below (commons do/dont · dodont-length) can only validate a complete document —
+  // a fragment truncates its boundary section's body and false-positives it as "no do/dont" (e.g.
+  // an edit anchored on the next `## ` header). They are Write-only by design (Edit/MultiEdit
+  // fragments fall through to the commit-time lint backstop, which has full-file context +
+  // claudeMdExempt). Detect the fragment case so those two guards (and the byte/size caps) skip it.
+  const isEditFragment =
+    input.content === undefined && (input.new_string !== undefined || editText.length > 0);
   if (!filePath) return 0;
 
   // convergence-on-touch — surface this file's recorded recurrence-prevention learnings

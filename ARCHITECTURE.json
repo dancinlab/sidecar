@@ -329,6 +329,13 @@
         "value": "ARCHITECTURE 트리 노드 대상 rule 게이트(id 강제·hygiene)는 노드 판정을 name 키 유무로만 하면 안 된다 — role/detail(역할/상세)만 있고 name 없는 노드도 뷰어엔 렌더되는 실노드인데, name-키잉 판정은 그걸 노드로 안 쳐서 id 강제를 통째 우회시킨다. rendered 판정 = name|role|detail(+legacy 이름/역할/상세) 로 넓혀야 모든 실노드가 id 강제된다.",
         "threshold": "재발조건: 트리 노드 검사를 obj['name'] 유무로 키잉 → name 없는 role/detail 노드가 silent 통과(id 강제 우회). 해결: isRenderedNode=name|role|detail 로 판정하고 구조래퍼(children-only)·columns(key/label)·convergence 는 계속 제외. 픽스처(name-noid + role-noname) 둘 다 block 되는지로 검증.",
         "source": "modules/architecture.ts"
+      },
+      {
+        "id": "pre-ts-2",
+        "state": "ossified",
+        "value": "parseToolInput/preWrite must gather input.edits[].new_string (MultiEdit shape has NO top-level content/new_string) into the scanned content — else every content-scanning write guard (INJECT-NON-ENGLISH english-only, secret-literal, portable-path, naming) silently passes MultiEdit. MultiEdit is an isEditFragment (partial fragments) so section-aware + byte/size caps still skip it.",
+        "threshold": "piped {tool_input:{file_path:'/x/CLAUDE.md',edits:[{new_string:'한글'}]}} to sidecar pre write and confirmed it emitted permissionDecision:deny (was exit-0 silent pass before the fix); english-only + backtick-exempt MultiEdit cases still allow (state/pre-korean-multiedit-smoke/run.sh ALL PASS).",
+        "source": "modules/pre.ts"
       }
     ]
   },

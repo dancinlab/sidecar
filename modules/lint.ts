@@ -367,6 +367,29 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
     if (hist) violations.push({ rule: hist.rule, file: f, msg: hist.msg });
   }
 
+  // 4n. commons-oversized — commons.md (config/ or .harness/) is the governance SSOT
+  // re-injected EVERY turn, held to the SAME lean bar as CLAUDE.md (lint.commonsCap · built-in
+  // default). diff-aware: only a STAGED over-cap commons.md blocks.
+  const cmCap = cfg.lint?.commonsCap ?? 0;
+  if (cmCap > 0) {
+    for (const f of staged) {
+      if ((f.split("/").pop() ?? "") !== "commons.md") continue;
+      let bytes = 0;
+      try {
+        bytes = Buffer.byteLength(readFileSync(repoPath(f), "utf8"), "utf8");
+      } catch {
+        continue; // staged deletion → nothing to scan
+      }
+      if (bytes > cmCap) {
+        violations.push({
+          rule: "COMMONS-OVERSIZED",
+          file: f,
+          msg: `${bytes}B > ${cmCap}B cap — commons.md is the governance SSOT re-injected EVERY turn (context-rot). Keep each rule a terse do/dont kernel; mechanism/precedents belong in code + CHANGELOG + git, not the re-injected doc. Raise lint.commonsCap only if genuinely irreducible.`,
+        });
+      }
+    }
+  }
+
   return violations;
 }
 
@@ -438,6 +461,19 @@ export function governanceDocWriteViolation(
   if (base === "CLAUDE.md") {
     const hist = claudeMdHistoryViolation(content);
     if (hist) return hist;
+  }
+  // commons.md byte cap — full Write only (a fragment can't tell the final file size)
+  if (base === "commons.md" && !isEditFragment) {
+    const cap = config().lint?.commonsCap ?? 0;
+    if (cap > 0) {
+      const bytes = Buffer.byteLength(content, "utf8");
+      if (bytes > cap) {
+        return {
+          rule: "COMMONS-OVERSIZED",
+          msg: `${bytes}B > ${cap}B cap — commons.md is the governance SSOT re-injected every turn (context-rot). Keep each rule a terse do/dont kernel; mechanism/precedents → code + CHANGELOG + git. Raise lint.commonsCap only if genuinely irreducible.`,
+        };
+      }
+    }
   }
   return null;
 }

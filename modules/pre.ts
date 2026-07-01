@@ -384,14 +384,18 @@ export async function preWrite(_args: string[]): Promise<number> {
   // worktree, 1 for the branch name; only a non-{main,master} HEAD escalates to the
   // full probe (accurate default-ref resolution + behind count for the message).
   if (config().git.guardOffMainEdit) {
-    const gcwd = process.env.PWD ?? "";
-    if (await isMainWorktree(gcwd)) {
-      const brRes = await execShell("git symbolic-ref --short -q HEAD", { cwd: gcwd || "." }).catch(() => null);
+    // evaluate the TARGET FILE's worktree, not the shell PWD — editing a file in a
+    // linked (isolated) worktree was false-blocked because PWD pointed at the primary
+    // checkout parked on a stale branch (#3736 guard misfire on the very isolated-
+    // worktree workflow this guard's own message prescribes).
+    const gdir = filePath.slice(0, filePath.lastIndexOf("/")) || process.env.PWD || ".";
+    if (await isMainWorktree(gdir)) {
+      const brRes = await execShell("git symbolic-ref --short -q HEAD", { cwd: gdir || "." }).catch(() => null);
       const branch = brRes && brRes.code === 0 ? brRes.stdout.trim() : ""; // "" = detached HEAD
       if (branch !== "main" && branch !== "master") {
         // Off a conventionally-named default (or detached) → confirm against the REAL
         // default ref before blocking (repos whose default is 'trunk'/'develop' etc.).
-        const c = await probeGitContext(gcwd || undefined);
+        const c = await probeGitContext(gdir || undefined);
         if (c && c.ref) {
           const onDefault = !c.detached && (c.ref === `origin/${c.branch}` || c.ref === c.branch);
           if (!onDefault) {

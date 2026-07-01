@@ -568,14 +568,24 @@ export function lintArchitectureTree(): ArchLintHit[] {
       // search` can address it by a stable key. Skip the convergence store (id-keyed,
       // no name) and columns (key/label, no name).
       const nodeName = obj["name"] ?? obj["이름"];
-      if (typeof nodeName === "string" && !path.startsWith("root.convergence")) {
+      // A RENDERED tree node carries any of name/role/detail (canonical or legacy 이름/역할/상세)
+      // — NOT just `name`. Keying id-enforcement on `name` alone let a node with role/detail but
+      // NO name (still drawn in the viewer) dodge the id gate entirely. Broadened so every
+      // rendered node needs an id. Structural wrappers (root, `tree` = children-only) and
+      // columns (key/label) carry none of these → correctly skipped.
+      const isRenderedNode =
+        typeof nodeName === "string" ||
+        obj["role"] !== undefined || obj["역할"] !== undefined ||
+        obj["detail"] !== undefined || obj["상세"] !== undefined;
+      if (isRenderedNode && !path.startsWith("root.convergence")) {
         sawTreeNode = true;
+        const label = typeof nodeName === "string" && nodeName.trim() ? `"${nodeName}"` : `(unnamed · ${path})`;
         const id = obj["id"] ?? obj["slug"]; // id canonical, slug legacy fallback
         if (typeof id !== "string" || !id.trim()) {
           hits.push({
             rule: "ARCH-ID-MISSING",
             path,
-            msg: `tree node "${nodeName}" has no id — every node needs a stable searchable id (\`sidecar architecture search\`)`,
+            msg: `tree node ${label} has no id — every rendered node (name/role/detail) needs a stable searchable id (\`sidecar architecture search\`)`,
           });
         } else if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
           hits.push({

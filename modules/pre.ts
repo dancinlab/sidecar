@@ -15,7 +15,7 @@ import { appendJsonl } from "../lib/log.ts";
 import { config, resolveRuleFile, repoPath } from "../lib/config.ts";
 import { collectViolations, lintBlockers } from "./lint.ts";
 import { detectForcePush } from "./git-guard.ts";
-import { detectBranchSwitch } from "./git-checkout-guard.ts";
+import { detectBranchSwitch, detectMainRefMove } from "./git-checkout-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
@@ -227,6 +227,17 @@ export async function preBash(_args: string[]): Promise<number> {
           `'${bs.label}' switches the MAIN worktree's branch — this clobbers a parallel session's untracked work and lands later commits on the wrong branch (the parallel-worktree incident, #3559). Do parallel work in an ISOLATED worktree instead: \`git worktree add <path> -b <branch>\` then \`cd\` there. No inline override; if a deliberate main-checkout switch is genuinely required, run it outside the agent.`
         );
       }
+    }
+
+    // Sibling vector — force-repoint/rename/delete the SHARED main ref via `git branch`
+    // (no checkout needed). Hits the shared ref store → dangerous from ANY worktree, so
+    // this is NOT gated on isMainWorktree. Same #3559 class as a branch switch.
+    const rm = detectMainRefMove(cmd);
+    if (rm) {
+      return emitBlock(
+        "GIT-MAIN-REF-MOVE",
+        `'${rm.label}' force-repoints/renames/deletes the shared main branch — hijacking it out from under the main checkout + parallel sessions (parallel-worktree incident, #3559). Do parallel work in an ISOLATED worktree (\`git worktree add <path> -b <branch>\`) and let \`sidecar pr-cycle\` land the verified main merge. No inline override; if genuinely required, run it outside the agent.`
+      );
     }
   }
 

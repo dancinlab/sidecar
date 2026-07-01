@@ -315,6 +315,13 @@
         "value": "거버넌스 규칙(pr-cycle/ship 진입 등)을 per-turn inject 텍스트로만 실으면 advisory 라 실제 강제가 안 된다 — inject 는 '상기'일 뿐, 진짜 강제는 Stop[] 에 decision:block stop-check 를 배선해야 성립. 또 라이브 Stop 훅의 SSOT 는 글로벌 ~/.claude/settings.json(setup.ts hookSpec)이고 plugin hooks.json 는 /plugin 설치용 별개 표면 — 새 Stop 게이트는 둘 다 배선 + install-hooks 재실행해야 라이브 반영된다.",
         "threshold": "재발조건: 새 거버넌스 규칙을 commons/CLAUDE.md inject 로만 추가하고 Stop 게이트 미배선, 또는 setup.ts 한쪽만 배선. 해결: 강제하려면 modules/<x>.ts 에 stop-check(marker/clean-state 기반) 추가 → setup.ts Stop[] + hooks.json 양쪽 → install-hooks 재실행 → 스모크.",
         "source": "modules/setup.ts"
+      },
+      {
+        "id": "git-checkout-guard-ts-1",
+        "state": "ossified",
+        "value": "브랜치 보호 가드는 HEAD 이동(checkout/switch) 벡터만 막으면 자매 구멍이 남는다 — 체크아웃 없이 SHARED main ref 를 갈아치우는 `git branch -f/-M/-m/-D/-d/-C/-c main` 도 같은 #3559 클래스(병렬 세션 clobber). ref-mutation 은 공유 ref store 라 링크드 워크트리에서도 위험 → isMainWorktree 로 게이팅하면 안 되고(그건 checkout 가드 전용) 무조건 차단. 단 pr-cycle 의 정상 ff(git fetch origin main:main · git merge --ff-only)는 mutating flag 를 안 써 통과 = 자폭 안 함.",
+        "threshold": "재발조건: 새 브랜치 조작 형태(예: git update-ref refs/heads/main, git branch --set-upstream 오용)를 추가 커버 안 하거나, main-ref-move 를 isMainWorktree 게이트로 좁혀 링크드 워크트리 우회 허용. 해결: git-checkout-guard.ts 에 벡터별 detector 를 두고 pre.ts 에서 guardBranchSwitch 하나로 묶어 실제 pre-bash 훅경로 stdin 스모크(block/allow)로 검증.",
+        "source": "modules/git-checkout-guard.ts"
       }
     ]
   },
@@ -372,6 +379,12 @@
                 "role": "메인 워크트리 브랜치 전환 차단",
                 "id": "guard-branch-switch",
                 "detail": "modules/git-checkout-guard.ts — MAIN 워크트리에서 HEAD 이동하는 `git checkout <branch>`/`-b`/`switch` 차단(병렬 세션 untracked 작업 손실 #3559 방지). 링크드 워크트리·파일복원(`checkout -- path`)은 면제 · 모호한 `checkout <ref>` 는 rev-parse 확인 · `-C <path>` 우회도 차단 · config `git.guardBranchSwitch`(기본 ON)."
+              },
+              {
+                "name": "main-ref-move 가드",
+                "role": "체크아웃 없이 main ref 갈아치우기 차단",
+                "id": "guard-main-ref-move",
+                "detail": "git-checkout-guard.ts detectMainRefMove — 체크아웃 없이 SHARED main/master ref 를 `git branch -f`(재지정)·`-M/-m`(개명)·`-D/-d`(삭제)·`-C/-c`(복사)로 갈아치우는 형태 차단(branch-switch 자매·#3559 동종 · 공유 ref 라 모든 워크트리에서 위험→isMainWorktree 비게이트). feature 브랜치 삭제/개명·`fetch main:main` ff 는 통과 · config `git.guardBranchSwitch` 공유."
               },
               {
                 "name": "cloud-raw 가드",

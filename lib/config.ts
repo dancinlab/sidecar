@@ -105,6 +105,11 @@ export interface SidecarConfig {
     // STAGED CLAUDE.md over cap blocks (legacy bloated files grandfathered until touched).
     // 0 = off (explicit opt-out only). CLAUDE-MD-OVERSIZED.
     claudeMdCap?: number;
+    // ALWAYS-ON byte cap on every tracked commons.md (config/commons.md · .harness/commons.md)
+    // — the governance SSOT re-injected EVERY turn (commons inject), same context-rot risk as
+    // CLAUDE.md, so it is held to the SAME lean bar. diff-aware (staged only · legacy
+    // grandfathered until touched). 0 = off. COMMONS-OVERSIZED.
+    commonsCap?: number;
   };
   // optional shared-file sync: a shell script the repo runs to fan files out
   sync?: { script: string };
@@ -296,6 +301,8 @@ const DEFAULTS: SidecarConfig = {
     // ALWAYS-ON byte cap for every tracked CLAUDE.md (re-injected every turn → context-rot).
     // ~2x a lean governance CLAUDE.md; diff-aware so legacy bloated ones block only on touch.
     claudeMdCap: 8000,
+    // commons.md held to the SAME lean bar as CLAUDE.md (both re-injected every turn).
+    commonsCap: 8000,
     // each sidecar inject source → its own size budget
     injectCaps: { "config/recommend.md": 7000, "styles/": 9000, ".harness/prefs.json": 2000 },
   },

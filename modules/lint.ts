@@ -13,7 +13,7 @@ import { isL0 } from "../lib/lockdown.ts";
 import { config, repoPath } from "../lib/config.ts";
 import { routeError, classify } from "./errors.ts";
 import { docViolations } from "./docs.ts";
-import { lintArchitectureTree, lintConvergenceRecords } from "./architecture.ts";
+import { lintArchitectureTree, lintConvergenceRecords, lintResultRecords } from "./architecture.ts";
 import { toolkitDrift } from "./toolkit.ts";
 import { lintCommandDescriptions } from "./shadow.ts";
 import { lintCommonsFormat, dodontLengthLint } from "./commons.ts";
@@ -247,6 +247,14 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
   // and can't be surfaced on file-touch; architecture.ts owns the validator.
   for (const it of lintConvergenceRecords()) {
     violations.push({ rule: "CONVERGENCE-MALFORMED", file: "ARCHITECTURE.json", msg: it });
+  }
+
+  // 4d'. result record hygiene (preserve-state · honesty) — bench/experiment outcomes accumulate
+  // in the ARCHITECTURE.json `results` array with the same 3-stage convergence-state vocabulary;
+  // each record must carry id + a valid kind + a valid state, else the accumulated result is
+  // malformed. architecture.ts owns the validator (lintResultRecords).
+  for (const it of lintResultRecords()) {
+    violations.push({ rule: "RESULT-MALFORMED", file: "ARCHITECTURE.json", msg: it });
   }
 
   // 4e. toolkit catalog drift (agent command discoverability) — the committed

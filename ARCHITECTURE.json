@@ -6,7 +6,7 @@
   "viewer": "ARCHITECTURE.html",
   "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
   "convergence": {
-    "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=3단계 수렴 pos-conv🟢(포지티브)|in-prog🔄(진행·검토)|neg-conv🧱(네거티브·wall) · 레거시 ossified/in_flight/failed accepted · value=핵심 · threshold=재발조건/해결 · source=원파일. 재발 시 update-in-place.",
+    "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=3단계 수렴 pos-conv🟢(포지티브)|in-prog🔄(진행·검토)|neg-conv🔴(네거티브·falsified) · 레거시 ossified/in_flight/failed accepted · value=핵심 · threshold=재발조건/해결 · source=원파일. 재발 시 update-in-place.",
     "records": [
       {
         "id": "EXEC_SPAWN_ERROR_UNHANDLED",
@@ -975,6 +975,12 @@
                     "role": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
                     "id": "detail-convergence-store-convergence",
                     "detail": "재발방지 학습 SSOT=`convergence.records[]`(id·state·value·threshold·source). `add`=`--source` 필수·id 자동(파일명 slug)·동일 source 레코드 있으면 BLOCK→`for <file>` 검토 후 `edit`/`--new`(중복누적 금지). 터치 시 `convergenceForFile` 가 그 학습을 PreToolUse `additionalContext` inject(`convergenceOnTouch` ON)"
+                  },
+                  {
+                    "name": "results 벤치·실험 결과 누적 store",
+                    "role": "벤치/실험 결과 누적 SSOT — convergence 와 같은 3단계 수렴상태 공유",
+                    "id": "detail-results-store",
+                    "detail": "누적 SSOT=`results.records[]`(id·kind·state·value·metric·subject). 방향3(pos-conv🟢/in-prog🔄/neg-conv🔴 · convergence 공유)+선행 untested⚪(안 잼) · '왜'는 metric 서술 · kind=bench|experiment · `add`=kind+subject+value·id 자동·동일(kind,subject)면 BLOCK→for검토후 edit/--new · lint RESULT-MALFORMED"
                   }
                 ]
               },
@@ -1293,5 +1299,9 @@
         ]
       }
     ]
+  },
+  "results": {
+    "note": "벤치·실험 결과 누적 SSOT (preserve-state · honesty). 방향 3단계(convergence 공유) pos-conv🟢|in-prog🔄|neg-conv🔴 + 결과전용 선행상태 untested⚪(등록됐으나 아직 안 잼 · 4번째 방향 아님). 세부 '왜'(막힘·불확정·무효)는 metric 자유서술. kind=bench|experiment · value=핵심결과 · metric=측정값/근거 · subject=대상. convergence 와 달리 file-touch 표면화·Stop게이트 없음 — 순수 누적(falsified/음성 보존). 같은 (kind,subject) 재측정은 update-in-place.",
+    "records": []
   }
 }

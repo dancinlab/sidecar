@@ -987,7 +987,27 @@
                     "name": "results 벤치·실험 결과 누적 store",
                     "role": "벤치/실험 결과 누적 SSOT — convergence 와 같은 3단계 수렴상태 공유",
                     "id": "detail-results-store",
-                    "detail": "누적 SSOT=`results.records[]`(id·kind·state·value·metric·subject). 방향3(pos-conv🟢/in-prog🔄/neg-conv🔴 · convergence 공유)+선행 untested⚪(안 잼) · '왜'는 metric 서술 · kind=bench|experiment · `add`=kind+subject+value·id 자동·동일(kind,subject)면 BLOCK→for검토후 edit/--new · lint RESULT-MALFORMED"
+                    "detail": "누적 SSOT `results.records[]`(id·kind·state·value·metric·subject) — bench/실험 outcome 누적, convergence 형제(Stop-gate 없음·negative 보존·preserve-state)",
+                    "children": [
+                      {
+                        "name": "상태 어휘",
+                        "role": "",
+                        "id": "detail-results-store-states",
+                        "detail": "방향3 pos-conv🟢/in-prog🔄/neg-conv🔴(convergence 공유) + 선행 untested⚪(등록·미측정) · '왜' nuance 는 metric 자유서술(state enum 늘리지 말 것) · kind=bench|experiment"
+                      },
+                      {
+                        "name": "CRUD",
+                        "role": "",
+                        "id": "detail-results-store-crud",
+                        "detail": "list/for<subject>/add/edit/rm · add=kind+subject+value(id 자동), 동일(kind,subject) 존재면 BLOCK→for 검토 후 edit/--new (blind append 금지) · lint RESULT-MALFORMED(id·kind·state)"
+                      },
+                      {
+                        "name": "sync (원장→store 백필)",
+                        "role": "",
+                        "id": "detail-results-store-sync",
+                        "detail": "config.resultSync(도메인 JSONL 원장 · subjectKey/valueKey/metricKey/tierKey · stateMap[정규식·neg 를 pos 앞에] · skip[]) 에서 measured-outcome idempotent 백필(subject 중복·미측정 skip · 반복/훅 가능 → 수동 drift 방지) · 도메인-무관 엔진, 맵은 per-repo config"
+                      }
+                    ]
                   }
                 ]
               },

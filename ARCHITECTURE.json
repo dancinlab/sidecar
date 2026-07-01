@@ -308,6 +308,13 @@
         "value": "매턴 inject 가 2 CC surface(settings.json=sidecar install + plugin hooks.json=/plugin)에 동시 배선돼 둘 다 활성이면 같은 블록을 매턴 2× emit = per-turn 토큰 2배 = context-rot(AI 멍청). emitInject 가 프롬프트키 dedup(atomic mkdir락 · 30s TTL)로 매턴 1회만 emit. 잘라내기 아님(전체 1회 emit).",
         "threshold": "새 UserPromptSubmit inject 는 raw process.stdout.write 대신 emitInject 사용 필수(안 그러면 이중발화 재발). vanish 방지=TTL(빈 프롬프트키로 크로스턴 collide 시 재emit). 재발신호: 컨텍스트에 같은 inject 2번 보이면 dedup 미적용 의심",
         "source": "lib/inject.ts"
+      },
+      {
+        "id": "setup-ts-1",
+        "state": "ossified",
+        "value": "거버넌스 규칙(pr-cycle/ship 진입 등)을 per-turn inject 텍스트로만 실으면 advisory 라 실제 강제가 안 된다 — inject 는 '상기'일 뿐, 진짜 강제는 Stop[] 에 decision:block stop-check 를 배선해야 성립. 또 라이브 Stop 훅의 SSOT 는 글로벌 ~/.claude/settings.json(setup.ts hookSpec)이고 plugin hooks.json 는 /plugin 설치용 별개 표면 — 새 Stop 게이트는 둘 다 배선 + install-hooks 재실행해야 라이브 반영된다.",
+        "threshold": "재발조건: 새 거버넌스 규칙을 commons/CLAUDE.md inject 로만 추가하고 Stop 게이트 미배선, 또는 setup.ts 한쪽만 배선. 해결: 강제하려면 modules/<x>.ts 에 stop-check(marker/clean-state 기반) 추가 → setup.ts Stop[] + hooks.json 양쪽 → install-hooks 재실행 → 스모크.",
+        "source": "modules/setup.ts"
       }
     ]
   },
@@ -430,9 +437,9 @@
           },
           {
             "name": "Stop",
-            "role": "에이전트 응답 종료 → 마지막 assistant 메시지 기반 3 Stop 훅",
+            "role": "에이전트 응답 종료 → 마지막 assistant 텍스트 기반 marker 게이트들 + staleness warn",
             "id": "surface-stop",
-            "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 3 훅 (아래). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
+            "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 Stop 훅 (아래). decision:block marker 게이트(recommend·convergence·ing·architecture·ship) + warn-only staleness. 공통 리더 lastAssistantText(modules/recommend.ts · export).",
             "children": [
               {
                 "name": "recommend stop-check",
@@ -463,6 +470,12 @@
                 "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
                 "id": "guard-architecture-stop-check",
                 "detail": "ing stop-check 의 설계판 — **조건부**: 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). 게이트=`pick()`(ARCHITECTURE.json/.md 존재)=설계 SSOT subject-게이트, 설계파일 생기는 순간 자동 발화. (modules/architecture.ts)"
+              },
+              {
+                "name": "ship stop-check",
+                "role": "impl/fix 후 verified-merge 진입 강제 (하이브리드 decision:block)",
+                "id": "guard-ship-stop-check",
+                "detail": "pr-cycle/ship ENTRY 게이트 — 미커밋 CODE diff 가 남았는데 응답에 `🚢 SHIP` 마커가 없으면 차단. marker-only 아님(하이브리드): clean-tree 성공경로는 실제 머지로만 도달(텍스트로 위조 불가), `🚢 SHIP: 보류(<사유>)`=명시적 WIP 유예. 게이트=`isManaged()` · anti-wedge 1/chain. cycle-docs-pr 을 inject 텍스트→결정적 강제로 승격. (modules/ship.ts)"
               }
             ]
           },

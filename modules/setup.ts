@@ -64,6 +64,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar recommend stop-check"),
       entry("sidecar architecture stop-check"), // turn-close design-report gate (was missing here vs hooks.json)
       entry("sidecar architecture convergence stop-check"),
+      entry("sidecar ship stop-check"), // turn-close pr-cycle/ship ENTRY gate — impl/fix code left uncommitted ⇒ block (clean tree or `🚢 SHIP` marker exits)
       entry("sidecar ing staleness-check"),
     ],
     // Compaction survival — the per-turn injects (commons/recommend/prefs/easy-lean) ride

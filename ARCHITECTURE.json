@@ -343,6 +343,13 @@
         "value": "sidecar 명령 이름이 Claude Code 기본 슬래시(/model·/config·/review·/compact·/init·/pr 등)와 겹치면, 셰도우로 미러된 bare /cmd 가 기본 명령에 가려져 picker 에서 안 보이거나 모호해진다(=우리 명령이 '반영 안 됨'처럼 보임). 실제 예: 모델 레지스트리 /model → CC 기본 /model 충돌 → /models rename.",
         "threshold": "재발조건: 새 명령을 CC 기본 슬래시와 동명으로 add. 해결: 네이밍 시 CC 기본 슬래시 목록과 대조 → 충돌 시 복수형/접두어로 회피(model→models). 이미 배포됐으면 modules/<name>·cli 등록·commands/<name>.md·상호참조·ARCHITECTURE 노드·TOOLKIT·CHANGELOG 일괄 rename 후 ship(shadow 가 orphan prune).",
         "source": "modules/shadow.ts"
+      },
+      {
+        "id": "index-ts-1",
+        "state": "pos-conv",
+        "value": "cli/index.ts 의 HELP 는 backtick 템플릿 리터럴 — help/description 절에 raw 백틱을 넣으면 리터럴이 조기 종료돼 esbuild 파싱이 통째 붕괴(Expected semicolon) → sidecar 명령 전부 죽음. 백틱 대신 작은따옴표를 쓰거나 이스케이프. 치명: self-update 는 그 깨진 CLI 로 돌아 스스로 못 고침(닭-달걀) → 설치 클론을 git 으로 origin/main 에 직접 하드동기화해야 복구.",
+        "threshold": "재발조건: cli/index.ts HELP 절에 backtick 포함 텍스트 추가(modules/CLAUDE.md gotcha 무시). 해결: 작은따옴표/이스케이프 + ship 직전 'sidecar help >/dev/null' 스모크로 파싱 검증.",
+        "source": "cli/index.ts"
       }
     ]
   },

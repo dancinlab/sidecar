@@ -12,7 +12,7 @@ import { readJson } from "../lib/json.ts";
 import { readStdin, execShell } from "../lib/exec.ts";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl } from "../lib/log.ts";
-import { config, resolveRuleFile, repoPath } from "../lib/config.ts";
+import { config, resolveRuleFile, repoPath, inGitRepo } from "../lib/config.ts";
 import { collectViolations, lintBlockers } from "./lint.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { detectBranchSwitch, detectMainRefMove } from "./git-checkout-guard.ts";
@@ -146,14 +146,16 @@ function emitContext(ctx: string): void {
 // per-repo git pre-commit hook (installed by `sidecar init`), so a repo that was never
 // `init`-ed (e.g. anima) committed completely un-gated. `sidecar pre bash` is wired
 // GLOBALLY via ~/.claude/settings.json, so intercepting an agent `git commit` HERE runs
-// the SAME lint (`collectViolations` → `lintBlockers`) in EVERY sidecar-managed repo —
-// no per-repo hook needed. Scoped to repos carrying harness.config.json (sidecar-managed);
-// honors the --no-verify / `# no-verify-ok` escape the danger guard already governs, so
-// it is ONE consistent opt-out, not a new hatch. Returns a block reason or null.
+// the SAME lint (`collectViolations` → `lintBlockers`) in EVERY git repo — no per-repo
+// hook needed. The managed-marker opt-in is ABOLISHED: this fires in ANY git repo (not
+// just ones carrying harness.config.json/CLAUDE.md), so brand-new repos are gated with
+// zero setup; a repo with no config just lints against the bundled defaults. Honors the
+// --no-verify / `# no-verify-ok` escape the danger guard already governs, so it is ONE
+// consistent opt-out, not a new hatch. Returns a block reason or null.
 async function commitLintGate(cmd: string): Promise<string | null> {
   if (!/(^|[\s;&|(])git\s+(-\S+\s+)*commit(?![\w-])/.test(cmd)) return null; // not a git commit
   if (/--no-verify|(^|\s)-n(\s|$)|no-verify-ok/.test(cmd)) return null; // danger-guard-governed escape
-  if (!existsSync(repoPath("harness.config.json"))) return null; // sidecar-managed repos only
+  if (!inGitRepo()) return null; // any git repo (managed-marker abolished · config.ts inGitRepo)
   const split = (s: string) => s.split("\n").map((x) => x.trim()).filter(Boolean);
   const cached = split((await execShell("git diff --cached --name-only", { cwd: repoPath(".") })).stdout);
   // `git commit -a/-am/--all` auto-stages tracked-modified files at commit time — widen

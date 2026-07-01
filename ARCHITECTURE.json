@@ -263,8 +263,8 @@
       {
         "id": "config-ts-1",
         "state": "ossified",
-        "value": "isManaged() 'managed repo' 게이트 기준은 모든 온보딩 repo 가 보편적으로 갖는 단일 마커(repo-root CLAUDE.md)로 키잉한다. 좁은/부분 마커(harness.config.json 단일 → 그 뒤 다중 마커 OR)로 키잉하면 그 마커 없는 repo 에서 progress Stop-게이트(ing 등)가 silent dead 가 되고, always-on inject 는 계속 떠서 '새 프로젝트에서 자동화가 안 된다'는 비대칭으로 재발한다.",
-        "threshold": "게이트/거버넌스가 '새 repo 에서 조용히 아무것도 안 한다'는 신호 → 게이트 로직이 아니라 isManaged 의 marker 기준부터 의심. 새 활성-조건 마커 추가 유혹이 들면 보편 마커(CLAUDE.md) 하나로 수렴시킬 것 (마커 OR-리스트 확장 금지).",
+        "value": "sidecar 거버넌스(ship·ing Stop게이트·commit lint)의 발화 게이트는 어떤 opt-in 마커(CLAUDE.md·harness.config.json)로도 키잉하지 않는다 — 마커 키잉은 그 마커 없는 repo(특히 신규)에서 게이트가 silent-dead 되는 비대칭을 낳는다. 관리-프로젝트 개념(isManaged) 자체를 폐기하고, 유일한 바닥은 'git repo 인가'(inGitRepo = REPO_ROOT 에 .git) 하나 — ship/ing/commit 은 git repo 밖에서 의미가 없으므로 이건 opt-in 이 아니라 물리 조건. 모든 git repo(신규 포함) 무조건 발화, non-repo 디렉터리만 조용.",
+        "threshold": "재발조건: 거버넌스가 '새 repo 에서 조용'하거나, '특정 repo만 관리대상'으로 취급하고 싶은 유혹(마커/이름패턴/경로 예외 도입) → 그건 방금 없앤 managed-마커의 부활이자 경로/이름 하드코딩 부채. 해결: 게이트는 inGitRepo 바닥 하나로 유지, 예외 필요시 sidecar-native 옵트아웃(# no-verify-ok / .harness)만 쓰고 이름패턴 하드코딩 금지.",
         "source": "lib/config.ts"
       },
       {
@@ -426,7 +426,7 @@
                 "name": "commit-lint 게이트",
                 "role": "agent git commit 에 lint 강제 (글로벌)",
                 "id": "guard-commit-lint",
-                "detail": "`COMMIT-LINT` — agent `git commit` 감지 시 sidecar-managed repo(harness.config.json)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
+                "detail": "`COMMIT-LINT` — agent `git commit` 감지 시 모든 git repo(inGitRepo · managed-마커 폐기 · config 없으면 defaults)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
               }
             ]
           },
@@ -508,7 +508,7 @@
             "name": "체크포인트",
             "role": "commit/세션 → lint / ci / ing",
             "id": "surface-checkpoint",
-            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용 · 0단계 inject-bloat 가드: injectCaps(소스별)+injectBudgetBytes(총합)+injectBudgetExtra(CLAUDE.md 합산)+INJECT-NON-ENGLISH(injectEnglishOnly docs 한글 차단·백틱면제·staged) = context-rot/AI멍청 재발방지 · lint↔ship 공유 (pr-cycle worktree-merge 자동복구=pr-cycle-ts-1)"
+            "detail": "검증·신선도·인계. exit code + stderr. `ship`=sidecar-repo 전용 · inject-bloat 가드: injectCaps+injectBudgetBytes+injectBudgetExtra+INJECT-NON-ENGLISH(재주입 doc 한글차단·백틱면제·staged · ALWAYS-ON baseline=CLAUDE.md·commons.md 모든repo·config불필요) = context-rot 재발방지 · lint↔ship 공유"
           }
         ]
       },

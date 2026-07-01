@@ -13,7 +13,7 @@
 //
 import { existsSync } from "node:fs";
 import { info, ok, loudFail } from "../lib/log.ts";
-import { repoPath, isManaged } from "../lib/config.ts";
+import { repoPath, inGitRepo } from "../lib/config.ts";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { readStdin, execShell } from "../lib/exec.ts";
 import { injectCapViolations } from "./lint.ts";
@@ -101,7 +101,7 @@ async function shipStopCheck(): Promise<number> {
     return 0;
   }
   if (payload?.stop_hook_active) return 0; // already nudged this chain — don't wedge
-  if (!isManaged()) return 0; // sidecar-governed only (repo-root CLAUDE.md present)
+  if (!inGitRepo()) return 0; // any git repo (managed-marker abolished · config.ts inGitRepo)
   const tp = payload?.transcript_path ?? payload?.transcriptPath;
   if (!tp) return 0;
   const text = lastAssistantText(String(tp));

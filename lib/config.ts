@@ -90,9 +90,11 @@ export interface SidecarConfig {
     // injectCaps) but still spend the per-turn token budget — counted toward the SUM
     // only (e.g. ["CLAUDE.md"]). Makes injectBudgetBytes reflect the TRUE per-turn total.
     injectBudgetExtra?: string[];
-    // english-only governance docs (INJECT-NON-ENGLISH · block). Each entry is either an
-    // exact repo-relative path, OR a bare filename with no "/" meaning "every tracked file
-    // with that basename in the tree". Korean (Hangul) PROSE in a re-injected doc costs
+    // ADDITIONAL english-only governance docs beyond the ALWAYS-ON built-in baseline
+    // (CLAUDE.md · .harness/commons.md · config/commons.md — enforced in EVERY repo with no
+    // config). This list is ADDITIVE: it extends the baseline, never shrinks it. Each entry
+    // is either an exact repo-relative path, OR a bare filename with no "/" meaning "every
+    // tracked file with that basename". Korean (Hangul) PROSE in a re-injected doc costs
     // ~3 bytes/char (2-3x token budget every turn) and prefs mandate english docs; Korean
     // literals inside `backticks` are exempt. diff-aware: only a STAGED target blocks.
     injectEnglishOnly?: string[];
@@ -369,16 +371,15 @@ export function config(): SidecarConfig {
   return _cfg;
 }
 
-// Is this repo "sidecar-managed" — i.e. should the progress Stop-gates (ing board
-// enforcement) fire here? Keyed on a SINGLE universal marker: a repo-root CLAUDE.md.
-// CLAUDE.md is the canonical "this repo is set up for AI work" entry point — every
-// onboarded dancinlab repo has one (and `sidecar init` / `/init` write it), so it
-// activates governance everywhere WITHOUT a per-repo `sidecar init`, while a throwaway
-// or archive dir with no CLAUDE.md stays quiet. (Earlier this keyed on a list of durable
-// markers — harness.config.json / ARCHITECTURE.json / .harness …; collapsed to the one
-// marker that actually tracks "managed", dropping the legacy fan-out.)
-export function isManaged(): boolean {
-  return existsSync(resolve(REPO_ROOT, "CLAUDE.md"));
+// Should sidecar governance (ship · ing Stop-gate · commit lint) fire in this repo? The
+// managed-project MARKER is ABOLISHED: governance fires in EVERY git repo unconditionally
+// — no CLAUDE.md / harness.config.json opt-in, so every project (incl. brand-new ones with
+// zero sidecar setup) is covered automatically. The ONLY floor is "is this actually a git
+// repo" — ship/ing/commit have no meaning outside one — keyed on a `.git` at REPO_ROOT (a
+// DIR for a normal clone, a FILE for a linked worktree; existsSync catches both). REPO_ROOT
+// already resolves to the git root even without harness.config.json (lib/paths.ts:43).
+export function inGitRepo(): boolean {
+  return existsSync(resolve(REPO_ROOT, ".git"));
 }
 
 // Resolve a rule-config file: prefer the repo override, else the bundled default.

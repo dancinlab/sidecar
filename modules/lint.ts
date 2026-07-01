@@ -297,8 +297,15 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
   // tracked file with that basename (git ls-files). Korean literals inside `backticks` are
   // EXEMPT (code-spans stripped first). diff-aware (dodontLengthLint pattern): only a target
   // among THIS commit's staged files blocks — untouched legacy Korean files are grandfathered.
-  const englishOnly = cfg.lint?.injectEnglishOnly ?? [];
-  if (englishOnly.length > 0) {
+  // ALWAYS-ON baseline — every re-injected governance PROSE doc, in EVERY repo (incl. new
+  // ones), with NO per-repo config required. `.harness/commons.md`/`config/commons.md` = the
+  // commons override + bundled source; `CLAUDE.md` (basename) = repo-root + every subfolder
+  // guide (all tracked CLAUDE.md). ARCHITECTURE.json is intentionally EXCLUDED (its injected
+  // tree carries deliberate Korean). Per-repo `injectEnglishOnly` is ADDITIVE — it can EXTEND
+  // this set but never shrink it, so config can't silently disable the rule.
+  const BUILTIN_ENGLISH_ONLY = ["CLAUDE.md", ".harness/commons.md", "config/commons.md"];
+  const englishOnly = [...new Set([...BUILTIN_ENGLISH_ONLY, ...(cfg.lint?.injectEnglishOnly ?? [])])];
+  {
     const targets = new Set<string>();
     let tracked: string[] | null = null;
     for (const entry of englishOnly) {

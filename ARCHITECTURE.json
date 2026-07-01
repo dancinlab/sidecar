@@ -489,6 +489,12 @@
                 "role": "impl/fix 후 verified-merge 진입 강제 (하이브리드 decision:block)",
                 "id": "guard-ship-stop-check",
                 "detail": "pr-cycle/ship ENTRY 게이트 — 미커밋 CODE diff 가 남았는데 응답에 `🚢 SHIP` 마커가 없으면 차단. marker-only 아님(하이브리드): clean-tree 성공경로는 실제 머지로만 도달(텍스트로 위조 불가), `🚢 SHIP: 보류(<사유>)`=명시적 WIP 유예. 게이트=`isManaged()` · anti-wedge 1/chain. cycle-docs-pr 을 inject 텍스트→결정적 강제로 승격. (modules/ship.ts)"
+              },
+              {
+                "name": "injects context-check",
+                "role": "컨텍스트 fill rot 알람 (warn-only · 절대 block 아님)",
+                "id": "guard-injects-context-check",
+                "detail": "긴 세션이 context 창을 채우면 attention 저하(context-rot·lost-in-middle, 연구 ~150-400K대)로 에이전트가 둔해진다 → transcript 의 마지막 compact_boundary 이후 바이트로 현재 window(≈bytes/4 tok) 추정, WARN(200k)/LOUD(350k) 넘으면 /compact·새세션 권고. inject footprint(고정)와 별개=대화 누적분 감시. anti-wedge stop_hook_active. (modules/injects.ts)"
               }
             ]
           },

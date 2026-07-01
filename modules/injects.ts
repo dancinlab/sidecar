@@ -10,7 +10,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { config, repoPath } from "../lib/config.ts";
 import { SIDECAR_ROOT } from "../lib/paths.ts";
-import { info } from "../lib/log.ts";
+import { info, warn } from "../lib/log.ts";
+import { readStdin } from "../lib/exec.ts";
 
 function bytesOf(abs: string): number {
   try {
@@ -35,9 +36,10 @@ const lpad = (s: string, n: number): string => (s.length >= n ? s : " ".repeat(n
 
 export async function runInjects(args: string[]): Promise<number> {
   if (args[0] === "-h" || args[0] === "--help" || args[0] === "help") {
-    info("usage: sidecar injects   — per-turn inject footprint report (read-only)");
+    info("usage: sidecar injects [context-check]   — per-turn inject footprint report (read-only) · context-check = Stop-hook context-rot alarm");
     return 0;
   }
+  if (args[0] === "context-check") return contextCheck();
   const cfg = config();
   const caps = cfg.lint?.injectCaps ?? {};
   const extras = cfg.lint?.injectBudgetExtra ?? [];
@@ -99,5 +101,61 @@ export async function runInjects(args: string[]): Promise<number> {
   info("note: each per-turn inject emits ONCE across all wired surfaces (dedup via lib/inject.ts) —");
   info("      double-wired plugin + global hooks do NOT re-spend the budget twice. Trim a SOURCE to");
   info("      shrink the footprint; per-turn injects are never truncated at emit (inject-lint rule).");
+  return 0;
+}
+
+// Context-fill rot alarm (Stop hook · advisory, NEVER blocks). The per-turn INJECT
+// footprint is bounded (the report above + the injectBudget lint gate), but the thing
+// that actually makes the agent dumber over a LONG session is the conversation filling
+// the context window — transformer attention degrades as the window grows (context rot /
+// lost-in-the-middle; Chroma's 18-model study puts noticeable degradation in the
+// ~150-400K-token band). This warns once the LIVE window — estimated from the transcript
+// bytes SINCE the last compaction boundary (so a fresh post-/compact window does NOT false
+// alarm) — crosses the band, nudging /compact or a fresh session for the next task.
+const CTX_WARN_TOKENS = 200_000; // ~4 bytes/token; transcript JSONL slightly over-counts real ctx → conservative
+const CTX_LOUD_TOKENS = 350_000;
+
+async function contextCheck(): Promise<number> {
+  let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
+  try {
+    payload = JSON.parse(readStdin());
+  } catch {
+    return 0;
+  }
+  if (payload?.stop_hook_active) return 0; // already fired this Stop chain — don't nag twice
+  const tp = payload?.transcript_path ?? payload?.transcriptPath;
+  if (!tp) return 0;
+  let raw = "";
+  try {
+    raw = readFileSync(tp, "utf8");
+  } catch {
+    return 0;
+  }
+  // Bytes AFTER the last compaction boundary ≈ the current live context window. The
+  // transcript file grows monotonically across compactions, so total size would keep
+  // warning even right after a /compact; counting from the last `compact_boundary` marker
+  // tracks the real window instead.
+  let running = 0;
+  let boundaryBytes = 0;
+  for (const line of raw.split("\n")) {
+    running += Buffer.byteLength(line, "utf8") + 1;
+    const s = line.trim();
+    if (!s) continue;
+    try {
+      const j = JSON.parse(s);
+      if (j.type === "system" && String(j.subtype ?? "").includes("compact")) boundaryBytes = running;
+    } catch {
+      /* non-JSON line — skip */
+    }
+  }
+  const tokens = Math.round((running - boundaryBytes) / 4);
+  if (tokens < CTX_WARN_TOKENS) return 0;
+  const k = Math.round(tokens / 1000);
+  const band = tokens >= CTX_LOUD_TOKENS ? "🔴 심각" : "🟡 주의";
+  warn(
+    `[context-rot] ${band} — 현재 컨텍스트 ~${k}k tokens (마지막 compaction 이후 추정). ` +
+      `긴 컨텍스트일수록 attention 저하(lost-in-the-middle)로 에이전트가 둔해진다 — ` +
+      `지금 작업을 매듭짓고 \`/compact\` 하거나, 다음 작업은 새 세션에서 시작하라.`,
+  );
   return 0;
 }

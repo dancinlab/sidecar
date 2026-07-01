@@ -423,6 +423,12 @@
                 "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · `@canonical-ok`/`# canonical-ok` 면제 · test/spec 제외"
               },
               {
+                "name": "portable-path 가드",
+                "role": "SHIPPED 스크립트의 하드코딩 홈경로 넛지 (이식성)",
+                "id": "guard-portable-path",
+                "detail": "modules/portable-path-guard.ts (PORTABLE-PATH · preWrite advisory) — SHIPPED 런타임 스크립트(hooks/·commands/·skills/·bin/·pi/ 의 .sh/.py/.ts 등)가 절대 홈경로(`/Users/…`·`/home/…`) 하드코딩 시 warn(타 host/user 에서 깨짐 → `$HOME`·`${CLAUDE_PLUGIN_ROOT}` 런타임 해석). Write·Edit · config `portablePathGuard`(기본 ON) · archive 포팅."
+              },
+              {
                 "name": "single-doc(scatter) 가드",
                 "role": "흩어진 문서 차단",
                 "id": "guard-single-doc-scatter",

@@ -1,0 +1,11 @@
+{
+  "_doc": "Research/gate VERDICT signal patterns scanned against the AI AGENT's OWN output (last assistant message) at session Stop — NOT the user prompt. A match with NO `🔬 GATE` accounting line ENFORCES (`sidecar architecture gate-stop-check`): the Stop hook emits decision:block, inducing the agent to DIRECTLY update the matching `type:\"gate\"` node's verdict in ARCHITECTURE.json (update-in-place, review-then-update — NOT a separate auto-store) then report `🔬 GATE 갱신: <gate-id>` (or dismiss `🔬 GATE: 해당 없음`). Deliberately research-verdict-specific tokens (near-zero false-fire where no gates exist). Plain substrings, case-insensitive. stop_hook_active bounds it to one block per stop-chain; the marker consumes that signal PER DISTINCT MATCHED SIGNAL per session (no wedge). No file / no patterns → inert. Override per-repo at .harness/gate-signals.json.",
+  "patterns": [
+    "META-LAW", "메타법칙",
+    "DIRECTIONAL floor", "DIRECTIONAL WALL", "WALL-DIRECTIONAL", "DIRECTIONAL 바닥",
+    "재조합벽", "정직한 벽", "정직한 바닥",
+    "🧱 DIRECTIONAL", "🧱 NOT-SUPPORTED", "🧱 종결", "🧱 WALL",
+    "G1 composed_distinct", "게이트 verdict", "gate verdict", "closure FAIL", "closure fail"
+  ],
+  "hint": "이 게이트/verdict 는 별도 store 가 아니라 ARCHITECTURE.json 의 해당 `type:\"gate\"` 노드에 직접 들어간다 — `sidecar architecture search <gate>` 로 노드를 찾아 그 `verdict` 필드를 update-in-place(검토 후 직접 갱신)하라."
+}

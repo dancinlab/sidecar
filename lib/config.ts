@@ -276,24 +276,6 @@ export interface SidecarConfig {
   // without re-probing. Each entry: a bare cmd name (probed via `--help`) or
   // { cmd, args, label, lines }. Merged with host-wide ~/.sidecar/companions.json.
   companions?: (string | { cmd: string; args?: string[]; label?: string; lines?: number })[];
-  // resultSync — backfill the `results.records` accumulation store from a domain JSONL ledger
-  // (e.g. a hypothesis/verdict file) via `sidecar architecture result sync`. Domain-AGNOSTIC
-  // engine: this per-repo config supplies the source path + row field keys + a tier→state
-  // classification map, so no domain vocabulary is hardcoded in the engine. Idempotent — an
-  // already-recorded subject is left untouched, only new measured outcomes are appended, so it
-  // can be run repeatedly (or hooked) to keep the store current without manual backfill. Absent
-  // = `result sync` is an inert no-op. See modules/architecture.ts resultVerb.
-  resultSync?: {
-    source: string; // repo-relative JSONL ledger path (one row per line)
-    kind?: string; // bench|experiment (default experiment)
-    subjectKey: string; // row key → subject (dedup key)
-    valueKey?: string; // row key → value (default = subjectKey)
-    metricKey?: string; // row key → metric (evidence)
-    tierKey: string; // row key → classification input
-    truncate?: number; // metric truncation (default 300)
-    skip?: string[]; // tier substrings that mean "not an outcome yet" → skip
-    stateMap: { match: string; state: string }[]; // ordered; first regex (case-insensitive) match on tier → state
-  };
 }
 
 const DEFAULTS: SidecarConfig = {

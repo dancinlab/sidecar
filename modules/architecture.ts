@@ -84,6 +84,7 @@ export async function runArchitecture(args: string[]): Promise<number> {
 
   if (sub === "convergence") return convergenceVerb(args.slice(1));
   if (sub === "result" || sub === "results") return resultVerb(args.slice(1));
+  if (sub === "gate-stop-check") return gateStopCheck();
 
   if (sub === "show") {
     if (!found) {
@@ -417,13 +418,16 @@ function loadTriggers(): ConvergenceTriggers {
 }
 
 const NUDGE_STATE = resolve(LOG_DIR, "convergence-nudge.json");
+// gate-stop-check keeps a SEPARATE per-signal nudge state so a convergence dismissal never
+// consumes a gate-verdict challenge (or vice-versa).
+const GATE_NUDGE_STATE = resolve(LOG_DIR, "gate-nudge.json");
 
-// Which recurrence signals already nudged in THIS session (transcript). Reset when
-// the transcript changes (= new session). Per-signal so a broad false positive
-// doesn't burn the nudge budget for a different, real signal later in the session.
-function nudgedSignals(transcript: string): Set<string> {
+// Which signals already nudged in THIS session (transcript), for the given state file. Reset
+// when the transcript changes (= new session). Per-signal so a broad false positive doesn't
+// burn the nudge budget for a different, real signal later in the session.
+function nudgedSignals(transcript: string, stateFile: string = NUDGE_STATE): Set<string> {
   try {
-    const j = JSON.parse(readFileSync(NUDGE_STATE, "utf8")) as { transcript?: string; seen?: string[] };
+    const j = JSON.parse(readFileSync(stateFile, "utf8")) as { transcript?: string; seen?: string[] };
     if (j.transcript === transcript) return new Set(j.seen ?? []);
   } catch {
     /* no state yet → nothing nudged */
@@ -431,12 +435,66 @@ function nudgedSignals(transcript: string): Set<string> {
   return new Set();
 }
 
-function markNudged(transcript: string, seen: Set<string>): void {
+function markNudged(transcript: string, seen: Set<string>, stateFile: string = NUDGE_STATE): void {
   try {
-    writeFileSync(NUDGE_STATE, JSON.stringify({ transcript, seen: [...seen] }) + "\n");
+    writeFileSync(stateFile, JSON.stringify({ transcript, seen: [...seen] }) + "\n");
   } catch {
     /* best-effort — a missed mark only risks one extra nudge next turn */
   }
+}
+
+// --- gate-stop-check: verdict-output → DIRECT in-tree type:"gate" node update (Stop hook) -----
+// Enforce direct-update induction (NOT an auto-store): when the agent's own last message reports
+// a research/gate verdict signal (config/gate-signals.json · per-repo .harness/gate-signals.json)
+// but carries no `🔬 GATE` accounting line, BLOCK — demanding the agent DIRECTLY update the
+// matching `type:"gate"` node's verdict in ARCHITECTURE.json (검토후 update-in-place, no separate
+// store) then report `🔬 GATE 갱신: <gate-id>` (or dismiss `🔬 GATE: 해당 없음`). Mirrors
+// convergenceStopCheck: WIDE keyword net, precision in the agent (the marker); per-signal nudge
+// (once per session) · stop_hook_active bound (anti-wedge). No signals file → inert no-op.
+const GATE_MARKER = /🔬\s*GATE/i;
+
+function loadGateSignals(): ConvergenceTriggers {
+  try {
+    return JSON.parse(readFileSync(resolveRuleFile("gate-signals.json", "gate-signals.json"), "utf8")) as ConvergenceTriggers;
+  } catch {
+    return {};
+  }
+}
+
+function gateStopCheck(): number {
+  let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
+  try {
+    payload = JSON.parse(readStdin());
+  } catch {
+    return 0;
+  }
+  if (!pick()) return 0; // no ARCHITECTURE.json → no typed tree to update
+  const tp = payload?.transcript_path ?? payload?.transcriptPath;
+  if (!tp) return 0;
+  const transcript = String(tp);
+  const text = lastAssistantText(transcript);
+  if (!text) return 0;
+  const { patterns, hint } = loadGateSignals();
+  if (!patterns?.length) return 0;
+  const hay = text.toLowerCase();
+  const seen = nudgedSignals(transcript, GATE_NUDGE_STATE);
+  const matched = patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
+  if (!matched) return 0;
+  // ACCOUNTED: the marker is present (updated or dismissed) → consume the signal, pass.
+  if (GATE_MARKER.test(text)) {
+    seen.add(matched);
+    markNudged(transcript, seen, GATE_NUDGE_STATE);
+    return 0;
+  }
+  const reason =
+    `게이트/verdict 신호 "${matched}" 를 렌더했는데 응답에 \`🔬 GATE\` 계정 줄이 없다 — ` +
+    (hint ??
+      "이 verdict 는 별도 store 가 아니라 ARCHITECTURE.json 의 해당 `type:\"gate\"` 노드에 직접 들어가야 한다. `sidecar architecture search <gate>` 로 그 노드를 찾아 `verdict` 필드를 update-in-place(검토후 직접 갱신)하라.") +
+    " 그런 다음 응답에 `🔬 GATE 갱신: <gate-id>` 한 줄로, 게이트 verdict 가 아니면 `🔬 GATE: 해당 없음` 한 줄로 명시하라 (둘 중 하나 필수).";
+  if (!payload?.stop_hook_active) {
+    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+  }
+  return 0;
 }
 
 // The `🧬 CONVERGENCE` accounting marker — the agent's per-signal acknowledgement,
@@ -933,115 +991,6 @@ async function resultVerb(args: string[]): Promise<number> {
     return 0;
   }
 
-  // `sync` — RECONCILE the store against a config-declared JSONL ledger (config.resultSync):
-  // ADD genuinely-new measured subjects AND UPDATE the state of any subject whose source verdict
-  // changed (a re-measurement) — so the store tracks the CURRENT outcome, not a frozen append
-  // that silently goes stale on re-measurement (the drift root-cause). Review-then-update: the
-  // DEFAULT is a DRY-RUN that prints the plan and writes nothing; `--apply` commits it. Value is
-  // left intact on update (curation preserved) — only state (+metric evidence) is refreshed.
-  // Domain-agnostic: source + field keys + tier→state map are per-repo config (module-grading).
-  if (verb === "sync") {
-    const cfg = config().resultSync;
-    if (!cfg?.source || !cfg.subjectKey || !cfg.tierKey || !cfg.stateMap?.length) {
-      info("result sync [--apply] — reconcile the store from a domain JSONL ledger (config.resultSync). Inert until configured:");
-      info("  config.resultSync = { source, kind?, subjectKey, valueKey?, metricKey?, tierKey, truncate?, skip?[], stateMap:[{match,state}] }");
-      return cfg ? 1 : 0; // configured-but-malformed = error; absent = inert no-op
-    }
-    const kind = cfg.kind ?? "experiment";
-    if (!RESULT_KINDS.has(kind)) return loudFail(`result sync: invalid kind '${kind}' (allowed: ${[...RESULT_KINDS].join("\u00b7")})`), 1;
-    let raw: string;
-    try {
-      raw = readFileSync(resolve(REPO_ROOT, cfg.source), "utf8");
-    } catch {
-      return loudFail(`result sync: cannot read source '${cfg.source}'`), 1;
-    }
-    const maps = cfg.stateMap.map((m) => ({ re: new RegExp(m.match, "i"), state: normalizeConvState(m.state) }));
-    for (const m of maps) if (!RESULT_STATES.has(m.state)) return loudFail(`result sync: invalid state '${m.state}' in stateMap`), 1;
-    const skip = (cfg.skip ?? []).map((s) => s.toLowerCase());
-    const trunc = cfg.truncate ?? 300;
-    const apply = args.includes("--apply");
-    const bySubject = new Map(records.map((r) => [r.subject, r] as const));
-    const ids = new Set(records.map((r) => r.id ?? ""));
-    const adds: ResultRecord[] = [];
-    const updates: { rec: ResultRecord; from: string; to: string; metric: string }[] = [];
-    let unchanged = 0,
-      nonOutcome = 0,
-      bad = 0;
-    for (const line of raw.split("\n")) {
-      const s = line.trim();
-      if (!s) continue;
-      let row: Record<string, unknown>;
-      try {
-        row = JSON.parse(s);
-      } catch {
-        bad++;
-        continue;
-      }
-      const subject = String(row[cfg.subjectKey] ?? "").trim();
-      if (!subject) {
-        bad++;
-        continue;
-      }
-      const tier = String(row[cfg.tierKey] ?? "").trim();
-      if (!tier || skip.some((k) => tier.toLowerCase().includes(k))) {
-        nonOutcome++;
-        continue;
-      }
-      const hit = maps.find((m) => m.re.test(tier));
-      if (!hit) {
-        nonOutcome++;
-        continue;
-      }
-      const metric = cfg.metricKey ? String(row[cfg.metricKey] ?? "").trim().slice(0, trunc) : "";
-      const existing = bySubject.get(subject);
-      if (!existing) {
-        const value = String(row[cfg.valueKey ?? cfg.subjectKey] ?? subject).trim() || subject;
-        const id = nextResultId(kind, subject, ids);
-        ids.add(id);
-        const rec: ResultRecord = { id, kind, state: hit.state, value, subject };
-        if (metric) rec.metric = metric;
-        adds.push(rec);
-        bySubject.set(subject, rec); // guard against duplicate subjects within the ledger itself
-      } else if (normalizeConvState(existing.state) !== hit.state) {
-        updates.push({ rec: existing, from: normalizeConvState(existing.state) ?? "?", to: hit.state, metric });
-      } else {
-        unchanged++;
-      }
-    }
-    // REVIEW: surface the plan (both dry-run and apply print it — 검토후 업데이트).
-    const CAP = 12;
-    if (adds.length) {
-      info(`result sync: ${adds.length} NEW to add —`);
-      adds.slice(0, CAP).forEach((r) => info(resultLine(r)));
-      if (adds.length > CAP) info(`  \u2026 +${adds.length - CAP} more`);
-    }
-    if (updates.length) {
-      info(`result sync: ${updates.length} RE-MEASURED to update (state changed) —`);
-      updates.slice(0, CAP).forEach((u) => info(`  ${u.rec.subject}: ${resultStateLabel(u.from)} \u2192 ${resultStateLabel(u.to)}  (${u.rec.value ?? ""})`));
-      if (updates.length > CAP) info(`  \u2026 +${updates.length - CAP} more`);
-    }
-    if (!apply) {
-      info(
-        `result sync (dry-run): +${adds.length} add \u00b7 ~${updates.length} update \u00b7 ${unchanged} unchanged \u00b7 ${nonOutcome} non-outcome${bad ? ` \u00b7 ${bad} unparseable` : ""} \u2014 \uac80\ud1a0 \ud6c4 \`result sync --apply\` \ub85c \ubc18\uc601`,
-      );
-      return 0;
-    }
-    if (!adds.length && !updates.length) {
-      ok(`result sync: nothing to reconcile (${unchanged} unchanged \u00b7 ${nonOutcome} non-outcome) \u00b7 ${records.length} total`);
-      return 0;
-    }
-    for (const u of updates) {
-      u.rec.state = u.to;
-      if (u.metric) u.rec.metric = u.metric;
-    }
-    records.push(...adds);
-    if (!writeResults(records)) return 1;
-    ok(
-      `result sync: applied +${adds.length} added \u00b7 ~${updates.length} updated \u00b7 ${unchanged} unchanged \u00b7 ${nonOutcome} non-outcome${bad ? ` \u00b7 ${bad} unparseable` : ""} \u00b7 ${records.length} total`,
-    );
-    return 0;
-  }
-
-  info("usage: sidecar architecture result {list [--kind bench|experiment]|for <subject>|add --kind <k> --subject <s> --value <v> [--state|--metric|--new|--id]|edit <id> [--kind|--state|--value|--metric|--subject]|rm <id>|sync}");
+  info("usage: sidecar architecture result {list [--kind bench|experiment]|for <subject>|add --kind <k> --subject <s> --value <v> [--state|--metric|--new|--id]|edit <id> [--kind|--state|--value|--metric|--subject]|rm <id>}");
   return 1;
 }

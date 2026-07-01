@@ -987,7 +987,7 @@
                     "name": "results 벤치·실험 결과 누적 store",
                     "role": "벤치/실험 결과 누적 SSOT — convergence 와 같은 3단계 수렴상태 공유",
                     "id": "detail-results-store",
-                    "detail": "누적 SSOT `results.records[]`(id·kind·state·value·metric·subject) — bench/실험 outcome 누적, convergence 형제(Stop-gate 없음·negative 보존·preserve-state)",
+                    "detail": "누적 SSOT `results.records[]`(id·kind·state·value·metric·subject) — bench/실험 outcome 누적(convergence 형제). ⚠️ per-repo 실험 verdict 의 canonical 자리는 이제 트리 `type:\"gate\"` 노드 직접 갱신(아래 gate-stop-check) — 이 store 는 범용 CRUD 로만 잔존",
                     "children": [
                       {
                         "name": "상태 어휘",
@@ -1000,14 +1000,14 @@
                         "role": "",
                         "id": "detail-results-store-crud",
                         "detail": "list/for<subject>/add/edit/rm · add=kind+subject+value(id 자동), 동일(kind,subject) 존재면 BLOCK→for 검토 후 edit/--new (blind append 금지) · lint RESULT-MALFORMED(id·kind·state)"
-                      },
-                      {
-                        "name": "sync (원장→store 백필)",
-                        "role": "",
-                        "id": "detail-results-store-sync",
-                        "detail": "`sync [--apply]` = config.resultSync(도메인 JSONL 원장·field keys·stateMap[정규식·neg→pos 순]·skip[]) 와 store RECONCILE — 신규 measured-outcome add + 재측정(source verdict 바뀜) state UPDATE(검토후 업데이트) · 기본 dry-run(계획만 출력)·--apply 로 반영 · value 보존(state+metric 만 갱신) · 도메인-무관 엔진"
                       }
                     ]
+                  },
+                  {
+                    "name": "gate-stop-check (type:gate 직접갱신 강제)",
+                    "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
+                    "id": "detail-gate-stop-check",
+                    "detail": "Stop 훅 `architecture gate-stop-check` — 출력에 게이트/verdict 신호(config/gate-signals.json) 있고 `🔬 GATE` 마커 없으면 block → 별도 store 아니라 ARCHITECTURE.json 의 해당 `type:\"gate\"` 노드 verdict 를 직접 update-in-place(검토후) 유도 → `🔬 GATE 갱신: <id>`/`해당 없음`. 세션당 1회·CC-only·convergenceStopCheck 동형"
                   }
                 ]
               },

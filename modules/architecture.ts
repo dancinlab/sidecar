@@ -933,20 +933,22 @@ async function resultVerb(args: string[]): Promise<number> {
     return 0;
   }
 
-  // `sync` — idempotent backfill from a config-declared JSONL ledger (config.resultSync).
-  // Classifies each row's tier into a result state and appends only NEW subjects (existing
-  // ones are left untouched — accumulation), so it can run repeatedly / be hooked to keep the
-  // store current without manual backfill. Domain-agnostic: the source, field keys, and
-  // tier→state map are per-repo config; no domain vocabulary is hardcoded here (module-grading).
+  // `sync` — RECONCILE the store against a config-declared JSONL ledger (config.resultSync):
+  // ADD genuinely-new measured subjects AND UPDATE the state of any subject whose source verdict
+  // changed (a re-measurement) — so the store tracks the CURRENT outcome, not a frozen append
+  // that silently goes stale on re-measurement (the drift root-cause). Review-then-update: the
+  // DEFAULT is a DRY-RUN that prints the plan and writes nothing; `--apply` commits it. Value is
+  // left intact on update (curation preserved) — only state (+metric evidence) is refreshed.
+  // Domain-agnostic: source + field keys + tier→state map are per-repo config (module-grading).
   if (verb === "sync") {
     const cfg = config().resultSync;
     if (!cfg?.source || !cfg.subjectKey || !cfg.tierKey || !cfg.stateMap?.length) {
-      info("result sync — backfill the store from a domain JSONL ledger (config.resultSync). Inert until configured:");
+      info("result sync [--apply] — reconcile the store from a domain JSONL ledger (config.resultSync). Inert until configured:");
       info("  config.resultSync = { source, kind?, subjectKey, valueKey?, metricKey?, tierKey, truncate?, skip?[], stateMap:[{match,state}] }");
       return cfg ? 1 : 0; // configured-but-malformed = error; absent = inert no-op
     }
     const kind = cfg.kind ?? "experiment";
-    if (!RESULT_KINDS.has(kind)) return loudFail(`result sync: invalid kind '${kind}' (allowed: ${[...RESULT_KINDS].join("·")})`), 1;
+    if (!RESULT_KINDS.has(kind)) return loudFail(`result sync: invalid kind '${kind}' (allowed: ${[...RESULT_KINDS].join("\u00b7")})`), 1;
     let raw: string;
     try {
       raw = readFileSync(resolve(REPO_ROOT, cfg.source), "utf8");
@@ -957,13 +959,14 @@ async function resultVerb(args: string[]): Promise<number> {
     for (const m of maps) if (!RESULT_STATES.has(m.state)) return loudFail(`result sync: invalid state '${m.state}' in stateMap`), 1;
     const skip = (cfg.skip ?? []).map((s) => s.toLowerCase());
     const trunc = cfg.truncate ?? 300;
-    const bySubject = new Set(records.map((r) => r.subject));
+    const apply = args.includes("--apply");
+    const bySubject = new Map(records.map((r) => [r.subject, r] as const));
     const ids = new Set(records.map((r) => r.id ?? ""));
-    let added = 0,
-      already = 0,
+    const adds: ResultRecord[] = [];
+    const updates: { rec: ResultRecord; from: string; to: string; metric: string }[] = [];
+    let unchanged = 0,
       nonOutcome = 0,
       bad = 0;
-    const byState: Record<string, number> = {};
     for (const line of raw.split("\n")) {
       const s = line.trim();
       if (!s) continue;
@@ -979,10 +982,6 @@ async function resultVerb(args: string[]): Promise<number> {
         bad++;
         continue;
       }
-      if (bySubject.has(subject)) {
-        already++;
-        continue;
-      } // accumulation: never overwrite an existing subject
       const tier = String(row[cfg.tierKey] ?? "").trim();
       if (!tier || skip.some((k) => tier.toLowerCase().includes(k))) {
         nonOutcome++;
@@ -993,21 +992,52 @@ async function resultVerb(args: string[]): Promise<number> {
         nonOutcome++;
         continue;
       }
-      const value = String(row[cfg.valueKey ?? cfg.subjectKey] ?? subject).trim() || subject;
-      const id = nextResultId(kind, subject, ids);
-      ids.add(id);
-      bySubject.add(subject);
-      const rec: ResultRecord = { id, kind, state: hit.state, value, subject };
-      const metric = cfg.metricKey ? String(row[cfg.metricKey] ?? "").trim() : "";
-      if (metric) rec.metric = metric.slice(0, trunc);
-      records.push(rec);
-      added++;
-      byState[hit.state] = (byState[hit.state] ?? 0) + 1;
+      const metric = cfg.metricKey ? String(row[cfg.metricKey] ?? "").trim().slice(0, trunc) : "";
+      const existing = bySubject.get(subject);
+      if (!existing) {
+        const value = String(row[cfg.valueKey ?? cfg.subjectKey] ?? subject).trim() || subject;
+        const id = nextResultId(kind, subject, ids);
+        ids.add(id);
+        const rec: ResultRecord = { id, kind, state: hit.state, value, subject };
+        if (metric) rec.metric = metric;
+        adds.push(rec);
+        bySubject.set(subject, rec); // guard against duplicate subjects within the ledger itself
+      } else if (normalizeConvState(existing.state) !== hit.state) {
+        updates.push({ rec: existing, from: normalizeConvState(existing.state) ?? "?", to: hit.state, metric });
+      } else {
+        unchanged++;
+      }
     }
-    if (added && !writeResults(records)) return 1;
-    const dist = Object.entries(byState).map(([k, v]) => `${k} ${v}`).join(", ") || "none";
+    // REVIEW: surface the plan (both dry-run and apply print it — 검토후 업데이트).
+    const CAP = 12;
+    if (adds.length) {
+      info(`result sync: ${adds.length} NEW to add —`);
+      adds.slice(0, CAP).forEach((r) => info(resultLine(r)));
+      if (adds.length > CAP) info(`  \u2026 +${adds.length - CAP} more`);
+    }
+    if (updates.length) {
+      info(`result sync: ${updates.length} RE-MEASURED to update (state changed) —`);
+      updates.slice(0, CAP).forEach((u) => info(`  ${u.rec.subject}: ${resultStateLabel(u.from)} \u2192 ${resultStateLabel(u.to)}  (${u.rec.value ?? ""})`));
+      if (updates.length > CAP) info(`  \u2026 +${updates.length - CAP} more`);
+    }
+    if (!apply) {
+      info(
+        `result sync (dry-run): +${adds.length} add \u00b7 ~${updates.length} update \u00b7 ${unchanged} unchanged \u00b7 ${nonOutcome} non-outcome${bad ? ` \u00b7 ${bad} unparseable` : ""} \u2014 \uac80\ud1a0 \ud6c4 \`result sync --apply\` \ub85c \ubc18\uc601`,
+      );
+      return 0;
+    }
+    if (!adds.length && !updates.length) {
+      ok(`result sync: nothing to reconcile (${unchanged} unchanged \u00b7 ${nonOutcome} non-outcome) \u00b7 ${records.length} total`);
+      return 0;
+    }
+    for (const u of updates) {
+      u.rec.state = u.to;
+      if (u.metric) u.rec.metric = u.metric;
+    }
+    records.push(...adds);
+    if (!writeResults(records)) return 1;
     ok(
-      `result sync: +${added} (${dist}) · ${already} already-recorded · ${nonOutcome} non-outcome${bad ? ` · ${bad} unparseable` : ""} · ${records.length} total`,
+      `result sync: applied +${adds.length} added \u00b7 ~${updates.length} updated \u00b7 ${unchanged} unchanged \u00b7 ${nonOutcome} non-outcome${bad ? ` \u00b7 ${bad} unparseable` : ""} \u00b7 ${records.length} total`,
     );
     return 0;
   }

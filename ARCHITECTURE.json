@@ -1005,7 +1005,7 @@
                         "name": "sync (원장→store 백필)",
                         "role": "",
                         "id": "detail-results-store-sync",
-                        "detail": "config.resultSync(도메인 JSONL 원장 · subjectKey/valueKey/metricKey/tierKey · stateMap[정규식·neg 를 pos 앞에] · skip[]) 에서 measured-outcome idempotent 백필(subject 중복·미측정 skip · 반복/훅 가능 → 수동 drift 방지) · 도메인-무관 엔진, 맵은 per-repo config"
+                        "detail": "`sync [--apply]` = config.resultSync(도메인 JSONL 원장·field keys·stateMap[정규식·neg→pos 순]·skip[]) 와 store RECONCILE — 신규 measured-outcome add + 재측정(source verdict 바뀜) state UPDATE(검토후 업데이트) · 기본 dry-run(계획만 출력)·--apply 로 반영 · value 보존(state+metric 만 갱신) · 도메인-무관 엔진"
                       }
                     ]
                   }

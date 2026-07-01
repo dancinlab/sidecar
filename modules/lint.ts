@@ -344,27 +344,55 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
   // · agent degradation). ALWAYS-ON byte cap (lint.claudeMdCap, built-in default) applied to
   // any STAGED CLAUDE.md (root + subfolder guides). diff-aware: an untouched legacy bloated
   // file never blocks — only a staged one over cap does (so it's paid down on next edit).
+  // and 4m. history — CLAUDE.md is current-state governance re-injected every turn, NOT a
+  // log; dates/changelog/"previously…" accrete staleness (CLAUDE-MD-HISTORY). Both scan any
+  // STAGED CLAUDE.md (diff-aware: legacy files block only when touched). Text read once.
   const mdCap = cfg.lint?.claudeMdCap ?? 0;
-  if (mdCap > 0) {
-    for (const f of staged) {
-      if ((f.split("/").pop() ?? "") !== "CLAUDE.md") continue;
-      let bytes = 0;
-      try {
-        bytes = Buffer.byteLength(readFileSync(repoPath(f), "utf8"), "utf8");
-      } catch {
-        continue; // staged deletion → nothing to scan
-      }
-      if (bytes > mdCap) {
-        violations.push({
-          rule: "CLAUDE-MD-OVERSIZED",
-          file: f,
-          msg: `${bytes}B > ${mdCap}B cap — CLAUDE.md is re-injected EVERY turn, so its size taxes all future turns (context-rot). Trim to the lean essentials (project blurb + orientation tree + hard rules); move deep structure to ARCHITECTURE.json and detail to subfolder guides. Raise lint.claudeMdCap only if the size is genuinely irreducible.`,
-        });
-      }
+  for (const f of staged) {
+    if ((f.split("/").pop() ?? "") !== "CLAUDE.md") continue;
+    let text = "";
+    try {
+      text = readFileSync(repoPath(f), "utf8");
+    } catch {
+      continue; // staged deletion → nothing to scan
     }
+    if (mdCap > 0 && Buffer.byteLength(text, "utf8") > mdCap) {
+      violations.push({
+        rule: "CLAUDE-MD-OVERSIZED",
+        file: f,
+        msg: `${Buffer.byteLength(text, "utf8")}B > ${mdCap}B cap — CLAUDE.md is re-injected EVERY turn, so its size taxes all future turns (context-rot). Trim to the lean essentials (project blurb + orientation tree + hard rules); move deep structure to ARCHITECTURE.json and detail to subfolder guides. Raise lint.claudeMdCap only if the size is genuinely irreducible.`,
+      });
+    }
+    const hist = claudeMdHistoryViolation(text);
+    if (hist) violations.push({ rule: hist.rule, file: f, msg: hist.msg });
   }
 
   return violations;
+}
+
+// History/changelog content banned from CLAUDE.md — it is CURRENT-STATE governance re-injected
+// EVERY turn, not a log. Dates / version-history / "previously…" accrete staleness + context-rot;
+// history belongs in CHANGELOG + git (mirrors ARCH-HISTORY for the design tree · commons c4).
+// Backtick code-spans are exempt (a date/term inside `…` is a literal, not a history note).
+// Returns the first history signal or null.
+export function claudeMdHistoryViolation(text: string): { rule: string; msg: string } | null {
+  const stripped = text.replace(/`[^`]*`/g, ""); // exempt literals inside code-spans
+  // 1. a section heading dedicated to history/changelog
+  const heading = stripped.match(/^#{1,6}\s*(change\s?log|revision history|version history|history|변경\s?이력|이력)\b.*$/im);
+  if (heading) {
+    return { rule: "CLAUDE-MD-HISTORY", msg: `history/changelog section "${heading[0].trim().slice(0, 48)}" in CLAUDE.md — it re-injects every turn (stale/context-rot). Keep CLAUDE.md current-state only; put history in CHANGELOG + git.` };
+  }
+  // 2. an ISO date (a history/changelog stamp)
+  const date = stripped.match(/\b\d{4}-\d{2}-\d{2}\b/);
+  if (date) {
+    return { rule: "CLAUDE-MD-HISTORY", msg: `date "${date[0]}" in CLAUDE.md — a re-injected governance doc is current-state, not dated history. Drop the date (git records WHEN); history → CHANGELOG.` };
+  }
+  // 3. temporal-change narration ("what it used to be")
+  const phrase = stripped.match(/\b(previously|formerly|renamed from|used to be)\b/i) ?? stripped.match(/(이전엔|예전엔|옛날엔|구버전)/);
+  if (phrase) {
+    return { rule: "CLAUDE-MD-HISTORY", msg: `change-narration "${phrase[0]}" in CLAUDE.md — describe only the CURRENT state, not what it used to be (history → CHANGELOG + git).` };
+  }
+  return null;
 }
 
 // Write-time (SAVE-time) governance-doc guard — the immediate teeth for the commit-time
@@ -404,6 +432,12 @@ export function governanceDocWriteViolation(
         };
       }
     }
+  }
+  // CLAUDE.md history/changelog ban — runs on Write AND Edit (a date/"previously…" is caught
+  // as it is typed · not section-aware → fragment-safe). commit-time lint is the full-file backstop.
+  if (base === "CLAUDE.md") {
+    const hist = claudeMdHistoryViolation(content);
+    if (hist) return hist;
   }
   return null;
 }

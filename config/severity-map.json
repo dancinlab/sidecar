@@ -34,7 +34,8 @@
       "CMD-DESC-LONG": "block",
       "INJECT-OVERSIZED": "block",
       "INJECT-NON-ENGLISH": "block",
-      "CLAUDE-MD-OVERSIZED": "block"
+      "CLAUDE-MD-OVERSIZED": "block",
+      "CLAUDE-MD-HISTORY": "block"
     },
     "build_kind": {
       "bash_nonzero": "block",

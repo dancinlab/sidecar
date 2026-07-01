@@ -646,7 +646,8 @@ export function lintArchitectureTree(): ArchLintHit[] {
 // Convergence-state = the 3-stage CONVERGENCE classification, not a lifecycle flag:
 //   pos-conv (🟢 포지티브 수렴)  = the fix/lesson converged POSITIVE — locked in, recurrence held
 //   in-prog  (🔄 진행·검토)      = still converging — being worked / under review
-//   neg-conv (🧱 네거티브 수렴)  = converged NEGATIVE — the prevention hit a wall / the fix failed
+//   neg-conv (🔴 네거티브 수렴)  = converged NEGATIVE — the prevention failed / the fix regressed
+//   (🔴 = a red/negative outcome; the 🧱 wall stays reserved for the break-walls terminal verdict)
 // Legacy lifecycle values (ossified/in_flight/failed…) are still ACCEPTED and normalized on
 // read+display, so pre-migration records never hard-fail; `add`/`edit` store the canonical form.
 const CONV_STATES = new Set(["pos-conv", "in-prog", "neg-conv"]);
@@ -658,10 +659,12 @@ const LEGACY_STATE_ALIAS: Record<string, string> = {
 export function normalizeConvState(s: string | undefined): string {
   return (s && LEGACY_STATE_ALIAS[s]) || s || "";
 }
-// display: icon + canonical name (POS-CONV 🟢 · IN-PROG 🔄 · NEG-CONV 🧱), legacy mapped first.
+// display: icon + canonical name (POS-CONV 🟢 · IN-PROG 🔄 · NEG-CONV 🔴), legacy mapped first.
+// neg-conv is 🔴 (a red/negative outcome), NOT 🧱 — the 🧱 wall is the break-walls terminal
+// verdict (stamped only after multi-lens exhaustion), a distinct concept from a negative convergence.
 export function convStateLabel(s: string | undefined): string {
   const n = normalizeConvState(s);
-  return n === "pos-conv" ? "🟢 POS-CONV" : n === "in-prog" ? "🔄 IN-PROG" : n === "neg-conv" ? "🧱 NEG-CONV" : (s ?? "?");
+  return n === "pos-conv" ? "🟢 POS-CONV" : n === "in-prog" ? "🔄 IN-PROG" : n === "neg-conv" ? "🔴 NEG-CONV" : (s ?? "?");
 }
 
 export interface ConvergenceRecord {
@@ -730,10 +733,8 @@ export function convergenceForFile(file: string): string {
 
 // --- results: bench / experiment accumulation store (ARCHITECTURE.json `results.records`) ---
 // Benchmark and experiment outcomes accumulate in the design SSOT (single-doc · preserve-state),
-// classified by the SAME 3-stage convergence-state vocabulary as recurrence learnings — but a
-// negative RESULT renders 🔴 (red = a bad/negative outcome), NOT 🧱: a 🧱 wall is the terminal
-// break-walls verdict stamped only after multi-lens exhaustion (commons break-walls), whereas a
-// falsified/regressed bench or experiment is just a red-circle outcome, not a scientific ceiling.
+// classified by the SAME 3-stage convergence-state vocabulary + label (convStateLabel) as
+// recurrence learnings:
 //   pos-conv 🟢 = converged POSITIVE — the bench/experiment landed a real, held gain / confirmation
 //   in-prog  🔄 = still converging — running / inconclusive / under review
 //   neg-conv 🔴 = converged NEGATIVE — falsified / regressed (honesty: a negative result is a result too)
@@ -753,17 +754,9 @@ export interface ResultRecord {
   subject?: string;
 }
 
-// display: kind icon + convergence-state label. bench=📊 experiment=🧪.
+// display: kind icon + shared convergence-state label. bench=📊 experiment=🧪.
 function resultKindIcon(kind: string | undefined): string {
   return kind === "bench" ? "📊 BENCH" : kind === "experiment" ? "🧪 EXP" : (kind ?? "?");
-}
-
-// results reuse the 3-stage convergence-state VOCABULARY but render neg-conv as 🔴, not the
-// 🧱 wall that convStateLabel uses: a negative bench/experiment outcome is a red-circle result,
-// not the terminal break-walls verdict (which is stamped only after multi-lens exhaustion).
-export function resultStateLabel(s: string | undefined): string {
-  const n = normalizeConvState(s);
-  return n === "pos-conv" ? "🟢 POS-CONV" : n === "in-prog" ? "🔄 IN-PROG" : n === "neg-conv" ? "🔴 NEG-CONV" : (s ?? "?");
 }
 
 // auto-assign a stable, readable id `<kind>-<subjectslug>-<n>` — mirrors nextConvergenceId so
@@ -827,7 +820,7 @@ export function lintResultRecords(): string[] {
 }
 
 function resultLine(r: ResultRecord): string {
-  return `  [${resultKindIcon(r.kind)} · ${resultStateLabel(r.state)}] ${r.id} — ${r.value ?? ""}${r.metric ? `  (측정: ${r.metric})` : ""}`;
+  return `  [${resultKindIcon(r.kind)} · ${convStateLabel(r.state)}] ${r.id} — ${r.value ?? ""}${r.metric ? `  (측정: ${r.metric})` : ""}`;
 }
 
 // sidecar architecture result {list|add|edit|rm} — CRUD over the bench/experiment

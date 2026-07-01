@@ -6,7 +6,7 @@
   "viewer": "ARCHITECTURE.html",
   "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
   "convergence": {
-    "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=3단계 수렴 pos-conv🟢(포지티브)|in-prog🔄(진행·검토)|neg-conv🧱(네거티브·wall) · 레거시 ossified/in_flight/failed accepted · value=핵심 · threshold=재발조건/해결 · source=원파일. 재발 시 update-in-place.",
+    "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=3단계 수렴 pos-conv🟢(포지티브)|in-prog🔄(진행·검토)|neg-conv🔴(네거티브·falsified) · 레거시 ossified/in_flight/failed accepted · value=핵심 · threshold=재발조건/해결 · source=원파일. 재발 시 update-in-place.",
     "records": [
       {
         "id": "EXEC_SPAWN_ERROR_UNHANDLED",
@@ -980,7 +980,7 @@
                     "name": "results 벤치·실험 결과 누적 store",
                     "role": "벤치/실험 결과 누적 SSOT — convergence 와 같은 3단계 수렴상태 공유",
                     "id": "detail-results-store",
-                    "detail": "누적 SSOT=`results.records[]`(id·kind·state·value·metric·subject). state=pos-conv🟢/in-prog🔄/neg-conv🔴(음성=🔴, break-walls 벽🧱 아님) · kind=bench|experiment · `add`=`--kind`+`--subject`+`--value`·id 자동·동일(kind,subject)면 BLOCK→for검토후 edit/--new. touch·Stop게이트 없음 · lint RESULT-MALFORMED"
+                    "detail": "누적 SSOT=`results.records[]`(id·kind·state·value·metric·subject). state=convergence 와 동일 pos-conv🟢/in-prog🔄/neg-conv🔴(음성) · kind=bench|experiment · `add`=`--kind`+`--subject`+`--value`·id 자동·동일(kind,subject)면 BLOCK→for검토후 edit/--new. touch·Stop게이트 없음 · lint RESULT-MALFORMED"
                   }
                 ]
               },
@@ -1301,7 +1301,7 @@
     ]
   },
   "results": {
-    "note": "벤치·실험 결과 누적 SSOT (preserve-state · honesty). state=convergence 와 동일 3단계 수렴 pos-conv🟢(포지티브·확정이득)|in-prog🔄(진행·불확정)|neg-conv🔴(네거티브·falsified/음성) · kind=bench|experiment · value=핵심결과 · metric=측정값/근거 · subject=대상. neg 는 🔴(음성 결과)이지 🧱(break-walls 종결벽)이 아니다. convergence 와 달리 file-touch 표면화·Stop게이트 없음 — 실행이력으로 쌓아 falsified/음성 결과도 보존. 같은 (kind,subject) 재측정은 update-in-place.",
+    "note": "벤치·실험 결과 누적 SSOT (preserve-state · honesty). state=convergence 와 동일 3단계 수렴 pos-conv🟢(포지티브·확정이득)|in-prog🔄(진행·불확정)|neg-conv🔴(네거티브·falsified/음성) · kind=bench|experiment · value=핵심결과 · metric=측정값/근거 · subject=대상. convergence 와 달리 file-touch 표면화·Stop게이트 없음 — 실행이력으로 쌓아 falsified/음성 결과도 보존. 같은 (kind,subject) 재측정은 update-in-place.",
     "records": []
   }
 }

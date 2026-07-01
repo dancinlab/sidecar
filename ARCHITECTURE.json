@@ -1014,7 +1014,7 @@
                     "name": "gate-stop-check (type:gate 직접갱신 강제)",
                     "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
                     "id": "detail-gate-stop-check",
-                    "detail": "Stop 훅 `architecture gate-stop-check` — 출력에 게이트/verdict 신호(config/gate-signals.json) 있고 `🔬 GATE` 마커 없으면 block → 별도 store 아니라 ARCHITECTURE.json 의 해당 `type:\"gate\"` 노드 verdict 를 직접 update-in-place(검토후) 유도 → `🔬 GATE 갱신: <id>`/`해당 없음`. 세션당 1회·CC-only·convergenceStopCheck 동형"
+                    "detail": "Stop 훅 `architecture gate-stop-check` — 출력에 게이트/verdict 신호(config/gate-signals.json) 있고 `🔬 GATE` 마커 없으면 block → 별도 store 아니라 ARCHITECTURE.json 의 해당 `type:\"gate\"` 노드 verdict 를 직접 update-in-place(검토후) 유도 → `🔬 GATE 갱신: <id>`/`해당 없음`. 세션당 1회·CC-only. 배선은 TWO surface — modules/setup.ts Stop[](→settings.json via install-hooks) AND hooks/hooks.json — 둘 다 필요(setup-ts-1)"
                   }
                 ]
               },

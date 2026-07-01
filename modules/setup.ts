@@ -64,6 +64,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar recommend stop-check"),
       entry("sidecar architecture stop-check"), // turn-close design-report gate (was missing here vs hooks.json)
       entry("sidecar architecture convergence stop-check"),
+      entry("sidecar architecture gate-stop-check"), // turn-close gate-verdict gate — verdict signal w/o `🔬 GATE` marker ⇒ block, induce DIRECT type:gate node update (wire BOTH: also in hooks/hooks.json)
       entry("sidecar ship stop-check"), // turn-close pr-cycle/ship ENTRY gate — impl/fix code left uncommitted ⇒ block (clean tree or `🚢 SHIP` marker exits)
       entry("sidecar ing staleness-check"),
       entry("sidecar injects context-check"), // turn-close context-rot alarm — warn (never block) when the live window enters the ~150-400K degradation band

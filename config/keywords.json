@@ -230,6 +230,16 @@
       ],
       "tool": "hexa deck",
       "hint": "도메인 input deck 은 `hexa deck <domain> <slug> '<spec-json>'` 로: exports/<domain>/decks/<slug>/ 생성. `hexa deck domains` (도메인 목록: rtsc·nuclear·material·chem·chip·bio) · stub 도메인은 honest exit-1. (c12)"
+    },
+    {
+      "id": "fable-delegate",
+      "patterns": [
+        "fable",
+        "Fable",
+        "파블"
+      ],
+      "tool": "sidecar fable",
+      "hint": "Fable 5 delegation → `sidecar fable` (headless `claude -p` · default claude-fable-5 · per-call, session backend untouched). Free text with shell-special chars → `printf '%s' \"<text>\" | sidecar fable -` (or /fable). Flags: -m/--json/--dry/--cwd/--timeout <s> (headless stall cap) · after `--` verbatim to claude."
     }
   ]
 }

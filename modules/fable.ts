@@ -30,6 +30,8 @@ const USAGE = `usage: sidecar fable [flags] <prompt...> | --file <f> | -
       --json         machine output (claude --output-format json)
       --dry          print the resolved claude argv + prompt size, do not run
       --cwd <dir>    working directory for the claude run (default: current)
+      --timeout <s>  kill the run after <s> seconds (exit 124) — headless claude
+                     can sleep FOREVER waiting for login credentials; cap it
       -- <flags...>  everything after -- is passed to claude verbatim
 prompt sources are exclusive: argv words | --file | - (stdin).`;
 
@@ -40,12 +42,13 @@ interface FableOpts {
   json: boolean;
   dry: boolean;
   cwd: string | null;
+  timeoutSec: number | null;
   words: string[];
   extra: string[];
 }
 
 function parseArgs(args: string[]): FableOpts | null {
-  const o: FableOpts = { model: DEFAULT_MODEL, file: null, stdin: false, json: false, dry: false, cwd: null, words: [], extra: [] };
+  const o: FableOpts = { model: DEFAULT_MODEL, file: null, stdin: false, json: false, dry: false, cwd: null, timeoutSec: null, words: [], extra: [] };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--") {
@@ -63,6 +66,10 @@ function parseArgs(args: string[]): FableOpts | null {
       const v = args[++i];
       if (!v) return null;
       o.cwd = v;
+    } else if (a === "--timeout") {
+      const v = Number(args[++i]);
+      if (!Number.isFinite(v) || v <= 0) return null;
+      o.timeoutSec = v;
     } else if (a === "-") {
       o.stdin = true;
     } else if (a === "--json") {
@@ -123,7 +130,7 @@ export async function runFable(args: string[]): Promise<number> {
   const claudeArgs = ["-p", "--model", o.model, ...(o.json ? ["--output-format", "json"] : []), ...o.extra];
   if (o.dry) {
     info(`fable --dry: claude ${claudeArgs.join(" ")}`);
-    info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""}`);
+    info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""}${o.timeoutSec ? ` · timeout=${o.timeoutSec}s` : ""}`);
     return 0;
   }
 
@@ -133,11 +140,31 @@ export async function runFable(args: string[]): Promise<number> {
       cwd: o.cwd ?? process.cwd(),
       stdio: ["pipe", "inherit", "inherit"],
     });
+    // Headless claude waiting on login credentials sleeps forever at 0% CPU —
+    // --timeout is the observed-stall cap: kill and report 124 (GNU timeout).
+    let timedOut = false;
+    const timer = o.timeoutSec
+      ? setTimeout(() => {
+          timedOut = true;
+          child.kill("SIGKILL");
+        }, o.timeoutSec * 1000)
+      : null;
+    const settle = (code: number) => {
+      if (timer) clearTimeout(timer);
+      resolve(code);
+    };
     child.on("error", (e: NodeJS.ErrnoException) => {
       warn(e.code === "ENOENT" ? "fable: `claude` CLI not found on PATH — install Claude Code first." : `fable: claude spawn failed: ${e.message}`);
-      resolve(127);
+      settle(127);
     });
-    child.on("close", (code) => resolve(code ?? 1));
+    child.on("close", (code) => {
+      if (timedOut) {
+        warn(`fable: killed after --timeout ${o.timeoutSec}s (headless claude stall — check 'claude /login' auth if this repeats).`);
+        settle(124);
+        return;
+      }
+      settle(code ?? 1);
+    });
     child.stdin.write(prompt);
     child.stdin.end();
   });

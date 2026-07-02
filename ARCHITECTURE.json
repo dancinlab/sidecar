@@ -853,7 +853,7 @@
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 호출 위임 — 세션 백엔드(switch)는 불변. 프롬프트 3택1(argv/--file/stdin '-')은 child stdin 으로 전달해 인용·길이·이력누출 0, 출력은 inherit 라이브 스트리밍. --json=JSON 결과 · --dry=미실행 argv 미리보기 · '--' 뒤는 claude 패스스루."
+                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 호출 위임 — 세션 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-')은 child stdin 전달, /fable 슬래시는 프롬프트 전용 stdin 파이프(글롭·인용 안전). 플래그 --json·--dry·--cwd·--timeout <s>(헤드리스 stall 킬·exit 124)·'--' 패스스루, 'fable' 키워드 트리거는 keywords.json."
               },
               {
                 "name": "pod {poll|watch|unwatch|list}",

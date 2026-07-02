@@ -134,7 +134,8 @@ hook delegates (wire these into your agent's settings.json):
   watch <url|path> [question] [flags]   download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent
   fable [flags] <prompt...> | --file <f> | -   delegate ONE instruction to the Fable 5 model via headless 'claude -p'
                            (default -m claude-fable-5 · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting
-                           · --json = claude --output-format json · --dry = print resolved argv, no run · --cwd <dir> · flags after -- go to claude verbatim)
+                           · --json = claude --output-format json · --dry = print resolved argv, no run · --cwd <dir>
+                           · --timeout <s> = kill a stalled headless run after s seconds, exit 124 · flags after -- go to claude verbatim)
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]

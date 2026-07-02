@@ -871,6 +871,12 @@
         "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
        },
        {
+        "name": "accounts",
+        "role": "멀티계정 로스터 (secret 스토어 파생 · 도메인 데이터 0)",
+        "id": "module-accounts",
+        "detail": "로스터 SSOT=secret 스토어: 그룹 패턴(~/.sidecar/accounts.json · {n} 치환)에 맞는 키에서 멤버십 파생 — config 측 인덱스 리스트 없음. list/status(쌍 무결성)·code <n|email>(gmail API OAuth·curl -K·--wait=호출 후 수신분만·exit 0/1/2/3)·add(패턴 이메일+rotate 비번)·retire(store-to-store→legacy 이동·중복 가드)·init. 비밀번호 미출력 · accounts.jsonl 원장(키만)"
+       },
+       {
         "name": "fable",
         "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
         "id": "module-fable",

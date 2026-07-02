@@ -252,11 +252,7 @@ export interface SidecarConfig {
   // no-push agent worktrees never get it and pile up. `maxAgeDays` is the age backstop:
   // a clean, unlocked, not-recently-touched AGENT worktree whose HEAD is older than this
   // is reaped (its tip preserved under refs/reaped/ first, so work is recoverable). 0 disables.
-  // `salvageDir` — merged([gone])-but-dirty worktrees strand forever otherwise; gc copies
-  // their uncommitted files here (under the MAIN checkout) before reaping (preserve-state).
-  // `labRoot` — root dir scanned by the load `wt` gauge for the lab-wide worktree count;
-  // "" = parent of the repo root.
-  worktree: { maxAgeDays: number; salvageDir: string; labRoot: string };
+  worktree: { maxAgeDays: number };
   // danger-guard — code-level destructive-command blocks. rmRfRoot gates ONLY the
   // catastrophic `rm -rf /` · `~` · `$HOME` · `*` block; default false = NOT guarded
   // (the user opted out). no-verify / reset-hard / curl|sh remain always-on (code).
@@ -386,7 +382,7 @@ const DEFAULTS: SidecarConfig = {
   askqText: true,
   ledger: { staleSec: 3600 },
   ing: { editThreshold: 5, staleDays: 5, maxActive: 12 },
-  worktree: { maxAgeDays: 3, salvageDir: "state/worktree-salvage", labRoot: "" },
+  worktree: { maxAgeDays: 3 },
   memGuard: { enabled: true, warnPct: 15, blockPct: 0, watchdogIntervalSec: 45 },
   dangerGuard: { rmRfRoot: false },
   annotationGuard: { enabled: true, file: ".harness/tool-annotations.json" },

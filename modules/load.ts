@@ -11,13 +11,9 @@
 // `memory_pressure` CLI — it does a full system scan and can take seconds, which
 // is unacceptable for a hook that fires on every prompt.
 import { execSync } from "node:child_process";
-import { readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
 import { emitInject } from "../lib/inject.ts";
 import { info } from "../lib/log.ts";
 import { readStdin } from "../lib/exec.ts";
-import { config } from "../lib/config.ts";
-import { REPO_ROOT } from "../lib/paths.ts";
 
 interface Snapshot {
   load1: number;
@@ -29,8 +25,7 @@ interface Snapshot {
   ramLight: string;
   swapUsedGiB: number;
   swapLight: string;
-  worktrees: number; // extra git worktrees in the cwd repo (main checkout excluded)
-  labWorktrees: number; // linked worktrees across ALL repos under the lab root (-1 unknown)
+  worktrees: number; // extra git worktrees (main checkout excluded) — hygiene at-a-glance
   danger: boolean;
 }
 
@@ -96,35 +91,13 @@ export function readSnapshot(): Snapshot | null {
   // hygiene gauge so stranded worktrees from isolated agents are visible every turn.
   const wtRaw = sh("git worktree list --porcelain 2>/dev/null");
   const worktrees = Math.max(0, (wtRaw.match(/^worktree /gm) || []).length - 1);
-  const labWorktrees = countLabWorktrees();
 
   const danger = cpuLight === "🔴" || ramLight === "🔴" || swapLight === "🔴" || pressure >= 2;
   return {
     load1, cores, cpuLight,
     ramUsedPct, pressure, pressureLabel, ramLight,
-    swapUsedGiB, swapLight, worktrees, labWorktrees, danger,
+    swapUsedGiB, swapLight, worktrees, danger,
   };
-}
-
-// Lab-wide linked-worktree count — the per-repo gauge only sees the cwd repo, so a
-// sibling repo could hold 40+ worktrees while every other session reads `wt 0 🟢`
-// (the cross-repo pileup blind spot). Counts .git/worktrees/ admin entries of every
-// immediate child repo of worktree.labRoot (default: parent of the repo root) —
-// readdir only, no subprocess, so it stays per-turn cheap. -1 = root unreadable.
-function countLabWorktrees(): number {
-  try {
-    const root = config().worktree?.labRoot || dirname(REPO_ROOT);
-    let n = 0;
-    for (const e of readdirSync(root, { withFileTypes: true })) {
-      if (!e.isDirectory()) continue;
-      try {
-        n += readdirSync(join(root, e.name, ".git", "worktrees")).length;
-      } catch { /* not a repo / no linked worktrees */ }
-    }
-    return n;
-  } catch {
-    return -1;
-  }
 }
 
 // Local-clock stamp appended to the readout — the agent has no real-time clock
@@ -144,8 +117,7 @@ function line(s: Snapshot): string {
     `${head}CPU ${s.load1.toFixed(2)}/${s.cores} ${s.cpuLight} · ` +
     `RAM ${s.ramUsedPct}%(${s.pressureLabel}) ${s.ramLight} · ` +
     `swap ${swap} ${s.swapLight} · ` +
-    `wt ${s.worktrees} ${light(s.worktrees, 3, 10)}` +
-    (s.labWorktrees >= 0 ? `/lab ${s.labWorktrees} ${light(s.labWorktrees, 10, 30)}` : "") + " · " +
+    `wt ${s.worktrees} ${light(s.worktrees, 3, 10)} · ` +
     `🕐 ${nowStamp()}`
   );
 }
@@ -159,7 +131,7 @@ function body(s: Snapshot): string {
     line(s) + "\n" +
     "- CPU = load1/cores (🟢<0.7 🟡<1.0 🔴≥1.0) · RAM = active+wired+compressor used% + kernel pressure(normal/warn/critical) · swap used (🟢<2G 🟡<6G 🔴≥6G).\n" +
     "- A Mac that dies under load fails on MEMORY (compressor+swap), not CPU — when RAM/swap light is 🔴 or pressure≥warn, say so loudly.\n" +
-    "- wt = extra git worktrees, this repo (🟢0-2 🟡3-9 🔴≥10) / lab = 전체 repo 합산 (🟢<10 🟡<30 🔴≥30) — 누적되면 해당 repo 에서 `sidecar worktree gc`.\n" +
+    "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10) — 누적되면 `sidecar worktree gc` 로 정리.\n" +
     "- 🕐 = the machine's REAL current local date+time (the session-start date in context is fixed; trust this line for 'now')." +
     warn + "\n"
   );

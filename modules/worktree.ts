@@ -3,18 +3,13 @@
 //   scan         classify every linked worktree (clean/dirty/unpushed/[gone]) and
 //                LOUDLY flag STRANDED ones — uncommitted or unpushed work left in a
 //                worktree. Exit 1 when any are stranded (usable as a gate).
-//   gc           eagerly sweep merged + dangling worktrees/branches — ALL linked
-//                worktrees (sibling dirs, /tmp, .worktrees/*), not just agent paths;
-//                agent-only scope let non-agent worktrees pile up cross-repo. Reap
-//                signals: [gone] upstream (squash-safe merged signal) for every
-//                worktree; the HEAD-age > worktree.maxAgeDays (default 3) backstop
-//                stays AGENT-ONLY so long-lived experiment lanes are never age-reaped.
-//                An aged tip with un-pushed commits is first preserved under
-//                refs/reaped/<branch> (fully recoverable). A merged([gone])-but-dirty
-//                worktree — the permanent-strand trap (uncommitted state/ outputs) —
-//                has its uncommitted files salvaged to worktree.salvageDir under the
-//                main checkout, then is reaped. UNCONDITIONAL live-work guards skip
-//                unmerged-dirty / recently-touched (<1h) / locked worktrees, so an
+//   gc           eagerly sweep merged + dangling AGENT worktrees/branches. Reaps on
+//                EITHER [gone] upstream (squash-safe merged signal) OR HEAD-age >
+//                worktree.maxAgeDays (default 3) — the age backstop catches squash-
+//                merge / no-push agent worktrees that never get [gone] and used to
+//                pile up. An aged tip with un-pushed commits is first preserved under
+//                refs/reaped/<branch> (fully recoverable). UNCONDITIONAL live-work
+//                guards skip dirty / recently-touched (<1h) / locked worktrees, so an
 //                active task is NEVER wiped. Always exits 0 (non-blocking).
 //   guard <cmd>  advisory for `git worktree add`: if stranded work already exists,
 //                steer to finish/clean it BEFORE starting new work (principle 3);
@@ -121,32 +116,6 @@ async function scan(): Promise<number> {
   return 0;
 }
 
-// Copy every uncommitted file (modified + untracked) out of a merged-but-dirty
-// worktree into <mainCheckout>/<salvageDir>/<branch-or-basename>/ before reaping —
-// preserve-state: the outputs survive in the git-tracked state/ root, the worktree
-// doesn't. Deletions carry no content and are skipped.
-async function salvageDirty(w: WT, salvageDir: string): Promise<number> {
-  const name = (w.branch || w.path.split("/").pop() || "unknown").replace(/[^A-Za-z0-9._-]+/g, "-");
-  const destRoot = repoPath(`${salvageDir}/${name}`);
-  const status = (await git("git status --porcelain", w.path)).out.split("\n").filter(Boolean);
-  let saved = 0;
-  for (const line of status) {
-    if (/^.?D/.test(line.slice(0, 2))) continue; // deletion — nothing to copy
-    let rel = line.slice(3).trim();
-    const arrow = rel.indexOf(" -> ");
-    if (arrow >= 0) rel = rel.slice(arrow + 4); // rename: keep the new path
-    rel = rel.replace(/^"|"$/g, "").replace(/\/$/, "");
-    const src = `${w.path}/${rel}`;
-    const dstParent = `${destRoot}/${rel}`.replace(/\/[^/]+$/, "");
-    const r = await execShell(
-      `mkdir -p ${JSON.stringify(dstParent)} && cp -R ${JSON.stringify(src)} ${JSON.stringify(dstParent)}/`
-    );
-    if (r.code === 0) saved++;
-    else warn(`  salvage failed (${rel}): ${(r.stdout + r.stderr).trim()}`);
-  }
-  return saved;
-}
-
 async function gc(): Promise<number> {
   const wts = await classify();
   const main = wts.find((w) => w.isMain)?.path;
@@ -156,23 +125,14 @@ async function gc(): Promise<number> {
   let swept = 0;
 
   const maxAgeDays = config().worktree?.maxAgeDays ?? 3;
-  const salvageDir = config().worktree?.salvageDir ?? "state/worktree-salvage";
   for (const w of fresh) {
-    if (w.isMain) continue;
+    if (w.isMain || !w.isAgent) continue; // only agent worktrees, conservative
     if (w.locked) continue; // another live checkout
+    if (w.dirty) { info(`  ⏭ skip (dirty): ${w.path}`); continue; }
     if (await recentlyTouched(w.path)) { info(`  ⏭ skip (recent <1h): ${w.path}`); continue; }
     const gone = w.track === "[gone]"; // pushed + remote-deleted (squash-safe)
-    // Age backstop stays AGENT-ONLY: non-agent worktrees (sibling dirs, .worktrees/*)
-    // may be intentional long-lived experiment lanes — reap those on [gone] only.
-    const aged = w.isAgent && maxAgeDays > 0 && (await headAgeDays(w.path)) > maxAgeDays;
+    const aged = maxAgeDays > 0 && (await headAgeDays(w.path)) > maxAgeDays;
     if (!gone && !aged) continue; // live/recent work → leave it
-    if (w.dirty) {
-      if (!gone) { info(`  ⏭ skip (dirty, unmerged): ${w.path}`); continue; }
-      // merged-but-dirty = the permanent-strand trap: the branch is done but
-      // uncommitted outputs pin the worktree. Salvage them, then reap.
-      const saved = await salvageDirty(w, salvageDir);
-      info(`  📦 salvaged ${saved} uncommitted file(s) → ${salvageDir}/`);
-    }
     // Aged reap may carry un-pushed commits (the [gone] path is already merged).
     // Preserve the tip under refs/reaped/ so the work stays fully recoverable.
     if (aged && !gone && w.ahead > 0 && w.branch) {

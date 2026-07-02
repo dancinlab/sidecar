@@ -35,10 +35,11 @@ const DEFAULT_MODEL = "claude-fable-5";
 // `--sources user,project,local` opts back into full inheritance.
 const DEFAULT_SOURCES = "project,local";
 const VALID_SOURCES = new Set(["user", "project", "local"]);
-// Default wall-clock cap for a run (foreground AND --bg watchdog). Fable 5 answers
-// in seconds-to-minutes; 30 min is a generous ceiling that still reliably reaps a
-// truly stalled headless child. `--timeout 0` disables it (unlimited).
-const DEFAULT_TIMEOUT_SEC = 1800;
+// NO default timeout — a run is UNLIMITED unless `--timeout <s>` is passed. The
+// original stall (a headless child inheriting the global governance Stop-hooks and
+// looping forever) is now fixed at the source by the default `--sources project,
+// local`, so an auto-cap would only risk killing a legitimately long generation.
+// `--timeout <s>` stays available as an opt-in reaper for a run you want bounded.
 
 const USAGE = `usage: sidecar fable [flags] <prompt...> | --file <f> | -
   -m, --model <id>     model to run (default ${DEFAULT_MODEL})
@@ -51,9 +52,9 @@ const USAGE = `usage: sidecar fable [flags] <prompt...> | --file <f> | -
                        user,project,local (default ${DEFAULT_SOURCES} — DROPS the
                        global governance hooks that stall a headless child; pass
                        user,project,local to inherit the full session environment)
-      --timeout <s>    kill the run after <s> seconds (exit 124) — default 1800
-                       (30 min); --timeout 0 = unlimited. Backstop for a stalled
-                       headless run (auth wait / blocking inherited hook)
+      --timeout <s>    OPT-IN cap: kill the run after <s> seconds (exit 124).
+                       Default is UNLIMITED (no cap) — pass this only for a run
+                       you want bounded
   -c, --continue       continue the most recent conversation in --cwd (stateful)
   -r, --resume <id>    resume a specific session by id (the session_id from a
                        prior --json run) — SAME --cwd as that run
@@ -185,7 +186,8 @@ function shq(s: string): string {
 }
 // Effective cap: null flag → default 30 min; 0 → unlimited (null); else the value.
 function effTimeoutSec(o: FableOpts): number | null {
-  return o.timeoutSec === null ? DEFAULT_TIMEOUT_SEC : o.timeoutSec === 0 ? null : o.timeoutSec;
+  // unlimited by default; only an explicit positive --timeout caps the run.
+  return o.timeoutSec && o.timeoutSec > 0 ? o.timeoutSec : null;
 }
 function isAlive(pid: number): boolean {
   try {
@@ -371,9 +373,8 @@ export async function runFable(args: string[]): Promise<number> {
       cwd: o.cwd ?? process.cwd(),
       stdio: ["pipe", "inherit", "inherit"],
     });
-    // Headless claude waiting on login credentials sleeps forever at 0% CPU —
-    // the timeout is the observed-stall cap: kill and report 124. Default 30 min
-    // (DEFAULT_TIMEOUT_SEC); --timeout 0 disables it.
+    // No cap by default (unlimited) — only an explicit --timeout <s> reaps the run
+    // at that many seconds (exit 124), for a run you want bounded.
     const cap = effTimeoutSec(o);
     let timedOut = false;
     const timer = cap

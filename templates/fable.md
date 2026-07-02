@@ -121,8 +121,8 @@ sidecar fable list           → all jobs + status
 - In Claude Code specifically, running a plain (blocking) `sidecar fable …` as a
   **background Bash tool call** also works — the harness re-invokes you on exit, no
   polling. `--bg` is the shell-native equivalent for terminals / cross-tool use.
-- The default `--timeout 1800` (30 min) applies to `--bg` too (a watchdog SIGKILLs a
-  stalled job → exitcode 124), so a hung background job self-reaps.
+- Runs are UNLIMITED by default (no timeout) — pass `--timeout <s>` to opt into a cap
+  (foreground kills at s seconds; a `--bg` job gets a shell watchdog → exitcode 124).
 
 ## Recipe — brainstorm / design divergence into a repo (the proven one)
 

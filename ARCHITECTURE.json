@@ -874,7 +874,7 @@
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5` 위임 — 백엔드(switch) 불변. /fable 은 런북형(Write→--file). 자식 기본 `--sources project,local`로 전역 Stop-훅 미상속=dirty-repo 스톨 차단. --timeout 기본 1800s(30분·0=무제한). -c·-r 다중턴. --bg=detach 발사→잡ID, `fable result/wait/list`로 수거(watchdog 내장). 주의시트=templates/fable.md."
+                "detail": "`claude -p --model claude-fable-5` 위임 — 백엔드(switch) 불변. /fable 은 런북형(Write→--file). 자식 기본 `--sources project,local`로 전역 Stop-훅 미상속=dirty-repo 스톨 차단. --timeout 은 기본 무제한(opt-in 캡만). -c·-r 다중턴. --bg=detach 발사→잡ID, `fable result/wait/list`로 수거. 주의시트=templates/fable.md."
               },
               {
                 "name": "hypotheses",

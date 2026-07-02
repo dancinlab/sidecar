@@ -140,7 +140,7 @@ hook delegates (wire these into your agent's settings.json):
                              headless child in a dirty repo; pass user,project,local to inherit the full session env)
                            · -c/--continue = continue the most recent conversation in --cwd · -r/--resume <id> = resume a session_id
                              from a prior --json run (stateful · same --cwd) · --timeout <s> = kill a stalled run after s seconds (default
-                             1800=30min · 0=unlimited · exit 124) · flags after -- go to claude verbatim)
+                             OPT-IN cap, default UNLIMITED, exit 124) · flags after -- go to claude verbatim)
                            · --bg = fire-and-forget (launch detached → prints a job id, returns now); collect with
                              'sidecar fable result <id>' (RUNNING=exit3) / 'wait <id> [--timeout s]' / 'list' — no hand-rolled poll loop
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history

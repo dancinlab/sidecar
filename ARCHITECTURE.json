@@ -235,8 +235,8 @@
       {
         "id": "WORKTREE_GONE_ONLY_PILEUP",
         "state": "pos-conv",
-        "value": "gc/pr-cycle reaped ONLY [gone]-upstream worktrees; squash-merge + no-push AGENT worktrees never get [gone], so they were skipped forever and piled (67 wts / 84GB / 6 days). Fix: reap on [gone] OR HEAD-age > worktree.maxAgeDays, preserving the tip under refs/reaped/ first so aged work stays recoverable",
-        "threshold": "agent worktree clean+unlocked+not-recent and older than maxAgeDays, or [gone] upstream",
+        "value": "gc reap widened to [gone] OR HEAD-age>maxAgeDays, yet pileup RECURRED (anima 41 wt / hexa-lang 16 + 8 full clones): gc only scans isAgent paths (.claude/worktrees/*) so sibling-dir (../repo-*), /tmp, and .worktrees/* worktrees are structurally exempt; merged-but-DIRTY worktrees (uncommitted state/ outputs · preserve-state violation) are skipped forever; the wt gauge + gc are cwd-repo-local so cross-repo pileups stay invisible (wt 0 🟢 in sidecar while anima holds 41); full clones named wt-* evade worktree tooling entirely",
+        "threshold": "recurs while gc skips non-agent paths + dirty worktrees and the wt gauge is repo-local; resolve = extend gc scope to all linked worktrees (salvage dirty outputs to state/ first), lab-wide wt scan, purge clone impostors",
         "source": "modules/worktree.ts"
       },
       {

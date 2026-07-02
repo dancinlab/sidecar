@@ -239,7 +239,7 @@
         "파블"
       ],
       "tool": "sidecar fable",
-      "hint": "Fable 5 delegation → `sidecar fable` (headless `claude -p` · default claude-fable-5 · per-call, session backend untouched). Free text with shell-special chars → `printf '%s' \"<text>\" | sidecar fable -` (or /fable). Flags: -m/--json/--dry/--cwd/--timeout <s> (headless stall cap) · after `--` verbatim to claude."
+      "hint": "Fable 5 delegation → `sidecar fable` (headless `claude -p` · claude-fable-5 · per-call). Free text → `sidecar fable --file <f> --timeout 600` (never inline). Runs hook-free by default (--sources project,local) so it won't stall in a dirty repo; --json for clean `.result`. Full sheet: templates/fable.md."
     }
   ]
 }

@@ -135,6 +135,8 @@ hook delegates (wire these into your agent's settings.json):
   fable [flags] <prompt...> | --file <f> | -   delegate ONE instruction to the Fable 5 model via headless 'claude -p'
                            (default -m claude-fable-5 · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting
                            · --json = claude --output-format json · --dry = print resolved argv, no run · --cwd <dir>
+                           · --sources <l> = setting sources (default project,local — DROPS the global governance hooks that stall a
+                             headless child in a dirty repo; pass user,project,local to inherit the full session env)
                            · --timeout <s> = kill a stalled headless run after s seconds, exit 124 · flags after -- go to claude verbatim)
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)

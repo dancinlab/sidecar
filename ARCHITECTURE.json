@@ -357,6 +357,13 @@
         "value": "CC 슬래시 '!' 원라이너의 $ARGUMENTS 는 셸 실행 전 텍스트 치환 — 어떤 인용 전략(비인용→괄호/글롭 붕괴 · 쌍따옴표 감싸기/stdin 파이프→프롬프트 속 쌍따옴표에서 붕괴)도 임의 자유텍스트를 셸라인에 안전하게 못 넣는다. 자유텍스트 인자를 받는 커맨드는 '!' 원라이너 금지 → 런북형(에이전트가 Write 로 파일 저장 → --file 플래그)으로 배선.",
         "threshold": "재발조건: 자유텍스트 인자 커맨드(commands/*.md)를 '!' + $ARGUMENTS 인라인으로 배선. 해결: 런북형 Write→--file + 특수문자(따옴표·괄호·글롭·백틱) QA 케이스.",
         "source": "commands/fable.md"
+      },
+      {
+        "id": "fable-ts-1",
+        "state": "pos-conv",
+        "value": "헤드리스 claude -p 자식은 전역 ~/.claude/settings.json 의 거버넌스 Stop-훅(architecture/convergence stop-check)을 상속한다 — cwd 가 미커밋 변경 있는 git repo면 자식이 답을 낸 뒤 그 Stop-훅이 블록→계속 루프를 걸어 프로세스가 안 죽고 --timeout 에 exit 124 로 킬되며, 최종턴 .result 도 발산 대신 거버넌스 메타로 덮인다. 해결=자식을 --setting-sources project,local 로 띄워 전역 user 소스(거버넌스 훅)를 걷어냄(keychain 인증은 설정소스가 아니라 유지 · --bare 는 인증까지 날려 Not-logged-in 이라 불가).",
+        "threshold": "재발조건: headless claude -p 를 전역 훅 상속(기본 setting-sources) + dirty git repo cwd 에서 실행. 해결: fable 기본 --sources project,local, 전체상속 필요시 --sources user,project,local + 사전 커밋.",
+        "source": "modules/fable.ts"
       }
     ]
   },
@@ -860,7 +867,7 @@
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 호출 위임 — 세션 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-')은 child stdin 전달, /fable 슬래시는 런북형(Write→--file · 셸라인 인라인 금지). 플래그 --json·--dry·--cwd·--timeout <s>(stall 킬·124)·'--' 패스스루. 에이전트 주의사항 시트=templates/fable.md, 'fable' 키워드 트리거=keywords.json."
+                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 위임 — 세션 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-'), /fable 슬래시는 런북형(Write→--file). 자식은 기본 `--setting-sources project,local`로 전역 거버넌스 Stop-훅 미상속=dirty-repo 스톨(exit124) 원천차단·keychain 인증 유지(`--sources user,project,local`로 전체상속). 주의시트=templates/fable.md."
               },
               {
                 "name": "pod {poll|watch|unwatch|list}",

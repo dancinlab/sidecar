@@ -22,17 +22,32 @@ import { readFileSync } from "node:fs";
 import { info, warn } from "../lib/log.ts";
 
 const DEFAULT_MODEL = "claude-fable-5";
+// Setting sources the child `claude -p` loads (user = global ~/.claude, project
+// = repo .claude, local = repo .claude/*.local). DEFAULT DROPS `user`: the
+// host-wide governance Stop-hooks live there, and a headless child that hits a
+// BLOCKING Stop-hook (architecture/convergence stop-check when the cwd repo has
+// uncommitted changes) loops forever → --timeout kills it at exit 124, AFTER the
+// answer was already produced (observed: --cwd anima → 124 stall + boilerplate-
+// polluted .result). Keychain auth is NOT a setting source, so dropping `user`
+// keeps the child logged in; `project,local` still gives it repo CLAUDE.md.
+// `--sources user,project,local` opts back into full inheritance.
+const DEFAULT_SOURCES = "project,local";
+const VALID_SOURCES = new Set(["user", "project", "local"]);
 
 const USAGE = `usage: sidecar fable [flags] <prompt...> | --file <f> | -
-  -m, --model <id>   model to run (default ${DEFAULT_MODEL})
-  -f, --file <path>  read the prompt from a file
-  -                  read the prompt from stdin (pipe-friendly)
-      --json         machine output (claude --output-format json)
-      --dry          print the resolved claude argv + prompt size, do not run
-      --cwd <dir>    working directory for the claude run (default: current)
-      --timeout <s>  kill the run after <s> seconds (exit 124) — headless claude
-                     can sleep FOREVER waiting for login credentials; cap it
-      -- <flags...>  everything after -- is passed to claude verbatim
+  -m, --model <id>     model to run (default ${DEFAULT_MODEL})
+  -f, --file <path>    read the prompt from a file
+  -                    read the prompt from stdin (pipe-friendly)
+      --json           machine output (claude --output-format json)
+      --dry            print the resolved claude argv + prompt size, do not run
+      --cwd <dir>      working directory for the claude run (default: current)
+      --sources <l>    claude setting sources to load, comma-joined subset of
+                       user,project,local (default ${DEFAULT_SOURCES} — DROPS the
+                       global governance hooks that stall a headless child; pass
+                       user,project,local to inherit the full session environment)
+      --timeout <s>    kill the run after <s> seconds (exit 124) — backstop for a
+                       stalled headless run (auth wait / blocking inherited hook)
+      -- <flags...>    everything after -- is passed to claude verbatim
 prompt sources are exclusive: argv words | --file | - (stdin).`;
 
 interface FableOpts {
@@ -42,13 +57,14 @@ interface FableOpts {
   json: boolean;
   dry: boolean;
   cwd: string | null;
+  sources: string;
   timeoutSec: number | null;
   words: string[];
   extra: string[];
 }
 
 function parseArgs(args: string[]): FableOpts | null {
-  const o: FableOpts = { model: DEFAULT_MODEL, file: null, stdin: false, json: false, dry: false, cwd: null, timeoutSec: null, words: [], extra: [] };
+  const o: FableOpts = { model: DEFAULT_MODEL, file: null, stdin: false, json: false, dry: false, cwd: null, sources: DEFAULT_SOURCES, timeoutSec: null, words: [], extra: [] };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--") {
@@ -66,6 +82,12 @@ function parseArgs(args: string[]): FableOpts | null {
       const v = args[++i];
       if (!v) return null;
       o.cwd = v;
+    } else if (a === "--sources") {
+      const v = args[++i];
+      if (!v) return null;
+      const parts = v.split(",").map((s) => s.trim()).filter(Boolean);
+      if (parts.length === 0 || !parts.every((p) => VALID_SOURCES.has(p))) return null;
+      o.sources = parts.join(",");
     } else if (a === "--timeout") {
       const v = Number(args[++i]);
       if (!Number.isFinite(v) || v <= 0) return null;
@@ -130,7 +152,7 @@ export async function runFable(args: string[]): Promise<number> {
     return 1;
   }
 
-  const claudeArgs = ["-p", "--model", o.model, ...(o.json ? ["--output-format", "json"] : []), ...o.extra];
+  const claudeArgs = ["-p", "--model", o.model, "--setting-sources", o.sources, ...(o.json ? ["--output-format", "json"] : []), ...o.extra];
   if (o.dry) {
     info(`fable --dry: claude ${claudeArgs.join(" ")}`);
     info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""}${o.timeoutSec ? ` · timeout=${o.timeoutSec}s` : ""}`);
@@ -162,7 +184,7 @@ export async function runFable(args: string[]): Promise<number> {
     });
     child.on("close", (code) => {
       if (timedOut) {
-        warn(`fable: killed after --timeout ${o.timeoutSec}s (headless claude stall — check 'claude /login' auth if this repeats).`);
+        warn(`fable: killed after --timeout ${o.timeoutSec}s (headless stall). Causes: auth wait (\`claude /login\`), or a BLOCKING inherited Stop-hook looping the child — default --sources ${DEFAULT_SOURCES} already drops the global governance hooks, so this repeats only if you passed --sources user,… into a repo with uncommitted changes.`);
         settle(124);
         return;
       }

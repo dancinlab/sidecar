@@ -159,9 +159,10 @@ hook delegates (wire these into your agent's settings.json):
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]
                            transactional email via Postmark API (POST /email) — token from \`secret get postmark.server_token\` (curl -K · never in argv)
                            | history [--count N][--offset N][--tag t][--json][--local] | list | help
-  accounts [list|status|code <n|email>|add|retire <n>|init] [--group g] [--json]   multi-account roster over the secret store —
+  accounts [list|status|code <n|email>|inbox|add|retire <n>|init] [--group g] [--json]   multi-account roster over the secret store —
                            membership DERIVED from secret keys matching the group's pattern (~/.sidecar/accounts.json = data, zero domain
                            hardcoding) · code = newest verification OTP via gmail API (creds from secret · curl -K · --wait rejects stale) ·
+                           inbox = quick check of verification mail across ALL accounts (age·n·code·from · --wait polls fresh arrivals) ·
                            add = pattern email + rotated password · retire = move to legacy namespace · passwords NEVER printed
   paper <new|build|cover|list|publish|update|unpublish|status> [slug] [flags]   demiurge-house scientific paper: scaffold (emoji title ·
                            g5 tier badges · TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate

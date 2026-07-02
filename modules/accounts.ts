@@ -27,13 +27,18 @@ interface GmailFetch {
   fromHint?: string;
   codeRegex?: string;
 }
+interface PostmarkFetch {
+  serverTokenKey: string; // secret key holding the inbound server's token
+  fromHint?: string;
+  codeRegex?: string;
+}
 interface Group {
   label?: string;
   emailPattern: string; // e.g. "svc{n}@example.com"
   secretPrefix: string; // e.g. "svc{n}" → keys svc{n}.email / svc{n}.password
   legacyPrefix: string; // e.g. "legacy.svc{n}"
   fields?: string[]; // default ["email","password"]
-  codeFetch?: { source: "gmail"; gmail?: GmailFetch };
+  codeFetch?: { source: "gmail" | "postmark"; gmail?: GmailFetch; postmark?: PostmarkFetch };
 }
 interface AccountsConfig {
   groups: Record<string, Group>;
@@ -142,6 +147,7 @@ function usage(): void {
   info("sidecar accounts [list] [--group g] [--json]        roster (emails visible · passwords never)");
   info("  status [--group g] [--json]                       integrity check (pair-complete · code-fetch readiness)");
   info("  code <n|email> [--group g] [--window 10m] [--wait <sec>] [--json]   fetch newest verification OTP");
+  info("  inbox [--group g] [--window 15m] [--wait <sec>] [--json]   quick check: verification mail across ALL accounts (age·n·code·from)");
   info("  add [--group g] [--index n]                       next index → email from pattern + `secret rotate` password");
   info("  retire <n> [--group g] [--force]                  move fields to the legacy namespace (store-to-store)");
   info("  init                                              scaffold ~/.sidecar/accounts.json example");
@@ -185,19 +191,21 @@ async function status(g: Group, name: string, asJson: boolean): Promise<number> 
     for (const f of fields)
       if (!a.hasFields[f]) problems.push(`index ${a.index}: missing ${render(g.secretPrefix, a.index)}.${f}`);
   // code-fetch readiness: the configured secret keys exist (presence only).
-  const gm = g.codeFetch?.source === "gmail" ? g.codeFetch.gmail : undefined;
+  const cf = g.codeFetch;
+  const needKeys =
+    cf?.source === "gmail" && cf.gmail ? [cf.gmail.clientIdKey, cf.gmail.clientSecretKey, cf.gmail.refreshTokenKey]
+    : cf?.source === "postmark" && cf.postmark ? [cf.postmark.serverTokenKey]
+    : null;
   const keys = await secretKeys();
-  const fetchReady = gm
-    ? [gm.clientIdKey, gm.clientSecretKey, gm.refreshTokenKey].every((k) => keys.includes(k))
-    : false;
-  if (gm && !fetchReady) problems.push(`code-fetch: missing one of ${gm.clientIdKey} / ${gm.clientSecretKey} / ${gm.refreshTokenKey}`);
+  const fetchReady = needKeys ? needKeys.every((k) => keys.includes(k)) : false;
+  if (needKeys && !fetchReady) problems.push(`code-fetch(${cf?.source}): missing one of ${needKeys.join(" / ")}`);
   if (asJson) {
     process.stdout.write(JSON.stringify({ group: name, active: accs.length, codeFetchReady: fetchReady, problems }) + "\n");
     return problems.length ? 1 : 0;
   }
   if (!accs.length) warn(`accounts status: group '${name}': no accounts yet — sidecar accounts add`);
   for (const p of problems) warn(`accounts status: ${p}`);
-  if (!problems.length) ok(`accounts status: group ${name} — ${accs.length} active, all field pairs complete${gm ? `, code-fetch ready (${g.codeFetch?.source})` : ""}`);
+  if (!problems.length) ok(`accounts status: group ${name} — ${accs.length} active, all field pairs complete${needKeys ? `, code-fetch ready (${cf?.source})` : ""}`);
   return problems.length ? 1 : 0;
 }
 
@@ -246,8 +254,6 @@ async function gmailToken(gm: GmailFetch): Promise<string | null> {
   }
 }
 
-interface Otp { code: string; subject: string; receivedAt: string; messageId: string; internalMs: number }
-
 // walk MIME parts for the first text/plain body (base64url).
 function textOf(payload: any): string {
   if (!payload) return "";
@@ -260,67 +266,108 @@ function textOf(payload: any): string {
   return "";
 }
 
-async function gmailFetchOtp(gm: GmailFetch, token: string, email: string, window: string, minMs: number): Promise<Otp | "none" | "err"> {
-  const query = (gm.query ?? "to:{email} newer_than:{window}").split("{email}").join(email).split("{window}").join(window);
-  const listUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10`;
-  const auth = `header = ${q("Authorization: Bearer " + token)}`;
-  const lr = await curlCfg([`url = ${q(listUrl)}`, auth]);
-  let ids: string[];
-  try {
-    ids = (JSON.parse(lr.out || "{}").messages ?? []).map((m: any) => String(m.id));
-  } catch {
-    loudFail(`accounts code: gmail search failed: ${lr.out.slice(0, 200)}`);
+// window like "10m" / "2h" / "7d" → milliseconds.
+function parseWindow(w: string): number {
+  const m = /^(\d+)([smhd])$/.exec(w.trim());
+  if (!m) return 15 * 60_000;
+  return parseInt(m[1], 10) * { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 }[m[2] as "s" | "m" | "h" | "d"];
+}
+
+// Postmark Inbound Messages API scan (server token from secret · curl -K).
+async function postmarkScan(pm: PostmarkFetch, accs: Account[], window: string, minMs: number, applyFromHint: boolean): Promise<InboxRow[] | "err"> {
+  const token = await secretGet(pm.serverTokenKey);
+  if (!token) {
+    loudFail(`accounts: \`secret get ${pm.serverTokenKey}\` empty — store the inbound server token first`);
     return "err";
   }
-  const re = new RegExp(gm.codeRegex ?? "\\b(\\d{6,8})\\b");
-  for (const id of ids) {
-    const mr = await curlCfg([`url = ${q(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`)}`, auth]);
-    let m: any;
+  const auth = `header = ${q("X-Postmark-Server-Token: " + token)}`;
+  const accept = `header = ${q("Accept: application/json")}`;
+  // the default (no-status) listing shows only processed mail — messages awaiting/failing
+  // webhook delivery sit in `scheduled`/`failed` and would be silently invisible. Query all
+  // three states and dedup by MessageID (retry entries repeat).
+  const msgs: any[] = [];
+  const seen = new Set<string>();
+  for (const st of ["", "scheduled", "failed"]) {
+    const lr = await curlCfg([`url = ${q(`https://api.postmarkapp.com/messages/inbound?count=20&offset=0${st ? `&status=${st}` : ""}`)}`, accept, auth]);
     try {
-      m = JSON.parse(mr.out || "{}");
+      const lj = JSON.parse(lr.out || "{}");
+      if (lj.ErrorCode) {
+        loudFail(`accounts: Postmark inbound error ${lj.ErrorCode} — ${lj.Message ?? ""}`);
+        return "err";
+      }
+      for (const m of lj.InboundMessages ?? []) {
+        const id = String(m.MessageID ?? "");
+        if (!seen.has(id)) {
+          seen.add(id);
+          msgs.push(m);
+        }
+      }
     } catch {
-      continue;
+      loudFail(`accounts: Postmark inbound list failed: ${lr.out.slice(0, 200)}`);
+      return "err";
     }
-    const hdr = (name: string) => String((m.payload?.headers ?? []).find((h: any) => h.name?.toLowerCase() === name)?.value ?? "");
-    const internalMs = parseInt(String(m.internalDate ?? "0"), 10);
-    if (internalMs < minMs) continue;
-    const toLine = `${hdr("to")} ${hdr("delivered-to")}`.toLowerCase();
-    if (!toLine.includes(email.toLowerCase())) continue;
-    if (gm.fromHint && !hdr("from").toLowerCase().includes(gm.fromHint.toLowerCase())) continue;
-    const subject = hdr("subject");
-    const hit = re.exec(subject) ?? re.exec(textOf(m.payload));
-    if (!hit) continue;
-    return { code: hit[1] ?? hit[0], subject, receivedAt: new Date(internalMs).toISOString(), messageId: String(m.id), internalMs };
   }
-  return "none";
+  const re = new RegExp(pm.codeRegex ?? "\\b(\\d{6,8})\\b");
+  const floor = Math.max(minMs, Date.now() - parseWindow(window));
+  const rows: InboxRow[] = [];
+  for (const m of msgs) {
+    const internalMs = Date.parse(String(m.Date ?? "")) || 0;
+    if (internalMs < floor) continue;
+    const toLine = [...(m.ToFull ?? []).map((t: any) => String(t.Email ?? "")), String(m.To ?? "")].join(" ").toLowerCase();
+    const acc = accs.find((a) => toLine.includes(a.email.toLowerCase()));
+    if (!acc) continue;
+    const from = String(m.From ?? "");
+    if (applyFromHint && pm.fromHint && !from.toLowerCase().includes(pm.fromHint.toLowerCase())) continue;
+    const subject = String(m.Subject ?? "");
+    let hit = re.exec(subject);
+    if (!hit) {
+      // the body lives behind the details endpoint
+      const dr = await curlCfg([`url = ${q(`https://api.postmarkapp.com/messages/inbound/${m.MessageID}/details`)}`, accept, auth]);
+      try {
+        const dj = JSON.parse(dr.out || "{}");
+        hit = re.exec(String(dj.TextBody ?? "")) ?? re.exec(String(dj.HtmlBody ?? ""));
+      } catch {
+        hit = null;
+      }
+    }
+    rows.push({ index: acc.index, email: acc.email, from, subject, code: hit ? hit[1] ?? hit[0] : null, receivedAt: new Date(internalMs).toISOString(), messageId: String(m.MessageID), internalMs });
+  }
+  return rows.sort((a, b) => b.internalMs - a.internalMs);
+}
+
+// Source dispatch — ONE scan API used by both `code` (single account · fromHint on)
+// and `inbox` (all accounts · fromHint off, From shown instead).
+async function sourceScan(g: Group, accs: Account[], window: string, minMs: number, applyFromHint: boolean): Promise<InboxRow[] | "err"> {
+  if (g.codeFetch?.source === "gmail" && g.codeFetch.gmail) {
+    const token = await gmailToken(g.codeFetch.gmail);
+    if (!token) return "err";
+    return inboxScan(g.codeFetch.gmail, token, accs, window, minMs, applyFromHint);
+  }
+  if (g.codeFetch?.source === "postmark" && g.codeFetch.postmark)
+    return postmarkScan(g.codeFetch.postmark, accs, window, minMs, applyFromHint);
+  loudFail(`accounts: no usable codeFetch source configured for this group (${CONFIG_PATH})`);
+  return "err";
 }
 
 async function code(g: Group, name: string, target: string, flags: Record<string, string | boolean>): Promise<number> {
   if (!target) { loudFail("accounts code: <n|email> required"); return 1; }
-  if (g.codeFetch?.source !== "gmail" || !g.codeFetch.gmail) {
-    loudFail(`accounts code: group '${name}' has no gmail codeFetch configured (${CONFIG_PATH})`);
-    return 1;
-  }
   const accs = await roster(g);
   const acc = target.includes("@")
     ? accs.find((a) => a.email.toLowerCase() === target.toLowerCase())
     : accs.find((a) => a.index === parseInt(target, 10));
   if (!acc) { loudFail(`accounts code: no account '${target}' in group ${name}`); return 1; }
 
-  const gm = g.codeFetch.gmail;
   const window = String(flags.window ?? "10m");
   const waitSec = parseInt(String(flags.wait ?? "0"), 10) || 0;
   const started = Date.now();
   // --wait accepts only mail newer than invocation start (−30 s slack): no stale-code replay.
   const minMs = waitSec ? started - 30_000 : 0;
-  const token = await gmailToken(gm);
-  if (!token) return 2;
-
   const deadline = started + waitSec * 1000;
   for (;;) {
-    const r = await gmailFetchOtp(gm, token, acc.email, window, minMs);
-    if (r === "err") return 2;
-    if (r !== "none") {
+    const rows = await sourceScan(g, [acc], window, minMs, true);
+    if (rows === "err") return 2;
+    const r = rows.find((x) => x.code);
+    if (r) {
       record({ verb: "code", group: name, index: acc.index, email: acc.email, status: "ok", message_id: r.messageId });
       if (flags.json) process.stdout.write(JSON.stringify({ group: name, index: acc.index, email: acc.email, code: r.code, subject: r.subject, receivedAt: r.receivedAt, messageId: r.messageId }) + "\n");
       else {
@@ -334,6 +381,93 @@ async function code(g: Group, name: string, target: string, flags: Record<string
   }
   record({ verb: "code", group: name, index: acc.index, email: acc.email, status: "none" });
   loudFail(`accounts code: no matching mail for ${acc.email} (window ${window}${waitSec ? ` · waited ${waitSec}s` : ""}) — widen --window or use --wait`);
+  return 3;
+}
+
+// ---------------------------------------------------------------- inbox (group-wide scan)
+
+interface InboxRow { index: number; email: string; from: string; subject: string; code: string | null; receivedAt: string; messageId: string; internalMs: number }
+
+// One gmail query over the given roster addresses: to:(a OR b OR …) — a single quick
+// check of "did a login/verification mail just arrive, and for which account?".
+async function inboxScan(gm: GmailFetch, token: string, accs: Account[], window: string, minMs: number, applyFromHint: boolean): Promise<InboxRow[] | "err"> {
+  const orEmail = "(" + accs.map((a) => a.email).join(" OR ") + ")";
+  const query = (gm.query ?? "to:{email} newer_than:{window}").split("{email}").join(orEmail).split("{window}").join(window);
+  const auth = `header = ${q("Authorization: Bearer " + token)}`;
+  const lr = await curlCfg([`url = ${q(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=20`)}`, auth]);
+  let ids: string[];
+  try {
+    const lj = JSON.parse(lr.out || "{}");
+    if (lj.error) {
+      loudFail(`accounts inbox: gmail API error ${lj.error.code ?? "?"} — ${lj.error.message ?? ""} (token scopes? needs gmail.readonly)`);
+      return "err";
+    }
+    ids = (lj.messages ?? []).map((m: any) => String(m.id));
+  } catch {
+    loudFail(`accounts inbox: gmail search failed: ${lr.out.slice(0, 200)}`);
+    return "err";
+  }
+  const re = new RegExp(gm.codeRegex ?? "\\b(\\d{6,8})\\b");
+  const rows: InboxRow[] = [];
+  for (const id of ids) {
+    const mr = await curlCfg([`url = ${q(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${id}?format=full`)}`, auth]);
+    let m: any;
+    try {
+      m = JSON.parse(mr.out || "{}");
+    } catch {
+      continue;
+    }
+    const hdr = (name: string) => String((m.payload?.headers ?? []).find((h: any) => h.name?.toLowerCase() === name)?.value ?? "");
+    const internalMs = parseInt(String(m.internalDate ?? "0"), 10);
+    if (internalMs < minMs) continue;
+    const toLine = `${hdr("to")} ${hdr("delivered-to")}`.toLowerCase();
+    const acc = accs.find((a) => toLine.includes(a.email.toLowerCase()));
+    if (!acc) continue; // not addressed to a roster account
+    if (applyFromHint && gm.fromHint && !hdr("from").toLowerCase().includes(gm.fromHint.toLowerCase())) continue;
+    const subject = hdr("subject");
+    // the code cell fills only when the OTP regex hits.
+    const hit = re.exec(subject) ?? re.exec(textOf(m.payload));
+    rows.push({ index: acc.index, email: acc.email, from: hdr("from"), subject, code: hit ? hit[1] ?? hit[0] : null, receivedAt: new Date(internalMs).toISOString(), messageId: String(m.id), internalMs });
+  }
+  return rows.sort((a, b) => b.internalMs - a.internalMs);
+}
+
+function age(ms: number): string {
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  return s < 60 ? `${s}s` : s < 3600 ? `${Math.round(s / 60)}m` : `${Math.round(s / 3600)}h`;
+}
+
+async function inbox(g: Group, name: string, flags: Record<string, string | boolean>): Promise<number> {
+  const accs = await roster(g);
+  if (!accs.length) { loudFail(`accounts inbox: group '${name}' has no accounts`); return 1; }
+  const window = String(flags.window ?? "15m");
+  const waitSec = parseInt(String(flags.wait ?? "0"), 10) || 0;
+  const started = Date.now();
+  const minMs = waitSec ? started - 30_000 : 0; // --wait: only mail newer than invocation (−30 s slack)
+
+  const deadline = started + waitSec * 1000;
+  for (;;) {
+    const rows = await sourceScan(g, accs, window, minMs, false);
+    if (rows === "err") return 2;
+    if (rows.length) {
+      record({ verb: "inbox", group: name, status: "ok", mails: rows.length });
+      if (flags.json) {
+        process.stdout.write(JSON.stringify({ group: name, window, mails: rows.map(({ internalMs, ...r }) => r) }) + "\n");
+        return 0;
+      }
+      info(`accounts inbox · group ${name} — ${rows.length} mail(s) in ${window}${waitSec ? " (waited)" : ""}`);
+      info("  age   n    email                      code      from / subject");
+      for (const r of rows) {
+        const from = r.from.replace(/\s*<[^>]*>/, "").slice(0, 24);
+        info(`  ${age(r.internalMs).padEnd(5)} ${String(r.index).padEnd(4)} ${r.email.padEnd(26)} ${(r.code ?? "-").padEnd(9)} ${from} · "${r.subject.slice(0, 48)}"`);
+      }
+      return 0;
+    }
+    if (Date.now() >= deadline) break;
+    await new Promise((res) => setTimeout(res, 5000));
+  }
+  record({ verb: "inbox", group: name, status: "none" });
+  loudFail(`accounts inbox: no mail to any of ${accs.length} accounts (window ${window}${waitSec ? ` · waited ${waitSec}s` : ""}) — widen --window or use --wait`);
   return 3;
 }
 
@@ -411,6 +545,7 @@ export async function runAccounts(args: string[]): Promise<number> {
   if (sub === "list") return list(g, name, !!flags.json);
   if (sub === "status") return status(g, name, !!flags.json);
   if (sub === "code") return code(g, name, pos[1] ?? "", flags);
+  if (sub === "inbox") return inbox(g, name, flags);
   if (sub === "add") return add(g, name, flags);
   if (sub === "retire") return retire(g, name, pos[1] ?? "", !!flags.force);
   loudFail(`accounts: unknown verb '${sub}' (run 'sidecar accounts help')`);

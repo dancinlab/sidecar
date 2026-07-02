@@ -350,6 +350,13 @@
         "value": "cli/index.ts 의 HELP 는 backtick 템플릿 리터럴 — help/description 절에 raw 백틱을 넣으면 리터럴이 조기 종료돼 esbuild 파싱이 통째 붕괴(Expected semicolon) → sidecar 명령 전부 죽음. 백틱 대신 작은따옴표를 쓰거나 이스케이프. 치명: self-update 는 그 깨진 CLI 로 돌아 스스로 못 고침(닭-달걀) → 설치 클론을 git 으로 origin/main 에 직접 하드동기화해야 복구.",
         "threshold": "재발조건: cli/index.ts HELP 절에 backtick 포함 텍스트 추가(modules/CLAUDE.md gotcha 무시). 해결: 작은따옴표/이스케이프 + ship 직전 'sidecar help >/dev/null' 스모크로 파싱 검증.",
         "source": "cli/index.ts"
+      },
+      {
+        "id": "fable-md-1",
+        "state": "pos-conv",
+        "value": "CC 슬래시 '!' 원라이너의 $ARGUMENTS 는 셸 실행 전 텍스트 치환 — 어떤 인용 전략(비인용→괄호/글롭 붕괴 · 쌍따옴표 감싸기/stdin 파이프→프롬프트 속 쌍따옴표에서 붕괴)도 임의 자유텍스트를 셸라인에 안전하게 못 넣는다. 자유텍스트 인자를 받는 커맨드는 '!' 원라이너 금지 → 런북형(에이전트가 Write 로 파일 저장 → --file 플래그)으로 배선.",
+        "threshold": "재발조건: 자유텍스트 인자 커맨드(commands/*.md)를 '!' + $ARGUMENTS 인라인으로 배선. 해결: 런북형 Write→--file + 특수문자(따옴표·괄호·글롭·백틱) QA 케이스.",
+        "source": "commands/fable.md"
       }
     ]
   },
@@ -853,7 +860,7 @@
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 호출 위임 — 세션 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-')은 child stdin 전달, /fable 슬래시는 프롬프트 전용 stdin 파이프(글롭·인용 안전). 플래그 --json·--dry·--cwd·--timeout <s>(헤드리스 stall 킬·exit 124)·'--' 패스스루, 'fable' 키워드 트리거는 keywords.json."
+                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 호출 위임 — 세션 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-')은 child stdin 전달, /fable 슬래시는 런북형(자유텍스트를 Write→--file 경유 · 셸라인 인라인 금지). 플래그 --json·--dry·--cwd·--timeout <s>(stall 킬·exit 124)·'--' 패스스루, 'fable' 키워드 트리거는 keywords.json."
               },
               {
                 "name": "pod {poll|watch|unwatch|list}",

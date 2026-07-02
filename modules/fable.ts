@@ -123,7 +123,10 @@ export async function runFable(args: string[]): Promise<number> {
   const prompt = await resolvePrompt(o);
   if (prompt === null) return 1;
   if (prompt.trim() === "") {
-    warn("fable: prompt is empty.");
+    // 0 bytes on '-' is almost always an eaten pipe, not an empty prompt: a
+    // wrapper that backgrounds its child (naive `timeout` shims — POSIX sh
+    // points a background job's stdin at /dev/null) swallows the stream.
+    warn(o.stdin ? "fable: stdin delivered 0 bytes — if you wrapped this in a `timeout` shim, it may have eaten the pipe; use the native `--timeout <s>` flag instead." : "fable: prompt is empty.");
     return 1;
   }
 

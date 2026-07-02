@@ -874,7 +874,7 @@
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5` 위임(백엔드 불변). /fable=런북형(Write→--file). 자식 기본 --sources project,local=전역 Stop-훅 미상속(dirty-repo 스톨 차단). --timeout=opt-in(기본 무제한). -c·-r 다중턴. --bg=detach→잡ID(result/wait/list). opus fallback 무조건 금지: --settings availableModels(opus 제외)→flag시 거부·모델불변. 주의=fable.md."
+                "detail": "`claude -p --model claude-fable-5` 위임(백엔드 불변). /fable=런북형(Write→--file). 자식 기본 --sources project,local=전역 Stop-훅 미상속(dirty-repo 스톨 차단). --timeout=opt-in(기본 무제한). -c·-r 다중턴. --bg=detach→잡ID(result/tail/wait/list). opus fallback 무조건 금지: --settings availableModels(opus 제외)→flag시 거부·모델불변. 주의=fable.md."
               },
               {
                 "name": "fable-mode",

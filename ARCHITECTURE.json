@@ -991,26 +991,6 @@
                     "detail": "재발방지 학습 SSOT=`convergence.records[]`(id·state·value·threshold·source). `add`=`--source` 필수·id 자동(파일명 slug)·동일 source 레코드 있으면 BLOCK→`for <file>` 검토 후 `edit`/`--new`(중복누적 금지). 터치 시 `convergenceForFile` 가 그 학습을 PreToolUse `additionalContext` inject(`convergenceOnTouch` ON)"
                   },
                   {
-                    "name": "results 벤치·실험 결과 누적 store",
-                    "role": "벤치/실험 결과 누적 SSOT — convergence 와 같은 3단계 수렴상태 공유",
-                    "id": "detail-results-store",
-                    "detail": "누적 SSOT `results.records[]`(id·kind·state·value·metric·subject) — bench/실험 outcome 누적(convergence 형제). ⚠️ per-repo 실험 verdict 의 canonical 자리는 이제 트리 `type:\"gate\"` 노드 직접 갱신(아래 gate-stop-check) — 이 store 는 범용 CRUD 로만 잔존",
-                    "children": [
-                      {
-                        "name": "상태 어휘",
-                        "role": "",
-                        "id": "detail-results-store-states",
-                        "detail": "방향3 pos-conv🟢/in-prog🔄/neg-conv🔴(convergence 공유) + 선행 untested⚪(등록·미측정) · '왜' nuance 는 metric 자유서술(state enum 늘리지 말 것) · kind=bench|experiment"
-                      },
-                      {
-                        "name": "CRUD",
-                        "role": "",
-                        "id": "detail-results-store-crud",
-                        "detail": "list/for<subject>/add/edit/rm · add=kind+subject+value(id 자동), 동일(kind,subject) 존재면 BLOCK→for 검토 후 edit/--new (blind append 금지) · lint RESULT-MALFORMED(id·kind·state)"
-                      }
-                    ]
-                  },
-                  {
                     "name": "gate-stop-check (type:gate 직접갱신 강제)",
                     "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
                     "id": "detail-gate-stop-check",

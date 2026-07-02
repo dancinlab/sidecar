@@ -110,8 +110,8 @@ hook delegates (wire these into your agent's settings.json):
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}
                            4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)
-  goal-guard stop-check    Stop gate — blocks a reply that PUNTS the work to a future session ('다음 세션에…'/'next session') so the agent
-                           presses on now; single-fire (stop_hook_active) + tail-precise, so a genuine multi-session blocker passes on re-stop (session-terminal)
+  goal-guard stop-check    Stop gate — blocks a reply that PUNTS the work: defers to a future session ('다음 세션에…'/'next session', tail-precise)
+                           OR reports live '잔여' (leftover work, negation-aware) — so the agent finishes now; single-fire (stop_hook_active), genuine blocker passes on re-stop (session-terminal)
   sbs [auto[:<axis>]|manual] [<task>]   plan-first runbook — resolver-first mode · chat-form 모호성→0 · plan.md handoff + auto-QA 4축 + 9-section dossier
   abg [labels]             all-bg-go — fan out prior-turn branches as parallel background Agents (runbook)
   afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)

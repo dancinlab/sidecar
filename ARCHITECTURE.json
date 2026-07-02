@@ -884,9 +884,9 @@
               },
               {
                 "name": "goal-guard",
-                "role": "다음-세션 미루기 차단 Stop 게이트",
+                "role": "작업-punt 차단 Stop 게이트 (다음-세션 미루기 + 잔여 방치)",
                 "id": "module-goal-guard",
-                "detail": "Stop-hook 가드. 마지막 assistant 답변의 꼬리(마지막 ~8줄)가 작업을 '다음 세션'으로 미루면(다음 세션/next session 등) decision:block 으로 계속 강제. tail-정밀 + stop_hook_active 단발 → 정상운영 무발화·진짜 다세션 블로커는 재-stop 시 통과(session-terminal 유지). CC 전용(Pi 블로킹 Stop 없음). 배선=hooks.json Stop[]+setup.ts Stop[]."
+                "detail": "Stop-hook 가드 · 2중 캐치: ① 답변 꼬리(~8줄)가 '다음 세션' 미루기면 block ② 본문 어디든 '잔여'(남은 작업)가 부정형 없이 언급되면 block — 같은 줄 24자 창의 없/0건/완료·마무리·처리·해소 과거형은 통과, 잔여는 전체 본문 스캔. decision:block 으로 지금 마무리 강제 · stop_hook_active 단발 → 진짜 블로커는 재-stop 통과(session-terminal). CC 전용 · 배선=hooks.json+setup.ts Stop[]."
               },
               {
                 "name": "hypotheses",

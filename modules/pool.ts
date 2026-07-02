@@ -1,8 +1,11 @@
-// sidecar pool {list|add|rm|on|status|specs} — host roster + remote exec.
+// sidecar pool {list|add|rm|on|status|specs|harden} — host roster + remote exec.
 // The host roster is machine-level, so it lives GLOBALLY at
 // ~/.sidecar/pool.json (shared across repos), not per-repo.
 //   list                 show roster (cached cores/mem/GPU + LIVE CPU/RAM/GPU load)
 //   add <name> [target]  add host (target = ssh alias or user@host; default = name)
+//   harden [name]        install the OOM memory-fence (cgroup user-slice cap + system reserve
+//                        + earlyoom prefer/avoid) so a heavy job can never OOM-reboot the box;
+//                        all shared hosts (or one named) · idempotent · needs passwordless sudo
 //   rm <name>            remove host
 //   on <name> <cmd...>   run a command on a host over ssh
 //   status               reachability + LIVE CPU/RAM/GPU load (one probe per host)
@@ -215,6 +218,35 @@ function fmtSpecs(s?: Specs): string {
   return parts.join(" · ");
 }
 
+// Remote OOM memory-fence installer (POSIX-sh, Linux systemd cgroup-v2). Percentage-of-RAM
+// so it adapts to any host: caps the user slice at 75% (kernel cgroup-OOM kills the biggest
+// task INSIDE the slice = the compute hog — not the desktop/system → no reboot loop), soft
+// MemoryHigh at 65% (reclaim before the wall), swap at 20% (no full-swap thrash spiral),
+// reserves system.slice a 1G floor (sshd/systemd survive → box stays reachable), and points
+// earlyoom at compute hogs while avoiding session/system procs. Idempotent; needs passwordless
+// sudo. Emits ONE parseable line `HARDEN_OK|total=..|cap=..|high=..|swap=..|live=..|earlyoom=..`.
+// NOTE: authored as plain concatenated JS strings (NOT a template literal) so `${VAR}` stays
+// literal for the REMOTE shell; ssh forwards it verbatim as a single argv (no local expansion).
+const HARDEN =
+  "set -e; " +
+  "TM=$(awk '/^MemTotal:/{printf \"%d\",$2/1024}' /proc/meminfo); " +
+  "[ -n \"$TM\" ] || { echo HARDEN_ERR=no_meminfo; exit 1; }; " +
+  "CAP=$((TM*75/100)); HIGH=$((TM*65/100)); SWAP=$((TM*20/100)); " +
+  "sudo mkdir -p /etc/systemd/system/user-.slice.d /etc/systemd/system/system.slice.d; " +
+  "printf '[Slice]\\nMemoryHigh=%dM\\nMemoryMax=%dM\\nMemorySwapMax=%dM\\n' \"$HIGH\" \"$CAP\" \"$SWAP\" " +
+  "| sudo tee /etc/systemd/system/user-.slice.d/50-memfence.conf >/dev/null; " +
+  "printf '[Slice]\\nMemoryMin=1G\\n' | sudo tee /etc/systemd/system/system.slice.d/50-memfence.conf >/dev/null; " +
+  "sudo systemctl daemon-reload; " +
+  "EO=absent; " +
+  "if command -v earlyoom >/dev/null 2>&1; then " +
+  "sudo tee /etc/default/earlyoom >/dev/null <<'MFEOF'\n" +
+  "EARLYOOM_ARGS=\"-r 3600 --prefer '^(hexa|hexad|hexat|python3|python|node|cargo|rustc|cc1plus)$' --avoid '^(sshd|systemd|systemd-.+|bash|zsh|sh|login|init|wireplumber|pipewire|pipewire-pulse|gnome-shell|Xorg|dbus-daemon|dbus-broker)$'\"\n" +
+  "MFEOF\n" +
+  "sudo systemctl reset-failed earlyoom 2>/dev/null || true; sudo systemctl restart earlyoom 2>/dev/null || true; " +
+  "EO=$(systemctl is-active earlyoom 2>/dev/null); fi; " +
+  "LIVE=$(cat /sys/fs/cgroup/user.slice/user-*.slice/memory.max 2>/dev/null | head -1 || echo NA); " +
+  "echo \"HARDEN_OK|total=${TM}M|cap=${CAP}M|high=${HIGH}M|swap=${SWAP}M|live=${LIVE}|earlyoom=${EO}\"";
+
 export async function runPool(args: string[]): Promise<number> {
   const sub = args[0] ?? "list";
   const r = load();
@@ -373,6 +405,50 @@ export async function runPool(args: string[]): Promise<number> {
     }
     return 0;
   }
-  info("usage: sidecar pool {list|add <name> [target]|rm <name>|on <name> <cmd>|status|specs [name]}");
+  if (sub === "harden") {
+    if (!r.hosts.length) {
+      info("pool: no hosts.");
+      return 0;
+    }
+    const only = args[1];
+    // Named host → just that one (even if restricted, provided its guard passes).
+    // No name → every SHARED host (restricted hosts are never mass-hardened — they are
+    // not shared compute; harden one explicitly by name if you own it in-context).
+    const targets = only ? r.hosts.filter((h) => h.name === only) : r.hosts.filter((h) => !isRestricted(h));
+    if (only && !targets.length) {
+      info(`pool: '${only}' not found`);
+      return 1;
+    }
+    info(`pool harden — OOM 메모리 방화벽(cgroup user-slice 캡 + system 예약 + earlyoom) 적용 → ${targets.length} host…`);
+    const out = await pmap(targets, 6, async (h) => {
+      // A restricted host is only hardened when its guard passes in this context.
+      if (!guard(h).ok) return { h, blocked: true, line: "", code: 0, err: "" };
+      const res = await execArgs("ssh", [...SSH_ARGS, h.target, HARDEN], { timeoutMs: 90_000 });
+      const line = res.stdout.split(/\r?\n/).find((l) => l.includes("HARDEN_OK")) ?? "";
+      return { h, blocked: false, line, code: res.code, err: res.stderr };
+    });
+    let rc = 0;
+    for (const o of out) {
+      if (o.blocked) {
+        info(`  🔒 ${o.h.name} — 차단(공용 아님 · 건너뜀 · 이름 지정하면 개별 적용)`);
+        continue;
+      }
+      if (!o.line) {
+        warn(`  🔴 ${o.h.name} — 적용 실패(도달 불가 또는 무암호 sudo 없음)${o.err ? `: ${o.err.trim().split(/\r?\n/).pop()}` : ""}`);
+        rc = 1;
+        continue;
+      }
+      const kv: Record<string, string> = {};
+      for (const p of o.line.split("|")) {
+        const i = p.indexOf("=");
+        if (i > 0) kv[p.slice(0, i)] = p.slice(i + 1);
+      }
+      const eo = kv.earlyoom === "active" ? "earlyoom🟢" : kv.earlyoom === "absent" ? "earlyoom없음(cgroup캡만)" : `earlyoom:${kv.earlyoom}`;
+      ok(`  🟢 ${o.h.name}  user-slice≤${kv.cap} (of ${kv.total}) · swap≤${kv.swap} · ${eo}`);
+    }
+    if (rc === 0) info("  ✅ 완료 — 이제 무거운 job이 한도 초과해도 그 job만 OOM-kill, 박스는 생존(재부팅 루프 종결). 롤백: rm /etc/systemd/system/{user-.slice.d,system.slice.d}/50-memfence.conf");
+    return rc;
+  }
+  info("usage: sidecar pool {list|add <name> [target]|rm <name>|on <name> <cmd>|status|specs [name]|harden [name]}");
   return 1;
 }

@@ -1,6 +1,6 @@
 ---
-description: /pool {list|add|rm|on <h> <cmd>|status|specs [h]} — host roster + remote exec + cores/mem/GPU probe (~/.sidecar/pool.json, global). Triggers — "풀 호스트", "pool status", "원격 실행", "호스트 목록", "/pool".
-argument-hint: "{list|add|rm|on <h> <cmd>|status|specs [h]}"
+description: /pool {list|add|rm|on <h> <cmd>|status|specs [h]|harden [h]} — host roster + remote exec + cores/mem/GPU probe + OOM memory-fence installer (~/.sidecar/pool.json, global). Triggers — "풀 호스트", "pool status", "원격 실행", "호스트 목록", "pool 죽지 않게", "메모리 캡", "/pool".
+argument-hint: "{list|add|rm|on <h> <cmd>|status|specs [h]|harden [h]}"
 allowed-tools: Bash
 ---
 

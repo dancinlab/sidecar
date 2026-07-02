@@ -1,1391 +1,1391 @@
 {
-  "schemaVersion": "2.0",
-  "kind": "architecture-tree",
-  "title": "sidecar — 아키텍처 SSOT",
-  "summary": "AI 코딩 사이드카 엔진. 핵심: 규칙은 코드가 아니라 데이터 — 엔진(언제·어떻게 검사)은 공유, 규칙(무엇을 검사)만 per-repo 주입.",
-  "viewer": "ARCHITECTURE.html",
-  "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
-  "convergence": {
-    "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=3단계 수렴 pos-conv🟢(포지티브)|in-prog🔄(진행·검토)|neg-conv🔴(네거티브·falsified) · 레거시 ossified/in_flight/failed accepted · value=핵심 · threshold=재발조건/해결 · source=원파일. 재발 시 update-in-place.",
-    "records": [
-      {
-        "id": "EXEC_SPAWN_ERROR_UNHANDLED",
-        "state": "pos-conv",
-        "value": "execArgs must handle the child's `error` event (spawn ENOENT / EACCES) — degrade to a non-zero ExecResult, never let an unhandled `error` crash the process",
-        "threshold": "a minimal-PATH hook env (SessionStart) couldn't spawn `bash` → unhandled 'error' event killed the whole SessionStart hook (node:events crash); every execShell caller was exposed",
-        "source": "lib/exec.ts"
-      },
-      {
-        "id": "CLAUDEMD_NOT_L0",
-        "state": "pos-conv",
-        "value": "CLAUDE.md must never be classified L0 — it DECLARES the L0 list (fromMarkdown) and is re-injected each turn, it is not protected engine core",
-        "threshold": "the L0 path-parser regex must NOT include a CLAUDE*.md alternation, or the guide captures itself",
-        "source": "lib/lockdown.ts"
-      },
-      {
-        "id": "ARCH_SNAPSHOT_NOT_HISTORY",
-        "state": "pos-conv",
-        "value": "ARCHITECTURE.json/.md is a CURRENT-STATE snapshot tree, not a change log — 'update' means replace the affected node in-place and delete the old wording; NEVER append history/version/dated/previous/deprecated nodes (history → CHANGELOG + git). The inject note carries this every turn so the model stops accreting history into the tree",
-        "threshold": "the word '갱신형'(updatable) was read as 'add an update entry', so sessions kept leaving version/dated/'이전엔…' nodes in the tree; hardened the every-turn inject note + commons c4 to say snapshot/replace-in-place explicitly",
-        "source": "modules/architecture.ts"
-      },
-      {
-        "id": "CI_TRACK_NATIVE",
-        "state": "pos-conv",
-        "value": "PR CI status is tracked by `sidecar ci-track` (gh pr checks --json → aggregate + verdict + optional --watch/--merge-on-green), not by hand-rolled `gh pr checks|grep` + /tmp monitor sleep loops",
-        "threshold": "merge-on-green campaigns repeatedly re-implemented CI polling inline (e.g. /tmp/pr3688_mon.sh) — no sidecar command tracked remote CI; this centralizes it (the poll runs inside the CLI, not a bash sleep loop)",
-        "source": "modules/ci-track.ts"
-      },
-      {
-        "id": "NO_RAW_CLOUD_CLI",
-        "state": "pos-conv",
-        "value": "raw runpodctl/vastai/`cloud rent`/provider-API calls are blocked in code (pre bash), not just by an enforcement regex rule",
-        "threshold": "a session ran `runpodctl pod create`/`cloud rent` directly because c11 was only a hint+warn; code guard runs before config rules with no override",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "NO_RAW_DOJO_DECK",
-        "state": "pos-conv",
-        "value": "raw `python train.py`/`torchrun`/`accelerate launch`/`deepspeed` training launches AND hand-run run.sh in a dojo/decks tree are blocked in code — use `hexa dojo`/`hexa deck`",
-        "threshold": "c11 named dojo/deck builtins but only cloud CLI was code-guarded; training launches and deck run.sh slipped through",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "NO_HANDROLLED_SHARD_FANOUT",
-        "state": "in-prog",
-        "value": "a hand-rolled launcher loop (split -n l/N + a for/while loop that setsid/nohup-backgrounds repeated `hexa run`/training launches) is the exact bypass that defeated NO_RAW_CLOUD_CLI — copy-to is whitelisted so the .sh sails through, then the fanout runs remotely unseen. Detected as a WARN that redirects to `hexa cloud fire-shards`",
-        "threshold": "a session wrote /tmp/h1305_launch.sh (12-shard staggered `hexa run` decode loop) + `hexa cloud copy-to` + remote run, bypassing structured dispatch/register/cost-accounting; the guard only saw the whitelisted copy-to",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "QUOTE_AWARE_SEGMENT",
-        "state": "pos-conv",
-        "value": "command-head detection segments on UNQUOTED shell operators only — a `|`/`;`/`&` inside quotes is data, not a separator",
-        "threshold": "`grep -E \"vast|runpod\"` false-blocked once `vast`/`runpod` became unconditional CLI heads: stripQuotes ran before the `|`-split, so the quoted alternation was torn into a bare `vast` segment",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "NO_VAST_VERB_WHITELIST",
-        "state": "pos-conv",
-        "value": "`vast` is blocked unconditionally in command position, same as `vastai`/`runpodctl` — NO verb whitelist",
-        "threshold": "a verb whitelist (VAST_VERBS) only blocked ~10 verbs; `vast set api-key`/`vast scp`/`vast execute`/literally `vast cli` all leaked because their verb wasn't listed — the guard 're-unlocked' every time vast.ai added a subcommand",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "BOTH_RUNPOD_CLIS",
-        "state": "pos-conv",
-        "value": "both RunPod CLI heads (`runpodctl` Go + `runpod` Python) are blocked, plus the serverless host `api.runpod.ai` alongside the control-plane `api.runpod.io`/`rest.runpod.io`",
-        "threshold": "only `runpodctl` was listed, so `runpod config`/`runpod project deploy`/`runpod pod create` and serverless `curl api.runpod.ai/v2/<id>/run` all leaked — same whitelist-too-narrow bypass as VAST_VERBS",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "DOJO_TRAIN_NAME_BROAD",
-        "state": "pos-conv",
-        "value": "the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)",
-        "threshold": "someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP.",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "COMPANION_SURFACE_NOT_INJECTED",
-        "state": "pos-conv",
-        "value": "a sibling CLI (hexa) and its subcommands (cloud/atlas/verify/drill) existed and worked, but the sidecar injected only its OWN command catalog (toolkit) — never the neighbour CLI's surface — so the agent re-probed 'is hexa installed? does cloud exist?' every session",
-        "threshold": "toolkit injected sidecar commands only; no carrier surfaced an adjacent project-CLI's verb list, so each session started blind to hexa",
-        "source": "modules/companions.ts"
-      },
-      {
-        "id": "CODE_GUARD_DESTRUCTIVE_BYPASS",
-        "state": "pos-conv",
-        "value": "--no-verify (gate bypass), git reset --hard/clean -fd (working-tree destroy), rm -rf / ~ $HOME (catastrophic), curl|wget|sh (remote code exec) are blocked in CODE before config rules — not regex-only — so a profile edit can't disable them; inline `# ...-ok` markers still allow an explicit per-command override",
-        "threshold": "these were block-policy but enforcement.json-only; a regex/profile edit (or the stdin-input bug that disabled the whole pre layer) would have left the irreversible/gate-bypass commands unguarded",
-        "source": "modules/danger-guard.ts"
-      },
-      {
-        "id": "STALE_BRANCH_TRAP",
-        "state": "pos-conv",
-        "value": "stale-branch 함정 3중 방어. (1) git-context SessionStart 경고(HEAD vs origin/<default> behind/detached). (2) 경고 무시 재발(anima #3736) → GIT-EDIT-OFF-MAIN 가드: main 워크트리가 non-default 브랜치에 주차된 채 Write/Edit 하면 deny. (3) ON-main 변종 재발(hexa-codex 증류섹션: 원격이 앞서갔는데 fetch 가 없어 로컬 ref 는 '최신'으로 보임 → 낡은 base 에 SSOT 재작성, pr-cycle 충돌로만 발각) → GIT-EDIT-STALE-MAIN 가드: TTL fetch(git.staleFetchTtlSec) 후 origin/<default> 가 대상 파일을 건드리며 앞서 있으면 deny, 무관 behind 는 warn. 경고=인지, 블록=예방. probeGitContext 는 cwd 파라미터화.",
-        "threshold": "재발조건: main 워크트리에서 stale base 로 편집 — 브랜치가 non-default 이거나(2), default 인데 원격이 앞서감(3·fetch 부재로 로컬 ref 가 가림). 해결: 경고+가드 셋 다 유지(git.guardOffMainEdit·git.guardStaleMainEdit 기본 ON) — 복귀는 ff-sync(merge --ff-only origin/<default>) 또는 최신 tip 에서 격리 워크트리. 격리 워크트리 면제(탈출구). warn-only 회귀·옵트인 마커 키잉 금지(config-ts-1).",
-        "source": "modules/git-context.ts"
-      },
-      {
-        "id": "FORCE_LEASE_DUAL_SSOT",
-        "state": "pos-conv",
-        "value": "`--force-with-lease` is ALLOWED by both the code guard (git-guard.ts) and config enforcement.json (H-FORCE-PUSH exceptions) — only blind --force/-f/+refspec is blocked, with a `# force-ok` escape",
-        "threshold": "QA found git-guard blocked --force-with-lease while config exempted it → lease hard-blocked with no override, breaking the rebase→lease-push workflow; aligned code guard to config intent",
-        "source": "modules/git-guard.ts"
-      },
-      {
-        "id": "ING_STALENESS_NUDGE",
-        "state": "in-prog",
-        "value": "code edited ≫ ing untouched is WARNED at Stop (c6) — code edits bump a counter, ing add/next/done resets it, Stop warns once past editThreshold then resets; warn-only (forcing an ing update has no ground truth, so a hard block would be a false-positive factory)",
-        "threshold": "every-turn `ing inject` only SHOWED the board; sessions edited lots of code while the board went stale because nothing nudged an update",
-        "source": "modules/ing-staleness.ts"
-      },
-      {
-        "id": "ING_BOARD_DEDICATED_REF",
-        "state": "pos-conv",
-        "value": "board lives on a dedicated `ing` ref via plumbing, never the working tree",
-        "threshold": "tracked worktree file: branch-switch/reset clobbers session edits (happened); untracked: unshared",
-        "source": "modules/ing.ts"
-      },
-      {
-        "id": "ING_NO_DIRECT_MAIN_PUSH",
-        "state": "neg-conv",
-        "value": "never store/push the board on main",
-        "threshold": "protectedBranches repo blocks direct main push so the board is unusable; a dedicated ref is protected-main-safe",
-        "source": "modules/ing.ts"
-      },
-      {
-        "id": "INIT-INJECT-DUP",
-        "state": "pos-conv",
-        "value": "init --hooks scaffolded the full host-wide inject set (commons/recommend/prefs/easy/load/architecture) into per-repo .claude/settings.json, duplicating the global install (~/.claude/settings.json) and/or the enabled plugin — same context injected 2-3x/turn, burying short user prompts",
-        "threshold": "resolved: per-repo .claude/settings.json is BANNED — sidecar is global-only. init no longer scaffolds repo hooks (the --hooks flag is gone); hooks live solely in the global ~/.claude/settings.json via `sidecar install`. inject = host-wide policy, the global layer owns it",
-        "source": "modules/init.ts"
-      },
-      {
-        "id": "HELP_NO_RAW_BACKTICK",
-        "state": "pos-conv",
-        "value": "a bare backtick in the cli HELP template literal terminates it → help/build break; lint HELP-BACKTICK(block) scans the HELP block and flags any unescaped backtick (escaped \\\\\\` allowed)",
-        "threshold": "twice in one session a help-line edit added `code`-style backticks (fleet-full, folders), each silently breaking `sidecar help` until caught by hand — ossify as a commit gate",
-        "source": "modules/lint.ts"
-      },
-      {
-        "id": "MAC_OOM_FANOUT_JETSAM",
-        "state": "in-prog",
-        "value": "a 16GB Mac OOM-dies (jetsam kills apps + kernel panic) because parallel fan-out (cycle-all/all-bg-go) accumulates 6+ detached `claude` processes (~400-490MB each) across sessions until macOS jetsams — mem-guard adds a free-RAM preflight before background-spawn + an opt-in launchd notify watchdog",
-        "threshold": "JetsamEvent reports 6/13-6/18 + panic 6/17 showed six `2.1.179` (claude) procs as top memory holders at OOM time; preflight warns/blocks spawn when available RAM < warnPct",
-        "source": "modules/mem-guard.ts"
-      },
-      {
-        "id": "NAMING_VERSION_SUFFIX",
-        "state": "pos-conv",
-        "value": "new files/dirs named foo_v2/_final/_copy/_old (via Write/Edit OR a mv/cp/touch/mkdir bash command) are BLOCKED — history belongs in git, not the filename; the `@canonical-ok` (write) / `# canonical-ok` (bash) marker is the only override",
-        "threshold": "warn-only proved too weak — the stale-sibling pileup kept recurring, so the user escalated it to a hard block + added bash-command coverage (a CLI `mv a a_v2.ts` previously slipped past the Write-only guard)",
-        "source": "modules/naming-guard.ts"
-      },
-      {
-        "id": "PRETOOLUSE_INPUT_FROM_STDIN",
-        "state": "pos-conv",
-        "value": "PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push) a silent pass",
-        "threshold": "a session ran raw `vastai`/`runpodctl` despite the ossified NO_RAW_CLOUD_CLI code guard because parseToolInput read an env var CC never set; verified by piping the real {tool_input:{command}} payload on stdin",
-        "source": "modules/pre.ts"
-      },
-      {
-        "id": "PRETOOLUSE_DENY_SCHEMA",
-        "state": "pos-conv",
-        "value": "pre-hook block must emit hookSpecificOutput.permissionDecision=deny (current PreToolUse schema), not the legacy {decision:block} which current Claude Code ignores — else the guard prints but never blocks",
-        "threshold": "a session ran raw `vastai destroy` despite c11 because emitBlock emitted only {decision:block}+exit0, which CC silently dropped; verified the new schema blocks via the actual `pre bash` hook output",
-        "source": "modules/pre.ts"
-      },
-      {
-        "id": "ARXIV_RATELIMIT_NOT_NORESULTS",
-        "state": "pos-conv",
-        "value": "arXiv throttles a burst with EITHER a 'Rate exceeded.' text body OR an HTTP 503 page — both have 0 <entry> exactly like a genuine empty result. Detect throttle by status>=500 OR /rate exceeded/ OR a non-Atom body (no <feed/<entry); a real empty result IS a valid <feed> with totalResults 0. Auto-retry with backoff (notice each round so the agent recognizes a RATE problem), then loudFail with a rate-limit error; NEVER report 'no results' for a throttle",
-        "threshold": "checked only the 'rate exceeded' string, so an HTTP-503 throttle slipped through and the command said 'no results' for a query with thousands of papers",
-        "source": "modules/research.ts"
-      },
-      {
-        "id": "CODE_GUARD_SECRET_LITERAL",
-        "state": "pos-conv",
-        "value": "hardcoded API keys / private keys / provider tokens are blocked in CODE at write time (before config rules) — a committed secret is an irreversible git-history leak; regex-only enforcement could be disabled by a profile edit",
-        "threshold": "H-SECRET-LITERAL was block-policy but enforcement.json-only; the stdin-input bug (and any profile edit) would have left credential writes unguarded",
-        "source": "modules/secret-guard.ts"
-      },
-      {
-        "id": "SHADOW_PREMARKER_STALE",
-        "state": "pos-conv",
-        "value": "pre-marker shadows in ~/.claude/commands/ lack SHADOW_MARKER, so refresh skips them as 'hand-authored' and they go stale — 18/22 lost the source description's `Triggers —` line, so bare-text recognition of /fleet /sbs /easy … silently broke even though source commands/*.md were correct",
-        "threshold": "resolved: `sidecar shadow --force` overwrites marker-less collisions from source (source = SSOT); run it once per host to heal pre-marker shadows. Re-breaks only if a NEW marker-less shadow layer is introduced without a heal path",
-        "source": "modules/shadow.ts"
-      },
-      {
-        "id": "SHADOW_GEN_NATIVE",
-        "state": "pos-conv",
-        "value": "bare /cmd shadows are generated by `sidecar shadow` from sidecar's own commands/ — not by the retired sidecar package, and never baked to a $CLAUDE_PLUGIN_ROOT/sidecar-cache path",
-        "threshold": "a session's /arxiv etc. died because sidecar-generated shadows pointed at a removed ~/.claude/plugins/cache/sidecar path; sidecar now owns shadow generation, marker-tracked + regenerable",
-        "source": "modules/shadow.ts"
-      },
-      {
-        "id": "SHADOW_MARKER_AFTER_FRONTMATTER",
-        "state": "pos-conv",
-        "value": "the SHADOW_MARKER must be inserted AFTER the YAML frontmatter block, never prepended — Claude Code only parses `description:` when `---` is on line 1; a marker on line 1 pushed frontmatter down so the picker rendered the marker comment as the command's description",
-        "threshold": "if the marker is ever prepended again, every shadow command shows '<!-- sidecar-shadow ... -->' instead of its description in the slash picker",
-        "source": "modules/shadow.ts"
-      },
-      {
-        "id": "SHIP_PROPAGATE_ALL_SURFACES",
-        "state": "pos-conv",
-        "value": "merge+self-update+shadow must run as one unit",
-        "threshold": "adding a slash command then running only pr-cycle+self-update left the shadow mirror stale → /fleet-abstract invisible; ship bundles all three",
-        "source": "modules/ship.ts"
-      },
-      {
-        "id": "TOOLKIT_FROM_HELP_SSOT",
-        "state": "pos-conv",
-        "value": "the agent-facing command catalog (TOOLKIT.jsonl) is GENERATED from the HELP text in cli/index.ts, never hand-maintained in parallel; `toolkit check` snapshot-diffs committed vs generated so the two can't drift",
-        "threshold": "commands existed + worked but had no proactive catalog/triggers, so the agent didn't know to use them (arxiv/secret blind spot); a hand-kept second catalog would just drift from help",
-        "source": "modules/toolkit.ts"
-      },
-      {
-        "id": "HELP_CLOSE_DELIM_NEWLINE",
-        "state": "pos-conv",
-        "value": "the closing delimiter search must be the line-start `\\\\n\\\\`;`, NOT a bare `\\\\`;` — the HELP body contains escaped backticks (e.g. `worktree gc\\\\`;`) and a bare-`\\\\`;` search truncated there, silently dropping every command after worktree (atlas/convergence/ing/sync/upstream/verdict)",
-        "threshold": "bare backtick-semicolon search matched an escaped inline backtick mid-body and cut the catalog short",
-        "source": "modules/toolkit.ts"
-      },
-      {
-        "id": "WORKTREE_GONE_ONLY_PILEUP",
-        "state": "pos-conv",
-        "value": "gc reap widened to [gone] OR HEAD-age>maxAgeDays, yet pileup RECURRED (anima 41 wt / hexa-lang 16 + 8 full clones): gc only scans isAgent paths (.claude/worktrees/*) so sibling-dir (../repo-*), /tmp, and .worktrees/* worktrees are structurally exempt; merged-but-DIRTY worktrees (uncommitted state/ outputs · preserve-state violation) are skipped forever; the wt gauge + gc are cwd-repo-local so cross-repo pileups stay invisible (wt 0 🟢 in sidecar while anima holds 41); full clones named wt-* evade worktree tooling entirely",
-        "threshold": "recurs while gc skips non-agent paths + dirty worktrees and the wt gauge is repo-local; resolve = extend gc scope to all linked worktrees (salvage dirty outputs to state/ first), lab-wide wt scan, purge clone impostors",
-        "source": "modules/worktree.ts"
-      },
-      {
-        "id": "ARCH_INJECT_IGNORED",
-        "state": "in-prog",
-        "value": "갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신 — 턴마감 게이트를 트리 뒤(recency)로 이동 + 갱신 시 보고 의무화",
-        "threshold": "ARCHITECTURE inject 가 갱신을 능동적으로 안 하고 사용자 지시에만 반응",
-        "source": "modules/architecture.ts"
-      },
-      {
-        "id": "INJECT_DOC_SKELETON_ONDEMAND",
-        "state": "pos-conv",
-        "value": "정적 참조 doc(설계 트리)은 매 UserPromptSubmit 풀-주입 금지 — Claude Code canonical 대용량-doc 패턴은 스켈레톤(요약+목차)+온디맨드 Read. 풀덤프는 10KB additionalContext 한도 초과→하네스가 파일-폴백(2KB 프리뷰만)+매 턴 토큰 재지불. 정적 doc=SessionStart/Compact 1회(캐시 prefix 재사용), per-turn 행동규칙(commons·recommend·prefs·load·ing)만 매턴 유지. easy 는 둘을 가진 2-tier: lean 행동지침(styles/easy.<lang>.md 의 `<!-- easy:lean -->` 영역)만 UserPromptSubmit 매턴 + gold예시·4종ASCII템플릿·체크리스트 풀 레퍼런스는 SessionStart/Compact 1회 + `easy show` 온디맨드(event 분기 emit · 마커 없으면 풀-폴백 · 런타임 절단 아님). 턴마감 게이트는 Stop 훅으로 결정적 강제, 매턴 리마인더로 흩지 말 것",
-        "threshold": "inject 소스 편집 시 — 정적 doc 을 UserPromptSubmit 에 다시 걸거나 풀-주입으로 되돌리면 재발",
-        "source": "modules/architecture.ts"
-      },
-      {
-        "id": "convergence-triggers-json-1",
-        "state": "pos-conv",
-        "value": "agent-facing nudge text lives in the DATA file (config/convergence-triggers.json hint field), which OVERRIDES the code fallback in architecture.ts convergenceStopCheck. Editing only the code fallback leaves the live nudge stale (the user spotted the old --id wording still showing).",
-        "threshold": "Updating a nudge/guard message: change the config JSON hint (the authoritative live string the Stop hook reads), not just the code fallback — grep the repo for the old phrasing to catch every copy.",
-        "source": "config/convergence-triggers.json"
-      },
-      {
-        "id": "config-ts-1",
-        "state": "pos-conv",
-        "value": "sidecar 거버넌스(ship·ing Stop게이트·commit lint)의 발화 게이트는 어떤 opt-in 마커(CLAUDE.md·harness.config.json)로도 키잉하지 않는다 — 마커 키잉은 그 마커 없는 repo(특히 신규)에서 게이트가 silent-dead 되는 비대칭을 낳는다. 관리-프로젝트 개념(isManaged) 자체를 폐기하고, 유일한 바닥은 'git repo 인가'(inGitRepo = REPO_ROOT 에 .git) 하나 — ship/ing/commit 은 git repo 밖에서 의미가 없으므로 이건 opt-in 이 아니라 물리 조건. 모든 git repo(신규 포함) 무조건 발화, non-repo 디렉터리만 조용.",
-        "threshold": "재발조건: 거버넌스가 '새 repo 에서 조용'하거나, '특정 repo만 관리대상'으로 취급하고 싶은 유혹(마커/이름패턴/경로 예외 도입) → 그건 방금 없앤 managed-마커의 부활이자 경로/이름 하드코딩 부채. 해결: 게이트는 inGitRepo 바닥 하나로 유지, 예외 필요시 sidecar-native 옵트아웃(# no-verify-ok / .harness)만 쓰고 이름패턴 하드코딩 금지.",
-        "source": "lib/config.ts"
-      },
-      {
-        "id": "pre-ts-1",
-        "state": "pos-conv",
-        "value": "preWrite section-aware write-guards (commonsWriteViolation·dodontLengthWriteViolation) run on full-content Write ONLY, never on Edit's new_string fragment — a fragment truncates its boundary ## section body and false-positives it as COMMONS-NO-DODONT (adding ## Project/## Tree to a do/dont CLAUDE.md while anchoring on the next rule's ## header hard-DENIED a legit edit). Edit fragments fall through to commit-time lint backstop (full-file + claudeMdExempt).",
-        "threshold": "재발조건: pre.ts 가 input.content/input.new_string 을 한 content 로 합쳐 section-검증 가드에 넘기면 Edit fragment 가 잘린 섹션으로 오차단. 해결: isEditFragment 로 두 가드만 skip(#267); desc/doc/naming(단일줄·파일명) 가드는 계속 실행.",
-        "source": "modules/pre.ts"
-      },
-      {
-        "id": "architecture-json-1",
-        "state": "pos-conv",
-        "value": "ARCHITECTURE.json detail 셀이 300자 ARCH-BIG-CELL cap 을 다시 넘기는 회귀 — 특히 게이트/enforce 노드(isManaged·ing/architecture stop-check)에 메커니즘·근거 산문을 욱여넣을 때 한 셀이 슬그머니 cap 초과 → 다음 사람의 lint/ship 게이트를 막는다.",
-        "threshold": "재발조건: detail 셀에 precedents/메커니즘 산문을 누적. 해결: 셀 편집 직후 'sidecar lint' 로 ARCH-BIG-CELL 확인 → kernel(요지)만 남기고 precedents/이력은 CHANGELOG+git 으로, 길면 자식 노드로 분해(commons single-doc c4).",
-        "source": "ARCHITECTURE.json"
-      },
-      {
-        "id": "pr-cycle-ts-1",
-        "state": "pos-conv",
-        "value": "worktree 에서 pr-cycle/ship 시 'merge failed' 오해 — GitHub squash-merge 는 성공·실패는 gh --delete-branch 의 머지후 로컬 checkout(main 이 주 워크트리 점유→거부). [FIXED] merge loop 가 worktree 오류면 gh pr view state=MERGED verify 후 성공처리 + step4.5 가 main 이 타 worktree 면 git -C <mainWt> merge --ff-only 로 ff (수동 마무리 불필요).",
-        "threshold": "재발 3회(#278·#279 + 이번세션 4회 수동). 진짜 fix 코드 배선 완료(pr-cycle.ts merge-verify + main-wt ff). 재발조건: gh CLI 가 --delete-branch 후처리 방식 바꾸거나 worktree 오류 문구 변경 시 정규식 갱신",
-        "source": "modules/pr-cycle.ts"
-      },
-      {
-        "id": "commons-md-1",
-        "state": "pos-conv",
-        "value": "harness 매턴 inject 누적 = context-rot: 입력 토큰↑ → transformer 어텐션 분산 → 에이전트 열화(Chroma 18-model 실측 200K창이 50K에서 정확도 손실 · 구조적 속성, 학습으로 해결 안 됨). sidecar 는 매턴 ~7.5K tok(commons 14.6K+recommend 5.8K+CLAUDE+ing+easy) 재주입 → INJECT-OVERSIZED 게이트(lint.injectCaps)가 inject 소스별 byte 천장 강제. 잘라내기(emit-truncate) 금지 — 소스를 직접 트림해 통과.",
-        "threshold": "injectCaps 키 부재/빈값=dead gate(무제한 비대). per-source cap 은 한 파일만 막음 → 여러 소스 합 비대(death-by-a-thousand-cuts)는 injectBudgetBytes 총합천장으로 차단. 언어변종은 turn당 1개만 주입 → dir키(styles/)뿐 아니라 file-key 변형셋(foo.md+foo.<lang>.md)도 base별 MAX 1회만 총합계상(injectCapViolations groupMax · injects 리포트도 동일). 재발조건: 새 inject cap/budget 누락 · 변형을 이중계상 · 합이 천장 근접 → 소스 트림 먼저",
-        "source": "config/commons.md"
-      },
-      {
-        "id": "audit-ts-1",
-        "state": "pos-conv",
-        "value": "self-scorecard ratio 축은 평생 누적 로그를 읽으면 영구 0 으로 saturate = artifact. quality_gate 는 per-violation errors ÷ per-run lints(차원불일치), cost 는 pre_block 가드발동(=하네스 정상작동)을 ×50 페널티(부호역전). 수정: 최근 WINDOW_DAYS(14d) 창 + 부호교정(가드 catch/block 은 일하는 것이지 결함 아님) → 0→참값(quality_gate 9·cost 10). 로그는 삭제 안 함(증거보존), 읽기만 window.",
-        "threshold": "0/10 축 발견 시: 로그 prune 으로 점수 올리기 금지(tune-to-green·은폐). 공식이 누적로그·역부호 artifact 인지부터 검증 후 metric 자체를 root-cause 교정. literal 만점 강요 금지 — 실제 dev 이력(위반 catch)은 정직히 반영",
-        "source": "modules/audit.ts"
-      },
-      {
-        "id": "inject-ts-1",
-        "state": "pos-conv",
-        "value": "매턴 inject 가 2 CC surface(settings.json=sidecar install + plugin hooks.json=/plugin)에 동시 배선돼 둘 다 활성이면 같은 블록을 매턴 2× emit = per-turn 토큰 2배 = context-rot(AI 멍청). emitInject 가 프롬프트키 dedup(atomic mkdir락 · 30s TTL)로 매턴 1회만 emit. 잘라내기 아님(전체 1회 emit).",
-        "threshold": "새 UserPromptSubmit inject 는 raw process.stdout.write 대신 emitInject 사용 필수(안 그러면 이중발화 재발). vanish 방지=TTL(빈 프롬프트키로 크로스턴 collide 시 재emit). 재발신호: 컨텍스트에 같은 inject 2번 보이면 dedup 미적용 의심",
-        "source": "lib/inject.ts"
-      },
-      {
-        "id": "setup-ts-1",
-        "state": "pos-conv",
-        "value": "거버넌스 규칙(pr-cycle/ship 진입 등)을 per-turn inject 텍스트로만 실으면 advisory 라 실제 강제가 안 된다 — inject 는 '상기'일 뿐, 진짜 강제는 Stop[] 에 decision:block stop-check 를 배선해야 성립. 또 라이브 Stop 훅의 SSOT 는 글로벌 ~/.claude/settings.json(setup.ts hookSpec)이고 plugin hooks.json 는 /plugin 설치용 별개 표면 — 새 Stop 게이트는 둘 다 배선 + install-hooks 재실행해야 라이브 반영된다.",
-        "threshold": "재발조건: 새 거버넌스 규칙을 commons/CLAUDE.md inject 로만 추가하고 Stop 게이트 미배선, 또는 setup.ts 한쪽만 배선. 해결: 강제하려면 modules/<x>.ts 에 stop-check(marker/clean-state 기반) 추가 → setup.ts Stop[] + hooks.json 양쪽 → install-hooks 재실행 → 스모크.",
-        "source": "modules/setup.ts"
-      },
-      {
-        "id": "git-checkout-guard-ts-1",
-        "state": "pos-conv",
-        "value": "브랜치 보호 가드는 (1) HEAD 이동(checkout/switch) 과 (2) 체크아웃 없는 SHARED main ref 조작(git branch -f/-M/-m/-D/-d/-C/-c main) 둘 다 막아야 #3559 클래스(병렬세션 clobber) 완결. ref-mutation 은 공유 ref store 라 링크드 워크트리에서도 위험→무조건 차단(isMainWorktree 게이트 금지, 그건 checkout 전용). BUT args 스캔은 반드시 단일 git-branch 문장으로 스코프 — 안 하면 compound(feature 삭제 && fetch origin main)의 뒤 bare main 을 오인해 feature 삭제를 오차단(false-positive). 정상 ff(fetch origin main:main·merge --ff-only)는 mutating flag 무사용→통과=자폭 안 함.",
-        "threshold": "재발조건: (a) 새 조작형태(update-ref refs/heads/main 등) 미커버 (b) main-ref-move 를 isMainWorktree 로 좁혀 링크드 우회 허용 (c) args 를 커맨드 전체로 스캔(문장경계 미적용)해 compound false-positive. 해결: 벡터별 detector + args 를 다음 git/셸연산자(|;&<>)에서 컷 + pre-bash stdin 스모크(block AND allow 양쪽, compound 포함)로 검증.",
-        "source": "modules/git-checkout-guard.ts"
-      },
-      {
-        "id": "architecture-ts-1",
-        "state": "pos-conv",
-        "value": "ARCHITECTURE 트리 노드 대상 rule 게이트(id 강제·hygiene)는 노드 판정을 name 키 유무로만 하면 안 된다 — role/detail(역할/상세)만 있고 name 없는 노드도 뷰어엔 렌더되는 실노드인데, name-키잉 판정은 그걸 노드로 안 쳐서 id 강제를 통째 우회시킨다. rendered 판정 = name|role|detail(+legacy 이름/역할/상세) 로 넓혀야 모든 실노드가 id 강제된다.",
-        "threshold": "재발조건: 트리 노드 검사를 obj['name'] 유무로 키잉 → name 없는 role/detail 노드가 silent 통과(id 강제 우회). 해결: isRenderedNode=name|role|detail 로 판정하고 구조래퍼(children-only)·columns(key/label)·convergence 는 계속 제외. 픽스처(name-noid + role-noname) 둘 다 block 되는지로 검증.",
-        "source": "modules/architecture.ts"
-      },
-      {
-        "id": "pre-ts-2",
-        "state": "pos-conv",
-        "value": "parseToolInput/preWrite must gather input.edits[].new_string (MultiEdit shape has NO top-level content/new_string) into the scanned content — else every content-scanning write guard (INJECT-NON-ENGLISH english-only, secret-literal, portable-path, naming) silently passes MultiEdit. MultiEdit is an isEditFragment (partial fragments) so section-aware + byte/size caps still skip it.",
-        "threshold": "piped {tool_input:{file_path:'/x/CLAUDE.md',edits:[{new_string:'한글'}]}} to sidecar pre write and confirmed it emitted permissionDecision:deny (was exit-0 silent pass before the fix); english-only + backtick-exempt MultiEdit cases still allow (state/pre-korean-multiedit-smoke/run.sh ALL PASS).",
-        "source": "modules/pre.ts"
-      },
-      {
-        "id": "shadow-ts-1",
-        "state": "pos-conv",
-        "value": "sidecar 명령 이름이 Claude Code 기본 슬래시(/model·/config·/review·/compact·/init·/pr 등)와 겹치면, 셰도우로 미러된 bare /cmd 가 기본 명령에 가려져 picker 에서 안 보이거나 모호해진다(=우리 명령이 '반영 안 됨'처럼 보임). 실제 예: 모델 레지스트리 /model → CC 기본 /model 충돌 → /models rename.",
-        "threshold": "재발조건: 새 명령을 CC 기본 슬래시와 동명으로 add. 해결: 네이밍 시 CC 기본 슬래시 목록과 대조 → 충돌 시 복수형/접두어로 회피(model→models). 이미 배포됐으면 modules/<name>·cli 등록·commands/<name>.md·상호참조·ARCHITECTURE 노드·TOOLKIT·CHANGELOG 일괄 rename 후 ship(shadow 가 orphan prune).",
-        "source": "modules/shadow.ts"
-      },
-      {
-        "id": "index-ts-1",
-        "state": "pos-conv",
-        "value": "cli/index.ts 의 HELP 는 backtick 템플릿 리터럴 — help/description 절에 raw 백틱을 넣으면 리터럴이 조기 종료돼 esbuild 파싱이 통째 붕괴(Expected semicolon) → sidecar 명령 전부 죽음. 백틱 대신 작은따옴표를 쓰거나 이스케이프. 치명: self-update 는 그 깨진 CLI 로 돌아 스스로 못 고침(닭-달걀) → 설치 클론을 git 으로 origin/main 에 직접 하드동기화해야 복구.",
-        "threshold": "재발조건: cli/index.ts HELP 절에 backtick 포함 텍스트 추가(modules/CLAUDE.md gotcha 무시). 해결: 작은따옴표/이스케이프 + ship 직전 'sidecar help >/dev/null' 스모크로 파싱 검증.",
-        "source": "cli/index.ts"
-      },
-      {
-        "id": "fable-md-1",
-        "state": "pos-conv",
-        "value": "CC 슬래시 '!' 원라이너의 $ARGUMENTS 는 셸 실행 전 텍스트 치환 — 어떤 인용 전략(비인용→괄호/글롭 붕괴 · 쌍따옴표 감싸기/stdin 파이프→프롬프트 속 쌍따옴표에서 붕괴)도 임의 자유텍스트를 셸라인에 안전하게 못 넣는다. 자유텍스트 인자를 받는 커맨드는 '!' 원라이너 금지 → 런북형(에이전트가 Write 로 파일 저장 → --file 플래그)으로 배선.",
-        "threshold": "재발조건: 자유텍스트 인자 커맨드(commands/*.md)를 '!' + $ARGUMENTS 인라인으로 배선. 해결: 런북형 Write→--file + 특수문자(따옴표·괄호·글롭·백틱) QA 케이스.",
-        "source": "commands/fable.md"
-      },
-      {
-        "id": "fable-ts-1",
-        "state": "pos-conv",
-        "value": "헤드리스 claude -p 자식은 전역 ~/.claude/settings.json 의 거버넌스 Stop-훅(architecture/convergence stop-check)을 상속한다 — cwd 가 미커밋 변경 있는 git repo면 자식이 답을 낸 뒤 그 Stop-훅이 블록→계속 루프를 걸어 프로세스가 안 죽고 --timeout 에 exit 124 로 킬되며, 최종턴 .result 도 발산 대신 거버넌스 메타로 덮인다. 해결=자식을 --setting-sources project,local 로 띄워 전역 user 소스(거버넌스 훅)를 걷어냄(keychain 인증은 설정소스가 아니라 유지 · --bare 는 인증까지 날려 Not-logged-in 이라 불가).",
-        "threshold": "재발조건: headless claude -p 를 전역 훅 상속(기본 setting-sources) + dirty git repo cwd 에서 실행. 해결: fable 기본 --sources project,local, 전체상속 필요시 --sources user,project,local + 사전 커밋.",
-        "source": "modules/fable.ts"
-      },
-      {
-        "id": "inject-ts-2",
-        "state": "pos-conv",
-        "value": "inject 의 additionalContext 는 반드시 emitInject() 경유 stdout 의 {hookSpecificOutput:{hookEventName,additionalContext}} JSON 으로 내야 함 — Claude Code 가 읽는 유일 채널. process.stderr.write raw 텍스트는 additionalContext 로 안 읽혀 payload 통째로 조용히 버려짐(에이전트 도달 X). toolkit(명령카탈로그)·companions(이웃CLI)가 stderr 로 내고 있어 두 카탈로그가 여태 에이전트에 도달 못 함 → 'sidecar 명령 아예 인지 못함'(fable). 훅 이벤트명은 STDIN 페이로드에서, STDIN 없으면 조용.",
-        "threshold": "재발조건: 새 inject 를 emitInject 대신 stdout/stderr.write 직접 방출(특히 stderr). 해결: emitInject(name,ev,text)+ev는 readStdin JSON. 검증=printf '{\"hook_event_name\":\"SessionStart\"}'|sidecar <x> inject → stdout JSON 확인.",
-        "source": "lib/inject.ts"
-      },
-      {
-        "id": "pr-cycle-hook-ts-1",
-        "state": "pos-conv",
-        "value": "punt 방지의 정답은 감지·경고·Stop게이트가 아니라 명령 자체의 코드수준 자동완결 — pre bash 가 `gh pr create` 를 재작성(updatedInput + permissionDecision:allow 필수, allow 없으면 CC 가 rewrite 무시)해 squash-merge·워크트리 정리까지 원자 실행(archive_sidecar pr-cycle-hook 정답지 1:1 포팅). goal-guard 식 '되묻기 감지' 접근은 오답으로 폐기(사용자 지시).",
-        "threshold": "재발조건: 에이전트가 머지 여부를 되묻거나 PR 만 만들고 멈춤 · rewrite 가 allow 없이 emit 되어 무시됨. 해결: pre bash rewriter 유지(대량삭제 deny 게이트 포함) — 감지형 게이트로 되돌리지 말 것.",
-        "source": "modules/pr-cycle-hook.ts"
-      }
-    ]
+ "schemaVersion": "2.0",
+ "kind": "architecture-tree",
+ "title": "sidecar — 아키텍처 SSOT",
+ "summary": "AI 코딩 사이드카 엔진. 핵심: 규칙은 코드가 아니라 데이터 — 엔진(언제·어떻게 검사)은 공유, 규칙(무엇을 검사)만 per-repo 주입.",
+ "viewer": "ARCHITECTURE.html",
+ "serve": "python3 serve.py  (로컬 서버 + 브라우저 자동 오픈; file:// fetch 차단 우회)",
+ "convergence": {
+  "note": "재발방지 학습 SSOT (구 인라인 마커 이관 · root-cause). state=3단계 수렴 pos-conv🟢(포지티브)|in-prog🔄(진행·검토)|neg-conv🔴(네거티브·falsified) · 레거시 ossified/in_flight/failed accepted · value=핵심 · threshold=재발조건/해결 · source=원파일. 재발 시 update-in-place.",
+  "records": [
+   {
+    "id": "EXEC_SPAWN_ERROR_UNHANDLED",
+    "state": "pos-conv",
+    "value": "execArgs must handle the child's `error` event (spawn ENOENT / EACCES) — degrade to a non-zero ExecResult, never let an unhandled `error` crash the process",
+    "threshold": "a minimal-PATH hook env (SessionStart) couldn't spawn `bash` → unhandled 'error' event killed the whole SessionStart hook (node:events crash); every execShell caller was exposed",
+    "source": "lib/exec.ts"
+   },
+   {
+    "id": "CLAUDEMD_NOT_L0",
+    "state": "pos-conv",
+    "value": "CLAUDE.md must never be classified L0 — it DECLARES the L0 list (fromMarkdown) and is re-injected each turn, it is not protected engine core",
+    "threshold": "the L0 path-parser regex must NOT include a CLAUDE*.md alternation, or the guide captures itself",
+    "source": "lib/lockdown.ts"
+   },
+   {
+    "id": "ARCH_SNAPSHOT_NOT_HISTORY",
+    "state": "pos-conv",
+    "value": "ARCHITECTURE.json/.md is a CURRENT-STATE snapshot tree, not a change log — 'update' means replace the affected node in-place and delete the old wording; NEVER append history/version/dated/previous/deprecated nodes (history → CHANGELOG + git). The inject note carries this every turn so the model stops accreting history into the tree",
+    "threshold": "the word '갱신형'(updatable) was read as 'add an update entry', so sessions kept leaving version/dated/'이전엔…' nodes in the tree; hardened the every-turn inject note + commons c4 to say snapshot/replace-in-place explicitly",
+    "source": "modules/architecture.ts"
+   },
+   {
+    "id": "CI_TRACK_NATIVE",
+    "state": "pos-conv",
+    "value": "PR CI status is tracked by `sidecar ci-track` (gh pr checks --json → aggregate + verdict + optional --watch/--merge-on-green), not by hand-rolled `gh pr checks|grep` + /tmp monitor sleep loops",
+    "threshold": "merge-on-green campaigns repeatedly re-implemented CI polling inline (e.g. /tmp/pr3688_mon.sh) — no sidecar command tracked remote CI; this centralizes it (the poll runs inside the CLI, not a bash sleep loop)",
+    "source": "modules/ci-track.ts"
+   },
+   {
+    "id": "NO_RAW_CLOUD_CLI",
+    "state": "pos-conv",
+    "value": "raw runpodctl/vastai/`cloud rent`/provider-API calls are blocked in code (pre bash), not just by an enforcement regex rule",
+    "threshold": "a session ran `runpodctl pod create`/`cloud rent` directly because c11 was only a hint+warn; code guard runs before config rules with no override",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "NO_RAW_DOJO_DECK",
+    "state": "pos-conv",
+    "value": "raw `python train.py`/`torchrun`/`accelerate launch`/`deepspeed` training launches AND hand-run run.sh in a dojo/decks tree are blocked in code — use `hexa dojo`/`hexa deck`",
+    "threshold": "c11 named dojo/deck builtins but only cloud CLI was code-guarded; training launches and deck run.sh slipped through",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "NO_HANDROLLED_SHARD_FANOUT",
+    "state": "in-prog",
+    "value": "a hand-rolled launcher loop (split -n l/N + a for/while loop that setsid/nohup-backgrounds repeated `hexa run`/training launches) is the exact bypass that defeated NO_RAW_CLOUD_CLI — copy-to is whitelisted so the .sh sails through, then the fanout runs remotely unseen. Detected as a WARN that redirects to `hexa cloud fire-shards`",
+    "threshold": "a session wrote /tmp/h1305_launch.sh (12-shard staggered `hexa run` decode loop) + `hexa cloud copy-to` + remote run, bypassing structured dispatch/register/cost-accounting; the guard only saw the whitelisted copy-to",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "QUOTE_AWARE_SEGMENT",
+    "state": "pos-conv",
+    "value": "command-head detection segments on UNQUOTED shell operators only — a `|`/`;`/`&` inside quotes is data, not a separator",
+    "threshold": "`grep -E \"vast|runpod\"` false-blocked once `vast`/`runpod` became unconditional CLI heads: stripQuotes ran before the `|`-split, so the quoted alternation was torn into a bare `vast` segment",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "NO_VAST_VERB_WHITELIST",
+    "state": "pos-conv",
+    "value": "`vast` is blocked unconditionally in command position, same as `vastai`/`runpodctl` — NO verb whitelist",
+    "threshold": "a verb whitelist (VAST_VERBS) only blocked ~10 verbs; `vast set api-key`/`vast scp`/`vast execute`/literally `vast cli` all leaked because their verb wasn't listed — the guard 're-unlocked' every time vast.ai added a subcommand",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "BOTH_RUNPOD_CLIS",
+    "state": "pos-conv",
+    "value": "both RunPod CLI heads (`runpodctl` Go + `runpod` Python) are blocked, plus the serverless host `api.runpod.ai` alongside the control-plane `api.runpod.io`/`rest.runpod.io`",
+    "threshold": "only `runpodctl` was listed, so `runpod config`/`runpod project deploy`/`runpod pod create` and serverless `curl api.runpod.ai/v2/<id>/run` all leaked — same whitelist-too-narrow bypass as VAST_VERBS",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "DOJO_TRAIN_NAME_BROAD",
+    "state": "pos-conv",
+    "value": "the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)",
+    "threshold": "someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP.",
+    "source": "modules/cloud-guard.ts"
+   },
+   {
+    "id": "COMPANION_SURFACE_NOT_INJECTED",
+    "state": "pos-conv",
+    "value": "a sibling CLI (hexa) and its subcommands (cloud/atlas/verify/drill) existed and worked, but the sidecar injected only its OWN command catalog (toolkit) — never the neighbour CLI's surface — so the agent re-probed 'is hexa installed? does cloud exist?' every session",
+    "threshold": "toolkit injected sidecar commands only; no carrier surfaced an adjacent project-CLI's verb list, so each session started blind to hexa",
+    "source": "modules/companions.ts"
+   },
+   {
+    "id": "CODE_GUARD_DESTRUCTIVE_BYPASS",
+    "state": "pos-conv",
+    "value": "--no-verify (gate bypass), git reset --hard/clean -fd (working-tree destroy), rm -rf / ~ $HOME (catastrophic), curl|wget|sh (remote code exec) are blocked in CODE before config rules — not regex-only — so a profile edit can't disable them; inline `# ...-ok` markers still allow an explicit per-command override",
+    "threshold": "these were block-policy but enforcement.json-only; a regex/profile edit (or the stdin-input bug that disabled the whole pre layer) would have left the irreversible/gate-bypass commands unguarded",
+    "source": "modules/danger-guard.ts"
+   },
+   {
+    "id": "STALE_BRANCH_TRAP",
+    "state": "pos-conv",
+    "value": "stale-branch 함정 3중 방어. (1) git-context SessionStart 경고(HEAD vs origin/<default> behind/detached). (2) 경고 무시 재발(anima #3736) → GIT-EDIT-OFF-MAIN 가드: main 워크트리가 non-default 브랜치에 주차된 채 Write/Edit 하면 deny. (3) ON-main 변종 재발(hexa-codex 증류섹션: 원격이 앞서갔는데 fetch 가 없어 로컬 ref 는 '최신'으로 보임 → 낡은 base 에 SSOT 재작성, pr-cycle 충돌로만 발각) → GIT-EDIT-STALE-MAIN 가드: TTL fetch(git.staleFetchTtlSec) 후 origin/<default> 가 대상 파일을 건드리며 앞서 있으면 deny, 무관 behind 는 warn. 경고=인지, 블록=예방. probeGitContext 는 cwd 파라미터화.",
+    "threshold": "재발조건: main 워크트리에서 stale base 로 편집 — 브랜치가 non-default 이거나(2), default 인데 원격이 앞서감(3·fetch 부재로 로컬 ref 가 가림). 해결: 경고+가드 셋 다 유지(git.guardOffMainEdit·git.guardStaleMainEdit 기본 ON) — 복귀는 ff-sync(merge --ff-only origin/<default>) 또는 최신 tip 에서 격리 워크트리. 격리 워크트리 면제(탈출구). warn-only 회귀·옵트인 마커 키잉 금지(config-ts-1).",
+    "source": "modules/git-context.ts"
+   },
+   {
+    "id": "FORCE_LEASE_DUAL_SSOT",
+    "state": "pos-conv",
+    "value": "`--force-with-lease` is ALLOWED by both the code guard (git-guard.ts) and config enforcement.json (H-FORCE-PUSH exceptions) — only blind --force/-f/+refspec is blocked, with a `# force-ok` escape",
+    "threshold": "QA found git-guard blocked --force-with-lease while config exempted it → lease hard-blocked with no override, breaking the rebase→lease-push workflow; aligned code guard to config intent",
+    "source": "modules/git-guard.ts"
+   },
+   {
+    "id": "ING_STALENESS_NUDGE",
+    "state": "in-prog",
+    "value": "code edited ≫ ing untouched is WARNED at Stop (c6) — code edits bump a counter, ing add/next/done resets it, Stop warns once past editThreshold then resets; warn-only (forcing an ing update has no ground truth, so a hard block would be a false-positive factory)",
+    "threshold": "every-turn `ing inject` only SHOWED the board; sessions edited lots of code while the board went stale because nothing nudged an update",
+    "source": "modules/ing-staleness.ts"
+   },
+   {
+    "id": "ING_BOARD_DEDICATED_REF",
+    "state": "pos-conv",
+    "value": "board lives on a dedicated `ing` ref via plumbing, never the working tree",
+    "threshold": "tracked worktree file: branch-switch/reset clobbers session edits (happened); untracked: unshared",
+    "source": "modules/ing.ts"
+   },
+   {
+    "id": "ING_NO_DIRECT_MAIN_PUSH",
+    "state": "neg-conv",
+    "value": "never store/push the board on main",
+    "threshold": "protectedBranches repo blocks direct main push so the board is unusable; a dedicated ref is protected-main-safe",
+    "source": "modules/ing.ts"
+   },
+   {
+    "id": "INIT-INJECT-DUP",
+    "state": "pos-conv",
+    "value": "init --hooks scaffolded the full host-wide inject set (commons/recommend/prefs/easy/load/architecture) into per-repo .claude/settings.json, duplicating the global install (~/.claude/settings.json) and/or the enabled plugin — same context injected 2-3x/turn, burying short user prompts",
+    "threshold": "resolved: per-repo .claude/settings.json is BANNED — sidecar is global-only. init no longer scaffolds repo hooks (the --hooks flag is gone); hooks live solely in the global ~/.claude/settings.json via `sidecar install`. inject = host-wide policy, the global layer owns it",
+    "source": "modules/init.ts"
+   },
+   {
+    "id": "HELP_NO_RAW_BACKTICK",
+    "state": "pos-conv",
+    "value": "a bare backtick in the cli HELP template literal terminates it → help/build break; lint HELP-BACKTICK(block) scans the HELP block and flags any unescaped backtick (escaped \\\\\\` allowed)",
+    "threshold": "twice in one session a help-line edit added `code`-style backticks (fleet-full, folders), each silently breaking `sidecar help` until caught by hand — ossify as a commit gate",
+    "source": "modules/lint.ts"
+   },
+   {
+    "id": "MAC_OOM_FANOUT_JETSAM",
+    "state": "in-prog",
+    "value": "a 16GB Mac OOM-dies (jetsam kills apps + kernel panic) because parallel fan-out (cycle-all/all-bg-go) accumulates 6+ detached `claude` processes (~400-490MB each) across sessions until macOS jetsams — mem-guard adds a free-RAM preflight before background-spawn + an opt-in launchd notify watchdog",
+    "threshold": "JetsamEvent reports 6/13-6/18 + panic 6/17 showed six `2.1.179` (claude) procs as top memory holders at OOM time; preflight warns/blocks spawn when available RAM < warnPct",
+    "source": "modules/mem-guard.ts"
+   },
+   {
+    "id": "NAMING_VERSION_SUFFIX",
+    "state": "pos-conv",
+    "value": "new files/dirs named foo_v2/_final/_copy/_old (via Write/Edit OR a mv/cp/touch/mkdir bash command) are BLOCKED — history belongs in git, not the filename; the `@canonical-ok` (write) / `# canonical-ok` (bash) marker is the only override",
+    "threshold": "warn-only proved too weak — the stale-sibling pileup kept recurring, so the user escalated it to a hard block + added bash-command coverage (a CLI `mv a a_v2.ts` previously slipped past the Write-only guard)",
+    "source": "modules/naming-guard.ts"
+   },
+   {
+    "id": "PRETOOLUSE_INPUT_FROM_STDIN",
+    "state": "pos-conv",
+    "value": "PreToolUse tool input must be read from STDIN (CC pipes the hook payload there), not only from $CLAUDE_TOOL_INPUT env — that env var is unset by current Claude Code, so reading env-only made every code guard (raw `vastai`/`runpodctl` block, force-push) a silent pass",
+    "threshold": "a session ran raw `vastai`/`runpodctl` despite the ossified NO_RAW_CLOUD_CLI code guard because parseToolInput read an env var CC never set; verified by piping the real {tool_input:{command}} payload on stdin",
+    "source": "modules/pre.ts"
+   },
+   {
+    "id": "PRETOOLUSE_DENY_SCHEMA",
+    "state": "pos-conv",
+    "value": "pre-hook block must emit hookSpecificOutput.permissionDecision=deny (current PreToolUse schema), not the legacy {decision:block} which current Claude Code ignores — else the guard prints but never blocks",
+    "threshold": "a session ran raw `vastai destroy` despite c11 because emitBlock emitted only {decision:block}+exit0, which CC silently dropped; verified the new schema blocks via the actual `pre bash` hook output",
+    "source": "modules/pre.ts"
+   },
+   {
+    "id": "ARXIV_RATELIMIT_NOT_NORESULTS",
+    "state": "pos-conv",
+    "value": "arXiv throttles a burst with EITHER a 'Rate exceeded.' text body OR an HTTP 503 page — both have 0 <entry> exactly like a genuine empty result. Detect throttle by status>=500 OR /rate exceeded/ OR a non-Atom body (no <feed/<entry); a real empty result IS a valid <feed> with totalResults 0. Auto-retry with backoff (notice each round so the agent recognizes a RATE problem), then loudFail with a rate-limit error; NEVER report 'no results' for a throttle",
+    "threshold": "checked only the 'rate exceeded' string, so an HTTP-503 throttle slipped through and the command said 'no results' for a query with thousands of papers",
+    "source": "modules/research.ts"
+   },
+   {
+    "id": "CODE_GUARD_SECRET_LITERAL",
+    "state": "pos-conv",
+    "value": "hardcoded API keys / private keys / provider tokens are blocked in CODE at write time (before config rules) — a committed secret is an irreversible git-history leak; regex-only enforcement could be disabled by a profile edit",
+    "threshold": "H-SECRET-LITERAL was block-policy but enforcement.json-only; the stdin-input bug (and any profile edit) would have left credential writes unguarded",
+    "source": "modules/secret-guard.ts"
+   },
+   {
+    "id": "SHADOW_PREMARKER_STALE",
+    "state": "pos-conv",
+    "value": "pre-marker shadows in ~/.claude/commands/ lack SHADOW_MARKER, so refresh skips them as 'hand-authored' and they go stale — 18/22 lost the source description's `Triggers —` line, so bare-text recognition of /fleet /sbs /easy … silently broke even though source commands/*.md were correct",
+    "threshold": "resolved: `sidecar shadow --force` overwrites marker-less collisions from source (source = SSOT); run it once per host to heal pre-marker shadows. Re-breaks only if a NEW marker-less shadow layer is introduced without a heal path",
+    "source": "modules/shadow.ts"
+   },
+   {
+    "id": "SHADOW_GEN_NATIVE",
+    "state": "pos-conv",
+    "value": "bare /cmd shadows are generated by `sidecar shadow` from sidecar's own commands/ — not by the retired sidecar package, and never baked to a $CLAUDE_PLUGIN_ROOT/sidecar-cache path",
+    "threshold": "a session's /arxiv etc. died because sidecar-generated shadows pointed at a removed ~/.claude/plugins/cache/sidecar path; sidecar now owns shadow generation, marker-tracked + regenerable",
+    "source": "modules/shadow.ts"
+   },
+   {
+    "id": "SHADOW_MARKER_AFTER_FRONTMATTER",
+    "state": "pos-conv",
+    "value": "the SHADOW_MARKER must be inserted AFTER the YAML frontmatter block, never prepended — Claude Code only parses `description:` when `---` is on line 1; a marker on line 1 pushed frontmatter down so the picker rendered the marker comment as the command's description",
+    "threshold": "if the marker is ever prepended again, every shadow command shows '<!-- sidecar-shadow ... -->' instead of its description in the slash picker",
+    "source": "modules/shadow.ts"
+   },
+   {
+    "id": "SHIP_PROPAGATE_ALL_SURFACES",
+    "state": "pos-conv",
+    "value": "merge+self-update+shadow must run as one unit",
+    "threshold": "adding a slash command then running only pr-cycle+self-update left the shadow mirror stale → /fleet-abstract invisible; ship bundles all three",
+    "source": "modules/ship.ts"
+   },
+   {
+    "id": "TOOLKIT_FROM_HELP_SSOT",
+    "state": "pos-conv",
+    "value": "the agent-facing command catalog (TOOLKIT.jsonl) is GENERATED from the HELP text in cli/index.ts, never hand-maintained in parallel; `toolkit check` snapshot-diffs committed vs generated so the two can't drift",
+    "threshold": "commands existed + worked but had no proactive catalog/triggers, so the agent didn't know to use them (arxiv/secret blind spot); a hand-kept second catalog would just drift from help",
+    "source": "modules/toolkit.ts"
+   },
+   {
+    "id": "HELP_CLOSE_DELIM_NEWLINE",
+    "state": "pos-conv",
+    "value": "the closing delimiter search must be the line-start `\\\\n\\\\`;`, NOT a bare `\\\\`;` — the HELP body contains escaped backticks (e.g. `worktree gc\\\\`;`) and a bare-`\\\\`;` search truncated there, silently dropping every command after worktree (atlas/convergence/ing/sync/upstream/verdict)",
+    "threshold": "bare backtick-semicolon search matched an escaped inline backtick mid-body and cut the catalog short",
+    "source": "modules/toolkit.ts"
+   },
+   {
+    "id": "WORKTREE_GONE_ONLY_PILEUP",
+    "state": "pos-conv",
+    "value": "gc reap widened to [gone] OR HEAD-age>maxAgeDays, yet pileup RECURRED (anima 41 wt / hexa-lang 16 + 8 full clones): gc only scans isAgent paths (.claude/worktrees/*) so sibling-dir (../repo-*), /tmp, and .worktrees/* worktrees are structurally exempt; merged-but-DIRTY worktrees (uncommitted state/ outputs · preserve-state violation) are skipped forever; the wt gauge + gc are cwd-repo-local so cross-repo pileups stay invisible (wt 0 🟢 in sidecar while anima holds 41); full clones named wt-* evade worktree tooling entirely",
+    "threshold": "recurs while gc skips non-agent paths + dirty worktrees and the wt gauge is repo-local; resolve = extend gc scope to all linked worktrees (salvage dirty outputs to state/ first), lab-wide wt scan, purge clone impostors",
+    "source": "modules/worktree.ts"
+   },
+   {
+    "id": "ARCH_INJECT_IGNORED",
+    "state": "in-prog",
+    "value": "갱신 지시가 트리 앞 괄호에 묻혀 모델이 시켜야만 갱신 — 턴마감 게이트를 트리 뒤(recency)로 이동 + 갱신 시 보고 의무화",
+    "threshold": "ARCHITECTURE inject 가 갱신을 능동적으로 안 하고 사용자 지시에만 반응",
+    "source": "modules/architecture.ts"
+   },
+   {
+    "id": "INJECT_DOC_SKELETON_ONDEMAND",
+    "state": "pos-conv",
+    "value": "정적 참조 doc(설계 트리)은 매 UserPromptSubmit 풀-주입 금지 — Claude Code canonical 대용량-doc 패턴은 스켈레톤(요약+목차)+온디맨드 Read. 풀덤프는 10KB additionalContext 한도 초과→하네스가 파일-폴백(2KB 프리뷰만)+매 턴 토큰 재지불. 정적 doc=SessionStart/Compact 1회(캐시 prefix 재사용), per-turn 행동규칙(commons·recommend·prefs·load·ing)만 매턴 유지. easy 는 둘을 가진 2-tier: lean 행동지침(styles/easy.<lang>.md 의 `<!-- easy:lean -->` 영역)만 UserPromptSubmit 매턴 + gold예시·4종ASCII템플릿·체크리스트 풀 레퍼런스는 SessionStart/Compact 1회 + `easy show` 온디맨드(event 분기 emit · 마커 없으면 풀-폴백 · 런타임 절단 아님). 턴마감 게이트는 Stop 훅으로 결정적 강제, 매턴 리마인더로 흩지 말 것",
+    "threshold": "inject 소스 편집 시 — 정적 doc 을 UserPromptSubmit 에 다시 걸거나 풀-주입으로 되돌리면 재발",
+    "source": "modules/architecture.ts"
+   },
+   {
+    "id": "convergence-triggers-json-1",
+    "state": "pos-conv",
+    "value": "agent-facing nudge text lives in the DATA file (config/convergence-triggers.json hint field), which OVERRIDES the code fallback in architecture.ts convergenceStopCheck. Editing only the code fallback leaves the live nudge stale (the user spotted the old --id wording still showing).",
+    "threshold": "Updating a nudge/guard message: change the config JSON hint (the authoritative live string the Stop hook reads), not just the code fallback — grep the repo for the old phrasing to catch every copy.",
+    "source": "config/convergence-triggers.json"
+   },
+   {
+    "id": "config-ts-1",
+    "state": "pos-conv",
+    "value": "sidecar 거버넌스(ship·ing Stop게이트·commit lint)의 발화 게이트는 어떤 opt-in 마커(CLAUDE.md·harness.config.json)로도 키잉하지 않는다 — 마커 키잉은 그 마커 없는 repo(특히 신규)에서 게이트가 silent-dead 되는 비대칭을 낳는다. 관리-프로젝트 개념(isManaged) 자체를 폐기하고, 유일한 바닥은 'git repo 인가'(inGitRepo = REPO_ROOT 에 .git) 하나 — ship/ing/commit 은 git repo 밖에서 의미가 없으므로 이건 opt-in 이 아니라 물리 조건. 모든 git repo(신규 포함) 무조건 발화, non-repo 디렉터리만 조용.",
+    "threshold": "재발조건: 거버넌스가 '새 repo 에서 조용'하거나, '특정 repo만 관리대상'으로 취급하고 싶은 유혹(마커/이름패턴/경로 예외 도입) → 그건 방금 없앤 managed-마커의 부활이자 경로/이름 하드코딩 부채. 해결: 게이트는 inGitRepo 바닥 하나로 유지, 예외 필요시 sidecar-native 옵트아웃(# no-verify-ok / .harness)만 쓰고 이름패턴 하드코딩 금지.",
+    "source": "lib/config.ts"
+   },
+   {
+    "id": "pre-ts-1",
+    "state": "pos-conv",
+    "value": "preWrite section-aware write-guards (commonsWriteViolation·dodontLengthWriteViolation) run on full-content Write ONLY, never on Edit's new_string fragment — a fragment truncates its boundary ## section body and false-positives it as COMMONS-NO-DODONT (adding ## Project/## Tree to a do/dont CLAUDE.md while anchoring on the next rule's ## header hard-DENIED a legit edit). Edit fragments fall through to commit-time lint backstop (full-file + claudeMdExempt).",
+    "threshold": "재발조건: pre.ts 가 input.content/input.new_string 을 한 content 로 합쳐 section-검증 가드에 넘기면 Edit fragment 가 잘린 섹션으로 오차단. 해결: isEditFragment 로 두 가드만 skip(#267); desc/doc/naming(단일줄·파일명) 가드는 계속 실행.",
+    "source": "modules/pre.ts"
+   },
+   {
+    "id": "architecture-json-1",
+    "state": "pos-conv",
+    "value": "ARCHITECTURE.json detail 셀이 300자 ARCH-BIG-CELL cap 을 다시 넘기는 회귀 — 특히 게이트/enforce 노드(isManaged·ing/architecture stop-check)에 메커니즘·근거 산문을 욱여넣을 때 한 셀이 슬그머니 cap 초과 → 다음 사람의 lint/ship 게이트를 막는다.",
+    "threshold": "재발조건: detail 셀에 precedents/메커니즘 산문을 누적. 해결: 셀 편집 직후 'sidecar lint' 로 ARCH-BIG-CELL 확인 → kernel(요지)만 남기고 precedents/이력은 CHANGELOG+git 으로, 길면 자식 노드로 분해(commons single-doc c4).",
+    "source": "ARCHITECTURE.json"
+   },
+   {
+    "id": "pr-cycle-ts-1",
+    "state": "pos-conv",
+    "value": "worktree 에서 pr-cycle/ship 시 'merge failed' 오해 — GitHub squash-merge 는 성공·실패는 gh --delete-branch 의 머지후 로컬 checkout(main 이 주 워크트리 점유→거부). [FIXED] merge loop 가 worktree 오류면 gh pr view state=MERGED verify 후 성공처리 + step4.5 가 main 이 타 worktree 면 git -C <mainWt> merge --ff-only 로 ff (수동 마무리 불필요).",
+    "threshold": "재발 3회(#278·#279 + 이번세션 4회 수동). 진짜 fix 코드 배선 완료(pr-cycle.ts merge-verify + main-wt ff). 재발조건: gh CLI 가 --delete-branch 후처리 방식 바꾸거나 worktree 오류 문구 변경 시 정규식 갱신",
+    "source": "modules/pr-cycle.ts"
+   },
+   {
+    "id": "commons-md-1",
+    "state": "pos-conv",
+    "value": "harness 매턴 inject 누적 = context-rot: 입력 토큰↑ → transformer 어텐션 분산 → 에이전트 열화(Chroma 18-model 실측 200K창이 50K에서 정확도 손실 · 구조적 속성, 학습으로 해결 안 됨). sidecar 는 매턴 ~7.5K tok(commons 14.6K+recommend 5.8K+CLAUDE+ing+easy) 재주입 → INJECT-OVERSIZED 게이트(lint.injectCaps)가 inject 소스별 byte 천장 강제. 잘라내기(emit-truncate) 금지 — 소스를 직접 트림해 통과.",
+    "threshold": "injectCaps 키 부재/빈값=dead gate(무제한 비대). per-source cap 은 한 파일만 막음 → 여러 소스 합 비대(death-by-a-thousand-cuts)는 injectBudgetBytes 총합천장으로 차단. 언어변종은 turn당 1개만 주입 → dir키(styles/)뿐 아니라 file-key 변형셋(foo.md+foo.<lang>.md)도 base별 MAX 1회만 총합계상(injectCapViolations groupMax · injects 리포트도 동일). 재발조건: 새 inject cap/budget 누락 · 변형을 이중계상 · 합이 천장 근접 → 소스 트림 먼저",
+    "source": "config/commons.md"
+   },
+   {
+    "id": "audit-ts-1",
+    "state": "pos-conv",
+    "value": "self-scorecard ratio 축은 평생 누적 로그를 읽으면 영구 0 으로 saturate = artifact. quality_gate 는 per-violation errors ÷ per-run lints(차원불일치), cost 는 pre_block 가드발동(=하네스 정상작동)을 ×50 페널티(부호역전). 수정: 최근 WINDOW_DAYS(14d) 창 + 부호교정(가드 catch/block 은 일하는 것이지 결함 아님) → 0→참값(quality_gate 9·cost 10). 로그는 삭제 안 함(증거보존), 읽기만 window.",
+    "threshold": "0/10 축 발견 시: 로그 prune 으로 점수 올리기 금지(tune-to-green·은폐). 공식이 누적로그·역부호 artifact 인지부터 검증 후 metric 자체를 root-cause 교정. literal 만점 강요 금지 — 실제 dev 이력(위반 catch)은 정직히 반영",
+    "source": "modules/audit.ts"
+   },
+   {
+    "id": "inject-ts-1",
+    "state": "pos-conv",
+    "value": "매턴 inject 가 2 CC surface(settings.json=sidecar install + plugin hooks.json=/plugin)에 동시 배선돼 둘 다 활성이면 같은 블록을 매턴 2× emit = per-turn 토큰 2배 = context-rot(AI 멍청). emitInject 가 프롬프트키 dedup(atomic mkdir락 · 30s TTL)로 매턴 1회만 emit. 잘라내기 아님(전체 1회 emit).",
+    "threshold": "새 UserPromptSubmit inject 는 raw process.stdout.write 대신 emitInject 사용 필수(안 그러면 이중발화 재발). vanish 방지=TTL(빈 프롬프트키로 크로스턴 collide 시 재emit). 재발신호: 컨텍스트에 같은 inject 2번 보이면 dedup 미적용 의심",
+    "source": "lib/inject.ts"
+   },
+   {
+    "id": "setup-ts-1",
+    "state": "pos-conv",
+    "value": "거버넌스 규칙(pr-cycle/ship 진입 등)을 per-turn inject 텍스트로만 실으면 advisory 라 실제 강제가 안 된다 — inject 는 '상기'일 뿐, 진짜 강제는 Stop[] 에 decision:block stop-check 를 배선해야 성립. 또 라이브 Stop 훅의 SSOT 는 글로벌 ~/.claude/settings.json(setup.ts hookSpec)이고 plugin hooks.json 는 /plugin 설치용 별개 표면 — 새 Stop 게이트는 둘 다 배선 + install-hooks 재실행해야 라이브 반영된다.",
+    "threshold": "재발조건: 새 거버넌스 규칙을 commons/CLAUDE.md inject 로만 추가하고 Stop 게이트 미배선, 또는 setup.ts 한쪽만 배선. 해결: 강제하려면 modules/<x>.ts 에 stop-check(marker/clean-state 기반) 추가 → setup.ts Stop[] + hooks.json 양쪽 → install-hooks 재실행 → 스모크.",
+    "source": "modules/setup.ts"
+   },
+   {
+    "id": "git-checkout-guard-ts-1",
+    "state": "pos-conv",
+    "value": "브랜치 보호 가드는 (1) HEAD 이동(checkout/switch) 과 (2) 체크아웃 없는 SHARED main ref 조작(git branch -f/-M/-m/-D/-d/-C/-c main) 둘 다 막아야 #3559 클래스(병렬세션 clobber) 완결. ref-mutation 은 공유 ref store 라 링크드 워크트리에서도 위험→무조건 차단(isMainWorktree 게이트 금지, 그건 checkout 전용). BUT args 스캔은 반드시 단일 git-branch 문장으로 스코프 — 안 하면 compound(feature 삭제 && fetch origin main)의 뒤 bare main 을 오인해 feature 삭제를 오차단(false-positive). 정상 ff(fetch origin main:main·merge --ff-only)는 mutating flag 무사용→통과=자폭 안 함.",
+    "threshold": "재발조건: (a) 새 조작형태(update-ref refs/heads/main 등) 미커버 (b) main-ref-move 를 isMainWorktree 로 좁혀 링크드 우회 허용 (c) args 를 커맨드 전체로 스캔(문장경계 미적용)해 compound false-positive. 해결: 벡터별 detector + args 를 다음 git/셸연산자(|;&<>)에서 컷 + pre-bash stdin 스모크(block AND allow 양쪽, compound 포함)로 검증.",
+    "source": "modules/git-checkout-guard.ts"
+   },
+   {
+    "id": "architecture-ts-1",
+    "state": "pos-conv",
+    "value": "ARCHITECTURE 트리 노드 대상 rule 게이트(id 강제·hygiene)는 노드 판정을 name 키 유무로만 하면 안 된다 — role/detail(역할/상세)만 있고 name 없는 노드도 뷰어엔 렌더되는 실노드인데, name-키잉 판정은 그걸 노드로 안 쳐서 id 강제를 통째 우회시킨다. rendered 판정 = name|role|detail(+legacy 이름/역할/상세) 로 넓혀야 모든 실노드가 id 강제된다.",
+    "threshold": "재발조건: 트리 노드 검사를 obj['name'] 유무로 키잉 → name 없는 role/detail 노드가 silent 통과(id 강제 우회). 해결: isRenderedNode=name|role|detail 로 판정하고 구조래퍼(children-only)·columns(key/label)·convergence 는 계속 제외. 픽스처(name-noid + role-noname) 둘 다 block 되는지로 검증.",
+    "source": "modules/architecture.ts"
+   },
+   {
+    "id": "pre-ts-2",
+    "state": "pos-conv",
+    "value": "parseToolInput/preWrite must gather input.edits[].new_string (MultiEdit shape has NO top-level content/new_string) into the scanned content — else every content-scanning write guard (INJECT-NON-ENGLISH english-only, secret-literal, portable-path, naming) silently passes MultiEdit. MultiEdit is an isEditFragment (partial fragments) so section-aware + byte/size caps still skip it.",
+    "threshold": "piped {tool_input:{file_path:'/x/CLAUDE.md',edits:[{new_string:'한글'}]}} to sidecar pre write and confirmed it emitted permissionDecision:deny (was exit-0 silent pass before the fix); english-only + backtick-exempt MultiEdit cases still allow (state/pre-korean-multiedit-smoke/run.sh ALL PASS).",
+    "source": "modules/pre.ts"
+   },
+   {
+    "id": "shadow-ts-1",
+    "state": "pos-conv",
+    "value": "sidecar 명령 이름이 Claude Code 기본 슬래시(/model·/config·/review·/compact·/init·/pr 등)와 겹치면, 셰도우로 미러된 bare /cmd 가 기본 명령에 가려져 picker 에서 안 보이거나 모호해진다(=우리 명령이 '반영 안 됨'처럼 보임). 실제 예: 모델 레지스트리 /model → CC 기본 /model 충돌 → /models rename.",
+    "threshold": "재발조건: 새 명령을 CC 기본 슬래시와 동명으로 add. 해결: 네이밍 시 CC 기본 슬래시 목록과 대조 → 충돌 시 복수형/접두어로 회피(model→models). 이미 배포됐으면 modules/<name>·cli 등록·commands/<name>.md·상호참조·ARCHITECTURE 노드·TOOLKIT·CHANGELOG 일괄 rename 후 ship(shadow 가 orphan prune).",
+    "source": "modules/shadow.ts"
+   },
+   {
+    "id": "index-ts-1",
+    "state": "pos-conv",
+    "value": "cli/index.ts 의 HELP 는 backtick 템플릿 리터럴 — help/description 절에 raw 백틱을 넣으면 리터럴이 조기 종료돼 esbuild 파싱이 통째 붕괴(Expected semicolon) → sidecar 명령 전부 죽음. 백틱 대신 작은따옴표를 쓰거나 이스케이프. 치명: self-update 는 그 깨진 CLI 로 돌아 스스로 못 고침(닭-달걀) → 설치 클론을 git 으로 origin/main 에 직접 하드동기화해야 복구.",
+    "threshold": "재발조건: cli/index.ts HELP 절에 backtick 포함 텍스트 추가(modules/CLAUDE.md gotcha 무시). 해결: 작은따옴표/이스케이프 + ship 직전 'sidecar help >/dev/null' 스모크로 파싱 검증.",
+    "source": "cli/index.ts"
+   },
+   {
+    "id": "fable-md-1",
+    "state": "pos-conv",
+    "value": "CC 슬래시 '!' 원라이너의 $ARGUMENTS 는 셸 실행 전 텍스트 치환 — 어떤 인용 전략(비인용→괄호/글롭 붕괴 · 쌍따옴표 감싸기/stdin 파이프→프롬프트 속 쌍따옴표에서 붕괴)도 임의 자유텍스트를 셸라인에 안전하게 못 넣는다. 자유텍스트 인자를 받는 커맨드는 '!' 원라이너 금지 → 런북형(에이전트가 Write 로 파일 저장 → --file 플래그)으로 배선.",
+    "threshold": "재발조건: 자유텍스트 인자 커맨드(commands/*.md)를 '!' + $ARGUMENTS 인라인으로 배선. 해결: 런북형 Write→--file + 특수문자(따옴표·괄호·글롭·백틱) QA 케이스.",
+    "source": "commands/fable.md"
+   },
+   {
+    "id": "fable-ts-1",
+    "state": "pos-conv",
+    "value": "헤드리스 claude -p 자식은 전역 ~/.claude/settings.json 의 거버넌스 Stop-훅(architecture/convergence stop-check)을 상속한다 — cwd 가 미커밋 변경 있는 git repo면 자식이 답을 낸 뒤 그 Stop-훅이 블록→계속 루프를 걸어 프로세스가 안 죽고 --timeout 에 exit 124 로 킬되며, 최종턴 .result 도 발산 대신 거버넌스 메타로 덮인다. 해결=자식을 --setting-sources project,local 로 띄워 전역 user 소스(거버넌스 훅)를 걷어냄(keychain 인증은 설정소스가 아니라 유지 · --bare 는 인증까지 날려 Not-logged-in 이라 불가).",
+    "threshold": "재발조건: headless claude -p 를 전역 훅 상속(기본 setting-sources) + dirty git repo cwd 에서 실행. 해결: fable 기본 --sources project,local, 전체상속 필요시 --sources user,project,local + 사전 커밋.",
+    "source": "modules/fable.ts"
+   },
+   {
+    "id": "inject-ts-2",
+    "state": "pos-conv",
+    "value": "inject 의 additionalContext 는 반드시 emitInject() 경유 stdout 의 {hookSpecificOutput:{hookEventName,additionalContext}} JSON 으로 내야 함 — Claude Code 가 읽는 유일 채널. process.stderr.write raw 텍스트는 additionalContext 로 안 읽혀 payload 통째로 조용히 버려짐(에이전트 도달 X). toolkit(명령카탈로그)·companions(이웃CLI)가 stderr 로 내고 있어 두 카탈로그가 여태 에이전트에 도달 못 함 → 'sidecar 명령 아예 인지 못함'(fable). 훅 이벤트명은 STDIN 페이로드에서, STDIN 없으면 조용.",
+    "threshold": "재발조건: 새 inject 를 emitInject 대신 stdout/stderr.write 직접 방출(특히 stderr). 해결: emitInject(name,ev,text)+ev는 readStdin JSON. 검증=printf '{\"hook_event_name\":\"SessionStart\"}'|sidecar <x> inject → stdout JSON 확인.",
+    "source": "lib/inject.ts"
+   },
+   {
+    "id": "pr-cycle-hook-ts-1",
+    "state": "pos-conv",
+    "value": "punt 방지의 정답은 감지·경고·Stop게이트가 아니라 명령 자체의 코드수준 자동완결 — pre bash 가 `gh pr create` 를 재작성(updatedInput + permissionDecision:allow 필수, allow 없으면 CC 가 rewrite 무시)해 squash-merge·워크트리 정리까지 원자 실행(archive_sidecar pr-cycle-hook 정답지 1:1 포팅). goal-guard 식 '되묻기 감지' 접근은 오답으로 폐기(사용자 지시).",
+    "threshold": "재발조건: 에이전트가 머지 여부를 되묻거나 PR 만 만들고 멈춤 · rewrite 가 allow 없이 emit 되어 무시됨. 해결: pre bash rewriter 유지(대량삭제 deny 게이트 포함) — 감지형 게이트로 되돌리지 말 것.",
+    "source": "modules/pr-cycle-hook.ts"
+   }
+  ]
+ },
+ "columns": [
+  {
+   "key": "name",
+   "label": "name",
+   "tree": true
   },
-  "columns": [
-    {
-      "key": "name",
-      "label": "name",
-      "tree": true
-    },
-    {
-      "key": "role",
-      "label": "role"
-    },
-    {
-      "key": "id",
-      "label": "id"
-    },
-    {
-      "key": "detail",
-      "label": "detail"
-    }
-  ],
-  "tree": {
-    "name": "sidecar",
-    "role": "프로젝트-무관 AI 코딩 사이드카 — 작업 흐름에 끼어드는 게이트 집합",
-    "id": "sidecar",
-    "detail": "엔진(.ts)은 모든 repo 공유, 규칙(JSON)만 주입. 1–4층은 5층(규칙 데이터)을 하드코딩하지 않는다.",
-    "children": [
-      {
-        "name": "surfaces — 5가지 통합 지점",
-        "role": "에이전트가 무언가 하기 직전/직후 = 사이드카가 끼어들 자리",
-        "id": "group-surfaces",
-        "detail": "어떤 에이전트 런타임이든 이 5 hook으로 환원된다.",
-        "children": [
-          {
-            "name": "UserPromptSubmit",
-            "role": "사용자가 말함 → prompt",
-            "id": "surface-userpromptsubmit",
-            "detail": "키워드→플레이북 매핑, 위험어→힌트. 결과: stderr(컨텍스트 주입)"
-          },
-          {
-            "name": "PreToolUse(Bash)",
-            "role": "도구 호출 직전 → pre bash",
-            "id": "surface-pretooluse-bash",
-            "detail": "코드레벨 가드(아래 children) 를 먼저 평가 → 그 뒤 config enforcement 정규식 매칭(backup). 코드 가드는 config 보다 먼저 실행되고 끌 수 없다(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr",
-            "children": [
-              {
-                "name": "force-push 가드",
-                "role": "히스토리 재작성 push 차단",
-                "id": "guard-force-push",
-                "detail": "blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH 와 동일 정책"
-              },
-              {
-                "name": "branch-switch 가드",
-                "role": "메인 워크트리 브랜치 전환 차단",
-                "id": "guard-branch-switch",
-                "detail": "modules/git-checkout-guard.ts — MAIN 워크트리에서 HEAD 이동하는 `git checkout <branch>`/`-b`/`switch` 차단(병렬 세션 untracked 작업 손실 #3559 방지). 링크드 워크트리·파일복원(`checkout -- path`)은 면제 · 모호한 `checkout <ref>` 는 rev-parse 확인 · `-C <path>` 우회도 차단 · config `git.guardBranchSwitch`(기본 ON)."
-              },
-              {
-                "name": "main-ref-move 가드",
-                "role": "체크아웃 없이 main ref 갈아치우기 차단",
-                "id": "guard-main-ref-move",
-                "detail": "git-checkout-guard.ts detectMainRefMove — 체크아웃 없이 SHARED main/master ref 를 `git branch -f`(재지정)·`-M/-m`(개명)·`-D/-d`(삭제)·`-C/-c`(복사)로 갈아치우는 형태 차단(branch-switch 자매·#3559 동종 · 공유 ref 라 모든 워크트리에서 위험→isMainWorktree 비게이트). feature 브랜치 삭제/개명·`fetch main:main` ff 는 통과 · config `git.guardBranchSwitch` 공유."
-              },
-              {
-                "name": "off-main-edit 가드",
-                "role": "메인 워크트리가 non-default 브랜치일 때 Write/Edit 차단 (main 고정)",
-                "id": "guard-off-main-edit",
-                "detail": "modules/pre.ts preWrite (GIT-EDIT-OFF-MAIN) — main 워크트리가 non-default 브랜치에 주차된 채 Write/Edit 하는 걸 차단(stale-branch 함정 #3736 · branch-switch 가드의 편집측 대칭). Write·Edit 양쪽 발화 · non-default HEAD 만 probeGitContext(gcwd) 확인 후 차단 · 격리 워크트리 면제 · config `git.guardOffMainEdit`(기본 ON)."
-              },
-              {
-                "name": "stale-main-edit 가드",
-                "role": "main 이 origin 보다 뒤처진 채 upstream 변경 파일 Write/Edit 차단",
-                "id": "guard-stale-main-edit",
-                "detail": "modules/pre.ts preWrite (GIT-EDIT-STALE-MAIN) — off-main-edit 의 on-main 대칭: main 이 origin/<default> 보다 뒤처졌고 upstream 커밋이 대상 파일을 건드리면 deny(낡은 base 편집=중복작업+충돌). TTL fetch 후 판정(git.guardStaleMainEdit, staleFetchTtlSec) · 무관 behind=warn · 격리 워크트리 면제 · 스모크 state/stale-main-edit-smoke."
-              },
-              {
-                "name": "pr-cycle 자동사이클 rewriter",
-                "role": "gh pr create → 머지+정리까지 코드수준 자동 완결 (재작성)",
-                "id": "guard-pr-cycle-rewrite",
-                "detail": "modules/pr-cycle-hook.ts (pre bash · archive 포팅) — `gh pr create` 를 updatedInput+allow 로 재작성: `&& gh pr merge --squash --admin --delete-branch` + 링크드 워크트리 정리 + stacked --base→default 강제 · 대량삭제(D>50, D≥10×A)=deny · --draft/명시 merge/MARK 면제 · 옵트아웃 없음 · 스모크 state/pr-cycle-hook-smoke."
-              },
-              {
-                "name": "cloud-raw 가드",
-                "role": "raw 클라우드 CLI 직접 호출 차단",
-                "id": "guard-cloud-raw",
-                "detail": "c11 — 구조화 dispatch 를 우회하는 raw runpodctl/vastai/ssh/scp/curl 직접 호출을 가드(`hexa cloud`/pod 흐름으로 유도)"
-              },
-              {
-                "name": "danger 가드",
-                "role": "파괴적 명령 차단",
-                "id": "guard-danger",
-                "detail": "no-verify·reset-hard·curl|sh 는 상시 always-on · rm-rf-root(루트 자체 /, /*, ~, $HOME, *)는 config `dangerGuard.rmRfRoot` 토글 · 기본 false=OFF(opt-out)"
-              },
-              {
-                "name": "hand-rolled-fanout 가드",
-                "role": "손수 fanout 루프 경고",
-                "id": "guard-hand-rolled-fanout",
-                "detail": "warn — copy-to 안의 손수 런처 fanout 은 구조화 dispatch·비용계상을 우회 → `fire-shards` 로 유도"
-              },
-              {
-                "name": "mem-guard",
-                "role": "OOM 예방",
-                "id": "guard-mem",
-                "detail": "background-spawn(`&`/nohup/disown) 직전 free-RAM 체크 → warnPct 이하 warn·blockPct 이하 block · OOM jetsam 예방"
-              },
-              {
-                "name": "naming-guard",
-                "role": "비-canonical 작명 차단(생성) + 터치 시 넛지",
-                "id": "guard-naming",
-                "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · `@canonical-ok`/`# canonical-ok` 면제 · test/spec 제외"
-              },
-              {
-                "name": "portable-path 가드",
-                "role": "SHIPPED 스크립트의 하드코딩 홈경로 넛지 (이식성)",
-                "id": "guard-portable-path",
-                "detail": "modules/portable-path-guard.ts (PORTABLE-PATH · preWrite advisory) — SHIPPED 런타임 스크립트(hooks/·commands/·skills/·bin/·pi/ 의 .sh/.py/.ts 등)가 절대 홈경로(`/Users/…`·`/home/…`) 하드코딩 시 warn(타 host/user 에서 깨짐 → `$HOME`·`${CLAUDE_PLUGIN_ROOT}` 런타임 해석). Write·Edit · config `portablePathGuard`(기본 ON) · archive 포팅."
-              },
-              {
-                "name": "single-doc(scatter) 가드",
-                "role": "흩어진 문서 차단",
-                "id": "guard-single-doc-scatter",
-                "detail": "scatter 파일명(`*-report/summary/notes/plan/guide.md`·`UPPERCASE.md`·날짜접두 `.md`) 생성 BLOCK(scope 무관·`DOC-SCATTER`) → ARCHITECTURE(SSOT)+CHANGELOG(append) 통합 · quickref 규율(`DOC-NO-QUICKREF`)은 scopeDirs 한정 warn · `docs.allow` 리스트·`docs.enforce:off` 로 면제 (commons single-doc)"
-              },
-              {
-                "name": "commit-lint 게이트",
-                "role": "agent git commit 에 lint 강제 (글로벌)",
-                "id": "guard-commit-lint",
-                "detail": "`COMMIT-LINT` — agent `git commit` 감지 시 모든 git repo(inGitRepo · managed-마커 폐기 · config 없으면 defaults)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
-              }
-            ]
-          },
-          {
-            "name": "PreToolUse(Write)",
-            "role": "쓰기 직전 → pre write",
-            "id": "surface-pretooluse-write",
-            "detail": "경로·내용·우회패턴 매칭 + write-time hard-deny(상세 4g/4h): SKILL-DESC-CAP/CMD-DESC-LONG · COMMONS-PROSE/NO-DODONT · DODONT-LONG/SECRET-LITERAL/HANDOFF-SCATTER · INJECT-NON-ENGLISH+CLAUDE-MD/COMMONS-OVERSIZED+HISTORY(CLAUDE.md·commons.md 저장시점 한글+byte cap 8000+이력 · commit 백스톱). stdout JSON(deny)/stderr(warn)"
-          },
-          {
-            "name": "PreToolUse(MCP)",
-            "role": "MCP 툴 호출 직전 → pre tool",
-            "id": "pre-mcp",
-            "detail": "modules/annotation-guard.ts — matcher `mcp__.*`. MCP 툴은 그간 무가드(Bash/Write만). 훅에 annotation 부재 → config 레지스트리(`config/tool-annotations.json`·repo override)로 tool명→hint(readOnly/destructive/openWorld/sensitive) 분류 후 Rule-of-Two: mutation=warn · destructive+openWorld=block. toggle `annotationGuard`."
-          },
-          {
-            "name": "PostToolUse",
-            "role": "도구 호출 직후 → post bash / edit",
-            "id": "surface-posttooluse",
-            "detail": "exit/파일경로로 실패 라우팅, L0 편집 경고, c6 ing-staleness(코드 편집 카운트 bump). errors 큐 / stderr"
-          },
-          {
-            "name": "Stop",
-            "role": "에이전트 응답 종료 → 마지막 assistant 텍스트 기반 marker 게이트들 + staleness warn",
-            "id": "surface-stop",
-            "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 Stop 훅 (아래). decision:block marker 게이트(recommend·convergence·ing·architecture·ship) + warn-only(staleness·context-rot·prefs-drift). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
-            "children": [
-              {
-                "name": "recommend stop-check",
-                "role": "박스로 종료 시 auto-proceed 강제 (정밀 decision:block)",
-                "id": "guard-recommend-stop-check",
-                "detail": "non-present default mode 인데 답변이 **진짜 박스/auto-pick 줄로 끝나면**(endsOnBox=마지막 ~2 비어있지않은 줄 검사) `decision:block` 으로 모델 재호출=강제. 정밀: tail=2 라 박스 뒤 작업/요약 따라오면 무발화 → 정상 땐 'Stop hook error' 안 뜨고 진짜 박스-멈춤만 강제(에러≠노이즈). 루프가드=stop_hook_active. (modules/recommend.ts)"
-              },
-              {
-                "name": "convergence stop-check",
-                "role": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
-                "id": "guard-convergence-stop-check",
-                "detail": "응답의 재발신호(config/convergence-triggers.json) 감지 시 enforce(`convergenceEnforce` 기본 ON): `🧬 CONVERGENCE` 계정 줄 없으면 `decision:block` — 기록 id 또는 `해당 없음` 강제(ing/architecture stop-check 동형 marker 게이트 · stop_hook_active anti-wedge 체인당 1블록 · off=레거시 warn). 신호별 1회(convergence-nudge.json)."
-              },
-              {
-                "name": "ing staleness-check",
-                "role": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
-                "id": "guard-ing-staleness-check",
-                "detail": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
-              },
-              {
-                "name": "ing stop-check",
-                "role": "매턴 ING 상태 보고 강제 (decision:block)",
-                "id": "guard-ing-stop-check",
-                "detail": "매 응답에 `🔄 ING` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. 코드편집뿐 아니라 측정·verdict·에이전트착륙도 포착(response-marker 기반·recommend stop-check 동형). 게이트=`isManaged()`(lib/config.ts): 내구성 거버넌스 마커(config.json·ARCHITECTURE·.harness/.sidecar dir·repo-root CLAUDE.md) 중 하나라도 있으면 발화. loop guard 1회/chain. (modules/ing.ts)"
-              },
-              {
-                "name": "architecture stop-check",
-                "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
-                "id": "guard-architecture-stop-check",
-                "detail": "ing stop-check 의 설계판 — **조건부**: 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). 게이트=`pick()`(ARCHITECTURE.json/.md 존재)=설계 SSOT subject-게이트, 설계파일 생기는 순간 자동 발화. (modules/architecture.ts)"
-              },
-              {
-                "name": "ship stop-check",
-                "role": "impl/fix 후 verified-merge 진입 강제 (하이브리드 decision:block)",
-                "id": "guard-ship-stop-check",
-                "detail": "pr-cycle/ship ENTRY 게이트 — 미커밋 CODE diff 가 남았는데 응답에 `🚢 SHIP` 마커가 없으면 차단. marker-only 아님(하이브리드): clean-tree 성공경로는 실제 머지로만 도달(텍스트로 위조 불가), `🚢 SHIP: 보류(<사유>)`=명시적 WIP 유예. 게이트=`isManaged()` · anti-wedge 1/chain. cycle-docs-pr 을 inject 텍스트→결정적 강제로 승격. (modules/ship.ts)"
-              },
-              {
-                "name": "injects context-check",
-                "role": "컨텍스트 fill rot 알람 (warn-only · 절대 block 아님)",
-                "id": "guard-injects-context-check",
-                "detail": "긴 세션이 context 창을 채우면 attention 저하(context-rot·lost-in-middle, 연구 ~150-400K대)로 에이전트가 둔해진다 → transcript 의 마지막 compact_boundary 이후 바이트로 현재 window(≈bytes/4 tok) 추정, WARN(200k)/LOUD(350k) 넘으면 /compact·새세션 권고. inject footprint(고정)와 별개=대화 누적분 감시. anti-wedge stop_hook_active. (modules/injects.ts)"
-              },
-              {
-                "name": "prefs stop-check",
-                "role": "prefs 언어축 drift 알람 (warn-only · 절대 block 아님)",
-                "id": "guard-prefs-stop-check",
-                "detail": "턴마감 prefs 언어축 drift WARN(차단 아님) — DOCS: diff 의 doc(.md·README·CHANGELOG) 한글 산문 추가(백틱 면제) · RESPONSE: 응답 산문이 prefs.response 와 거의 다르면(Hangul<10% 휴리스틱). CODE축은 codeLangViolation(post.ts)이 per-edit 담당→제외. anti-wedge stop_hook_active. (modules/prefs.ts)"
-              }
-            ]
-          },
-          {
-            "name": "PreCompact·PostCompact",
-            "role": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
-            "id": "surface-precompact-postcompact",
-            "detail": "매-턴 inject(commons·recommend·prefs·easy·load·ing)=UserPromptSubmit · 세션-스코프(architecture·git-context·toolkit·companions+easy풀)=SessionStart→컴팩션증발→Pre/PostCompact 재주입. `lib/inject.ts` emitInject=이중배선(settings+plugin) 2×를 프롬프트/세션키 dedup→매턴·SessionStart 1회(inject-ts-1). `injects`=footprint"
-          },
-          {
-            "name": "체크포인트",
-            "role": "commit/세션 → lint / ci / ing",
-            "id": "surface-checkpoint",
-            "detail": "검증·신선도·인계. exit+stderr. `ship`=sidecar-repo 전용 · inject-bloat 가드: injectCaps+injectBudget+INJECT-NON-ENGLISH(재주입 doc 한글차단)+CLAUDE-MD-OVERSIZED(CLAUDE.md byte cap 8000) — ALWAYS-ON·모든repo·config불필요·diff-aware = context-rot 재발방지 · lint↔ship 공유"
-          }
-        ]
-      },
-      {
-        "name": "layers — 층 구조",
-        "role": "1=바닥(실행 입구) → 5=꼭대기(규칙 데이터)",
-        "id": "group-layers",
-        "detail": "재사용성의 비밀: 1–4층이 5층을 하드코딩하지 않는다.",
-        "children": [
-          {
-            "name": "L1 실행 입구",
-            "role": "bin/sidecar — 런타임 자동탐색",
-            "id": "layer-l1",
-            "detail": ""
-          },
-          {
-            "name": "L2 디스패처",
-            "role": "cli/index.ts — 명령 라우팅 진입점",
-            "id": "layer-l2",
-            "detail": ""
-          },
-          {
-            "name": "L3 공용 부품",
-            "role": "lib/ — 경로찾기·로깅·실행·직렬화",
-            "id": "layer-l3",
-            "detail": "",
-            "children": [
-              {
-                "name": "paths.ts",
-                "role": "repo-root 상향 탐색",
-                "id": "lib-paths-ts",
-                "detail": "config.json→.git 순, SIDECAR_REPO_ROOT override"
-              },
-              {
-                "name": "config.ts",
-                "role": "harness.config.json 읽어 기본값과 머지",
-                "id": "lib-config-ts",
-                "detail": "모든 모듈의 단일 설정원"
-              },
-              {
-                "name": "log.ts",
-                "role": "구조화 로그",
-                "id": "lib-log-ts",
-                "detail": "info/ok/warn/loudFail"
-              },
-              {
-                "name": "json.ts",
-                "role": "JSON 직렬화 유틸",
-                "id": "lib-json-ts",
-                "detail": ""
-              },
-              {
-                "name": "exec.ts",
-                "role": "셸/프로세스 실행",
-                "id": "lib-exec-ts",
-                "detail": "execShell=bash -lc, execArgs=직접 spawn"
-              },
-              {
-                "name": "lockdown.ts",
-                "role": "L0 잠금 파일 검사 (opt-in)",
-                "id": "lib-lockdown-ts",
-                "detail": ""
-              }
-            ]
-          },
-          {
-            "name": "L4 기능 모듈",
-            "role": "modules/*.ts — 언제·어떻게 검사할까",
-            "id": "layer-l4",
-            "detail": "① 완전 범용 등급만 포함",
-            "children": [
-              {
-                "name": "pre",
-                "role": "정규식 규칙 엔진",
-                "id": "module-pre",
-                "detail": "규칙은 전부 외부 JSON"
-              },
-              {
-                "name": "post",
-                "role": "exit/파일경로만 봄",
-                "id": "module-post",
-                "detail": "도메인 지식 0"
-              },
-              {
-                "name": "prompt",
-                "role": "키워드→힌트 매핑",
-                "id": "module-prompt",
-                "detail": "키워드는 외부 JSON"
-              },
-              {
-                "name": "lint",
-                "role": "staged-L0·신선도·수렴 + doc-gate (commit 전 게이트)",
-                "id": "module-lint",
-                "detail": "staged 변경에 대한 commit-time 게이트 모음. CHANGELOG·ARCHITECTURE(.json|.md) 미동반=block (README 는 비강제·advisory update-in-place · pr-cycle은 ing 보드 현행화도 gate). 개별 체크는 children.",
-                "children": [
-                  {
-                    "name": "SHADOW-DESC (4f)",
-                    "role": "명령 desc 인지 (warn)",
-                    "id": "check-shadow-desc-4f",
-                    "detail": "commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(sidecar-repo 한정·commands/ 존재 시). sidecar s18 포팅"
-                  },
-                  {
-                    "name": "CMD-DESC-LONG (4f-min)",
-                    "role": "명령 desc 미니멀 cap (block)",
-                    "id": "check-cmd-desc-long-4f-min",
-                    "detail": "commands/*.md description codepoint ≤ `lint.cmdDescCap`(기본 320)인지 — 1400 천장(SHADOW-DESC)과 별개의 빡빡한 '미니멀' 선. 초과면 차단: 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로. write-time 도 같은 cap deny(`shadow.ts:descWriteViolation`→pre.ts) · 0=off"
-                  },
-                  {
-                    "name": "INJECT-OVERSIZED (4j)",
-                    "role": "inject별 개별 바이트 cap (block)",
-                    "id": "check-inject-oversized-4j",
-                    "detail": "각 inject 소스가 **자기 cap** 이하인지 — `lint.injectCaps` 맵(path→budget · `/`끝=그 dir `*.md` 각각). recommend/easy 는 lang 변형(recommend.md+recommend.<lang>.md · prefs response 로 택1 주입): 변형셋은 base별 MAX 1회만 총합계상. 산문 비대=매 턴 context 세금이라 소스 lean(emit 절단=손실 금지). commons/CLAUDE 는 각자 format lint. 0=off"
-                  },
-                  {
-                    "name": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",
-                    "role": "commons·CLAUDE do/dont 양식 (block)",
-                    "id": "check-commons-prose-no-dodont-dodont-incomplete-4g",
-                    "detail": "**commons.md(또는 .harness override) + 루트 CLAUDE.md** 각 `## slug` 섹션이 `- do:` AND `- dont:` 줄만(둘 다 필수·산문 금지)인지 — 첫 `## ` 앞 preamble 면제 · 서브폴더 CLAUDE.md(folder-docs)는 자유양식 제외. 거버넌스/프로젝트규칙 SSOT 산문 재비대 + 한쪽-누락 차단(`commons.ts:lintCommonsFormat`+lintCommonsText)"
-                  },
-                  {
-                    "name": "DODONT-LONG (4h)",
-                    "role": "do/dont 길이 cap (block)",
-                    "id": "check-dodont-long-4h",
-                    "detail": "staged commons.md + 루트 CLAUDE.md 의 do/dont 엔트리(연속줄 합산→cap 우회 차단) codepoint 가 `lint.dodontCap`(200) 초과 신규/증가면 차단. HEAD diff-aware grandfather · 서브폴더 제외 · write-time 선차단(`commonsWriteViolation`/`dodontLength`)은 Write-only(Edit fragment skip → commit-time 4g/4h 백스톱, 경계섹션 false-pos 회피)"
-                  },
-                  {
-                    "name": "FOLDER-GUIDE-MISSING (4i)",
-                    "role": "폴더 가이드 (block)",
-                    "id": "check-folder-guide-missing-4i",
-                    "detail": "staged 폴더(folderGuides)에 CLAUDE.md 없으면 차단(존재만·folder-docs)"
-                  },
-                  {
-                    "name": "HELP-BACKTICK (4j)",
-                    "role": "HELP 백틱 위생 (block)",
-                    "id": "check-help-backtick-4j",
-                    "detail": "cli/index.ts HELP 리터럴 내 이스케이프 안 된 백틱 차단(help/build 깨짐 재발 박제·텍스트스캔)"
-                  }
-                ]
-              },
-              {
-                "name": "naming",
-                "role": "repo 전수 비-canonical 이름 audit (write-guard 의 backlog 짝)",
-                "id": "module-naming",
-                "detail": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름을 전수 스캔(`offendingToken` 재사용 = naming-guard 와 동일 판정). write-time naming-guard 는 새 파일만 막아 기존 backlog 를 못 보던 갭을 메움.",
-                "children": [
-                  {
-                    "name": "출력 모드",
-                    "id": "detail-output-mode",
-                    "detail": "기본 read-only 보고(exit 0) · `--gate`=위반 시 exit 1(commit/CI 게이트) · `--ing`=요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo 감사는 각 repo 안에서 돌려 그 repo ING 에 착지."
-                  },
-                  {
-                    "name": "생태계-native 면제 (오탐 방지)",
-                    "id": "detail-native-exempt",
-                    "detail": "native-canonical-first: Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)."
-                  }
-                ]
-              },
-              {
-                "name": "install",
-                "role": "공용(전역) 부트스트랩 — clone+래퍼+전역훅 (init=per-repo 와 별개)",
-                "id": "module-install",
-                "detail": "SSOT=scripts/install.sh(curl 가능); `sidecar install`은 이를 위임. clone dancinlab/sidecar→~/.sidecar/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/sidecar · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
-              },
-              {
-                "name": "lab",
-                "role": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
-                "id": "module-lab",
-                "detail": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]` — lumen/rtsc/carbon-capture 형제 골격 1발 스캐폴드. files-only(git init/push 없음).",
-                "children": [
-                  {
-                    "name": "스켈레톤 치환·방출",
-                    "role": "토큰 템플릿 → 타깃",
-                    "id": "detail-lab-skeleton",
-                    "detail": "`templates/lab/` 토큰화 스켈레톤(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`)을 재귀 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 방출. never-clobber(--force 만 덮어씀)·--dry-run 보고전용·빈 dir 은 .gitkeep"
-                  },
-                  {
-                    "name": "방출물",
-                    "role": "생성되는 파일셋",
-                    "id": "detail-lab-emitted",
-                    "detail": "src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger)"
-                  },
-                  {
-                    "name": "생성 CLAUDE.md 규약",
-                    "role": "demiurge 교차-repo 규약 2",
-                    "id": "detail-lab-claude-conventions",
-                    "detail": "생성 CLAUDE.md 가 명시: hexa-lang stdlib(d3 — 구현코드=canonical hexa-lang stdlib, repo는 docs/manifest만 consume) + QFORGE 컴퓨트 기본엔진(d_qforge_default — DFT/el-ph 기본=QFORGE-native, QE는 미전환 fallback·≤1% gate·deck=hexa deck · non-compute lab은 skip)"
-                  }
-                ]
-              },
-              {
-                "name": "shadow",
-                "role": "sidecar commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
-                "id": "module-shadow",
-                "detail": "plan|remove|--force. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수작성 동명파일은 skip. regen 은 소스에 없는 marker-shadow(폐기된 명령)를 orphan-prune(손수작성은 보존) — 명령 폐기 시 bare /cmd 자동 청소. 사이드카 무의존·재생성 가능(플러그인 미설치 폴백).",
-                "children": [
-                  {
-                    "name": "--force heal",
-                    "role": "마커-없는 stale 치유",
-                    "id": "detail-force-heal",
-                    "detail": "`--force` 는 마커-없는 충돌도 source(SSOT)로 덮어써 마커 도입 *전* stale shadow 를 heal (@convergence SHADOW_PREMARKER_STALE: 마커없는 옛 shadow 가 손수작성 false-positive 로 skip 돼 source 의 `Triggers —` 줄을 잃으면 맨-텍스트 명령 인지가 죽는다)."
-                  },
-                  {
-                    "name": "마커 위치",
-                    "role": "frontmatter 뒤 삽입",
-                    "id": "detail-marker-location",
-                    "detail": "마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로 앞에 붙이면 picker 가 마커를 desc 로 표시(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). desc 품질은 lint 4f(SHADOW-DESC) 게이트."
-                  },
-                  {
-                    "name": "hexa 위임자",
-                    "role": "이웃 CLI 위임",
-                    "id": "detail-hexa",
-                    "detail": "일부 commands/*.md 는 `hexa` 위임자(/hexa·/cloud·/dojo·/deck·/verify·/atlas — hexa 부재 시 graceful echo; sidecar 자체 dojo 는 /hdojo). ⚠️ frontmatter argument-hint 중첩 큰따옴표 금지(YAML 깨짐) — 안쪽은 작은따옴표."
-                  }
-                ]
-              },
-              {
-                "name": "pr-cycle",
-                "role": "push→PR→검증머지→로컬 base sync",
-                "id": "module-pr-cycle",
-                "detail": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→로컬 base ff-sync→merged worktree sweep→stale-PR reaper. main/master 에선 거부.",
-                "children": [
-                  {
-                    "name": "로컬 ff-sync",
-                    "role": "로컬 base 뒤처짐 방지",
-                    "id": "detail-ff-sync",
-                    "detail": "`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부."
-                  },
-                  {
-                    "name": "stale-PR reaper",
-                    "role": "내 열린 PR 전수 정리",
-                    "id": "detail-stale-pr-reaper",
-                    "detail": "내 다른 열린 PR 전수: MERGEABLE=자동 squash머지 · CONFLICTING/blocked=rebase/`gh pr close` 안내와 함께 큰소리 보고 · `--no-reap` 차단. 중단/실패한 머지가 영구 방치(충돌로 썩음)되던 누수 차단."
-                  },
-                  {
-                    "name": "worktree 누적 한계",
-                    "role": "[gone] 못 거두는 워크트리",
-                    "id": "detail-worktree",
-                    "detail": "sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 의 isolation:worktree 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적. SessionStart `worktree gc` 의 age 백스톱(HEAD>maxAgeDays 기본3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거."
-                  }
-                ]
-              },
-              {
-                "name": "ship",
-                "role": "구현 후 모든 설치 surface 에 한 번에 전파 (orchestrator)",
-                "id": "module-ship",
-                "detail": "pr-cycle(검증 머지) → self-update(전역 CLI git-pull) → shadow(commands/ 재미러) 를 한 명령으로 올바른 순서 실행, 단계 실패 시 즉시 중단. shadow 빠뜨리면 새 슬래시가 picker 에 안 떠 '반영 안됨' 재발 → 셋을 묶어 락스텝. 플러그인(/plugin) 설치본은 별도 surface · `--no-doc` pr-cycle 로 forward"
-              },
-              {
-                "name": "verify",
-                "role": "검증 명령 병렬 실행",
-                "id": "module-verify",
-                "detail": "명령은 config 선언"
-              },
-              {
-                "name": "ci",
-                "role": "검증 명령 병렬 실행 + CI scaffold",
-                "id": "module-ci",
-                "detail": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1). `ci scaffold` = `.github/workflows/ci.yml` 방출. `ci.fallback` = cost-free: `pick-runner` 가 self-hosted pool probe → 무료 self-hosted·없으면 github-hosted fallback. `ci.cachePaths` → `actions/cache@v4` warm"
-              },
-              {
-                "name": "paper",
-                "role": "demiurge 하우스 논문 스캐폴드·표지·빌드·배포(Zenodo/arXiv)",
-                "id": "module-paper",
-                "detail": "new(스캐폴드) → cover(imagine 표지) → build(xelatex+bibtex×3) → publish/update/unpublish/status(배포). NeuroLM 정답지 미러 + 하드 content-floor 게이트.",
-                "children": [
-                  {
-                    "name": "build content-floor 게이트",
-                    "id": "detail-build-content-floor",
-                    "detail": "build=xelatex+bibtex×3 · pages/refs/result-figs 보고 · 하드 2게이트 ≥10p(g51) + ≥9 result figs(cover 제외 = NeuroLM바) · 둘다 `--min-*` 0 으로 해제 · 미달 exit3 · 깨진/빈 PDF 실패처리."
-                  },
-                  {
-                    "name": "NeuroLM 정답지 미러",
-                    "id": "detail-neurolm",
-                    "detail": "외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용) 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림(TikZ 아키텍처 + pgfplots 막대 · 캡션=결과연결) · g5 tier-badge · natbib. 마케팅 표지는 허용(의도된 divergence). 손조립 규율을 도구로 박제."
-                  },
-                  {
-                    "name": "배포 수명주기 (Zenodo/arXiv)",
-                    "id": "detail-zenodo-arxiv",
-                    "detail": "publish/update/unpublish/status `--to zenodo|arxiv|both` · 키는 secret · 원장 PAPERS/<slug>/publish.json. Zenodo=완전 REST(업로드→메타→발행→DOI · update=new-version · unpublish=DRAFT 삭제). arXiv=제출 API 없음(SWORD 폐지)→tar.gz 패키징 + 제출 가이드(가짜 자동제출 안 함)"
-                  }
-                ]
-              },
-              {
-                "name": "imagine",
-                "role": "AI 이미지+영상 생성 (fal/openai · 키 secret 경유)",
-                "id": "module-imagine",
-                "detail": "출력 확장자로 분기: 이미지(.png/.jpg)=fal `openai/gpt-image-2`(또는 -b openai); 영상(.mp4/.mov)=fal Seedance 2.0(`-i` 없으면 text-to-video·있으면 image-to-video). 동일 queue+poll · 프롬프트는 FILE · 키는 secret get·-K curl 로 argv 누출 방지 · -m override"
-              },
-              {
-                "name": "email (alias mail)",
-                "role": "Postmark 트랜잭션 메일 발송 (토큰 secret 경유)",
-                "id": "module-email-alias-mail",
-                "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
-              },
-              {
-                "name": "accounts",
-                "role": "멀티계정 로스터 (secret 스토어 파생 · 도메인 데이터 0)",
-                "id": "module-accounts",
-                "detail": "로스터 SSOT=secret 스토어: 그룹 패턴(~/.sidecar/accounts.json · {n} 치환)에 맞는 키에서 멤버십 파생 — config 측 인덱스 리스트 없음. list/status(쌍 무결성)·code <n|email>(gmail API OAuth·curl -K·--wait=호출 후 수신분만·exit 0/1/2/3)·add(패턴 이메일+rotate 비번)·retire(store-to-store→legacy 이동·중복 가드)·init. 비밀번호 미출력 · accounts.jsonl 원장(키만)"
-              },
-              {
-                "name": "fable",
-                "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
-                "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5` 위임(백엔드 불변). 자식 기본 --sources project,local=전역훅 미상속(스톨차단)·기본 read-only(헤드리스 무승인→쓰기거부; --write=bypassPermissions 로 Write/Bash/git). --timeout=opt-in. -c·-r 다중턴. --bg=detach→잡ID(result/tail/wait/list). opus fallback 무조건 금지(--settings·opus제외). 주의=fable.md."
-              },
-              {
-                "name": "fable-mode",
-                "role": "세션 스코프 분업 토글 (on/off)",
-                "id": "module-fable-mode",
-                "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 분업 지시: **설계·분석·리서치·리뷰·계획·난제(막힌 문제·까다로운 버그/증명/알고리즘)=Fable 5 위임**(sidecar fable), **실제 구현·빌드·git·commit·ship=로컬(기본진행)**. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 재귀금지. 3표면 배선."
-              },
-              {
-                "name": "goal-guard",
-                "role": "작업-punt 차단 Stop 게이트 (다음-세션 미루기 + 잔여 방치)",
-                "id": "module-goal-guard",
-                "detail": "Stop-hook 가드 · 2중 캐치: ① 답변 꼬리(~8줄)가 '다음 세션' 미루기면 block ② 본문 어디든 '잔여'(남은 작업)가 부정형 없이 언급되면 block — 같은 줄 24자 창의 없/0건/완료·마무리·처리·해소 과거형은 통과, 잔여는 전체 본문 스캔. decision:block 으로 지금 마무리 강제 · stop_hook_active 단발 → 진짜 블로커는 재-stop 통과(session-terminal). CC 전용 · 배선=hooks.json+setup.ts Stop[]."
-              },
-              {
-                "name": "hypotheses",
-                "role": "가설 폴더 단일 정규명(HYPOTHESES/) 강제·감사·마이그레이션",
-                "id": "module-hypotheses",
-                "detail": "config `hypotheses.dir`(기본 HYPOTHESES/)로 가설(pre-register→falsify→run→verdict) 작업을 한 폴더 고정. hypothesis-guard(pre write/bash)가 신규 stray 폴더(per-repo aliases 예 UNIVERSE·내장 hypothes*/가설* 패턴) 차단(신규=block·기존=warn·name-pattern 상시). check=감사(--gate) · migrate=git mv→canonical(병합) · scaffold · show."
-              },
-              {
-                "name": "pod {poll|watch|unwatch|list}",
-                "role": "GPU pod 자동 폴링 (>=10분 cadence)",
-                "id": "module-pod-poll",
-                "detail": "modules/pod-poll.ts — 발사 후 수동 ssh 확인을 canonical 명령으로 일반화(runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북). 모든 원격 op 은 `hexa cloud` 경유(commons c11, 직접 ssh/curl 금지).",
-                "children": [
-                  {
-                    "name": "hexa cloud 경유 op",
-                    "role": "canonical-cli 재사용",
-                    "id": "detail-pod-poll-cloud",
-                    "detail": "`alive` 생존(RUNNING/GONE)·`exec` 프로브(GPU-util 또는 `--ssh-check`)·`copy-from` pull·`rm` teardown. poll=one-shot, idle-streak `--done-after N`(기본 2)로 sustained-idle done 판정."
-                  },
-                  {
-                    "name": "no-escape-hatch 기본값",
-                    "role": "안전 비파괴 (read-only)",
-                    "id": "detail-pod-poll-readonly",
-                    "detail": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
-                  },
-                  {
-                    "name": "watch cadence",
-                    "role": "레지스트리 + 구동",
-                    "id": "detail-pod-poll-cadence",
-                    "detail": "레지스트리 `~/.sidecar/pod-watch.json`(flat 전역 규약 · pool.json 동형) + cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(기본 비파괴 · crontab write 불가 환경 자동 fallback · interval >=600s c19)."
-                  }
-                ]
-              },
-              {
-                "name": "fleet (+ lab/abstract/full)",
-                "role": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
-                "id": "module-fleet-lab-abstract-full",
-                "detail": "MODES 맵(fleet·lab·abstract·full)이 엔진 1개를 공유 — roster 파일·런북·어휘만 다르다. 4모드 공통 go/stop/status, `/fleet <mode> …`는 sidecar 가 `$ARGUMENTS` forward.",
-                "children": [
-                  {
-                    "name": "fleet (기본)",
-                    "role": "빌드/멀티레인",
-                    "id": "mode-fleet",
-                    "detail": "roster `.harness/fleet/active` + templates/fleet.md. N개 독립 레인을 background Agent로, 각 레인은 착륙 즉시 다음 라운드를 스스로 발사(barrier 없음)."
-                  },
-                  {
-                    "name": "fleet lab",
-                    "role": "research 특화",
-                    "id": "mode-fleet-lab",
-                    "detail": "roster `lab` + fleet-lab.md. 레인=막힌 프론티어(벽). 싼 research gate→정당화 시만 비싼 implement/measure→측정(c2)→SSOT(blocking-frontiers)→재-research/벽(🧱 reopenable)."
-                  },
-                  {
-                    "name": "fleet abstract",
-                    "role": "추상화 특화",
-                    "id": "mode-fleet-abstract",
-                    "detail": "roster `abstract` + fleet-abstract.md. 레인=누적 법칙군/천장. census LAWS→한 겹 peel해 공유 trade-off(메타법칙) 도출→escape 원리 발명→반증가능 예측으로 캐스팅해 compute/research 핸드오프. 메타법칙(🌌)은 새 lens로 reopen, 산출 전부 미검증(d6 좌표≠발견), lazy-ceiling 금지(c14 d)."
-                  },
-                  {
-                    "name": "fleet full",
-                    "role": "풀스택",
-                    "id": "mode-fleet-full",
-                    "detail": "roster `full` + fleet-full.md. 프론티어가 3 페이즈 순환 research→implement→(벽)→abstract→falsify — implement 스킵 금지(약한 레버도 싼 probe 로 벽 측정 후 abstract). 기본 순차(afg)·`parallel` 일 때만 Workflow fan-out. 게이트는 비용 — 싼/로컬 자동·비싼(pool/GPU)만 4축+go. depletion=양축 dry"
-                  }
-                ]
-              },
-              {
-                "name": "errors",
-                "role": "(kind,code)→severity 분류",
-                "id": "module-errors",
-                "detail": "맵 로드 = bundled config/ defaults 위에 per-repo `.harness/` override 병합(repo 가 code별 우선) → 새 bundled 규칙이 stale repo 맵에서 fallback-block 으로 둔갑 방지"
-              },
-              {
-                "name": "ledger",
-                "role": "에이전트 작업 등록 (중복 방지)",
-                "id": "module-ledger",
-                "detail": "도메인 무관"
-              },
-              {
-                "name": "ing",
-                "role": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
-                "id": "module-ing",
-                "detail": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다.",
-                "children": [
-                  {
-                    "name": "저장 = ing ref (worktree 아님)",
-                    "id": "detail-ing-ref-worktree",
-                    "detail": "done=scrub. 보드는 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref) 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. 보드 cwd=`git rev-parse --show-toplevel`(REPO_ROOT fallback)로 해석 — config-less worktree 가 sibling repo ref 에 쓰던 누수 차단"
-                  },
-                  {
-                    "name": "verb 의미 · stdin",
-                    "id": "detail-verb-stdin",
-                    "detail": "add=work · next=다음 · done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 중단작업 복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피."
-                  },
-                  {
-                    "name": "적체 방지 (나이 게이트)",
-                    "id": "detail-pileup-gate",
-                    "detail": "inject/show 가 각 work 항목에 나이 `⏳Nd` 표시 + `ing.staleDays`(기본 5) 초과 묵음 또는 `ing.maxActive`(기본 12) 초과 시 매 턴 `🧹 ING 적체 — … 끝난 항목 지금 done 로 scrub` 강제 지시. 자동삭제 아님 — 완료분이 ACTIVE 로 썩는 것 차단(나이는 done-vs-active proxy)."
-                  }
-                ]
-              },
-              {
-                "name": "bitter-gate",
-                "role": "JSONL 빈도 분석",
-                "id": "module-bitter-gate",
-                "detail": "dormant 규칙 폐기 검토"
-              },
-              {
-                "name": "audit",
-                "role": "JSONL 카운트 기반 6축 스코어카드",
-                "id": "module-audit",
-                "detail": ""
-              },
-              {
-                "name": "gc",
-                "role": "마크다운 가이드 링크 drift 탐지",
-                "id": "module-gc",
-                "detail": ""
-              },
-              {
-                "name": "changelog",
-                "role": "이력 SSOT = CHANGELOG.jsonl (append + auto-prune)",
-                "id": "module-changelog",
-                "detail": "이력을 `CHANGELOG.jsonl`(newest-first · {ts,title,body})로. `add`(body=stdin)+keep-N 자동 트림·`list`·`render`·`prune --keep N|--older-than D`·`autoprune`(SessionStart 배선·cap 초과시만)·`migrate`(md→jsonl). keep-N=lint.changelog.keep(기본 30)·옛 엔트리는 git 보존. CHANGELOG-MISSING 게이트는 .jsonl staged 요구"
-              },
-              {
-                "name": "architecture",
-                "role": "설계 SSOT 스켈레톤 주입 (SessionStart + Compact · detail 은 온디맨드)",
-                "id": "module-architecture",
-                "detail": "스켈레톤(title+summary+2단계 목차)만 additionalContext 주입 — SessionStart + PreCompact/PostCompact(NOT per-turn · 정적 doc 의 매턴 풀-주입은 대용량-doc 안티패턴). 세부(`detail`셀·전체 트리·convergence)는 파일에 두고 `show`/`search`/Read 온디맨드. 턴-마감 게이트는 Stop 훅 `architecture stop-check` 강제(학습=convergence INJECT_DOC_SKELETON_ONDEMAND)",
-                "children": [
-                  {
-                    "name": "lint (트리 위생 · c4 강제)",
-                    "role": "fine-decomposition 게이트",
-                    "id": "detail-lint-c4",
-                    "detail": "`architecture lint` = 셀 cap(ARCH-BIG-CELL 300), piled>6(ARCH-PILED), history키(ARCH-HISTORY), rendered노드(name|role|detail) id 부재/중복/형식(ARCH-ID-MISSING/DUPE/FORMAT)=block. rendered 0 비-canonical=ARCH-SCHEMA-UNRECOGNIZED(warn · id게이트 silent no-op). 최상위 `convergence` 제외"
-                  },
-                  {
-                    "name": "search (id 검색)",
-                    "role": "노드를 id/텍스트로 찾기",
-                    "id": "detail-search",
-                    "detail": "`architecture search <q>` = id/name/role/detail 대소문자무시 substring 매칭 → 매칭 노드의 id + breadcrumb 경로 출력. 각 트리 노드는 고유 kebab-case id 보유(레거시 `slug`/한글키 read-fallback · 카테고리는 id prefix `guard-`/`module-`/`config-`… 로 흡수), columns 의 `id` 컬럼으로 표시·HTML 뷰어 검색에도 노출"
-                  },
-                  {
-                    "name": "convergence 재발학습 store (구 convergence 모듈 흡수)",
-                    "role": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
-                    "id": "detail-convergence-store-convergence",
-                    "detail": "재발방지 학습 SSOT=`convergence.records[]`(id·state·value·threshold·source). `add`=`--source` 필수·id 자동(파일명 slug)·동일 source 레코드 있으면 BLOCK→`for <file>` 검토 후 `edit`/`--new`(중복누적 금지). 터치 시 `convergenceForFile` 가 그 학습을 PreToolUse `additionalContext` inject(`convergenceOnTouch` ON)"
-                  },
-                  {
-                    "name": "gate-stop-check (type:gate 직접갱신 강제)",
-                    "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
-                    "id": "detail-gate-stop-check",
-                    "detail": "Stop 훅 — 출력에 게이트/verdict 신호(config/gate-signals.json)+`🔬 GATE` 마커 없으면 block → ARCHITECTURE.json 의 `type:\"gate\"` 노드 verdict 직접 update-in-place 유도(별도 store 아님) → `🔬 GATE 갱신/해당없음`. CC-only·세션당1회. 배선 TWO surface: setup.ts Stop[](install-hooks→settings.json)+hooks.json (setup-ts-1)"
-                  }
-                ]
-              },
-              {
-                "name": "models",
-                "role": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축 · 슬래시 `/models` — CC 기본 `/model` 충돌 회피로 rename)",
-                "id": "module-models",
-                "detail": "`models {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(SSOT)에 등록. 필드 id·arch·version·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재대조 · `prune`=HF+sha 확인 후 weight 삭제 · writer=byte-불변 splice(`dataset` 평행)"
-              },
-              {
-                "name": "dataset",
-                "role": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
-                "id": "module-dataset",
-                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·version(family SemVer)·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar models` 과 동일 splice writer·flag 파서 미러(byte-불변)"
-              },
-              {
-                "name": "git-context",
-                "role": "stale-branch 함정 가드 (SessionStart inject)",
-                "id": "module-git-context",
-                "detail": "HEAD vs origin/<default>(main|master) 를 LOCAL ref 로 비교(fetch 없음) → BEHIND 이거나 detached-stale 이면 ⚠️ 경고 주입: '이 위치 파일은 최신이 아닐 수 있다 · git log origin/<default> -- <file> 로 이미 머지됐는지 확인 후 코드 믿어라'. clean 한 default 브랜치면 무음(노이즈 0). 재발방지: 옛 feature 브랜치에서 옛 코드를 보고 이미 머지된 작업을 중복 구현한 사고(#3736 dup #3734) 차단"
-              },
-              {
-                "name": "claudemd",
-                "role": "프로젝트 규칙 매턴 재주입",
-                "id": "module-claudemd",
-                "detail": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입(SessionStart 1회로는 긴 대화에서 묻힘) → 프로젝트 규칙을 commons급 salience 로 상주(MUST-FOLLOW 헤더 prepend). `<!-- enforce:start/end -->` 있으면 그 섹션만·없으면 전체·80KB 절단·부재 무음. 디렉토리·모듈 트리는 ARCHITECTURE.json SSOT 라 CLAUDE.md 에 중복 안 함"
-              },
-              {
-                "name": "load",
-                "role": "매턴 macOS 자원 압박 readout 주입 (CPU+RAM+swap, ⚠️ on danger)",
-                "id": "module-load",
-                "detail": "show|inject. 매 UserPromptSubmit 에 한 줄 readout(CPU·RAM·swap·wt·🕐 현재날짜시간)을 additionalContext 로 주입 — 답변 맨 위에 부하+현재시각을 상주시켜 무거운 작업 전 자각·시간감각 유지. 비-macOS 무음.",
-                "children": [
-                  {
-                    "name": "3축 신호등",
-                    "role": "CPU·RAM·swap·wt readout",
-                    "id": "detail-3",
-                    "detail": "CPU(load1÷cores·🟢<0.7 🟡<1.0 🔴≥1.0), RAM((active+wired+compressor)%+pressure), swap(🟢<2G 🟡<6G 🔴≥6G), wt(추가 worktree·🟢0-2 🟡3-9 🔴≥10). 어느 축이든 🔴/pressure≥warn 이면 선두 `⚠️` 마커 + 가드 노트(대량빌드·병렬agent·GPU 자제)"
-                  },
-                  {
-                    "name": "동기·비용안전",
-                    "role": "왜 MEMORY 를 보나",
-                    "id": "detail-sync-cost-safety",
-                    "detail": "부하로 죽는 맥은 CPU 가 아니라 MEMORY(compressor+swap 폭증)로 죽으므로 RAM압박·swap 을 같이 본다. 비용안전: sysctl+vm_stat 만(즉답) — 전체 스캔으로 수초 걸리는 `memory_pressure` CLI 는 매턴 훅에 부적합이라 의도적 회피."
-                  }
-                ]
-              },
-              {
-                "name": "toolkit",
-                "role": "명령 카탈로그 — agent 가 전 명령을 인지·사용하도록 SessionStart 주입 (sidecar TOOLKIT 패리티)",
-                "id": "module-toolkit",
-                "detail": "list|inject|json|write|check. 단일 출처=cli/index.ts `HELP` 텍스트 파싱 + keyword 트리거 매핑. inject=SessionStart 에 전 명령을 compact 카탈로그(`id — use ⟨triggers⟩`)로 주입(키워드 사각지대 보완). write=TOOLKIT.jsonl 산출. check=dispatch case 커버리지 + 커밋본 drift(`lint` TOOLKIT-DRIFT warn)"
-              },
-              {
-                "name": "companions",
-                "role": "이웃 CLI 명령 surface 주입 — agent 가 sibling 툴체인(hexa 등)을 더듬지 않고 인지하게 SessionStart 주입",
-                "id": "module-companions",
-                "detail": "toolkit 의 자매 — toolkit 이 sidecar 자신 명령을 주입하면 companions 는 이웃 CLI(hexa 등) 카탈로그를 주입. DOMAIN-AGNOSTIC: 어떤 CLI 는 데이터(harness.config.json `companions` + host `~/.sidecar/companions.json` union)라 엔진에 hexa 안 박음. 각 companion 카탈로그(default `--help`) 실행·절단·주입·부재/실패 skip"
-              },
-              {
-                "name": "sync",
-                "role": "공유파일 sync 셸 스크립트 래퍼",
-                "id": "module-sync",
-                "detail": ""
-              },
-              {
-                "name": "pool",
-                "role": "호스트 로스터 + 원격 실행 + 자원 프로브",
-                "id": "module-pool",
-                "detail": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단(allow 마커가 cwd 일치 시 해제·status 🔓 표기). ssh=execArgs 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브해 캐시 · list·status 는 라이브 부하(CPU%·RAM%·GPU util)를 SSH 병렬 프로브 ⚡뱃지(status 는 이 프로브로 reachability 겸함 · 캐시 안 함 · RAM=total−available)"
-              }
-            ]
-          },
-          {
-            "name": "L5 규칙 데이터",
-            "role": "per-repo — 무엇을 막을까",
-            "id": "layer-l5",
-            "detail": "이 층만 프로젝트별로 달라짐",
-            "children": [
-              {
-                "name": "enforcement.json",
-                "role": "pre 정규식 규칙",
-                "id": "data-enforcement-json",
-                "detail": "strict 기본(16룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음). H-RAW-GPU-RENT: raw vastai/runpodctl GPU 렌트(create/rent/launch) 차단 → hexa cloud rent 단일진입 강제(미귀속 고아포드 방지) = NO_RAW_CLOUD_CLI 코드가드(c11)의 정규식-프로파일 2중방어, exceptions 빈배열(전면차단)."
-              },
-              {
-                "name": "keywords.json",
-                "role": "prompt 트리거 키워드",
-                "id": "data-keywords-json",
-                "detail": ""
-              },
-              {
-                "name": "severity-map.json",
-                "role": "errors 분류 맵",
-                "id": "data-severity-map-json",
-                "detail": "fallback=block · 낮은 unknown_threshold (strict 기본). bundled config/ 가 base, repo `.harness/` 가 code별 override (errors 가 병합 로드)"
-              },
-              {
-                "name": "harness.config.json",
-                "role": "repo 루트 설정",
-                "id": "data-harness-config-json",
-                "detail": "project·lockdown·verify.checks 등"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "name": "plugin — 배포 (자기완결 · 공용셋)",
-        "role": "sidecar 를 Claude Code 플러그인으로 배포 — 훅 + 슬래시 명령 + CLI 본체가 ONE 유닛. 프로젝트 무관·중앙 1곳",
-        "id": "group-plugin",
-        "detail": "sidecar 를 에이전트 하네스에 배포 — 거버넌스 엔진(modules/*.ts)은 한 벌, 배선만 에이전트별. Claude Code = hooks/hooks.json+run.sh 플러그인 · Pi = pi/sidecar.ts 확장. 프로젝트 무관·중앙 1곳",
-        "children": [
-          {
-            "name": "hooks/hooks.json + hooks/run.sh",
-            "role": "거버넌스 훅 배선 (guards + injects + SessionStart) → run.sh 디스패처",
-            "id": "config-hooks-hooks-json-hooks-run-sh",
-            "detail": "run.sh = 단일 해석점: ${CLAUDE_PLUGIN_ROOT}/bin/sidecar(번들) 우선 → 전역 `sidecar` 폴백 → 둘 다 없으면 exit 0(무음). CC가 stdin 으로 주는 페이로드를 exec 로 상속(pre 가 stdin 에서 tool input 읽음)"
-          },
-          {
-            "name": "commands/*.md",
-            "role": "슬래시-명령 위임자 셋 (bare /cmd · shadow 가 미러하는 SOURCE)",
-            "id": "config-commands-md",
-            "detail": "프런트매터(description+Triggers+argument-hint+allowed-tools) + `!sidecar <cmd> $ARGUMENTS` 위임자. 플러그인 명령으로 로드 안 됨(plugin.json `commands: []` → bare /cmd 와 `/sidecar:cmd` picker 중복 방지). `shadow` 가 ~/.claude/commands/ 에 bare /cmd 미러. 공용셋·프로젝트 무관 · hook-내부 제외"
-          },
-          {
-            "name": "pi/sidecar.ts (+ modules/pi.ts)",
-            "role": "Pi 코딩에이전트 브리지 확장 — 같은 sidecar CLI 를 Pi 라이프사이클에 배선",
-            "id": "config-pi-sidecar-ts",
-            "detail": "Pi 이벤트→sidecar verb 번역(CC hooks 와 같은 CLI): before_agent_start=매턴 inject+prompt-scan · session_start=gc · tool_call=pre 가드(deny→block) · tool_result=post(advisory). Stop 하드게이트는 Pi 에 blocking stop 훅 없어 CC 전용. 설치 `sidecar pi install`. 상세 pi/CLAUDE.md"
-          }
-        ]
-      },
-      {
-        "name": "module-grading — 모듈 분류",
-        "role": "'규칙을 JSON으로 빼면 다른 repo에서 그대로 도나?'",
-        "id": "group-module-grading",
-        "detail": "YES면 ①, NO면 ③",
-        "children": [
-          {
-            "name": "① 완전 범용",
-            "role": "이 repo에 포함",
-            "id": "grade-fully-generic",
-            "detail": "pre/post/prompt/lint/verify/errors/ledger/bitter-gate/audit/gc/ing/convergence/sync/pool/architecture/claudemd"
-          },
-          {
-            "name": "② 부분 범용",
-            "role": "패턴만 문서화, 코드 미포함",
-            "id": "grade-partly-generic",
-            "detail": "구현이 특정 디렉토리 규약에 묶임 (extending.md)"
-          },
-          {
-            "name": "③ 도메인 전용",
-            "role": "포함 금지",
-            "id": "grade-domain-specific",
-            "detail": "deploy/db/ssh/health/site/정산 등 특정 인프라·비즈니스에 묶임"
-          }
-        ]
-      },
-      {
-        "name": "config-driven — config 주도 설계",
-        "role": "lib/config.ts가 harness.config.json을 읽어 머지",
-        "id": "group-config-driven",
-        "detail": "설정 0으로도 합리적 기본 동작 + 점진적 커스터마이즈",
-        "children": [
-          {
-            "name": "project",
-            "role": "로그/리포트 라벨",
-            "id": "config-project",
-            "detail": ""
-          },
-          {
-            "name": "lockdown.files",
-            "role": "L0 잠금 파일",
-            "id": "config-lockdown-files",
-            "detail": "opt-in, 기본 0개"
-          },
-          {
-            "name": "enforcementFile / keywordsFile / severityMapFile",
-            "role": "규칙 파일 위치",
-            "id": "config-enforcementfile-keywordsfile-severitymapfile",
-            "detail": "없으면 번들 기본 fallback"
-          },
-          {
-            "name": "verify.checks[]",
-            "role": "검증 명령 선언",
-            "id": "config-verify-checks",
-            "detail": "{id,cmd,timeoutMs,slow}"
-          },
-          {
-            "name": "lint.freshnessFiles[] · convergence · guides[] · ledger.staleSec",
-            "role": "기타 모듈별 대상 선언",
-            "id": "config-lint-freshnessfiles-convergence-guides-ledger-stalesec",
-            "detail": ""
-          },
-          {
-            "name": "dojo {defaultLang,stack,delegate}",
-            "role": "dojo 스캐폴더 기본 스택 (선택)",
-            "id": "config-dojo-defaultlang-stack-delegate",
-            "detail": "엔진 무하드코딩 — 선호 학습/커널 스택을 per-repo config 가 운반. delegate 설정+hexa 있으면 `hexa dojo <delegate>` 위임. 부재 시 제네릭 py stub"
-          },
-          {
-            "name": "docs.scratchDir = state",
-            "role": "산출물 단일 루트",
-            "id": "config-docs-scratchdir-state",
-            "detail": "실험·벤치·검증(verdict/claim)·스크래치 등 모든 작업 산출물을 repo-root `state/` 하나로 통일(c5). 하위 디렉토리 안 쪼갬 — `state/<id>` 평면(verdict 는 `state/<slug>/<id>.txt`). verdict/verify/atlas 가 이 경로를 공유. 재생성 가능 `build/` 만 .gitignore · 머신 자동로그는 `.harness/`"
-          },
-          {
-            "name": "docs.claudeMdSections[]",
-            "role": "repo-root CLAUDE.md 필수 섹션 게이트",
-            "id": "config-docs-claudemdsections",
-            "detail": "repo-root CLAUDE.md 필수 헤딩 (기본 `[\"## Project\",\"## Tree\"]` · commit block · `docs.ts`). 각 헤딩 존재+비어있지않은 본문 필수 · tree-계열은 ├─/└─+설명 warn. Project→`NO-DESC`/Tree→`NO-TREE`/기타→`SECTION-MISSING`. `[]`=끔. 깊은 구조 SSOT=ARCHITECTURE.json · do/dont 포맷검사는 이 섹션만 prose 면제(`commons.ts`)"
-          }
-        ]
-      },
-      {
-        "name": "debt — 들어낸 비범용 부채 (교훈)",
-        "role": "원본 도구 일반화 시 제거한 안티패턴",
-        "id": "group-debt",
-        "detail": "이 도구에서 피할 것",
-        "children": [
-          {
-            "name": "경로 하드코딩",
-            "role": "절대경로 고정",
-            "id": "debt-path-hardcode",
-            "detail": "→ repo-root 상향 탐색 + env override"
-          },
-          {
-            "name": "L0 목록 하드코딩",
-            "role": "fallback 배열에 실제 파일 박힘",
-            "id": "debt-l0-list-hardcode",
-            "detail": "→ config.lockdown (opt-in)"
-          },
-          {
-            "name": "도메인 모듈 번들",
-            "role": "배포/머니 모듈이 코어에 섞임",
-            "id": "debt-domain-module-bundle",
-            "detail": "→ ①/③ 등급 분리, ③ 제외"
-          },
-          {
-            "name": "SSOT 단일 repo 고정",
-            "role": "두 repo가 한 repo의 JSON에 수렴",
-            "id": "debt-ssot-single-repo",
-            "detail": "→ per-repo 로그, 공유는 sync로 명시"
-          },
-          {
-            "name": "검증 명령 하드코딩",
-            "role": "pnpm test 등 박제",
-            "id": "debt-verify-cmd-hardcode",
-            "detail": "→ verify.checks[]로 선언"
-          }
-        ]
-      },
-      {
-        "name": "setup — 새 repo에 세우는 절차",
-        "role": "참조: install.md(통합), extending.md(확장)",
-        "id": "group-setup",
-        "detail": "",
-        "children": [
-          {
-            "name": "1. 엔진 추가",
-            "role": "git submodule add …/sidecar .harness-engine",
-            "id": "step-1",
-            "detail": ""
-          },
-          {
-            "name": "2. config 작성",
-            "role": "cp harness.config.example.json harness.config.json",
-            "id": "step-2-config",
-            "detail": "→ 수정"
-          },
-          {
-            "name": "3. (선택) 규칙 추가",
-            "role": "cp config/enforcement.json .harness/",
-            "id": "step-3",
-            "detail": "→ repo 규칙 append"
-          },
-          {
-            "name": "4. hook 배선 (전역 1벌)",
-            "role": "sidecar install — 전역 ~/.claude/settings.json 에만 배선",
-            "id": "step-4-hook-1",
-            "detail": "GLOBAL-ONLY: per-repo .claude/settings.json 금지(전역과 중복돼 컨텍스트 2~3중 주입되던 버그). init 은 repo settings 를 안 쓰고, install-hooks --repo 는 거부. 훅은 호스트당 한 번 sidecar install 로 전역 배선 → 모든 repo 발사. (@convergence INIT-INJECT-DUP)"
-          },
-          {
-            "name": "5. 검증",
-            "role": "sidecar audit / sidecar ci list",
-            "id": "step-5",
-            "detail": ""
-          },
-          {
-            "name": "6. 운영",
-            "role": "commit 전 verify, 세션 끝 ing, 규칙 추가 전 bitter-gate",
-            "id": "step-6",
-            "detail": ""
-          }
-        ]
-      },
-      {
-        "name": "viewer — 아키텍처 뷰어",
-        "role": "이 트리(ARCHITECTURE.json)를 사람이 보는 도구",
-        "id": "group-viewer-group",
-        "detail": "JSON이 SSOT, HTML/서버는 표시 수단",
-        "children": [
-          {
-            "name": "ARCHITECTURE.html",
-            "role": "의존성 0 자립형 뷰어",
-            "id": "viewer-architecture-html",
-            "detail": "json fetch→컬럼 그리드 트리(접기·검색·다크모드·드롭 fallback)"
-          },
-          {
-            "name": "serve.py",
-            "role": "python3 serve.py [port] [--no-open]",
-            "id": "viewer-serve-py",
-            "detail": "로컬 정적 서버 + 브라우저 자동 오픈 — file:// fetch 차단 우회"
-          }
-        ]
-      }
-    ]
+  {
+   "key": "role",
+   "label": "role"
   },
-  "results": {
-    "note": "벤치·실험 결과 누적 SSOT (preserve-state · honesty). 방향 3단계(convergence 공유) pos-conv🟢|in-prog🔄|neg-conv🔴 + 결과전용 선행상태 untested⚪(등록됐으나 아직 안 잼 · 4번째 방향 아님). 세부 '왜'(막힘·불확정·무효)는 metric 자유서술. kind=bench|experiment · value=핵심결과 · metric=측정값/근거 · subject=대상. convergence 와 달리 file-touch 표면화·Stop게이트 없음 — 순수 누적(falsified/음성 보존). 같은 (kind,subject) 재측정은 update-in-place.",
-    "records": []
+  {
+   "key": "id",
+   "label": "id"
+  },
+  {
+   "key": "detail",
+   "label": "detail"
   }
+ ],
+ "tree": {
+  "name": "sidecar",
+  "role": "프로젝트-무관 AI 코딩 사이드카 — 작업 흐름에 끼어드는 게이트 집합",
+  "id": "sidecar",
+  "detail": "엔진(.ts)은 모든 repo 공유, 규칙(JSON)만 주입. 1–4층은 5층(규칙 데이터)을 하드코딩하지 않는다.",
+  "children": [
+   {
+    "name": "surfaces — 5가지 통합 지점",
+    "role": "에이전트가 무언가 하기 직전/직후 = 사이드카가 끼어들 자리",
+    "id": "group-surfaces",
+    "detail": "어떤 에이전트 런타임이든 이 5 hook으로 환원된다.",
+    "children": [
+     {
+      "name": "UserPromptSubmit",
+      "role": "사용자가 말함 → prompt",
+      "id": "surface-userpromptsubmit",
+      "detail": "키워드→플레이북 매핑, 위험어→힌트. 결과: stderr(컨텍스트 주입)"
+     },
+     {
+      "name": "PreToolUse(Bash)",
+      "role": "도구 호출 직전 → pre bash",
+      "id": "surface-pretooluse-bash",
+      "detail": "코드레벨 가드(아래 children) 를 먼저 평가 → 그 뒤 config enforcement 정규식 매칭(backup). 코드 가드는 config 보다 먼저 실행되고 끌 수 없다(profile 편집 무력화 방지) · 인라인 `# ...-ok` 마커만 예외. block=stdout JSON / warn=stderr",
+      "children": [
+       {
+        "name": "force-push 가드",
+        "role": "히스토리 재작성 push 차단",
+        "id": "guard-force-push",
+        "detail": "blind --force/-f/+refspec 차단 · --force-with-lease 허용 · `# force-ok` 이스케이프 — config H-FORCE-PUSH 와 동일 정책"
+       },
+       {
+        "name": "branch-switch 가드",
+        "role": "메인 워크트리 브랜치 전환 차단",
+        "id": "guard-branch-switch",
+        "detail": "modules/git-checkout-guard.ts — MAIN 워크트리에서 HEAD 이동하는 `git checkout <branch>`/`-b`/`switch` 차단(병렬 세션 untracked 작업 손실 #3559 방지). 링크드 워크트리·파일복원(`checkout -- path`)은 면제 · 모호한 `checkout <ref>` 는 rev-parse 확인 · `-C <path>` 우회도 차단 · config `git.guardBranchSwitch`(기본 ON)."
+       },
+       {
+        "name": "main-ref-move 가드",
+        "role": "체크아웃 없이 main ref 갈아치우기 차단",
+        "id": "guard-main-ref-move",
+        "detail": "git-checkout-guard.ts detectMainRefMove — 체크아웃 없이 SHARED main/master ref 를 `git branch -f`(재지정)·`-M/-m`(개명)·`-D/-d`(삭제)·`-C/-c`(복사)로 갈아치우는 형태 차단(branch-switch 자매·#3559 동종 · 공유 ref 라 모든 워크트리에서 위험→isMainWorktree 비게이트). feature 브랜치 삭제/개명·`fetch main:main` ff 는 통과 · config `git.guardBranchSwitch` 공유."
+       },
+       {
+        "name": "off-main-edit 가드",
+        "role": "메인 워크트리가 non-default 브랜치일 때 Write/Edit 차단 (main 고정)",
+        "id": "guard-off-main-edit",
+        "detail": "modules/pre.ts preWrite (GIT-EDIT-OFF-MAIN) — main 워크트리가 non-default 브랜치에 주차된 채 Write/Edit 하는 걸 차단(stale-branch 함정 #3736 · branch-switch 가드의 편집측 대칭). Write·Edit 양쪽 발화 · non-default HEAD 만 probeGitContext(gcwd) 확인 후 차단 · 격리 워크트리 면제 · config `git.guardOffMainEdit`(기본 ON)."
+       },
+       {
+        "name": "stale-main-edit 가드",
+        "role": "main 이 origin 보다 뒤처진 채 upstream 변경 파일 Write/Edit 차단",
+        "id": "guard-stale-main-edit",
+        "detail": "modules/pre.ts preWrite (GIT-EDIT-STALE-MAIN) — off-main-edit 의 on-main 대칭: main 이 origin/<default> 보다 뒤처졌고 upstream 커밋이 대상 파일을 건드리면 deny(낡은 base 편집=중복작업+충돌). TTL fetch 후 판정(git.guardStaleMainEdit, staleFetchTtlSec) · 무관 behind=warn · 격리 워크트리 면제 · 스모크 state/stale-main-edit-smoke."
+       },
+       {
+        "name": "pr-cycle 자동사이클 rewriter",
+        "role": "gh pr create → 머지+정리까지 코드수준 자동 완결 (재작성)",
+        "id": "guard-pr-cycle-rewrite",
+        "detail": "modules/pr-cycle-hook.ts (pre bash · archive 포팅) — `gh pr create` 를 updatedInput+allow 로 재작성: `&& gh pr merge --squash --admin --delete-branch` + 링크드 워크트리 정리 + stacked --base→default 강제 · 대량삭제(D>50, D≥10×A)=deny · --draft/명시 merge/MARK 면제 · 옵트아웃 없음 · 스모크 state/pr-cycle-hook-smoke."
+       },
+       {
+        "name": "cloud-raw 가드",
+        "role": "raw 클라우드 CLI 직접 호출 차단",
+        "id": "guard-cloud-raw",
+        "detail": "c11 — 구조화 dispatch 를 우회하는 raw runpodctl/vastai/ssh/scp/curl 직접 호출을 가드(`hexa cloud`/pod 흐름으로 유도)"
+       },
+       {
+        "name": "danger 가드",
+        "role": "파괴적 명령 차단",
+        "id": "guard-danger",
+        "detail": "no-verify·reset-hard·curl|sh 는 상시 always-on · rm-rf-root(루트 자체 /, /*, ~, $HOME, *)는 config `dangerGuard.rmRfRoot` 토글 · 기본 false=OFF(opt-out)"
+       },
+       {
+        "name": "hand-rolled-fanout 가드",
+        "role": "손수 fanout 루프 경고",
+        "id": "guard-hand-rolled-fanout",
+        "detail": "warn — copy-to 안의 손수 런처 fanout 은 구조화 dispatch·비용계상을 우회 → `fire-shards` 로 유도"
+       },
+       {
+        "name": "mem-guard",
+        "role": "OOM 예방",
+        "id": "guard-mem",
+        "detail": "background-spawn(`&`/nohup/disown) 직전 free-RAM 체크 → warnPct 이하 warn·blockPct 이하 block · OOM jetsam 예방"
+       },
+       {
+        "name": "naming-guard",
+        "role": "비-canonical 작명 차단(생성) + 터치 시 넛지",
+        "id": "guard-naming",
+        "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · `@canonical-ok`/`# canonical-ok` 면제 · test/spec 제외"
+       },
+       {
+        "name": "portable-path 가드",
+        "role": "SHIPPED 스크립트의 하드코딩 홈경로 넛지 (이식성)",
+        "id": "guard-portable-path",
+        "detail": "modules/portable-path-guard.ts (PORTABLE-PATH · preWrite advisory) — SHIPPED 런타임 스크립트(hooks/·commands/·skills/·bin/·pi/ 의 .sh/.py/.ts 등)가 절대 홈경로(`/Users/…`·`/home/…`) 하드코딩 시 warn(타 host/user 에서 깨짐 → `$HOME`·`${CLAUDE_PLUGIN_ROOT}` 런타임 해석). Write·Edit · config `portablePathGuard`(기본 ON) · archive 포팅."
+       },
+       {
+        "name": "single-doc(scatter) 가드",
+        "role": "흩어진 문서 차단",
+        "id": "guard-single-doc-scatter",
+        "detail": "scatter 파일명(`*-report/summary/notes/plan/guide.md`·`UPPERCASE.md`·날짜접두 `.md`) 생성 BLOCK(scope 무관·`DOC-SCATTER`) → ARCHITECTURE(SSOT)+CHANGELOG(append) 통합 · quickref 규율(`DOC-NO-QUICKREF`)은 scopeDirs 한정 warn · `docs.allow` 리스트·`docs.enforce:off` 로 면제 (commons single-doc)"
+       },
+       {
+        "name": "commit-lint 게이트",
+        "role": "agent git commit 에 lint 강제 (글로벌)",
+        "id": "guard-commit-lint",
+        "detail": "`COMMIT-LINT` — agent `git commit` 감지 시 모든 git repo(inGitRepo · managed-마커 폐기 · config 없으면 defaults)에서 `collectViolations`→`lintBlockers` 실행, block 위반이면 차단. per-repo git 훅과 동일 lint 를 글로벌 settings.json 경로로 훅-미설치 repo 까지 강제. `-a/-am`=tracked-modified 스코프 확장 · `--no-verify`/`# no-verify-ok` escape 공유"
+       }
+      ]
+     },
+     {
+      "name": "PreToolUse(Write)",
+      "role": "쓰기 직전 → pre write",
+      "id": "surface-pretooluse-write",
+      "detail": "경로·내용·우회패턴 매칭 + write-time hard-deny(상세 4g/4h): SKILL-DESC-CAP/CMD-DESC-LONG · COMMONS-PROSE/NO-DODONT · DODONT-LONG/SECRET-LITERAL/HANDOFF-SCATTER · INJECT-NON-ENGLISH+CLAUDE-MD/COMMONS-OVERSIZED+HISTORY(CLAUDE.md·commons.md 저장시점 한글+byte cap 8000+이력 · commit 백스톱). stdout JSON(deny)/stderr(warn)"
+     },
+     {
+      "name": "PreToolUse(MCP)",
+      "role": "MCP 툴 호출 직전 → pre tool",
+      "id": "pre-mcp",
+      "detail": "modules/annotation-guard.ts — matcher `mcp__.*`. MCP 툴은 그간 무가드(Bash/Write만). 훅에 annotation 부재 → config 레지스트리(`config/tool-annotations.json`·repo override)로 tool명→hint(readOnly/destructive/openWorld/sensitive) 분류 후 Rule-of-Two: mutation=warn · destructive+openWorld=block. toggle `annotationGuard`."
+     },
+     {
+      "name": "PostToolUse",
+      "role": "도구 호출 직후 → post bash / edit",
+      "id": "surface-posttooluse",
+      "detail": "exit/파일경로로 실패 라우팅, L0 편집 경고, c6 ing-staleness(코드 편집 카운트 bump). errors 큐 / stderr"
+     },
+     {
+      "name": "Stop",
+      "role": "에이전트 응답 종료 → 마지막 assistant 텍스트 기반 marker 게이트들 + staleness warn",
+      "id": "surface-stop",
+      "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 Stop 훅 (아래). decision:block marker 게이트(recommend·convergence·ing·architecture·ship) + warn-only(staleness·context-rot·prefs-drift). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
+      "children": [
+       {
+        "name": "recommend stop-check",
+        "role": "박스로 종료 시 auto-proceed 강제 (정밀 decision:block)",
+        "id": "guard-recommend-stop-check",
+        "detail": "non-present default mode 인데 답변이 **진짜 박스/auto-pick 줄로 끝나면**(endsOnBox=마지막 ~2 비어있지않은 줄 검사) `decision:block` 으로 모델 재호출=강제. 정밀: tail=2 라 박스 뒤 작업/요약 따라오면 무발화 → 정상 땐 'Stop hook error' 안 뜨고 진짜 박스-멈춤만 강제(에러≠노이즈). 루프가드=stop_hook_active. (modules/recommend.ts)"
+       },
+       {
+        "name": "convergence stop-check",
+        "role": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
+        "id": "guard-convergence-stop-check",
+        "detail": "응답의 재발신호(config/convergence-triggers.json) 감지 시 enforce(`convergenceEnforce` 기본 ON): `🧬 CONVERGENCE` 계정 줄 없으면 `decision:block` — 기록 id 또는 `해당 없음` 강제(ing/architecture stop-check 동형 marker 게이트 · stop_hook_active anti-wedge 체인당 1블록 · off=레거시 warn). 신호별 1회(convergence-nudge.json)."
+       },
+       {
+        "name": "ing staleness-check",
+        "role": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
+        "id": "guard-ing-staleness-check",
+        "detail": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
+       },
+       {
+        "name": "ing stop-check",
+        "role": "매턴 ING 상태 보고 강제 (decision:block)",
+        "id": "guard-ing-stop-check",
+        "detail": "매 응답에 `🔄 ING` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. 코드편집뿐 아니라 측정·verdict·에이전트착륙도 포착(response-marker 기반·recommend stop-check 동형). 게이트=`isManaged()`(lib/config.ts): 내구성 거버넌스 마커(config.json·ARCHITECTURE·.harness/.sidecar dir·repo-root CLAUDE.md) 중 하나라도 있으면 발화. loop guard 1회/chain. (modules/ing.ts)"
+       },
+       {
+        "name": "architecture stop-check",
+        "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
+        "id": "guard-architecture-stop-check",
+        "detail": "ing stop-check 의 설계판 — **조건부**: 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). 게이트=`pick()`(ARCHITECTURE.json/.md 존재)=설계 SSOT subject-게이트, 설계파일 생기는 순간 자동 발화. (modules/architecture.ts)"
+       },
+       {
+        "name": "ship stop-check",
+        "role": "impl/fix 후 verified-merge 진입 강제 (하이브리드 decision:block)",
+        "id": "guard-ship-stop-check",
+        "detail": "pr-cycle/ship ENTRY 게이트 — 미커밋 CODE diff 가 남았는데 응답에 `🚢 SHIP` 마커가 없으면 차단. marker-only 아님(하이브리드): clean-tree 성공경로는 실제 머지로만 도달(텍스트로 위조 불가), `🚢 SHIP: 보류(<사유>)`=명시적 WIP 유예. 게이트=`isManaged()` · anti-wedge 1/chain. cycle-docs-pr 을 inject 텍스트→결정적 강제로 승격. (modules/ship.ts)"
+       },
+       {
+        "name": "injects context-check",
+        "role": "컨텍스트 fill rot 알람 (warn-only · 절대 block 아님)",
+        "id": "guard-injects-context-check",
+        "detail": "긴 세션이 context 창을 채우면 attention 저하(context-rot·lost-in-middle, 연구 ~150-400K대)로 에이전트가 둔해진다 → transcript 의 마지막 compact_boundary 이후 바이트로 현재 window(≈bytes/4 tok) 추정, WARN(200k)/LOUD(350k) 넘으면 /compact·새세션 권고. inject footprint(고정)와 별개=대화 누적분 감시. anti-wedge stop_hook_active. (modules/injects.ts)"
+       },
+       {
+        "name": "prefs stop-check",
+        "role": "prefs 언어축 drift 알람 (warn-only · 절대 block 아님)",
+        "id": "guard-prefs-stop-check",
+        "detail": "턴마감 prefs 언어축 drift WARN(차단 아님) — DOCS: diff 의 doc(.md·README·CHANGELOG) 한글 산문 추가(백틱 면제) · RESPONSE: 응답 산문이 prefs.response 와 거의 다르면(Hangul<10% 휴리스틱). CODE축은 codeLangViolation(post.ts)이 per-edit 담당→제외. anti-wedge stop_hook_active. (modules/prefs.ts)"
+       }
+      ]
+     },
+     {
+      "name": "PreCompact·PostCompact",
+      "role": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
+      "id": "surface-precompact-postcompact",
+      "detail": "매-턴 inject(commons·recommend·prefs·easy·load·ing)=UserPromptSubmit · 세션-스코프(architecture·git-context·toolkit·companions+easy풀)=SessionStart→컴팩션증발→Pre/PostCompact 재주입. `lib/inject.ts` emitInject=이중배선(settings+plugin) 2×를 프롬프트/세션키 dedup→매턴·SessionStart 1회(inject-ts-1). `injects`=footprint"
+     },
+     {
+      "name": "체크포인트",
+      "role": "commit/세션 → lint / ci / ing",
+      "id": "surface-checkpoint",
+      "detail": "검증·신선도·인계. exit+stderr. `ship`=sidecar-repo 전용 · inject-bloat 가드: injectCaps+injectBudget+INJECT-NON-ENGLISH(재주입 doc 한글차단)+CLAUDE-MD-OVERSIZED(CLAUDE.md byte cap 8000) — ALWAYS-ON·모든repo·config불필요·diff-aware = context-rot 재발방지 · lint↔ship 공유"
+     }
+    ]
+   },
+   {
+    "name": "layers — 층 구조",
+    "role": "1=바닥(실행 입구) → 5=꼭대기(규칙 데이터)",
+    "id": "group-layers",
+    "detail": "재사용성의 비밀: 1–4층이 5층을 하드코딩하지 않는다.",
+    "children": [
+     {
+      "name": "L1 실행 입구",
+      "role": "bin/sidecar — 런타임 자동탐색",
+      "id": "layer-l1",
+      "detail": ""
+     },
+     {
+      "name": "L2 디스패처",
+      "role": "cli/index.ts — 명령 라우팅 진입점",
+      "id": "layer-l2",
+      "detail": ""
+     },
+     {
+      "name": "L3 공용 부품",
+      "role": "lib/ — 경로찾기·로깅·실행·직렬화",
+      "id": "layer-l3",
+      "detail": "",
+      "children": [
+       {
+        "name": "paths.ts",
+        "role": "repo-root 상향 탐색",
+        "id": "lib-paths-ts",
+        "detail": "config.json→.git 순, SIDECAR_REPO_ROOT override"
+       },
+       {
+        "name": "config.ts",
+        "role": "harness.config.json 읽어 기본값과 머지",
+        "id": "lib-config-ts",
+        "detail": "모든 모듈의 단일 설정원"
+       },
+       {
+        "name": "log.ts",
+        "role": "구조화 로그",
+        "id": "lib-log-ts",
+        "detail": "info/ok/warn/loudFail"
+       },
+       {
+        "name": "json.ts",
+        "role": "JSON 직렬화 유틸",
+        "id": "lib-json-ts",
+        "detail": ""
+       },
+       {
+        "name": "exec.ts",
+        "role": "셸/프로세스 실행",
+        "id": "lib-exec-ts",
+        "detail": "execShell=bash -lc, execArgs=직접 spawn"
+       },
+       {
+        "name": "lockdown.ts",
+        "role": "L0 잠금 파일 검사 (opt-in)",
+        "id": "lib-lockdown-ts",
+        "detail": ""
+       }
+      ]
+     },
+     {
+      "name": "L4 기능 모듈",
+      "role": "modules/*.ts — 언제·어떻게 검사할까",
+      "id": "layer-l4",
+      "detail": "① 완전 범용 등급만 포함",
+      "children": [
+       {
+        "name": "pre",
+        "role": "정규식 규칙 엔진",
+        "id": "module-pre",
+        "detail": "규칙은 전부 외부 JSON"
+       },
+       {
+        "name": "post",
+        "role": "exit/파일경로만 봄",
+        "id": "module-post",
+        "detail": "도메인 지식 0"
+       },
+       {
+        "name": "prompt",
+        "role": "키워드→힌트 매핑",
+        "id": "module-prompt",
+        "detail": "키워드는 외부 JSON"
+       },
+       {
+        "name": "lint",
+        "role": "staged-L0·신선도·수렴 + doc-gate (commit 전 게이트)",
+        "id": "module-lint",
+        "detail": "staged 변경에 대한 commit-time 게이트 모음. CHANGELOG·ARCHITECTURE(.json|.md) 미동반=block (README 는 비강제·advisory update-in-place · pr-cycle은 ing 보드 현행화도 gate). 개별 체크는 children.",
+        "children": [
+         {
+          "name": "SHADOW-DESC (4f)",
+          "role": "명령 desc 인지 (warn)",
+          "id": "check-shadow-desc-4f",
+          "detail": "commands/*.md description 이 ≤1400자 skill-listing cap + `Triggers —` 절 보유인지 — 누락 시 bare /cmd 자연어 인지가 죽으므로 환기(sidecar-repo 한정·commands/ 존재 시). sidecar s18 포팅"
+         },
+         {
+          "name": "CMD-DESC-LONG (4f-min)",
+          "role": "명령 desc 미니멀 cap (block)",
+          "id": "check-cmd-desc-long-4f-min",
+          "detail": "commands/*.md description codepoint ≤ `lint.cmdDescCap`(기본 320)인지 — 1400 천장(SHADOW-DESC)과 별개의 빡빡한 '미니멀' 선. 초과면 차단: 하는 일+`Triggers —` 만 두고 플래그표/서브버브 카탈로그는 body/`--help`/`argument-hint` 로. write-time 도 같은 cap deny(`shadow.ts:descWriteViolation`→pre.ts) · 0=off"
+         },
+         {
+          "name": "INJECT-OVERSIZED (4j)",
+          "role": "inject별 개별 바이트 cap (block)",
+          "id": "check-inject-oversized-4j",
+          "detail": "각 inject 소스가 **자기 cap** 이하인지 — `lint.injectCaps` 맵(path→budget · `/`끝=그 dir `*.md` 각각). recommend/easy 는 lang 변형(recommend.md+recommend.<lang>.md · prefs response 로 택1 주입): 변형셋은 base별 MAX 1회만 총합계상. 산문 비대=매 턴 context 세금이라 소스 lean(emit 절단=손실 금지). commons/CLAUDE 는 각자 format lint. 0=off"
+         },
+         {
+          "name": "COMMONS-PROSE/NO-DODONT/DODONT-INCOMPLETE (4g)",
+          "role": "commons·CLAUDE do/dont 양식 (block)",
+          "id": "check-commons-prose-no-dodont-dodont-incomplete-4g",
+          "detail": "**commons.md(또는 .harness override) + 루트 CLAUDE.md** 각 `## slug` 섹션이 `- do:` AND `- dont:` 줄만(둘 다 필수·산문 금지)인지 — 첫 `## ` 앞 preamble 면제 · 서브폴더 CLAUDE.md(folder-docs)는 자유양식 제외. 거버넌스/프로젝트규칙 SSOT 산문 재비대 + 한쪽-누락 차단(`commons.ts:lintCommonsFormat`+lintCommonsText)"
+         },
+         {
+          "name": "DODONT-LONG (4h)",
+          "role": "do/dont 길이 cap (block)",
+          "id": "check-dodont-long-4h",
+          "detail": "staged commons.md + 루트 CLAUDE.md 의 do/dont 엔트리(연속줄 합산→cap 우회 차단) codepoint 가 `lint.dodontCap`(200) 초과 신규/증가면 차단. HEAD diff-aware grandfather · 서브폴더 제외 · write-time 선차단(`commonsWriteViolation`/`dodontLength`)은 Write-only(Edit fragment skip → commit-time 4g/4h 백스톱, 경계섹션 false-pos 회피)"
+         },
+         {
+          "name": "FOLDER-GUIDE-MISSING (4i)",
+          "role": "폴더 가이드 (block)",
+          "id": "check-folder-guide-missing-4i",
+          "detail": "staged 폴더(folderGuides)에 CLAUDE.md 없으면 차단(존재만·folder-docs)"
+         },
+         {
+          "name": "HELP-BACKTICK (4j)",
+          "role": "HELP 백틱 위생 (block)",
+          "id": "check-help-backtick-4j",
+          "detail": "cli/index.ts HELP 리터럴 내 이스케이프 안 된 백틱 차단(help/build 깨짐 재발 박제·텍스트스캔)"
+         }
+        ]
+       },
+       {
+        "name": "naming",
+        "role": "repo 전수 비-canonical 이름 audit (write-guard 의 backlog 짝)",
+        "id": "module-naming",
+        "detail": "`audit [path] [--ing] [--gate]` — git ls-files 트리에서 버전/복사/중복 접미사 이름을 전수 스캔(`offendingToken` 재사용 = naming-guard 와 동일 판정). write-time naming-guard 는 새 파일만 막아 기존 backlog 를 못 보던 갭을 메움.",
+        "children": [
+         {
+          "name": "출력 모드",
+          "id": "detail-output-mode",
+          "detail": "기본 read-only 보고(exit 0) · `--gate`=위반 시 exit 1(commit/CI 게이트) · `--ing`=요약 1줄을 **그 repo 자기 ING** 보드에 add(보드=내 repo 전용 · cross-repo 전달 없음). cross-repo 감사는 각 repo 안에서 돌려 그 repo ING 에 착지."
+         },
+         {
+          "name": "생태계-native 면제 (오탐 방지)",
+          "id": "detail-native-exempt",
+          "detail": "native-canonical-first: Android res 한정자 `-v<API>`(`values-v26`·`mipmap-anydpi-v26`)·bare `_version` 모듈명(`version\\d+` 만 위반)은 guard/audit 공통 면제 · audit 은 `archive/`·`.verdicts/` 트리 무시(frozen 이력·전이 로그)."
+         }
+        ]
+       },
+       {
+        "name": "install",
+        "role": "공용(전역) 부트스트랩 — clone+래퍼+전역훅 (init=per-repo 와 별개)",
+        "id": "module-install",
+        "detail": "SSOT=scripts/install.sh(curl 가능); `sidecar install`은 이를 위임. clone dancinlab/sidecar→~/.sidecar/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/sidecar · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
+       },
+       {
+        "name": "lab",
+        "role": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
+        "id": "module-lab",
+        "detail": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]` — lumen/rtsc/carbon-capture 형제 골격 1발 스캐폴드. files-only(git init/push 없음).",
+        "children": [
+         {
+          "name": "스켈레톤 치환·방출",
+          "role": "토큰 템플릿 → 타깃",
+          "id": "detail-lab-skeleton",
+          "detail": "`templates/lab/` 토큰화 스켈레톤(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`)을 재귀 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 방출. never-clobber(--force 만 덮어씀)·--dry-run 보고전용·빈 dir 은 .gitkeep"
+         },
+         {
+          "name": "방출물",
+          "role": "생성되는 파일셋",
+          "id": "detail-lab-emitted",
+          "detail": "src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger)"
+         },
+         {
+          "name": "생성 CLAUDE.md 규약",
+          "role": "demiurge 교차-repo 규약 2",
+          "id": "detail-lab-claude-conventions",
+          "detail": "생성 CLAUDE.md 가 명시: hexa-lang stdlib(d3 — 구현코드=canonical hexa-lang stdlib, repo는 docs/manifest만 consume) + QFORGE 컴퓨트 기본엔진(d_qforge_default — DFT/el-ph 기본=QFORGE-native, QE는 미전환 fallback·≤1% gate·deck=hexa deck · non-compute lab은 skip)"
+         }
+        ]
+       },
+       {
+        "name": "shadow",
+        "role": "sidecar commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
+        "id": "module-shadow",
+        "detail": "plan|remove|--force. 각 commands/*.md 를 ~/.claude/commands/ 에 얇은 /cmd 위임자로 복제 + SHADOW_MARKER 주석으로 추적 — 손수작성 동명파일은 skip. regen 은 소스에 없는 marker-shadow(폐기된 명령)를 orphan-prune(손수작성은 보존) — 명령 폐기 시 bare /cmd 자동 청소. 사이드카 무의존·재생성 가능(플러그인 미설치 폴백).",
+        "children": [
+         {
+          "name": "--force heal",
+          "role": "마커-없는 stale 치유",
+          "id": "detail-force-heal",
+          "detail": "`--force` 는 마커-없는 충돌도 source(SSOT)로 덮어써 마커 도입 *전* stale shadow 를 heal (@convergence SHADOW_PREMARKER_STALE: 마커없는 옛 shadow 가 손수작성 false-positive 로 skip 돼 source 의 `Triggers —` 줄을 잃으면 맨-텍스트 명령 인지가 죽는다)."
+         },
+         {
+          "name": "마커 위치",
+          "role": "frontmatter 뒤 삽입",
+          "id": "detail-marker-location",
+          "detail": "마커는 frontmatter 닫는 `---` **뒤**에 삽입(`withMarker`) — Claude Code 는 `---` 가 1행일 때만 `description:` 을 읽으므로 앞에 붙이면 picker 가 마커를 desc 로 표시(@convergence SHADOW_MARKER_AFTER_FRONTMATTER). desc 품질은 lint 4f(SHADOW-DESC) 게이트."
+         },
+         {
+          "name": "hexa 위임자",
+          "role": "이웃 CLI 위임",
+          "id": "detail-hexa",
+          "detail": "일부 commands/*.md 는 `hexa` 위임자(/hexa·/cloud·/dojo·/deck·/verify·/atlas — hexa 부재 시 graceful echo; sidecar 자체 dojo 는 /hdojo). ⚠️ frontmatter argument-hint 중첩 큰따옴표 금지(YAML 깨짐) — 안쪽은 작은따옴표."
+         }
+        ]
+       },
+       {
+        "name": "pr-cycle",
+        "role": "push→PR→검증머지→로컬 base sync",
+        "id": "module-pr-cycle",
+        "detail": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→로컬 base ff-sync→merged worktree sweep→stale-PR reaper. main/master 에선 거부.",
+        "children": [
+         {
+          "name": "로컬 ff-sync",
+          "role": "로컬 base 뒤처짐 방지",
+          "id": "detail-ff-sync",
+          "detail": "`git fetch origin <base>:<base>` · checkout 전환 없이 로컬 main 뒤처짐 방지 · non-ff 거부."
+         },
+         {
+          "name": "stale-PR reaper",
+          "role": "내 열린 PR 전수 정리",
+          "id": "detail-stale-pr-reaper",
+          "detail": "내 다른 열린 PR 전수: MERGEABLE=자동 squash머지 · CONFLICTING/blocked=rebase/`gh pr close` 안내와 함께 큰소리 보고 · `--no-reap` 차단. 중단/실패한 머지가 영구 방치(충돌로 썩음)되던 누수 차단."
+         },
+         {
+          "name": "worktree 누적 한계",
+          "role": "[gone] 못 거두는 워크트리",
+          "id": "detail-worktree",
+          "detail": "sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 의 isolation:worktree 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적. SessionStart `worktree gc` 의 age 백스톱(HEAD>maxAgeDays 기본3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거."
+         }
+        ]
+       },
+       {
+        "name": "ship",
+        "role": "구현 후 모든 설치 surface 에 한 번에 전파 (orchestrator)",
+        "id": "module-ship",
+        "detail": "pr-cycle(검증 머지) → self-update(전역 CLI git-pull) → shadow(commands/ 재미러) 를 한 명령으로 올바른 순서 실행, 단계 실패 시 즉시 중단. shadow 빠뜨리면 새 슬래시가 picker 에 안 떠 '반영 안됨' 재발 → 셋을 묶어 락스텝. 플러그인(/plugin) 설치본은 별도 surface · `--no-doc` pr-cycle 로 forward"
+       },
+       {
+        "name": "verify",
+        "role": "검증 명령 병렬 실행",
+        "id": "module-verify",
+        "detail": "명령은 config 선언"
+       },
+       {
+        "name": "ci",
+        "role": "검증 명령 병렬 실행 + CI scaffold",
+        "id": "module-ci",
+        "detail": "`ci [all|fast|list]` = config `verify.checks` 병렬(실패 1개라도 exit 1). `ci scaffold` = `.github/workflows/ci.yml` 방출. `ci.fallback` = cost-free: `pick-runner` 가 self-hosted pool probe → 무료 self-hosted·없으면 github-hosted fallback. `ci.cachePaths` → `actions/cache@v4` warm"
+       },
+       {
+        "name": "paper",
+        "role": "demiurge 하우스 논문 스캐폴드·표지·빌드·배포(Zenodo/arXiv)",
+        "id": "module-paper",
+        "detail": "new(스캐폴드) → cover(imagine 표지) → build(xelatex+bibtex×3) → publish/update/unpublish/status(배포). NeuroLM 정답지 미러 + 하드 content-floor 게이트.",
+        "children": [
+         {
+          "name": "build content-floor 게이트",
+          "id": "detail-build-content-floor",
+          "detail": "build=xelatex+bibtex×3 · pages/refs/result-figs 보고 · 하드 2게이트 ≥10p(g51) + ≥9 result figs(cover 제외 = NeuroLM바) · 둘다 `--min-*` 0 으로 해제 · 미달 exit3 · 깨진/빈 PDF 실패처리."
+         },
+         {
+          "name": "NeuroLM 정답지 미러",
+          "id": "detail-neurolm",
+          "detail": "외부 품질 정답지 NeuroLM(templates/paper/_reference_samples/2409.00101_neurolm.pdf · ICLR 2025 · 읽기전용) 미러 — 섹션 Intro·Background·Method·Experiments·Ablation·Discussion + 결과그림(TikZ 아키텍처 + pgfplots 막대 · 캡션=결과연결) · g5 tier-badge · natbib. 마케팅 표지는 허용(의도된 divergence). 손조립 규율을 도구로 박제."
+         },
+         {
+          "name": "배포 수명주기 (Zenodo/arXiv)",
+          "id": "detail-zenodo-arxiv",
+          "detail": "publish/update/unpublish/status `--to zenodo|arxiv|both` · 키는 secret · 원장 PAPERS/<slug>/publish.json. Zenodo=완전 REST(업로드→메타→발행→DOI · update=new-version · unpublish=DRAFT 삭제). arXiv=제출 API 없음(SWORD 폐지)→tar.gz 패키징 + 제출 가이드(가짜 자동제출 안 함)"
+         }
+        ]
+       },
+       {
+        "name": "imagine",
+        "role": "AI 이미지+영상 생성 (fal/openai · 키 secret 경유)",
+        "id": "module-imagine",
+        "detail": "출력 확장자로 분기: 이미지(.png/.jpg)=fal `openai/gpt-image-2`(또는 -b openai); 영상(.mp4/.mov)=fal Seedance 2.0(`-i` 없으면 text-to-video·있으면 image-to-video). 동일 queue+poll · 프롬프트는 FILE · 키는 secret get·-K curl 로 argv 누출 방지 · -m override"
+       },
+       {
+        "name": "email (alias mail)",
+        "role": "Postmark 트랜잭션 메일 발송 (토큰 secret 경유)",
+        "id": "module-email-alias-mail",
+        "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
+       },
+       {
+        "name": "accounts",
+        "role": "멀티계정 로스터 (secret 스토어 파생 · 도메인 데이터 0)",
+        "id": "module-accounts",
+        "detail": "로스터 SSOT=secret 스토어: 그룹 패턴(~/.sidecar/accounts.json · {n}) 키에서 멤버십 파생. verbs: list/status·code(단일계정 OTP·fromHint)·inbox(전 계정 일괄·--wait 신착만)·add·retire(→legacy)·init. codeFetch 플러그블 gmail|postmark(Inbound API 3-큐 병합 — 기본 조회는 webhook-대기 메일 은닉). exit 0/1/2/3 · 비밀번호 미출력"
+       },
+       {
+        "name": "fable",
+        "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
+        "id": "module-fable",
+        "detail": "`claude -p --model claude-fable-5` 위임(백엔드 불변). 자식 기본 --sources project,local=전역훅 미상속(스톨차단)·기본 read-only(헤드리스 무승인→쓰기거부; --write=bypassPermissions 로 Write/Bash/git). --timeout=opt-in. -c·-r 다중턴. --bg=detach→잡ID(result/tail/wait/list). opus fallback 무조건 금지(--settings·opus제외). 주의=fable.md."
+       },
+       {
+        "name": "fable-mode",
+        "role": "세션 스코프 분업 토글 (on/off)",
+        "id": "module-fable-mode",
+        "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 분업 지시: **설계·분석·리서치·리뷰·계획·난제(막힌 문제·까다로운 버그/증명/알고리즘)=Fable 5 위임**(sidecar fable), **실제 구현·빌드·git·commit·ship=로컬(기본진행)**. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 재귀금지. 3표면 배선."
+       },
+       {
+        "name": "goal-guard",
+        "role": "작업-punt 차단 Stop 게이트 (다음-세션 미루기 + 잔여 방치)",
+        "id": "module-goal-guard",
+        "detail": "Stop-hook 가드 · 2중 캐치: ① 답변 꼬리(~8줄)가 '다음 세션' 미루기면 block ② 본문 어디든 '잔여'(남은 작업)가 부정형 없이 언급되면 block — 같은 줄 24자 창의 없/0건/완료·마무리·처리·해소 과거형은 통과, 잔여는 전체 본문 스캔. decision:block 으로 지금 마무리 강제 · stop_hook_active 단발 → 진짜 블로커는 재-stop 통과(session-terminal). CC 전용 · 배선=hooks.json+setup.ts Stop[]."
+       },
+       {
+        "name": "hypotheses",
+        "role": "가설 폴더 단일 정규명(HYPOTHESES/) 강제·감사·마이그레이션",
+        "id": "module-hypotheses",
+        "detail": "config `hypotheses.dir`(기본 HYPOTHESES/)로 가설(pre-register→falsify→run→verdict) 작업을 한 폴더 고정. hypothesis-guard(pre write/bash)가 신규 stray 폴더(per-repo aliases 예 UNIVERSE·내장 hypothes*/가설* 패턴) 차단(신규=block·기존=warn·name-pattern 상시). check=감사(--gate) · migrate=git mv→canonical(병합) · scaffold · show."
+       },
+       {
+        "name": "pod {poll|watch|unwatch|list}",
+        "role": "GPU pod 자동 폴링 (>=10분 cadence)",
+        "id": "module-pod-poll",
+        "detail": "modules/pod-poll.ts — 발사 후 수동 ssh 확인을 canonical 명령으로 일반화(runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북). 모든 원격 op 은 `hexa cloud` 경유(commons c11, 직접 ssh/curl 금지).",
+        "children": [
+         {
+          "name": "hexa cloud 경유 op",
+          "role": "canonical-cli 재사용",
+          "id": "detail-pod-poll-cloud",
+          "detail": "`alive` 생존(RUNNING/GONE)·`exec` 프로브(GPU-util 또는 `--ssh-check`)·`copy-from` pull·`rm` teardown. poll=one-shot, idle-streak `--done-after N`(기본 2)로 sustained-idle done 판정."
+         },
+         {
+          "name": "no-escape-hatch 기본값",
+          "role": "안전 비파괴 (read-only)",
+          "id": "detail-pod-poll-readonly",
+          "detail": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
+         },
+         {
+          "name": "watch cadence",
+          "role": "레지스트리 + 구동",
+          "id": "detail-pod-poll-cadence",
+          "detail": "레지스트리 `~/.sidecar/pod-watch.json`(flat 전역 규약 · pool.json 동형) + cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(기본 비파괴 · crontab write 불가 환경 자동 fallback · interval >=600s c19)."
+         }
+        ]
+       },
+       {
+        "name": "fleet (+ lab/abstract/full)",
+        "role": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
+        "id": "module-fleet-lab-abstract-full",
+        "detail": "MODES 맵(fleet·lab·abstract·full)이 엔진 1개를 공유 — roster 파일·런북·어휘만 다르다. 4모드 공통 go/stop/status, `/fleet <mode> …`는 sidecar 가 `$ARGUMENTS` forward.",
+        "children": [
+         {
+          "name": "fleet (기본)",
+          "role": "빌드/멀티레인",
+          "id": "mode-fleet",
+          "detail": "roster `.harness/fleet/active` + templates/fleet.md. N개 독립 레인을 background Agent로, 각 레인은 착륙 즉시 다음 라운드를 스스로 발사(barrier 없음)."
+         },
+         {
+          "name": "fleet lab",
+          "role": "research 특화",
+          "id": "mode-fleet-lab",
+          "detail": "roster `lab` + fleet-lab.md. 레인=막힌 프론티어(벽). 싼 research gate→정당화 시만 비싼 implement/measure→측정(c2)→SSOT(blocking-frontiers)→재-research/벽(🧱 reopenable)."
+         },
+         {
+          "name": "fleet abstract",
+          "role": "추상화 특화",
+          "id": "mode-fleet-abstract",
+          "detail": "roster `abstract` + fleet-abstract.md. 레인=누적 법칙군/천장. census LAWS→한 겹 peel해 공유 trade-off(메타법칙) 도출→escape 원리 발명→반증가능 예측으로 캐스팅해 compute/research 핸드오프. 메타법칙(🌌)은 새 lens로 reopen, 산출 전부 미검증(d6 좌표≠발견), lazy-ceiling 금지(c14 d)."
+         },
+         {
+          "name": "fleet full",
+          "role": "풀스택",
+          "id": "mode-fleet-full",
+          "detail": "roster `full` + fleet-full.md. 프론티어가 3 페이즈 순환 research→implement→(벽)→abstract→falsify — implement 스킵 금지(약한 레버도 싼 probe 로 벽 측정 후 abstract). 기본 순차(afg)·`parallel` 일 때만 Workflow fan-out. 게이트는 비용 — 싼/로컬 자동·비싼(pool/GPU)만 4축+go. depletion=양축 dry"
+         }
+        ]
+       },
+       {
+        "name": "errors",
+        "role": "(kind,code)→severity 분류",
+        "id": "module-errors",
+        "detail": "맵 로드 = bundled config/ defaults 위에 per-repo `.harness/` override 병합(repo 가 code별 우선) → 새 bundled 규칙이 stale repo 맵에서 fallback-block 으로 둔갑 방지"
+       },
+       {
+        "name": "ledger",
+        "role": "에이전트 작업 등록 (중복 방지)",
+        "id": "module-ledger",
+        "detail": "도메인 무관"
+       },
+       {
+        "name": "ing",
+        "role": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
+        "id": "module-ing",
+        "detail": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다.",
+        "children": [
+         {
+          "name": "저장 = ing ref (worktree 아님)",
+          "id": "detail-ing-ref-worktree",
+          "detail": "done=scrub. 보드는 refs/heads/ing 에 plumbing(hash-object→mktree→commit-tree→update-ref) 저장 + best-effort push origin ing → branch-switch/reset 무관·공유·protected-main-safe. 보드 cwd=`git rev-parse --show-toplevel`(REPO_ROOT fallback)로 해석 — config-less worktree 가 sibling repo ref 에 쓰던 누수 차단"
+         },
+         {
+          "name": "verb 의미 · stdin",
+          "id": "detail-verb-stdin",
+          "detail": "add=work · next=다음 · done은 id 정확매칭 우선, text fallback은 1건일 때만(대량삭제 방지). `↩`-prefix resume 항목은 show/inject 맨 앞 표면화(c17 — upstream-fix 중단작업 복원). add/next 자유텍스트에 셸 특수문자(괄호·따옴표·$·→)면 `--stdin`(또는 단독 `-`)로 stdin 읽기 — 슬래시 `$ARGUMENTS` 무인용 깨짐 회피."
+         },
+         {
+          "name": "적체 방지 (나이 게이트)",
+          "id": "detail-pileup-gate",
+          "detail": "inject/show 가 각 work 항목에 나이 `⏳Nd` 표시 + `ing.staleDays`(기본 5) 초과 묵음 또는 `ing.maxActive`(기본 12) 초과 시 매 턴 `🧹 ING 적체 — … 끝난 항목 지금 done 로 scrub` 강제 지시. 자동삭제 아님 — 완료분이 ACTIVE 로 썩는 것 차단(나이는 done-vs-active proxy)."
+         }
+        ]
+       },
+       {
+        "name": "bitter-gate",
+        "role": "JSONL 빈도 분석",
+        "id": "module-bitter-gate",
+        "detail": "dormant 규칙 폐기 검토"
+       },
+       {
+        "name": "audit",
+        "role": "JSONL 카운트 기반 6축 스코어카드",
+        "id": "module-audit",
+        "detail": ""
+       },
+       {
+        "name": "gc",
+        "role": "마크다운 가이드 링크 drift 탐지",
+        "id": "module-gc",
+        "detail": ""
+       },
+       {
+        "name": "changelog",
+        "role": "이력 SSOT = CHANGELOG.jsonl (append + auto-prune)",
+        "id": "module-changelog",
+        "detail": "이력을 `CHANGELOG.jsonl`(newest-first · {ts,title,body})로. `add`(body=stdin)+keep-N 자동 트림·`list`·`render`·`prune --keep N|--older-than D`·`autoprune`(SessionStart 배선·cap 초과시만)·`migrate`(md→jsonl). keep-N=lint.changelog.keep(기본 30)·옛 엔트리는 git 보존. CHANGELOG-MISSING 게이트는 .jsonl staged 요구"
+       },
+       {
+        "name": "architecture",
+        "role": "설계 SSOT 스켈레톤 주입 (SessionStart + Compact · detail 은 온디맨드)",
+        "id": "module-architecture",
+        "detail": "스켈레톤(title+summary+2단계 목차)만 additionalContext 주입 — SessionStart + PreCompact/PostCompact(NOT per-turn · 정적 doc 의 매턴 풀-주입은 대용량-doc 안티패턴). 세부(`detail`셀·전체 트리·convergence)는 파일에 두고 `show`/`search`/Read 온디맨드. 턴-마감 게이트는 Stop 훅 `architecture stop-check` 강제(학습=convergence INJECT_DOC_SKELETON_ONDEMAND)",
+        "children": [
+         {
+          "name": "lint (트리 위생 · c4 강제)",
+          "role": "fine-decomposition 게이트",
+          "id": "detail-lint-c4",
+          "detail": "`architecture lint` = 셀 cap(ARCH-BIG-CELL 300), piled>6(ARCH-PILED), history키(ARCH-HISTORY), rendered노드(name|role|detail) id 부재/중복/형식(ARCH-ID-MISSING/DUPE/FORMAT)=block. rendered 0 비-canonical=ARCH-SCHEMA-UNRECOGNIZED(warn · id게이트 silent no-op). 최상위 `convergence` 제외"
+         },
+         {
+          "name": "search (id 검색)",
+          "role": "노드를 id/텍스트로 찾기",
+          "id": "detail-search",
+          "detail": "`architecture search <q>` = id/name/role/detail 대소문자무시 substring 매칭 → 매칭 노드의 id + breadcrumb 경로 출력. 각 트리 노드는 고유 kebab-case id 보유(레거시 `slug`/한글키 read-fallback · 카테고리는 id prefix `guard-`/`module-`/`config-`… 로 흡수), columns 의 `id` 컬럼으로 표시·HTML 뷰어 검색에도 노출"
+         },
+         {
+          "name": "convergence 재발학습 store (구 convergence 모듈 흡수)",
+          "role": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
+          "id": "detail-convergence-store-convergence",
+          "detail": "재발방지 학습 SSOT=`convergence.records[]`(id·state·value·threshold·source). `add`=`--source` 필수·id 자동(파일명 slug)·동일 source 레코드 있으면 BLOCK→`for <file>` 검토 후 `edit`/`--new`(중복누적 금지). 터치 시 `convergenceForFile` 가 그 학습을 PreToolUse `additionalContext` inject(`convergenceOnTouch` ON)"
+         },
+         {
+          "name": "gate-stop-check (type:gate 직접갱신 강제)",
+          "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
+          "id": "detail-gate-stop-check",
+          "detail": "Stop 훅 — 출력에 게이트/verdict 신호(config/gate-signals.json)+`🔬 GATE` 마커 없으면 block → ARCHITECTURE.json 의 `type:\"gate\"` 노드 verdict 직접 update-in-place 유도(별도 store 아님) → `🔬 GATE 갱신/해당없음`. CC-only·세션당1회. 배선 TWO surface: setup.ts Stop[](install-hooks→settings.json)+hooks.json (setup-ts-1)"
+         }
+        ]
+       },
+       {
+        "name": "models",
+        "role": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축 · 슬래시 `/models` — CC 기본 `/model` 충돌 회피로 rename)",
+        "id": "module-models",
+        "detail": "`models {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(SSOT)에 등록. 필드 id·arch·version·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재대조 · `prune`=HF+sha 확인 후 weight 삭제 · writer=byte-불변 splice(`dataset` 평행)"
+       },
+       {
+        "name": "dataset",
+        "role": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
+        "id": "module-dataset",
+        "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·version(family SemVer)·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar models` 과 동일 splice writer·flag 파서 미러(byte-불변)"
+       },
+       {
+        "name": "git-context",
+        "role": "stale-branch 함정 가드 (SessionStart inject)",
+        "id": "module-git-context",
+        "detail": "HEAD vs origin/<default>(main|master) 를 LOCAL ref 로 비교(fetch 없음) → BEHIND 이거나 detached-stale 이면 ⚠️ 경고 주입: '이 위치 파일은 최신이 아닐 수 있다 · git log origin/<default> -- <file> 로 이미 머지됐는지 확인 후 코드 믿어라'. clean 한 default 브랜치면 무음(노이즈 0). 재발방지: 옛 feature 브랜치에서 옛 코드를 보고 이미 머지된 작업을 중복 구현한 사고(#3736 dup #3734) 차단"
+       },
+       {
+        "name": "claudemd",
+        "role": "프로젝트 규칙 매턴 재주입",
+        "id": "module-claudemd",
+        "detail": "repo-root CLAUDE.md 를 매 UserPromptSubmit 마다 additionalContext 로 재주입(SessionStart 1회로는 긴 대화에서 묻힘) → 프로젝트 규칙을 commons급 salience 로 상주(MUST-FOLLOW 헤더 prepend). `<!-- enforce:start/end -->` 있으면 그 섹션만·없으면 전체·80KB 절단·부재 무음. 디렉토리·모듈 트리는 ARCHITECTURE.json SSOT 라 CLAUDE.md 에 중복 안 함"
+       },
+       {
+        "name": "load",
+        "role": "매턴 macOS 자원 압박 readout 주입 (CPU+RAM+swap, ⚠️ on danger)",
+        "id": "module-load",
+        "detail": "show|inject. 매 UserPromptSubmit 에 한 줄 readout(CPU·RAM·swap·wt·🕐 현재날짜시간)을 additionalContext 로 주입 — 답변 맨 위에 부하+현재시각을 상주시켜 무거운 작업 전 자각·시간감각 유지. 비-macOS 무음.",
+        "children": [
+         {
+          "name": "3축 신호등",
+          "role": "CPU·RAM·swap·wt readout",
+          "id": "detail-3",
+          "detail": "CPU(load1÷cores·🟢<0.7 🟡<1.0 🔴≥1.0), RAM((active+wired+compressor)%+pressure), swap(🟢<2G 🟡<6G 🔴≥6G), wt(추가 worktree·🟢0-2 🟡3-9 🔴≥10). 어느 축이든 🔴/pressure≥warn 이면 선두 `⚠️` 마커 + 가드 노트(대량빌드·병렬agent·GPU 자제)"
+         },
+         {
+          "name": "동기·비용안전",
+          "role": "왜 MEMORY 를 보나",
+          "id": "detail-sync-cost-safety",
+          "detail": "부하로 죽는 맥은 CPU 가 아니라 MEMORY(compressor+swap 폭증)로 죽으므로 RAM압박·swap 을 같이 본다. 비용안전: sysctl+vm_stat 만(즉답) — 전체 스캔으로 수초 걸리는 `memory_pressure` CLI 는 매턴 훅에 부적합이라 의도적 회피."
+         }
+        ]
+       },
+       {
+        "name": "toolkit",
+        "role": "명령 카탈로그 — agent 가 전 명령을 인지·사용하도록 SessionStart 주입 (sidecar TOOLKIT 패리티)",
+        "id": "module-toolkit",
+        "detail": "list|inject|json|write|check. 단일 출처=cli/index.ts `HELP` 텍스트 파싱 + keyword 트리거 매핑. inject=SessionStart 에 전 명령을 compact 카탈로그(`id — use ⟨triggers⟩`)로 주입(키워드 사각지대 보완). write=TOOLKIT.jsonl 산출. check=dispatch case 커버리지 + 커밋본 drift(`lint` TOOLKIT-DRIFT warn)"
+       },
+       {
+        "name": "companions",
+        "role": "이웃 CLI 명령 surface 주입 — agent 가 sibling 툴체인(hexa 등)을 더듬지 않고 인지하게 SessionStart 주입",
+        "id": "module-companions",
+        "detail": "toolkit 의 자매 — toolkit 이 sidecar 자신 명령을 주입하면 companions 는 이웃 CLI(hexa 등) 카탈로그를 주입. DOMAIN-AGNOSTIC: 어떤 CLI 는 데이터(harness.config.json `companions` + host `~/.sidecar/companions.json` union)라 엔진에 hexa 안 박음. 각 companion 카탈로그(default `--help`) 실행·절단·주입·부재/실패 skip"
+       },
+       {
+        "name": "sync",
+        "role": "공유파일 sync 셸 스크립트 래퍼",
+        "id": "module-sync",
+        "detail": ""
+       },
+       {
+        "name": "pool",
+        "role": "호스트 로스터 + 원격 실행 + 자원 프로브",
+        "id": "module-pool",
+        "detail": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단(allow 마커가 cwd 일치 시 해제·status 🔓 표기). ssh=execArgs 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브해 캐시 · list·status 는 라이브 부하(CPU%·RAM%·GPU util)를 SSH 병렬 프로브 ⚡뱃지(status 는 이 프로브로 reachability 겸함 · 캐시 안 함 · RAM=total−available)"
+       }
+      ]
+     },
+     {
+      "name": "L5 규칙 데이터",
+      "role": "per-repo — 무엇을 막을까",
+      "id": "layer-l5",
+      "detail": "이 층만 프로젝트별로 달라짐",
+      "children": [
+       {
+        "name": "enforcement.json",
+        "role": "pre 정규식 규칙",
+        "id": "data-enforcement-json",
+        "detail": "strict 기본(16룰 block-everything) — init 이 항상 이 세트를 깐다(과거 hardcore profile 흡수, 별도 변종 없음). H-RAW-GPU-RENT: raw vastai/runpodctl GPU 렌트(create/rent/launch) 차단 → hexa cloud rent 단일진입 강제(미귀속 고아포드 방지) = NO_RAW_CLOUD_CLI 코드가드(c11)의 정규식-프로파일 2중방어, exceptions 빈배열(전면차단)."
+       },
+       {
+        "name": "keywords.json",
+        "role": "prompt 트리거 키워드",
+        "id": "data-keywords-json",
+        "detail": ""
+       },
+       {
+        "name": "severity-map.json",
+        "role": "errors 분류 맵",
+        "id": "data-severity-map-json",
+        "detail": "fallback=block · 낮은 unknown_threshold (strict 기본). bundled config/ 가 base, repo `.harness/` 가 code별 override (errors 가 병합 로드)"
+       },
+       {
+        "name": "harness.config.json",
+        "role": "repo 루트 설정",
+        "id": "data-harness-config-json",
+        "detail": "project·lockdown·verify.checks 등"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "name": "plugin — 배포 (자기완결 · 공용셋)",
+    "role": "sidecar 를 Claude Code 플러그인으로 배포 — 훅 + 슬래시 명령 + CLI 본체가 ONE 유닛. 프로젝트 무관·중앙 1곳",
+    "id": "group-plugin",
+    "detail": "sidecar 를 에이전트 하네스에 배포 — 거버넌스 엔진(modules/*.ts)은 한 벌, 배선만 에이전트별. Claude Code = hooks/hooks.json+run.sh 플러그인 · Pi = pi/sidecar.ts 확장. 프로젝트 무관·중앙 1곳",
+    "children": [
+     {
+      "name": "hooks/hooks.json + hooks/run.sh",
+      "role": "거버넌스 훅 배선 (guards + injects + SessionStart) → run.sh 디스패처",
+      "id": "config-hooks-hooks-json-hooks-run-sh",
+      "detail": "run.sh = 단일 해석점: ${CLAUDE_PLUGIN_ROOT}/bin/sidecar(번들) 우선 → 전역 `sidecar` 폴백 → 둘 다 없으면 exit 0(무음). CC가 stdin 으로 주는 페이로드를 exec 로 상속(pre 가 stdin 에서 tool input 읽음)"
+     },
+     {
+      "name": "commands/*.md",
+      "role": "슬래시-명령 위임자 셋 (bare /cmd · shadow 가 미러하는 SOURCE)",
+      "id": "config-commands-md",
+      "detail": "프런트매터(description+Triggers+argument-hint+allowed-tools) + `!sidecar <cmd> $ARGUMENTS` 위임자. 플러그인 명령으로 로드 안 됨(plugin.json `commands: []` → bare /cmd 와 `/sidecar:cmd` picker 중복 방지). `shadow` 가 ~/.claude/commands/ 에 bare /cmd 미러. 공용셋·프로젝트 무관 · hook-내부 제외"
+     },
+     {
+      "name": "pi/sidecar.ts (+ modules/pi.ts)",
+      "role": "Pi 코딩에이전트 브리지 확장 — 같은 sidecar CLI 를 Pi 라이프사이클에 배선",
+      "id": "config-pi-sidecar-ts",
+      "detail": "Pi 이벤트→sidecar verb 번역(CC hooks 와 같은 CLI): before_agent_start=매턴 inject+prompt-scan · session_start=gc · tool_call=pre 가드(deny→block) · tool_result=post(advisory). Stop 하드게이트는 Pi 에 blocking stop 훅 없어 CC 전용. 설치 `sidecar pi install`. 상세 pi/CLAUDE.md"
+     }
+    ]
+   },
+   {
+    "name": "module-grading — 모듈 분류",
+    "role": "'규칙을 JSON으로 빼면 다른 repo에서 그대로 도나?'",
+    "id": "group-module-grading",
+    "detail": "YES면 ①, NO면 ③",
+    "children": [
+     {
+      "name": "① 완전 범용",
+      "role": "이 repo에 포함",
+      "id": "grade-fully-generic",
+      "detail": "pre/post/prompt/lint/verify/errors/ledger/bitter-gate/audit/gc/ing/convergence/sync/pool/architecture/claudemd"
+     },
+     {
+      "name": "② 부분 범용",
+      "role": "패턴만 문서화, 코드 미포함",
+      "id": "grade-partly-generic",
+      "detail": "구현이 특정 디렉토리 규약에 묶임 (extending.md)"
+     },
+     {
+      "name": "③ 도메인 전용",
+      "role": "포함 금지",
+      "id": "grade-domain-specific",
+      "detail": "deploy/db/ssh/health/site/정산 등 특정 인프라·비즈니스에 묶임"
+     }
+    ]
+   },
+   {
+    "name": "config-driven — config 주도 설계",
+    "role": "lib/config.ts가 harness.config.json을 읽어 머지",
+    "id": "group-config-driven",
+    "detail": "설정 0으로도 합리적 기본 동작 + 점진적 커스터마이즈",
+    "children": [
+     {
+      "name": "project",
+      "role": "로그/리포트 라벨",
+      "id": "config-project",
+      "detail": ""
+     },
+     {
+      "name": "lockdown.files",
+      "role": "L0 잠금 파일",
+      "id": "config-lockdown-files",
+      "detail": "opt-in, 기본 0개"
+     },
+     {
+      "name": "enforcementFile / keywordsFile / severityMapFile",
+      "role": "규칙 파일 위치",
+      "id": "config-enforcementfile-keywordsfile-severitymapfile",
+      "detail": "없으면 번들 기본 fallback"
+     },
+     {
+      "name": "verify.checks[]",
+      "role": "검증 명령 선언",
+      "id": "config-verify-checks",
+      "detail": "{id,cmd,timeoutMs,slow}"
+     },
+     {
+      "name": "lint.freshnessFiles[] · convergence · guides[] · ledger.staleSec",
+      "role": "기타 모듈별 대상 선언",
+      "id": "config-lint-freshnessfiles-convergence-guides-ledger-stalesec",
+      "detail": ""
+     },
+     {
+      "name": "dojo {defaultLang,stack,delegate}",
+      "role": "dojo 스캐폴더 기본 스택 (선택)",
+      "id": "config-dojo-defaultlang-stack-delegate",
+      "detail": "엔진 무하드코딩 — 선호 학습/커널 스택을 per-repo config 가 운반. delegate 설정+hexa 있으면 `hexa dojo <delegate>` 위임. 부재 시 제네릭 py stub"
+     },
+     {
+      "name": "docs.scratchDir = state",
+      "role": "산출물 단일 루트",
+      "id": "config-docs-scratchdir-state",
+      "detail": "실험·벤치·검증(verdict/claim)·스크래치 등 모든 작업 산출물을 repo-root `state/` 하나로 통일(c5). 하위 디렉토리 안 쪼갬 — `state/<id>` 평면(verdict 는 `state/<slug>/<id>.txt`). verdict/verify/atlas 가 이 경로를 공유. 재생성 가능 `build/` 만 .gitignore · 머신 자동로그는 `.harness/`"
+     },
+     {
+      "name": "docs.claudeMdSections[]",
+      "role": "repo-root CLAUDE.md 필수 섹션 게이트",
+      "id": "config-docs-claudemdsections",
+      "detail": "repo-root CLAUDE.md 필수 헤딩 (기본 `[\"## Project\",\"## Tree\"]` · commit block · `docs.ts`). 각 헤딩 존재+비어있지않은 본문 필수 · tree-계열은 ├─/└─+설명 warn. Project→`NO-DESC`/Tree→`NO-TREE`/기타→`SECTION-MISSING`. `[]`=끔. 깊은 구조 SSOT=ARCHITECTURE.json · do/dont 포맷검사는 이 섹션만 prose 면제(`commons.ts`)"
+     }
+    ]
+   },
+   {
+    "name": "debt — 들어낸 비범용 부채 (교훈)",
+    "role": "원본 도구 일반화 시 제거한 안티패턴",
+    "id": "group-debt",
+    "detail": "이 도구에서 피할 것",
+    "children": [
+     {
+      "name": "경로 하드코딩",
+      "role": "절대경로 고정",
+      "id": "debt-path-hardcode",
+      "detail": "→ repo-root 상향 탐색 + env override"
+     },
+     {
+      "name": "L0 목록 하드코딩",
+      "role": "fallback 배열에 실제 파일 박힘",
+      "id": "debt-l0-list-hardcode",
+      "detail": "→ config.lockdown (opt-in)"
+     },
+     {
+      "name": "도메인 모듈 번들",
+      "role": "배포/머니 모듈이 코어에 섞임",
+      "id": "debt-domain-module-bundle",
+      "detail": "→ ①/③ 등급 분리, ③ 제외"
+     },
+     {
+      "name": "SSOT 단일 repo 고정",
+      "role": "두 repo가 한 repo의 JSON에 수렴",
+      "id": "debt-ssot-single-repo",
+      "detail": "→ per-repo 로그, 공유는 sync로 명시"
+     },
+     {
+      "name": "검증 명령 하드코딩",
+      "role": "pnpm test 등 박제",
+      "id": "debt-verify-cmd-hardcode",
+      "detail": "→ verify.checks[]로 선언"
+     }
+    ]
+   },
+   {
+    "name": "setup — 새 repo에 세우는 절차",
+    "role": "참조: install.md(통합), extending.md(확장)",
+    "id": "group-setup",
+    "detail": "",
+    "children": [
+     {
+      "name": "1. 엔진 추가",
+      "role": "git submodule add …/sidecar .harness-engine",
+      "id": "step-1",
+      "detail": ""
+     },
+     {
+      "name": "2. config 작성",
+      "role": "cp harness.config.example.json harness.config.json",
+      "id": "step-2-config",
+      "detail": "→ 수정"
+     },
+     {
+      "name": "3. (선택) 규칙 추가",
+      "role": "cp config/enforcement.json .harness/",
+      "id": "step-3",
+      "detail": "→ repo 규칙 append"
+     },
+     {
+      "name": "4. hook 배선 (전역 1벌)",
+      "role": "sidecar install — 전역 ~/.claude/settings.json 에만 배선",
+      "id": "step-4-hook-1",
+      "detail": "GLOBAL-ONLY: per-repo .claude/settings.json 금지(전역과 중복돼 컨텍스트 2~3중 주입되던 버그). init 은 repo settings 를 안 쓰고, install-hooks --repo 는 거부. 훅은 호스트당 한 번 sidecar install 로 전역 배선 → 모든 repo 발사. (@convergence INIT-INJECT-DUP)"
+     },
+     {
+      "name": "5. 검증",
+      "role": "sidecar audit / sidecar ci list",
+      "id": "step-5",
+      "detail": ""
+     },
+     {
+      "name": "6. 운영",
+      "role": "commit 전 verify, 세션 끝 ing, 규칙 추가 전 bitter-gate",
+      "id": "step-6",
+      "detail": ""
+     }
+    ]
+   },
+   {
+    "name": "viewer — 아키텍처 뷰어",
+    "role": "이 트리(ARCHITECTURE.json)를 사람이 보는 도구",
+    "id": "group-viewer-group",
+    "detail": "JSON이 SSOT, HTML/서버는 표시 수단",
+    "children": [
+     {
+      "name": "ARCHITECTURE.html",
+      "role": "의존성 0 자립형 뷰어",
+      "id": "viewer-architecture-html",
+      "detail": "json fetch→컬럼 그리드 트리(접기·검색·다크모드·드롭 fallback)"
+     },
+     {
+      "name": "serve.py",
+      "role": "python3 serve.py [port] [--no-open]",
+      "id": "viewer-serve-py",
+      "detail": "로컬 정적 서버 + 브라우저 자동 오픈 — file:// fetch 차단 우회"
+     }
+    ]
+   }
+  ]
+ },
+ "results": {
+  "note": "벤치·실험 결과 누적 SSOT (preserve-state · honesty). 방향 3단계(convergence 공유) pos-conv🟢|in-prog🔄|neg-conv🔴 + 결과전용 선행상태 untested⚪(등록됐으나 아직 안 잼 · 4번째 방향 아님). 세부 '왜'(막힘·불확정·무효)는 metric 자유서술. kind=bench|experiment · value=핵심결과 · metric=측정값/근거 · subject=대상. convergence 와 달리 file-touch 표면화·Stop게이트 없음 — 순수 누적(falsified/음성 보존). 같은 (kind,subject) 재측정은 update-in-place.",
+  "records": []
+ }
 }

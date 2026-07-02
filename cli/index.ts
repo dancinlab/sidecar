@@ -144,7 +144,7 @@ hook delegates (wire these into your agent's settings.json):
                              from a prior --json run (stateful · same --cwd) · --timeout <s> = kill a stalled run after s seconds (default
                              OPT-IN cap, default UNLIMITED, exit 124) · flags after -- go to claude verbatim)
                            · --bg = fire-and-forget (launch detached → prints a job id, returns now); collect with
-                             'sidecar fable result <id>' (RUNNING=exit3) / 'wait <id> [--timeout s]' / 'list' — no hand-rolled poll loop
+                             'sidecar fable result <id>' (RUNNING=exit3) / 'tail <id>' (follow output live) / 'wait <id> [--timeout s]' / 'list' — no hand-rolled poll loop
                            · opus fallback FORBIDDEN (always, not a flag): pins an availableModels allowlist without Opus, so a
                              safety-classifier-flagged request refuses on the delegated model instead of silently re-running on Opus)
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history

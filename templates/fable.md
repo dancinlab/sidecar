@@ -133,11 +133,17 @@ fable blocks until claude answers (seconds → minutes). To not wait:
 ```
 sidecar fable --bg --file <p> --json --cwd <dir>   → prints a job id, returns NOW
 sidecar fable result <id>    → prints the answer if DONE, else "RUNNING" (exit 3)
+sidecar fable tail <id>      → follow the output stream LIVE until done (watch progress)
 sidecar fable wait <id> [--timeout <s>]   → block until DONE, then print
 sidecar fable list           → all jobs + status
 ```
 
 - Jobs live under `~/.sidecar/fable-jobs/<id>/` (prompt · out · err · exitcode).
+- `tail <id>` follows `out` live and returns when the job finishes — the "watch
+  progress" view. A streaming (non-`--json`) job fills `out` incrementally so you
+  see it type; a `--json` job emits ONE blob only at the end, so `tail` stays quiet
+  until done (launch WITHOUT `--json`, or `-- --output-format stream-json`, to watch
+  it stream). Ctrl-C stops the VIEW, not the detached job.
 - Do NOT hand-roll `sidecar fable … & ` + a `pgrep`/`ps|grep` poll loop — that
   self-matches its OWN command line ("RUNNING" false positive; the remote-poll-pgrep
   trap) AND you have to babysit it. Use `--bg` + `result`/`wait`.

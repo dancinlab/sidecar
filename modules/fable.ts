@@ -71,6 +71,7 @@ given; capture session_id from a --json run to resume it later (same --cwd).
 async jobs (no polling by hand):
   sidecar fable --bg …              launch a background job → prints <id>
   sidecar fable result <id>         print output if DONE, else RUNNING (exit 3)
+  sidecar fable tail <id>           follow the output stream LIVE until done (watch progress)
   sidecar fable wait <id> [--timeout s]   block until DONE, then print output
   sidecar fable list                list background jobs + status`;
 
@@ -338,10 +339,52 @@ function jobList(): number {
   return 0;
 }
 
+// Follow a job's `out` stream live until it finishes, printing new bytes as they
+// land — the "watch progress" verb (vs result = one-shot, wait = block-then-dump).
+// A streaming (non-json) job fills `out` incrementally so you see it type; a --json
+// job emits one blob only at the end, so tail stays quiet until done. Poll ~300ms;
+// Ctrl-C stops the VIEW, not the detached job. Exits with the job's code (1 on
+// no-such-job). Re-reads the small out file and writes only the new tail each tick.
+async function jobTail(id: string): Promise<number> {
+  const j0 = readJob(id);
+  if (!j0) {
+    warn(`fable: no job '${id}' (list: sidecar fable list)`);
+    return 1;
+  }
+  const outF = join(j0.dir, "out");
+  info(`⏳ fable ${id}: tailing output — Ctrl-C stops the view, the job keeps running.`);
+  let printed = 0;
+  const flush = () => {
+    if (!existsSync(outF)) return;
+    const buf = readFileSync(outF);
+    if (buf.length > printed) {
+      process.stdout.write(buf.subarray(printed));
+      printed = buf.length;
+    }
+  };
+  for (;;) {
+    flush();
+    const j = readJob(id);
+    if (j?.st.done || (j && !j.st.alive)) {
+      flush();
+      const code = j?.st.code ?? 0;
+      if (code !== 0) {
+        warn(`— fable ${id}: exit ${code}${code === 124 ? " (stalled)" : ""} — stderr:`);
+        process.stderr.write(existsSync(join(j!.dir, "err")) ? readFileSync(join(j!.dir, "err"), "utf8") : "");
+      } else {
+        info(`— fable ${id}: ✅ done (exit ${code})`);
+      }
+      return code;
+    }
+    await new Promise((r) => setTimeout(r, 300));
+  }
+}
+
 export async function runFable(args: string[]): Promise<number> {
   // job-management verbs (async collection) — checked before flag parsing.
   const verb = args[0];
   if (verb === "result") return jobResult(args[1] ?? "");
+  if (verb === "tail" || verb === "watch") return jobTail(args[1] ?? "");
   if (verb === "list") return jobList();
   if (verb === "wait") {
     const id = args[1] ?? "";

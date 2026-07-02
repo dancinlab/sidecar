@@ -111,6 +111,14 @@ function parseArgs(args: string[]): FableOpts | null {
       o.json = true;
     } else if (a === "--dry") {
       o.dry = true;
+    } else if (a.startsWith("-") && a !== "-") {
+      // An unrecognized flag — REJECT it loudly instead of swallowing it as a
+      // prompt word (which silently corrupts the prompt or trips the
+      // exclusive-sources check). A frequent trip-up: claude's own flag name
+      // `--setting-sources` vs fable's `--sources`; flags meant for claude go
+      // AFTER `--`.
+      warn(`fable: unknown flag '${a}'. Known: -m/--model · -f/--file · - (stdin) · --json · --dry · --cwd · --sources · --timeout · -c/--continue · -r/--resume. Pass claude's own flags AFTER '--'.`);
+      return null;
     } else {
       o.words.push(a);
     }

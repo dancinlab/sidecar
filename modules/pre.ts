@@ -29,6 +29,7 @@ import { detectHandoffScatter } from "./handoff-guard.ts";
 import { detectHardcodedHomePath } from "./portable-path-guard.ts";
 import { probeGitContext } from "./git-context.ts";
 import { detectVersionedName, detectVersionedNameBash, offendingToken } from "./naming-guard.ts";
+import { detectStrayHypothesisWrite, detectStrayHypothesisBash } from "./hypothesis-guard.ts";
 import { existsSync } from "node:fs";
 import { basename, isAbsolute, join } from "node:path";
 import { memPreflight } from "./mem-guard.ts";
@@ -273,6 +274,23 @@ export async function preBash(_args: string[]): Promise<number> {
     }
   }
 
+  // hypothesis-guard (bash) — BLOCK a mkdir/mv/cp CREATING a stray hypothesis
+  // folder (a configured alias or the built-in `hypothes*`/`가설*` pattern) instead
+  // of the canonical `hypotheses.dir`. `mv UNIVERSE HYPOTHESES` (renaming AWAY) is
+  // allowed. `# hypothesis-ok` overrides.
+  if (config().hypothesisGuard) {
+    const hb = detectStrayHypothesisBash(cmd);
+    if (hb) {
+      const canon = config().hypotheses?.dir || "HYPOTHESES";
+      return emitBlock(
+        "HYPOTHESIS-STRAY-FOLDER",
+        `'${hb.offender}' is a stray hypothesis folder (${hb.reason}) — hypotheses live in ONE canonical dir '${canon}/'. ` +
+          `Create the registry/cards under '${canon}/', or migrate: \`sidecar hypotheses migrate ${hb.offender}\`. ` +
+          `Intentional exception → append '# hypothesis-ok <reason>' to the command.`
+      );
+    }
+  }
+
   // built-in raw-cloud-CLI guard — code-level block (c11), runs before config
   // rules, default-on, NO override. GPU/cloud must go through hexa builtins.
   const cloudLabel = detectRawCloudCli(cmd);
@@ -444,6 +462,17 @@ export async function preWrite(_args: string[]): Promise<number> {
     if (nv) {
       if (existsSync(filePath)) emitWarn("NAMING-TOUCH-VERSION-SUFFIX", `${nv} — 기존 파일을 터치 중. 고치는 김에 canonical 이름으로 rename 고려 (\`sidecar naming audit\`).`);
       else return emitBlock("NAMING-VERSION-SUFFIX", nv);
+    }
+  }
+
+  // hypothesis-guard (write) — path-based (runs on Edit/MultiEdit fragments too, no
+  // section content needed). A NEW file under a stray hypothesis folder → BLOCK;
+  // editing one that ALREADY exists → WARN (don't paralyze a not-yet-migrated repo).
+  if (config().hypothesisGuard) {
+    const hv = detectStrayHypothesisWrite(filePath, content);
+    if (hv) {
+      if (existsSync(filePath)) emitWarn("HYPOTHESIS-TOUCH-STRAY-FOLDER", `${hv}`);
+      else return emitBlock("HYPOTHESIS-STRAY-FOLDER", hv);
     }
   }
 

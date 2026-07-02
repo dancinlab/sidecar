@@ -60,6 +60,7 @@ import { runSwitch } from "../modules/switch.ts";
 import { runPi } from "../modules/pi.ts";
 import { runInjects } from "../modules/injects.ts";
 import { runFable } from "../modules/fable.ts";
+import { runHypotheses } from "../modules/hypotheses.ts";
 
 export const HELP = `dancinlab/sidecar — project-agnostic AI coding sidecar
 
@@ -153,6 +154,10 @@ hook delegates (wire these into your agent's settings.json):
 gates & ledgers:
   lint [all|fast|verbose]  staged-L0 + freshness + doc-gate checks
   naming audit [path] [--ing] [--gate]   repo-wide non-canonical name audit (version/copy/dup suffix backlog the write-guard never saw) · --ing = land summary on THIS repo's board · --gate = exit 1 on any hit
+  hypotheses {check [--gate]|migrate <dir>|scaffold|show}   enforce ONE canonical hypothesis folder (config hypotheses.dir, default HYPOTHESES/) for
+                           pre-register->falsify->run->verdict work. The pre write/bash guards block NEW strays (a configured hypotheses.alias, e.g.
+                           anima UNIVERSE, or the built-in hypothes*/가설* pattern); check audits the backlog (--gate exits 1), migrate = history-preserving
+                           git mv <dir> -> HYPOTHESES/ (merges if it exists), scaffold = create the skeleton, show = active dir + aliases
   ci [all|fast|list|scaffold [--force]]   run configured verification commands in parallel (was verify; config key stays verify.checks) · scaffold = emit a .github/workflows/ci.yml that runs 'sidecar ci' on config ci.{runner,setup,fallback,cachePaths} (init writes it too) · ci.fallback on = cost-free fast path (self-hosted pool then github-hosted fallback, probe-fail-safe, no Blacksmith) + cachePaths = warm actions/cache
   ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop)
   verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge)
@@ -211,6 +216,8 @@ async function main(): Promise<number> {
       return runSwitch(rest);
     case "fable":
       return runFable(rest);
+    case "hypotheses":
+      return runHypotheses(rest);
     case "shadow":
       return runShadow(rest);
     case "fleet":

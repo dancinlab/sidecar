@@ -870,6 +870,12 @@
                 "detail": "`claude -p --model claude-fable-5`(-m 교체) 위임 — 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-'), /fable 은 런북형(Write→--file). 자식 기본 `--setting-sources project,local`로 전역 Stop-훅 미상속=dirty-repo 스톨(124) 차단·인증 유지. 기본 stateless — `-c`·`-r <session_id>`로 다중턴. 주의시트=templates/fable.md."
               },
               {
+                "name": "hypotheses",
+                "role": "가설 폴더 단일 정규명(HYPOTHESES/) 강제·감사·마이그레이션",
+                "id": "module-hypotheses",
+                "detail": "config `hypotheses.dir`(기본 HYPOTHESES/)로 가설(pre-register→falsify→run→verdict) 작업을 한 폴더 고정. hypothesis-guard(pre write/bash)가 신규 stray 폴더(per-repo aliases 예 UNIVERSE·내장 hypothes*/가설* 패턴) 차단(신규=block·기존=warn·name-pattern 상시). check=감사(--gate) · migrate=git mv→canonical(병합) · scaffold · show."
+              },
+              {
                 "name": "pod {poll|watch|unwatch|list}",
                 "role": "GPU pod 자동 폴링 (>=10분 cadence)",
                 "id": "module-pod-poll",

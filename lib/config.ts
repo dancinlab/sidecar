@@ -128,6 +128,14 @@ export interface SidecarConfig {
     ignore: string[];
     ext: string[];
   };
+  // hypothesis-folder convention: ONE canonical English dir for pre-register→
+  // falsify→run→verdict science work. `dir` is the one true name; `aliases` are
+  // per-repo non-canonical stems (e.g. anima's `UNIVERSE`) the guard/audit steer
+  // BACK to `dir`. Built-in patterns (hypotheses_*, 가설*) always flag regardless.
+  hypotheses: {
+    dir: string;
+    aliases: string[];
+  };
   // single-doc discipline — keep AI output in two canonical files instead of
   // scattering reports/notes. Active only when `architecture` file exists (opt-in
   // by presence). architecture = UPDATE-in-place SSOT; log = APPEND-only.
@@ -198,6 +206,12 @@ export interface SidecarConfig {
   // to git, not the filename. Steer to one canonical file updated in place. The
   // `@canonical-ok` (Write/Edit content) / `# canonical-ok` (bash) marker overrides.
   namingGuard: boolean;
+  // hypothesisGuard BLOCKS a NEW file/dir under a stray hypothesis folder (a name
+  // matching `hypotheses.aliases` or the built-in hypothesis-name pattern) and
+  // WARNS when editing one that already exists — steering pre-register→falsify→run
+  // →verdict work into the ONE canonical `hypotheses.dir`. `@hypothesis-ok` /
+  // `# hypothesis-ok` overrides.
+  hypothesisGuard: boolean;
   // portablePathGuard WARNS (pre write) when a SHIPPED runtime script (under a
   // hooks/·commands/·skills/·bin/·pi/ dir, ext .sh/.py/.hexa/.ts/.js/.rb/.pl)
   // hardcodes an absolute machine home path (`/Users/<you>/…` · `/home/<you>/…`)
@@ -323,6 +337,10 @@ const DEFAULTS: SidecarConfig = {
       ".swift", ".dart", ".hexa",
     ],
   },
+  hypotheses: {
+    dir: "HYPOTHESES",
+    aliases: [],
+  },
   docs: {
     architecture: "ARCHITECTURE.json",
     log: "CHANGELOG.md",
@@ -359,6 +377,7 @@ const DEFAULTS: SidecarConfig = {
   tmpGuard: true,
   handoffGuard: true,
   namingGuard: true,
+  hypothesisGuard: true,
   portablePathGuard: true,
   askqText: true,
   ledger: { staleSec: 3600 },

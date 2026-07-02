@@ -241,6 +241,19 @@
       ],
       "tool": "sidecar fable",
       "hint": "Fable 5 delegation → `sidecar fable` (headless `claude -p` · claude-fable-5 · per-call). Free text → `sidecar fable --file <f> --timeout 600` (never inline). Runs hook-free by default (--sources project,local) so it won't stall in a dirty repo; --json for clean `.result`. Full sheet: templates/fable.md."
+    },
+    {
+      "id": "hypothesis-convention",
+      "patterns": [
+        "가설",
+        "hypothesis",
+        "hypotheses",
+        "pre-register",
+        "반증",
+        "falsif"
+      ],
+      "tool": "sidecar hypotheses",
+      "hint": "Hypotheses live in ONE canonical folder (config hypotheses.dir, default HYPOTHESES/) — pre-register→falsify→run→verdict. The pre guards block NEW stray folders; `sidecar hypotheses check` audits the backlog, `sidecar hypotheses migrate <dir>` renames a non-canonical one (history-preserving)."
     }
   ]
 }

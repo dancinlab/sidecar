@@ -1,5 +1,5 @@
 ---
-description: /fable <지시> — delegate ONE instruction to the Fable 5 model via headless `claude -p` (sidecar fable · claude-fable-5 · per-call). Free-text safe — the prompt goes through a FILE (`--file`), never inlined on a shell line. Triggers — "fable 한테", "fable 모델로", "파블 시켜", "/fable".
+description: /fable <지시> — delegate ONE instruction to the Fable 5 model via headless `claude -p` (sidecar fable · claude-fable-5 · per-call). Free-text safe — the prompt goes through a FILE (`--file`), never inlined on a shell line. Triggers — "fable 한테", "fable 모델로", "파블 시켜", "페이블 시켜", "/fable".
 argument-hint: "<prompt — free text, any shell-special chars OK>"
 allowed-tools: Bash, Write
 ---

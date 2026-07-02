@@ -111,5 +111,5 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - dont: Guessing from stale docs/memory · inferring cross-repo capability from a repo-internal doc
 
 ## fanout-workflow
-- do: Fanning independent work to many subagents at once (≥3 · `fleet`/`abg`/`gap full`) → one `Workflow` call
-- dont: Firing N direct `Agent` calls in one message (rate-limit death) (exception: a single one-off agent · `afg`)
+- do: Fanning independent work to many subagents at once (≥3 · `fleet`/`abg`/`gap full`) → one `Workflow` call · for parallel Fable-5 investigation/brainstorm/analysis, spawn `Workflow` agents with `{model:'fable'}` (clean fan-out — workflow agents don't inherit the session Stop-hooks that stall a headless `sidecar fable` child; use `sidecar fable --file … --json --setting-sources project,local` only for a single ad-hoc off-workflow call)
+- dont: Firing N direct `Agent` calls in one message (rate-limit death) (exception: a single one-off agent · `afg`) · looping one-at-a-time `sidecar fable` calls when ≥3 independent fable probes fit one `Workflow`

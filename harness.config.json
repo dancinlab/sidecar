@@ -26,6 +26,7 @@
   },
   "lint": {
     "freshnessFiles": [],
+    "commonsCap": 8500,
     "injectCaps": {
       "config/recommend.md": 6500,
       "config/recommend.ko.md": 6500

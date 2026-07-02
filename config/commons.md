@@ -70,6 +70,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Before terminal, check the measurement path — on divergence suspect tool/harness/env/incomplete-run · terminal only after `reference-match` clears artifacts
 - dont: Stamping failure terminal without the check · concluding divergence is the target's defect (suspect tool first)
 
+## session-terminal
+- do: A blocked goal (needs another session · async/external dep · human-only input · multi-session endpoint) is a VALID terminal → record wall + resume target to ING/ARCHITECTURE, then STOP
+- dont: Looping the same blocked/multi-session verdict every turn · faking completion to escape a goal-loop · calling a recorded cross-session handoff a failure
+
 ## heavy-on-pool
 - do: Distribute builds/tests/sweeps/long compute across `sidecar pool` hosts · GPU/training via `hexa cloud`/`hexa dojo`
 - dont: Piling load on one local machine · a `shared:false` host as shared compute

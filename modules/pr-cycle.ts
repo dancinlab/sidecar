@@ -29,7 +29,7 @@ async function git(cmd: string, cwd?: string): Promise<{ code: number; out: stri
 // checkout, locked worktrees, or a branch with a live/absent upstream (may hold
 // un-pushed work); a worktree with UNCOMMITTED changes is PRESERVED with a warning
 // instead of being --force-clobbered.
-async function sweepMergedWorktrees(): Promise<void> {
+async function sweepMergedWorktrees(mergedBranch?: string): Promise<void> {
   // first `worktree <path>` line is always the main worktree (git invariant)
   const list = (await git("git worktree list --porcelain")).out;
   const main = (list.match(/^worktree (.+)$/m) || [])[1];
@@ -37,6 +37,13 @@ async function sweepMergedWorktrees(): Promise<void> {
     await git("git worktree prune");
     return;
   }
+  // The just-merged branch (verified MERGED by the caller) is cleaned DETERMINISTICALLY
+  // rather than inferred from [gone]: when pr-cycle merges from a linked worktree, gh's
+  // `--delete-branch` post-step is a LOCAL checkout that fails, so the REMOTE ref often
+  // lingers and the branch never reads as [gone] → its worktree was never swept and
+  // piled up. Explicitly delete the remote ref (best-effort; a normal delete already
+  // happened → harmless error), then fetch -p so its upstream flips to [gone].
+  if (mergedBranch) await git(`git push origin --delete ${JSON.stringify(mergedBranch)}`, main);
   await git("git fetch -p origin", main);
 
   // parse porcelain blocks → { path, branch, locked }
@@ -48,7 +55,9 @@ async function sweepMergedWorktrees(): Promise<void> {
     const br = (b.match(/^branch refs\/heads\/(.+)$/m) || [])[1];
     if (!br) continue;
     const track = (await git(`git for-each-ref --format='%(upstream:track)' refs/heads/${JSON.stringify(br)}`, main)).out;
-    if (track !== "[gone]") continue; // only merged + deleted (squash-safe)
+    // Sweep a worktree when its branch is merged: either the squash-safe [gone] signal,
+    // OR it IS the branch pr-cycle just verified as merged (heuristic-independent).
+    if (track !== "[gone]" && br !== mergedBranch) continue;
     // Preserve a worktree with uncommitted work rather than --force-clobbering it —
     // [gone] means the BRANCH is merged, but the tree may hold new unrelated edits.
     const dirty = (await git("git status --porcelain", wt)).out;
@@ -289,8 +298,10 @@ export async function runPrCycle(args: string[]): Promise<number> {
     }
   }
 
-  // 5. post-merge worktree sweep — remove merged agent worktrees + local branches
-  await sweepMergedWorktrees();
+  // 5. post-merge worktree sweep — remove merged worktrees + local branches. Pass the
+  //    just-merged branch (only when the merge VERIFIED on base) so its own worktree is
+  //    cleaned deterministically, not left to the flaky [gone] heuristic.
+  await sweepMergedWorktrees(onBase ? branch : undefined);
 
   // 6. stale-PR reaper — reconcile any OTHER open PRs of mine so none rot abandoned.
   //    Runs only after a verified merge; opt-out with --no-reap.

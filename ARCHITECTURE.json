@@ -850,6 +850,12 @@
                 "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
               },
               {
+                "name": "fable",
+                "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
+                "id": "module-fable",
+                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 호출 위임 — 세션 백엔드(switch)는 불변. 프롬프트 3택1(argv/--file/stdin '-')은 child stdin 으로 전달해 인용·길이·이력누출 0, 출력은 inherit 라이브 스트리밍. --json=JSON 결과 · --dry=미실행 argv 미리보기 · '--' 뒤는 claude 패스스루."
+              },
+              {
                 "name": "pod {poll|watch|unwatch|list}",
                 "role": "GPU pod 자동 폴링 (>=10분 cadence)",
                 "id": "module-pod-poll",

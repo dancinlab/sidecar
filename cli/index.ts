@@ -59,6 +59,7 @@ import { runClaudemd } from "../modules/claudemd.ts";
 import { runSwitch } from "../modules/switch.ts";
 import { runPi } from "../modules/pi.ts";
 import { runInjects } from "../modules/injects.ts";
+import { runFable } from "../modules/fable.ts";
 
 export const HELP = `dancinlab/sidecar — project-agnostic AI coding sidecar
 
@@ -131,6 +132,9 @@ hook delegates (wire these into your agent's settings.json):
                            + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited
   research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang] | web <query> [--n N] | fetch <url>}   arXiv / YouTube transcript / keyless web search (DuckDuckGo) / page fetch (no key)
   watch <url|path> [question] [flags]   download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent
+  fable [flags] <prompt...> | --file <f> | -   delegate ONE instruction to the Fable 5 model via headless 'claude -p'
+                           (default -m claude-fable-5 · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting
+                           · --json = claude --output-format json · --dry = print resolved argv, no run · --cwd <dir> · flags after -- go to claude verbatim)
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]
@@ -200,6 +204,8 @@ async function main(): Promise<number> {
       return runSelfUpdate(rest);
     case "switch":
       return runSwitch(rest);
+    case "fable":
+      return runFable(rest);
     case "shadow":
       return runShadow(rest);
     case "fleet":

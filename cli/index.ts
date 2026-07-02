@@ -45,6 +45,7 @@ import { runEasy } from "../modules/easy.ts";
 import { runFableMode } from "../modules/fable-mode.ts";
 import { runLoad } from "../modules/load.ts";
 import { runRecommend } from "../modules/recommend.ts";
+import { runGoalGuard } from "../modules/goal-guard.ts";
 import { runSbs } from "../modules/sbs.ts";
 import { runFanout } from "../modules/fanout.ts";
 import { runMemGuard } from "../modules/mem-guard.ts";
@@ -109,6 +110,8 @@ hook delegates (wire these into your agent's settings.json):
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}
                            4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)
+  goal-guard stop-check    Stop gate — blocks a reply that PUNTS the work to a future session ('다음 세션에…'/'next session') so the agent
+                           presses on now; single-fire (stop_hook_active) + tail-precise, so a genuine multi-session blocker passes on re-stop (session-terminal)
   sbs [auto[:<axis>]|manual] [<task>]   plan-first runbook — resolver-first mode · chat-form 모호성→0 · plan.md handoff + auto-QA 4축 + 9-section dossier
   abg [labels]             all-bg-go — fan out prior-turn branches as parallel background Agents (runbook)
   afg [labels]             all-fg-go — run prior-turn branches sequentially in-session (runbook)
@@ -277,6 +280,8 @@ async function main(): Promise<number> {
       return runLoad(rest);
     case "recommend":
       return runRecommend(rest);
+    case "goal-guard":
+      return runGoalGuard(rest);
     case "sbs":
     case "step-by-step":
       return runSbs(rest);

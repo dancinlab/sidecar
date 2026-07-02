@@ -63,6 +63,7 @@ function hookSpec(): Record<string, unknown[]> {
     ],
     Stop: [
       entry("sidecar recommend stop-check"),
+      entry("sidecar goal-guard stop-check"), // turn-close anti-punt gate — reply that defers work to a future session ('다음 세션에…') ⇒ block; single-fire, genuine blocker passes on re-stop (wire BOTH: also in hooks/hooks.json)
       entry("sidecar architecture stop-check"), // turn-close design-report gate (was missing here vs hooks.json)
       entry("sidecar architecture convergence stop-check"),
       entry("sidecar architecture gate-stop-check"), // turn-close gate-verdict gate — verdict signal w/o `🔬 GATE` marker ⇒ block, induce DIRECT type:gate node update (wire BOTH: also in hooks/hooks.json)

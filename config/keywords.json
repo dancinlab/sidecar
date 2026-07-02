@@ -27,37 +27,6 @@
       "hint": "다음 세션 인계는 ING 로: `sidecar ing add <text>` (내 repo 전용 · cross-repo 전달 폐기 — 직접수정 원칙)."
     },
     {
-      "id": "goal-continuity",
-      "patterns": [
-        "다음 진행",
-        "다음 뭐",
-        "다음 할",
-        "다음 작업",
-        "다음 단계",
-        "다음 세션",
-        "잔여",
-        "남은 작업",
-        "남은 일",
-        "이어서",
-        "계속 진행",
-        "계속하자",
-        "계속해줘",
-        "next step",
-        "next task",
-        "what's next",
-        "whats next",
-        "remaining work",
-        "remaining task",
-        "keep going",
-        "pick up where",
-        "continue from",
-        "continue where",
-        "\\bresumes?\\b"
-      ],
-      "tool": "sidecar ing",
-      "hint": "진행 지속: 잔여는 `sidecar ing`(next 항목) pull→바로 착수 · 직전 제안 계속은 `sidecar go`. 장기 목표면 native `/goal <대화로 증명가능한 조건> or stop after N turns`(매턴 자동 지속·--resume 시 복원). 다세션 벽은 `sidecar ing next <재개지점>` 기록 후 STOP(session-terminal)."
-    },
-    {
       "id": "research-fetch",
       "patterns": [
         "arxiv",

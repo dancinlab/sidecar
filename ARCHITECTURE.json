@@ -880,7 +880,7 @@
                 "name": "fable-mode",
                 "role": "세션 스코프 분업 토글 (on/off)",
                 "id": "module-fable-mode",
-                "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 분업 지시: **설계·분석·리서치·리뷰·계획=Fable 5 위임**(sidecar fable), **실제 구현·빌드·git·commit·ship=로컬(기본진행)**. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 재귀금지. 3표면 배선."
+                "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 분업 지시: **설계·분석·리서치·리뷰·계획·난제(막힌 문제·까다로운 버그/증명/알고리즘)=Fable 5 위임**(sidecar fable), **실제 구현·빌드·git·commit·ship=로컬(기본진행)**. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 재귀금지. 3표면 배선."
               },
               {
                 "name": "hypotheses",

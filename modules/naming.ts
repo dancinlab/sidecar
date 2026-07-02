@@ -3,7 +3,7 @@
 // never sees the BACKLOG — the version/copy/dup-suffixed names already committed before the
 // guard existed (or imported from elsewhere). This audits the whole tracked tree for that
 // backlog so the canonical-naming rule is actually enforced across a repo, not just on new
-// writes. Read-only report by default (canonical-naming · native-canonical-first).
+// writes. Read-only report by default (canonical-naming · canonical-cli).
 //   --ing   append a one-line summary to THIS repo's ING board (boards are my-repo only —
 //           no cross-repo forwarding; each repo's audit lands on its OWN board).
 //   --gate  exit 1 when any non-canonical name is found (commit/CI gate); default exit 0.

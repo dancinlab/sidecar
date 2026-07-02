@@ -6,10 +6,6 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Fix cause not symptom · on repeat log the lesson in `ARCHITECTURE.json` `convergence.records[]`
 - dont: `@ts-ignore`·`eslint-disable`·empty catch·`if(false)`·TODO-only·shadow guards (justified→`@root-cause-ok`)
 
-## fix-the-tool
-- do: Dependent tool defect/limit → fix THAT tool in its CANONICAL repo, merge via its own pr-cycle · verify in-session (worktree+build+CI)
-- dont: Cover a wall (reimpl·cached-binary·symbol dodge·fallback) or patch only the INSTALLED/vendored copy; a NOW-unblock still lands upstream same cycle (else `@root-cause-ok`)
-
 ## verify-done
 - do: Run `sidecar ci`/build/test, confirm BY OUTPUT · QA all subcommands+edge cases (PASS/FAIL tally → fix → close) · evidence via `sidecar verdict record`
 - dont: LLM self-judging · hiding failures · unverified "done"
@@ -51,8 +47,8 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - dont: Arbitrary refactors of adjacent code · deleting unrelated dead code
 
 ## canonical-cli
-- do: Same job → its command (`sidecar imagine/research/watch/pool/lsp/secret/sbs/ci/verify/verdict` · GPU `hexa cloud` · train `hexa dojo`) · PATH global binary
-- dont: Habitual raw curl/manual runpod/vast/train scripts · stale binaries from a submodule
+- do: Same job → its command (`sidecar research/pool/lsp/secret/sbs/ci/verify/verdict` · GPU `hexa cloud`) else the native primitive; hand-roll only if none (`reference-match`)
+- dont: Raw curl/manual runpod/vast/train scripts · reinvent when a native primitive exists · needless wrapper/shim/shadow/fork · stale submodule binaries (`@root-cause-ok`)
 
 ## cycle-docs-pr
 - do: Each cycle: docs (CHANGELOG + ARCHITECTURE/ING · README if touched) → merge verified main `sidecar pr-cycle` · report `🏛️ ARCHITECTURE`/`🔄 ING` · branch off latest base
@@ -75,7 +71,7 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - dont: Looping the same blocked/multi-session verdict every turn · faking completion to escape a goal-loop · calling a recorded cross-session handoff a failure
 
 ## heavy-on-pool
-- do: Distribute builds/tests/sweeps/long compute across `sidecar pool` hosts · GPU/training via `hexa cloud`/`hexa dojo`
+- do: Distribute builds/tests/sweeps/long compute across `sidecar pool` hosts · GPU via `hexa cloud`
 - dont: Piling load on one local machine · a `shared:false` host as shared compute
 
 ## no-escape-hatch
@@ -83,8 +79,8 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - dont: Inserting hatches before asked (`# *-ok`·opt-out·skip·fallback) · holes in new guards
 
 ## upstream-fix
-- do: Upstream defect (any dancinlab repo = your write access) → that session: clone/worktree, fix cause, verify via CI, `sidecar pr-cycle` merge THERE · high-risk → isolated worktree
-- dont: Offloading the fix to upstream · cross-repo handoff to another session · "it's upstream" excuse · wrapper/shadow/fork cover · fixed-but-unmerged
+- do: Dependent/upstream tool defect (any dancinlab repo) → fix the CAUSE in ITS canonical repo this session (high-risk → isolated worktree), verify in-session, merge via its own `sidecar pr-cycle`
+- dont: Cover a wall (reimpl·cached-bin·symbol-dodge·fallback·wrapper/shadow/fork) · patch only the vendored copy · offload/defer to upstream · fixed-but-unmerged (else `@root-cause-ok`)
 
 ## release-tag-ci
 - do: A repo with release artifacts gets a semver tag (`vX.Y.Z`) on verified main → `release.yml` builds per-target + uploads a GitHub release
@@ -109,10 +105,6 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 ## canonical-naming
 - do: One canonical native name per ecosystem · update-in-place · true API versioning (`v1/`/`v2/`) justified with `@canonical-ok`
 - dont: Baking history into filenames — `_v2`·`_copy`·`_old`·`_bak`·`foo(1)` (history lives in git)
-
-## native-canonical-first
-- do: Prefer the tool/language's native/canonical way; hand-roll only if no native path (`reference-match`); fix a bespoke native-bypass on sight
-- dont: Reinvent when a native primitive exists · needless wrapper/shim/shadow/fork on the canonical path · a non-std bypass that "works" (w/o `@root-cause-ok`)
 
 ## tool-self-report
 - do: Check a tool's subsystems/accel/build/version via the tool itself (`<tool> --help`/status; e.g. `hexa gpu`) · keep self-report in lockstep on release

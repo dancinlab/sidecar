@@ -867,7 +867,7 @@
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5`(-m 교체) 1회 위임 — 세션 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-'), /fable 슬래시는 런북형(Write→--file). 자식은 기본 `--setting-sources project,local`로 전역 거버넌스 Stop-훅 미상속=dirty-repo 스톨(exit124) 원천차단·keychain 인증 유지(`--sources user,project,local`로 전체상속). 주의시트=templates/fable.md."
+                "detail": "`claude -p --model claude-fable-5`(-m 교체) 위임 — 백엔드(switch) 불변. 프롬프트 3택1(argv/--file/stdin '-'), /fable 은 런북형(Write→--file). 자식 기본 `--setting-sources project,local`로 전역 Stop-훅 미상속=dirty-repo 스톨(124) 차단·인증 유지. 기본 stateless — `-c`·`-r <session_id>`로 다중턴. 주의시트=templates/fable.md."
               },
               {
                 "name": "pod {poll|watch|unwatch|list}",

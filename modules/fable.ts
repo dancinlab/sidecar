@@ -47,8 +47,13 @@ const USAGE = `usage: sidecar fable [flags] <prompt...> | --file <f> | -
                        user,project,local to inherit the full session environment)
       --timeout <s>    kill the run after <s> seconds (exit 124) — backstop for a
                        stalled headless run (auth wait / blocking inherited hook)
+  -c, --continue       continue the most recent conversation in --cwd (stateful)
+  -r, --resume <id>    resume a specific session by id (the session_id from a
+                       prior --json run) — SAME --cwd as that run
       -- <flags...>    everything after -- is passed to claude verbatim
-prompt sources are exclusive: argv words | --file | - (stdin).`;
+prompt sources are exclusive: argv words | --file | - (stdin).
+continuity: fable is stateless per-call UNLESS -c/--continue or -r/--resume is
+given; capture session_id from a --json run to resume it later (same --cwd).`;
 
 interface FableOpts {
   model: string;
@@ -58,13 +63,15 @@ interface FableOpts {
   dry: boolean;
   cwd: string | null;
   sources: string;
+  cont: boolean;
+  resume: string | null;
   timeoutSec: number | null;
   words: string[];
   extra: string[];
 }
 
 function parseArgs(args: string[]): FableOpts | null {
-  const o: FableOpts = { model: DEFAULT_MODEL, file: null, stdin: false, json: false, dry: false, cwd: null, sources: DEFAULT_SOURCES, timeoutSec: null, words: [], extra: [] };
+  const o: FableOpts = { model: DEFAULT_MODEL, file: null, stdin: false, json: false, dry: false, cwd: null, sources: DEFAULT_SOURCES, cont: false, resume: null, timeoutSec: null, words: [], extra: [] };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === "--") {
@@ -88,6 +95,12 @@ function parseArgs(args: string[]): FableOpts | null {
       const parts = v.split(",").map((s) => s.trim()).filter(Boolean);
       if (parts.length === 0 || !parts.every((p) => VALID_SOURCES.has(p))) return null;
       o.sources = parts.join(",");
+    } else if (a === "-c" || a === "--continue") {
+      o.cont = true;
+    } else if (a === "-r" || a === "--resume") {
+      const v = args[++i];
+      if (!v) return null;
+      o.resume = v;
     } else if (a === "--timeout") {
       const v = Number(args[++i]);
       if (!Number.isFinite(v) || v <= 0) return null;
@@ -142,6 +155,10 @@ export async function runFable(args: string[]): Promise<number> {
     info(USAGE);
     return 1;
   }
+  if (o.cont && o.resume !== null) {
+    warn("fable: --continue and --resume are mutually exclusive — pick one (continue = most recent in --cwd; resume = a specific session_id).");
+    return 1;
+  }
   const prompt = await resolvePrompt(o);
   if (prompt === null) return 1;
   if (prompt.trim() === "") {
@@ -152,10 +169,14 @@ export async function runFable(args: string[]): Promise<number> {
     return 1;
   }
 
-  const claudeArgs = ["-p", "--model", o.model, "--setting-sources", o.sources, ...(o.json ? ["--output-format", "json"] : []), ...o.extra];
+  // --continue / --resume make the call STATEFUL: claude re-opens a prior
+  // session (keyed to --cwd) and appends this prompt. session_id comes back in
+  // the --json result of an earlier run. These sit before the `--` passthrough.
+  const contArgs = o.cont ? ["--continue"] : o.resume !== null ? ["--resume", o.resume] : [];
+  const claudeArgs = ["-p", "--model", o.model, "--setting-sources", o.sources, ...contArgs, ...(o.json ? ["--output-format", "json"] : []), ...o.extra];
   if (o.dry) {
     info(`fable --dry: claude ${claudeArgs.join(" ")}`);
-    info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""}${o.timeoutSec ? ` · timeout=${o.timeoutSec}s` : ""}`);
+    info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""}${o.timeoutSec ? ` · timeout=${o.timeoutSec}s` : ""}${o.cont ? " · continue" : o.resume !== null ? ` · resume=${o.resume}` : ""}`);
     return 0;
   }
 

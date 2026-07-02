@@ -23,8 +23,12 @@ async function git(cmd: string, cwd?: string): Promise<{ code: number; out: stri
 // --is-ancestor can't detect a squash, but a deleted upstream reliably can). cd to
 // the MAIN worktree first so even the just-merged CURRENT worktree (if pr-cycle ran
 // inside one) becomes sweepable, then remove every LINKED worktree whose branch is
-// [gone]. NEVER touches the main checkout, locked worktrees, or a branch with a
-// live/absent upstream (may hold un-pushed work).
+// [gone] — REGARDLESS of path. The old sweep only touched `.claude/worktrees/` agent
+// worktrees, so a manually-added `git worktree add <path> -b <br>` (the standard
+// isolated-worktree pattern) was never reaped and piled up. NEVER touches the main
+// checkout, locked worktrees, or a branch with a live/absent upstream (may hold
+// un-pushed work); a worktree with UNCOMMITTED changes is PRESERVED with a warning
+// instead of being --force-clobbered.
 async function sweepMergedWorktrees(): Promise<void> {
   // first `worktree <path>` line is always the main worktree (git invariant)
   const list = (await git("git worktree list --porcelain")).out;
@@ -40,12 +44,18 @@ async function sweepMergedWorktrees(): Promise<void> {
   for (const b of blocks) {
     const wt = (b.match(/^worktree (.+)$/m) || [])[1];
     if (!wt || wt === main) continue;
-    if (!wt.includes("/.claude/worktrees/")) continue; // only sidecar agent worktrees
     if (/^locked/m.test(b)) continue; // never another live checkout
     const br = (b.match(/^branch refs\/heads\/(.+)$/m) || [])[1];
     if (!br) continue;
     const track = (await git(`git for-each-ref --format='%(upstream:track)' refs/heads/${JSON.stringify(br)}`, main)).out;
     if (track !== "[gone]") continue; // only merged + deleted (squash-safe)
+    // Preserve a worktree with uncommitted work rather than --force-clobbering it —
+    // [gone] means the BRANCH is merged, but the tree may hold new unrelated edits.
+    const dirty = (await git("git status --porcelain", wt)).out;
+    if (dirty) {
+      info(`  ⚠ merged worktree kept (uncommitted changes): ${wt} — commit/discard, then \`sidecar worktree gc\``);
+      continue;
+    }
     const rm = await git(`git worktree remove --force ${JSON.stringify(wt)}`, main);
     if (rm.code === 0) {
       await git(`git branch -D ${JSON.stringify(br)}`, main);

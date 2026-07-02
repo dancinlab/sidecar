@@ -14,10 +14,11 @@
 //
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { execArgs } from "../lib/exec.ts";
+import { execArgs, readStdin } from "../lib/exec.ts";
 import { config } from "../lib/config.ts";
 import { readJsonOr } from "../lib/json.ts";
 import { info } from "../lib/log.ts";
+import { emitInject } from "../lib/inject.ts";
 
 export interface Companion {
   cmd: string; // executable name (resolved on PATH at inject time)
@@ -79,7 +80,18 @@ export async function runCompanions(args: string[]): Promise<number> {
       if (cat) blocks.push(`## ${c.label ?? c.cmd}\n\n\`\`\`\n${cat}\n\`\`\``);
     }
     if (!blocks.length) return 0;
-    process.stderr.write([...HEADER, blocks.join("\n\n")].join("\n") + "\n");
+    // Emit via stdout `{hookSpecificOutput:{additionalContext}}` (emitInject) — the
+    // schema Claude Code reads. Raw STDERR (old behaviour) was dropped, so the
+    // neighbour-CLI surface never reached the agent. Needs the hook payload on STDIN
+    // for the event name; a bare manual run (no stdin JSON) stays silent.
+    try {
+      const j = JSON.parse(await readStdin());
+      const ev = String(j.hook_event_name ?? j.hookEventName ?? "");
+      if (!ev) return 0;
+      emitInject("companions", ev, [...HEADER, blocks.join("\n\n")].join("\n"));
+    } catch {
+      return 0;
+    }
     return 0;
   }
 

@@ -18,6 +18,8 @@ import { fileURLToPath } from "node:url";
 import { info, ok, warn, loudFail } from "../lib/log.ts";
 import { readJsonOr } from "../lib/json.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
+import { emitInject } from "../lib/inject.ts";
+import { readStdin } from "../lib/exec.ts";
 
 const CLI_SRC = fileURLToPath(new URL("../cli/index.ts", import.meta.url));
 const TOOLKIT_FILE = fileURLToPath(new URL("../TOOLKIT.jsonl", import.meta.url));
@@ -181,8 +183,21 @@ export async function runToolkit(args: string[]): Promise<number> {
     return 0;
   }
   if (sub === "inject") {
-    // SessionStart additionalContext — quiet (no entries → silent).
-    if (entries.length) process.stderr.write(renderInject(entries) + "\n");
+    // SessionStart additionalContext — emit the catalog through the hook's stdout
+    // as `{hookSpecificOutput:{additionalContext}}` (emitInject), the SAME schema
+    // commons/architecture use. Writing raw text to STDERR (the old behaviour) is
+    // NOT read by Claude Code, so the whole command catalog silently never reached
+    // the agent — every command looked "unknown". Reads the hook payload from STDIN
+    // for the event name; a bare manual run (no stdin JSON) stays silent.
+    if (!entries.length) return 0;
+    try {
+      const j = JSON.parse(await readStdin());
+      const ev = String(j.hook_event_name ?? j.hookEventName ?? "");
+      if (!ev) return 0;
+      emitInject("toolkit", ev, renderInject(entries));
+    } catch {
+      return 0;
+    }
     return 0;
   }
   if (sub === "write") {

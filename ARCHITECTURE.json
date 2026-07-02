@@ -364,6 +364,13 @@
         "value": "헤드리스 claude -p 자식은 전역 ~/.claude/settings.json 의 거버넌스 Stop-훅(architecture/convergence stop-check)을 상속한다 — cwd 가 미커밋 변경 있는 git repo면 자식이 답을 낸 뒤 그 Stop-훅이 블록→계속 루프를 걸어 프로세스가 안 죽고 --timeout 에 exit 124 로 킬되며, 최종턴 .result 도 발산 대신 거버넌스 메타로 덮인다. 해결=자식을 --setting-sources project,local 로 띄워 전역 user 소스(거버넌스 훅)를 걷어냄(keychain 인증은 설정소스가 아니라 유지 · --bare 는 인증까지 날려 Not-logged-in 이라 불가).",
         "threshold": "재발조건: headless claude -p 를 전역 훅 상속(기본 setting-sources) + dirty git repo cwd 에서 실행. 해결: fable 기본 --sources project,local, 전체상속 필요시 --sources user,project,local + 사전 커밋.",
         "source": "modules/fable.ts"
+      },
+      {
+        "id": "inject-ts-2",
+        "state": "pos-conv",
+        "value": "inject 의 additionalContext 는 반드시 emitInject() 경유 stdout 의 {hookSpecificOutput:{hookEventName,additionalContext}} JSON 으로 내야 함 — Claude Code 가 읽는 유일 채널. process.stderr.write raw 텍스트는 additionalContext 로 안 읽혀 payload 통째로 조용히 버려짐(에이전트 도달 X). toolkit(명령카탈로그)·companions(이웃CLI)가 stderr 로 내고 있어 두 카탈로그가 여태 에이전트에 도달 못 함 → 'sidecar 명령 아예 인지 못함'(fable). 훅 이벤트명은 STDIN 페이로드에서, STDIN 없으면 조용.",
+        "threshold": "재발조건: 새 inject 를 emitInject 대신 stdout/stderr.write 직접 방출(특히 stderr). 해결: emitInject(name,ev,text)+ev는 readStdin JSON. 검증=printf '{\"hook_event_name\":\"SessionStart\"}'|sidecar <x> inject → stdout JSON 확인.",
+        "source": "lib/inject.ts"
       }
     ]
   },

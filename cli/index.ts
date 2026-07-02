@@ -137,7 +137,9 @@ hook delegates (wire these into your agent's settings.json):
                            · --json = claude --output-format json · --dry = print resolved argv, no run · --cwd <dir>
                            · --sources <l> = setting sources (default project,local — DROPS the global governance hooks that stall a
                              headless child in a dirty repo; pass user,project,local to inherit the full session env)
-                           · --timeout <s> = kill a stalled headless run after s seconds, exit 124 · flags after -- go to claude verbatim)
+                           · -c/--continue = continue the most recent conversation in --cwd · -r/--resume <id> = resume a session_id
+                             from a prior --json run (stateful · same --cwd) · --timeout <s> = kill a stalled run after s seconds, exit 124
+                           · flags after -- go to claude verbatim)
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]

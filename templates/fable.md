@@ -65,10 +65,10 @@ for `claude --bare` — it also skips keychain reads and lands "Not logged in".
 6. **No recursion / no unbounded fan-out.** Never let the delegated prompt
    itself call `sidecar fable` (fork storm), and don't fire N parallel fable
    calls without a timeout on each.
-7. **Batch, don't ping.** Fable 5 is the top-tier model and each call is
-   stateless — pack related sub-questions into ONE prompt instead of a loop of
-   tiny calls. For a continued conversation pass claude's own flag: `-- --continue`
-   (same `--cwd`).
+7. **Batch OR continue — don't ping blindly.** Each call is stateless by
+   DEFAULT, so either pack related sub-questions into ONE prompt, or make it
+   STATEFUL: `-r/--resume <session_id>` (from a prior `--json` run) or
+   `-c/--continue` (most recent in `--cwd`). See "Continuity" below.
 8. **Background pattern.** `sidecar fable --file <f> --timeout <s> --json > <log> 2>&1 &`
    then poll the log; a 0-byte log after exit means the run FAILED (read the
    exit code) — do not report it as "still thinking".
@@ -82,6 +82,26 @@ for `claude --bare` — it also skips keychain reads and lands "Not logged in".
 | 124 | killed at `--timeout` (stall) | `claude /login` for auth; or you used `--sources user,…` in a dirty repo → drop back to default `project,local` |
 | 127 | `claude` CLI not on PATH | install Claude Code |
 | other | claude's own exit | relay stderr |
+
+## Continuity — multi-turn delegation (stateful)
+
+fable is stateless per-call UNLESS you ask for continuity. Two knobs, both keyed
+to `--cwd` (claude stores sessions per working directory):
+
+```
+1. Seed  : sidecar fable --file <p1> --json --cwd <dir>   → read .session_id from the JSON
+2. Resume: sidecar fable --file <p2> --json --cwd <dir> --resume <session_id>   (precise)
+   or     : sidecar fable --file <p2> --json --cwd <dir> --continue             (most recent in <dir>)
+```
+
+- `-r/--resume <id>` is precise — it targets the exact `session_id` you captured;
+  survives other fable calls in between.
+- `-c/--continue` grabs the MOST RECENT session in that `--cwd` — simple but
+  ambiguous if several ran there; prefer `--resume` for parallel work.
+- Proven: seed "codeword=천리마" → `--resume` recalled 천리마 → `--continue` recalled it too.
+- `--continue` and `--resume` are mutually exclusive (fable rejects both).
+- Continuity works UNDER the default hook-free `--sources project,local` — session
+  persistence is not a setting source, so dropping global hooks doesn't disable it.
 
 ## Recipe — brainstorm / design divergence into a repo (the proven one)
 

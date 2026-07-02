@@ -12,3 +12,5 @@ Delegate the instruction in `$ARGUMENTS` to the Fable 5 model. The text is FREE 
 3. **Relay the answer** to the user. Exit meanings: `124` = the headless run stalled past --timeout (usually login credentials — suggest checking `claude /login`); `127` = claude CLI not on PATH; if `sidecar` itself is missing, say so (install dancinlab/sidecar).
 
 Do NOT pipe the prompt inline (`printf '%s' "…" | sidecar fable -`) from this skill — that reintroduces the quoting trap. The file path is the safe channel.
+
+Full agent caveat sheet (stall/124 · eaten-pipe · output boilerplate · --cwd tool reach · no recursion · batching · background pattern): `templates/fable.md` in dancinlab/sidecar — read it BEFORE an unattended or background run.

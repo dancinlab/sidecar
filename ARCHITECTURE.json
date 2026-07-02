@@ -877,6 +877,12 @@
                 "detail": "`claude -p --model claude-fable-5` 위임 — 백엔드(switch) 불변. /fable 은 런북형(Write→--file). 자식 기본 `--sources project,local`로 전역 Stop-훅 미상속=dirty-repo 스톨 차단. --timeout 은 기본 무제한(opt-in 캡만). -c·-r 다중턴. --bg=detach 발사→잡ID, `fable result/wait/list`로 수거. 주의시트=templates/fable.md."
               },
               {
+                "name": "fable-mode",
+                "role": "세션 스코프 위임 토글 (on/off)",
+                "id": "module-fable-mode",
+                "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 '이번 턴 실질작업을 Fable 5 에 sidecar fable 로 위임하라' 지시문 emit. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 오케스트레이션(프롬프트파일·result수거·commit/ship)은 로컬·재귀금지. 3표면 배선."
+              },
+              {
                 "name": "hypotheses",
                 "role": "가설 폴더 단일 정규명(HYPOTHESES/) 강제·감사·마이그레이션",
                 "id": "module-hypotheses",

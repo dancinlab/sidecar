@@ -106,7 +106,8 @@ function extractBlock(r: VerbResult): { reason: string } | null {
 // CC UserPromptSubmit inject set (run EVERY turn).
 const PER_TURN: string[][] = [
   ["commons", "inject"], ["claudemd", "inject"], ["recommend", "inject"],
-  ["prefs", "inject"], ["easy", "inject"], ["load", "inject"], ["ing", "inject"],
+  ["prefs", "inject"], ["easy", "inject"], ["fable-mode", "inject"],
+  ["load", "inject"], ["ing", "inject"],
 ];
 // CC SessionStart-only inject set (run ONCE per session — first turn).
 const SESSION_ONCE: string[][] = [

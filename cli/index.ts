@@ -42,6 +42,7 @@ import { runFolders } from "../modules/folders.ts";
 import { runNaming } from "../modules/naming.ts";
 import { runPrefs } from "../modules/prefs.ts";
 import { runEasy } from "../modules/easy.ts";
+import { runFableMode } from "../modules/fable-mode.ts";
 import { runLoad } from "../modules/load.ts";
 import { runRecommend } from "../modules/recommend.ts";
 import { runSbs } from "../modules/sbs.ts";
@@ -104,6 +105,7 @@ hook delegates (wire these into your agent's settings.json):
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject|scaffold "<q>"|lint <file|->}
                            easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)
+  fable-mode {on|off|status|inject} [--repo]   session-scoped toggle — when ON, per-turn inject mandates delegating substantive work to Fable 5 via 'sidecar fable' (scope: repo .harness > host ~/.sidecar; default host-wide · OFF emits nothing)
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}
                            4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)
@@ -264,6 +266,8 @@ async function main(): Promise<number> {
       return runPrefs(rest);
     case "easy":
       return runEasy(rest);
+    case "fable-mode":
+      return runFableMode(rest);
     case "load":
       return runLoad(rest);
     case "recommend":

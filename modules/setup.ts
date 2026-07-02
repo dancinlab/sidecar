@@ -45,6 +45,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar recommend inject"),
       entry("sidecar prefs inject"),
       entry("sidecar easy inject"),
+      entry("sidecar fable-mode inject"),
       entry("sidecar load inject"),
       entry("sidecar ing inject"),
     ],

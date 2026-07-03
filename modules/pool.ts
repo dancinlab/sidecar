@@ -338,10 +338,25 @@ export async function runPool(args: string[]): Promise<number> {
   }
   if (sub === "on") {
     const name = args[1];
-    const cmd = args.slice(2).join(" ");
+    // Optional `--timeout <sec>` (or `--timeout=<sec>`) BEFORE the command:
+    // default 120s (back-compat); `--timeout 0` = unbounded, for long remote
+    // builds/sweeps/heavy compute (the whole point of `heavy-on-pool`) that the
+    // fixed 120s cap used to SIGKILL mid-run. Keepalive (SSH_ARGS) keeps the
+    // output-idle connection live meanwhile.
+    let rest = args.slice(2);
+    let timeoutMs = 120_000;
+    const ti = rest.findIndex((a) => a === "--timeout" || a.startsWith("--timeout="));
+    if (ti !== -1) {
+      const inline = rest[ti].includes("=");
+      const raw = inline ? rest[ti].split("=").slice(1).join("=") : rest[ti + 1];
+      const sec = Number.parseInt(raw ?? "", 10);
+      if (!Number.isNaN(sec)) timeoutMs = sec <= 0 ? 0 : sec * 1000;
+      rest = inline ? [...rest.slice(0, ti), ...rest.slice(ti + 1)] : [...rest.slice(0, ti), ...rest.slice(ti + 2)];
+    }
+    const cmd = rest.join(" ");
     const h = r.hosts.find((x) => x.name === name);
     if (!h || !cmd) {
-      info("usage: sidecar pool on <name> <cmd...>");
+      info("usage: sidecar pool on <name> [--timeout <sec>|0] <cmd...>");
       return 1;
     }
     const g = guard(h);
@@ -359,7 +374,7 @@ export async function runPool(args: string[]): Promise<number> {
     // local shell). This prevents the LOCAL mac shell from expanding $VAR/$(...)/
     // backticks inside the remote command — ssh forwards `cmd` verbatim to the
     // REMOTE login shell, which expands it (and pipes/redirects) correctly there.
-    const res = await execArgs("ssh", [...SSH_ARGS, h.target, cmd], { timeoutMs: 120_000 });
+    const res = await execArgs("ssh", [...SSH_ARGS, h.target, cmd], { timeoutMs });
     process.stdout.write(res.stdout);
     if (res.stderr) process.stderr.write(res.stderr);
     if (res.code !== 0) loudFail(`pool on ${name}: exit ${res.code}`);

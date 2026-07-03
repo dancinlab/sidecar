@@ -25,10 +25,21 @@ function tokens(s: string): string[] {
   return s.split(/\s+/).filter(Boolean);
 }
 
-export function detectForcePush(rawCmd: string): string | null {
-  // inline escape: `# force-ok <reason>` overrides a bare-force block (config parity)
-  if (/#\s*force-ok\b/.test(rawCmd)) return null;
-  const toks = tokens(stripQuotes(rawCmd));
+// A shell command separator — the flag/refspec scan MUST stop here so a later,
+// unrelated command's tokens (`… && rm -f x`, `… ; git push --force other`)
+// are never misattributed to an EARLIER `git push`. Without this boundary the
+// scan ran to end-of-string and blocked a fast-forward push whenever ANY `-f`
+// / `--force` / `+refspec` token appeared later in the same compound (a benign
+// FF push chained with `rm -f`, or a distinct force-push on another branch).
+function isSep(t: string): boolean {
+  return t === "&&" || t === "||" || t === ";" || t === "|" || t === "&" || t === "|&";
+}
+
+// Scan ONE command segment (already sliced at shell separators) for a force
+// push. Returns a label or null. Every `git push` segment is checked, so a
+// genuine `benign-push && git push --force` still blocks — only cross-segment
+// bleed is removed.
+function detectInSegment(toks: string[]): string | null {
   const n = toks.length;
 
   // find `git … push`, allowing git-level options (`-c key=val`, `--flag`)
@@ -66,4 +77,26 @@ export function detectForcePush(rawCmd: string): string | null {
   }
 
   return null;
+}
+
+export function detectForcePush(rawCmd: string): string | null {
+  // inline escape: `# force-ok <reason>` overrides a bare-force block (config parity)
+  if (/#\s*force-ok\b/.test(rawCmd)) return null;
+  const toks = tokens(stripQuotes(rawCmd));
+
+  // Split the token stream at shell separators and judge each segment on its
+  // own tokens — a force flag/refspec only counts against the `git push` in
+  // the SAME segment. Every segment is scanned, so a real force-push anywhere
+  // in a compound (`a && git push --force`) is still caught.
+  let seg: string[] = [];
+  for (const t of toks) {
+    if (isSep(t)) {
+      const hit = detectInSegment(seg);
+      if (hit) return hit;
+      seg = [];
+    } else {
+      seg.push(t);
+    }
+  }
+  return detectInSegment(seg);
 }

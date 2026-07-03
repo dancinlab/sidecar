@@ -93,12 +93,24 @@ async function checksGreen(prNumber: number): Promise<boolean> {
 async function mergeStale(prNumber: number): Promise<{ ok: boolean; detail: string }> {
   const mr = await git(`gh pr merge ${prNumber} --squash --delete-branch`);
   if (mr.code === 0) return { ok: true, detail: "" };
+  if (await mergedDespiteLocalError(prNumber, mr.out)) return { ok: true, detail: "merged (로컬 브랜치 삭제만 스킵 — 워크트리 점유)" };
   if (/policy|review|not mergeable/i.test(mr.out) && (await checksGreen(prNumber))) {
     const ad = await git(`gh pr merge ${prNumber} --squash --admin --delete-branch`);
     if (ad.code === 0) return { ok: true, detail: "checks-green · admin(리뷰정책만 우회)" };
+    if (await mergedDespiteLocalError(prNumber, ad.out)) return { ok: true, detail: "checks-green · admin · 로컬 삭제 스킵" };
     return { ok: false, detail: ad.out.split("\n")[0] };
   }
   return { ok: false, detail: mr.out.split("\n")[0] };
+}
+
+// gh's --delete-branch post-step runs a LOCAL branch delete that fails when the
+// branch is held by a worktree — the REMOTE merge has already succeeded by then.
+// Same trap as pr-cycle's merge loop (convergence pr-cycle-ts-1): verify the PR
+// state on GitHub before calling the merge a failure.
+async function mergedDespiteLocalError(prNumber: number, out: string): Promise<boolean> {
+  if (!/worktree|used by|checked out|failed to delete local branch/i.test(out)) return false;
+  const st = (await git(`gh pr view ${prNumber} --json state -q .state`)).out;
+  return /MERGED/i.test(st);
 }
 
 function reapCfg() {

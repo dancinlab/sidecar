@@ -1,0 +1,1 @@
+{"kind":"work","id":"1","ts":"2026-07-03T15:55:26.686Z","text":"pool.ts: pool-on 원격 exec에 setsid+timeout+cleanup trap 배선 — ssh 세션 드롭 시 원격 커맨드 트리 자동 수거(고아 fork storm 근절 · convergence pool-ts-1)"}

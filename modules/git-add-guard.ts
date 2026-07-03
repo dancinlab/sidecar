@@ -13,9 +13,27 @@
 // blocks. An explicit-file add (`git add foo.ts`) or a scoped `git add -u src/`
 // is NOT an all-form and passes.
 
-function stripQuotes(s: string): string {
+// Blank the CONTENTS of quoted spans (replace with spaces) so quoted TEXT — a
+// commit message, an `ing`/`changelog` note, any string arg that merely MENTIONS
+// "git add -A" — is never tokenized as a command word. An actual bare `git add -A`
+// is unquoted and survives. (A quoted flag like `git add "-A"` is not a realistic
+// accidental form, so not looking inside quotes is the right trade-off for an
+// accident-prevention guard — unlike the force-push guard, which strips quotes to
+// catch a deliberate `git push "--force"` evasion.)
+function blankQuoted(s: string): string {
   let out = "";
-  for (const c of s) if (c !== "'" && c !== '"') out += c;
+  let q = "";
+  for (const c of s) {
+    if (q) {
+      out += " ";
+      if (c === q) q = "";
+    } else if (c === "'" || c === '"') {
+      q = c;
+      out += " ";
+    } else {
+      out += c;
+    }
+  }
   return out;
 }
 
@@ -96,7 +114,7 @@ function detectInSegment(toks: string[]): AddAllHit | null {
 
 // Public: detect a whole-tree `git add` anywhere in a (possibly compound) command.
 export function detectAddAll(rawCmd: string): AddAllHit | null {
-  const toks = tokens(stripQuotes(rawCmd));
+  const toks = tokens(blankQuoted(rawCmd));
   let seg: string[] = [];
   for (const t of toks) {
     if (isSep(t)) {

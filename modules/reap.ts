@@ -103,20 +103,35 @@ async function defaultBase(): Promise<string> {
 // Union-resolve one conflicted append-only log file inside the refresh worktree:
 // stage 2 = PR side ("ours"), stage 3 = base side ("theirs"), stage 1 = ancestor
 // (absent on add/add). `git merge-file --union` keeps BOTH sides' lines — lossless.
-async function unionResolve(wt: string, f: string, scratch: string): Promise<boolean> {
+async function unionResolve(
+  wt: string,
+  f: string,
+  scratch: string,
+): Promise<"union" | "took-base" | "took-base-delete" | null> {
   const q = JSON.stringify(f);
   const ours = await gitOut(`git show :2:${q}`, wt);
   const theirs = await gitOut(`git show :3:${q}`, wt);
-  if (ours.code !== 0 || theirs.code !== 0) return false; // delete/modify etc. — not unionable
+  // delete/modify: the base side removed the file (e.g. CHANGELOG.md migrated to
+  // .jsonl) or the branch did. Follow the base side — it reflects every merge since
+  // — and report as "dropped" so the caller posts the lossless pre-refresh pointer.
+  if (ours.code === 0 && theirs.code !== 0) {
+    const rm = await git(`git rm -q -- ${q}`, wt);
+    return rm.code === 0 ? "took-base-delete" : null;
+  }
+  if (ours.code !== 0 && theirs.code === 0) {
+    const r = await git(`git checkout --theirs -- ${q} && git add ${q}`, wt);
+    return r.code === 0 ? "took-base" : null;
+  }
+  if (ours.code !== 0) return null;
   const base = await gitOut(`git show :1:${q}`, wt); // may not exist (add/add)
   const fo = join(scratch, "ours"), fb = join(scratch, "base"), ft = join(scratch, "theirs");
   writeFileSync(fo, ours.stdout);
   writeFileSync(fb, base.code === 0 ? base.stdout : "");
   writeFileSync(ft, theirs.stdout);
   const m = await git(`git merge-file --union ${JSON.stringify(fo)} ${JSON.stringify(fb)} ${JSON.stringify(ft)}`, wt);
-  if (m.code < 0) return false; // >0 = conflict count, still written with union
+  if (m.code < 0) return null; // >0 = conflict count, still written with union
   const cp = await git(`cp ${JSON.stringify(fo)} ${q} && git add ${q}`, wt);
-  return cp.code === 0;
+  return cp.code === 0 ? "union" : null;
 }
 
 // Refresh one CONFLICTING own-PR: merge base into the branch in a throwaway
@@ -155,7 +170,9 @@ async function refreshPr(pr: StalePr, base: string, artifactRes: RegExp[], union
       for (const f of unresolved) {
         const q = JSON.stringify(f);
         if (UNION_RE.test(f) || unionRes.some((re) => re.test(f))) {
-          if (!(await unionResolve(wt, f, scratch))) blocked.push(f);
+          const u = await unionResolve(wt, f, scratch);
+          if (u === null) blocked.push(f);
+          else if (u !== "union") dropped.push(f); // base-side delete/version won — comment preserves pointer
         } else if (ARCH_RE.test(f)) {
           const r = await git(`git checkout --theirs -- ${q} && git add ${q}`, wt);
           if (r.code === 0) dropped.push(f);

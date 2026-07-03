@@ -54,8 +54,11 @@ export interface SidecarConfig {
   ci: { runner: string; setup: CiStep[]; enforceRunner?: boolean; fallback?: string; cachePaths?: string[] };
   lint: {
     freshnessFiles: FreshnessFile[];
-    // staged code changes REQUIRE the changelog file to also be staged
-    changelog?: { file: string; triggerPattern: string; ignore?: string[] };
+    // staged code changes REQUIRE the changelog file to also be staged.
+    // fragmentDir: when set (e.g. "CHANGELOG.d"), a staged shard under that dir also
+    // satisfies the gate — the conflict-free per-add-one-file mode (auto-detected by
+    // the changelog engine when the dir exists). Legacy single-file mode = omit it.
+    changelog?: { file: string; triggerPattern: string; ignore?: string[]; fragmentDir?: string };
     // committing directly on one of these branches is a violation
     protectedBranches?: string[];
     // do/dont line length cap (chars/codepoints) for commons.md + CLAUDE.md —

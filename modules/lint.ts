@@ -156,10 +156,17 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
     const { file, triggerPattern, ignore } = cfg.lint.changelog;
     const trigRe = new RegExp(triggerPattern);
     const igRe = (ignore ?? []).map((p) => new RegExp(p));
+    const fragDir = cfg.lint.changelog.fragmentDir;
     const codeChanges = staged.filter(
       (f) => f !== file && trigRe.test(f) && !igRe.some((r) => r.test(f))
     );
-    if (codeChanges.length > 0 && !staged.includes(file)) {
+    // Fragment mode: a new shard under CHANGELOG.d/ satisfies the changelog gate just
+    // like staging the legacy single file. (Auto-detected when fragmentDir is configured
+    // OR any staged path is under CHANGELOG.d/ — backward-compatible with legacy repos.)
+    const changelogStaged =
+      staged.includes(file) ||
+      staged.some((f) => f.startsWith((fragDir ?? "CHANGELOG.d") + "/"));
+    if (codeChanges.length > 0 && !changelogStaged) {
       violations.push({
         rule: "CHANGELOG-MISSING",
         file,

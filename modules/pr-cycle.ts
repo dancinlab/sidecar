@@ -105,7 +105,7 @@ export async function runPrCycle(args: string[]): Promise<number> {
     const ignore = /(^|\/)(tests?|__tests__|spec)\/|\.(test|spec)\.[a-z]+$|(^|\/)\.harness(-engine)?\//i;
     const meaningful = changed.filter((f) => !ignore.test(f));
     const tracked = async (f: string) => (await git(`git ls-files ${f}`)).out.length > 0;
-    const hasChangelog = changed.some((f) => /(^|\/)CHANGELOG\.(jsonl|md)$/.test(f));
+    const hasChangelog = changed.some((f) => /(^|\/)CHANGELOG\.(jsonl|md)$|(^|\/)CHANGELOG\.d\//.test(f));
     // ARCHITECTURE SSOT may be .json (tree) or .md (prose) — gate whichever is tracked.
     const archDoc = (await tracked("ARCHITECTURE.json"))
       ? "ARCHITECTURE.json"

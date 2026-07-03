@@ -9,8 +9,11 @@
 //
 // Cost: only sysctl + vm_stat (cheap, instant). We deliberately avoid the
 // `memory_pressure` CLI — it does a full system scan and can take seconds, which
-// is unacceptable for a hook that fires on every prompt.
+// is unacceptable for a hook that fires on every prompt. The open-PR count is
+// the one network-backed axis, so it goes through a TTL cache (git common dir)
+// and a hard subprocess timeout — a cold fetch happens at most once per TTL.
 import { execSync } from "node:child_process";
+import { readFileSync, writeFileSync } from "node:fs";
 import { emitInject } from "../lib/inject.ts";
 import { info } from "../lib/log.ts";
 import { readStdin } from "../lib/exec.ts";
@@ -26,6 +29,7 @@ interface Snapshot {
   swapUsedGiB: number;
   swapLight: string;
   worktrees: number; // extra git worktrees (main checkout excluded) — hygiene at-a-glance
+  openPRs: number | null; // open PRs on this repo (gh · TTL-cached) — null = unknown (no repo/gh)
   danger: boolean;
 }
 
@@ -96,8 +100,38 @@ export function readSnapshot(): Snapshot | null {
   return {
     load1, cores, cpuLight,
     ramUsedPct, pressure, pressureLabel, ramLight,
-    swapUsedGiB, swapLight, worktrees, danger,
+    swapUsedGiB, swapLight, worktrees, openPRs: readOpenPRs(), danger,
   };
+}
+
+// Open-PR count for the current repo, TTL-cached in the git common dir so the
+// per-prompt hook stays instant: `gh pr list` is a network call, so a cold
+// fetch (capped at 4s) runs at most once per TTL; within the TTL every turn is
+// a local file read. Stale cache beats no data on fetch failure; null (segment
+// omitted) only when there is no repo, no gh, and no prior cache.
+const PR_CACHE_TTL_MS = 300_000;
+
+function readOpenPRs(): number | null {
+  const commonDir = sh("git rev-parse --git-common-dir 2>/dev/null");
+  if (!commonDir) return null;
+  const cachePath = `${commonDir}/sidecar-pr-count.json`;
+  let cached: { count: number; ts: number } | null = null;
+  try {
+    const c = JSON.parse(readFileSync(cachePath, "utf8"));
+    if (Number.isFinite(c?.count) && Number.isFinite(c?.ts)) cached = c;
+  } catch { /* no/corrupt cache → cold fetch */ }
+  if (cached && Date.now() - cached.ts < PR_CACHE_TTL_MS) return cached.count;
+  try {
+    const out = execSync("gh pr list --state open --limit 100 --json number --jq length", {
+      encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 4000,
+    }).trim();
+    const count = parseInt(out, 10);
+    if (!Number.isFinite(count)) return cached?.count ?? null;
+    try { writeFileSync(cachePath, JSON.stringify({ count, ts: Date.now() })); } catch { /* cache write is best-effort */ }
+    return count;
+  } catch {
+    return cached?.count ?? null; // offline/no-gh/timeout → last known, else unknown
+  }
 }
 
 // Local-clock stamp appended to the readout — the agent has no real-time clock
@@ -118,6 +152,7 @@ function line(s: Snapshot): string {
     `RAM ${s.ramUsedPct}%(${s.pressureLabel}) ${s.ramLight} · ` +
     `swap ${swap} ${s.swapLight} · ` +
     `wt ${s.worktrees} ${light(s.worktrees, 3, 10)} · ` +
+    (s.openPRs === null ? "" : `PR ${s.openPRs} ${light(s.openPRs, 3, 10)} · `) +
     `🕐 ${nowStamp()}`
   );
 }
@@ -132,6 +167,7 @@ function body(s: Snapshot): string {
     "- CPU = load1/cores (🟢<0.7 🟡<1.0 🔴≥1.0) · RAM = active+wired+compressor used% + kernel pressure(normal/warn/critical) · swap used (🟢<2G 🟡<6G 🔴≥6G).\n" +
     "- A Mac that dies under load fails on MEMORY (compressor+swap), not CPU — when RAM/swap light is 🔴 or pressure≥warn, say so loudly.\n" +
     "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10) — 누적되면 `sidecar worktree gc` 로 정리.\n" +
+    "- PR = this repo's open PRs (gh · 5min cache · 🟢0-2 🟡3-9 🔴≥10) — 쌓이면 머지/정리 (`cycle-docs-pr`) · 저장소/gh 없으면 생략.\n" +
     "- 🕐 = the machine's REAL current local date+time (the session-start date in context is fixed; trust this line for 'now')." +
     warn + "\n"
   );

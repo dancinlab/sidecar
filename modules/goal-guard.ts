@@ -20,9 +20,11 @@ import { info } from "../lib/log.ts";
 import { lastAssistantText } from "./recommend.ts";
 
 // Deferral-to-a-FUTURE-SESSION phrases (KO + EN). Scoped to session-punting only
-// (not generic "나중에/later") to stay precise. Case-insensitive.
+// (not generic "나중에/later") to stay precise. Case-insensitive. Also catches
+// rate-limit excuses ("rate limit에 걸려서 나중에…") — a rate limit is a wait,
+// not a session boundary, so closing on it is still a punt.
 const DEFER_RE =
-  /다음\s*세션|다음\s*번\s*세션|다음번\s*세션|추후\s*세션|이후\s*세션|별도\s*세션|새\s*세션에|다른\s*세션에서|다세션|다중\s*세션|멀티\s*세션|여러\s*세션|next session|future session|later session|another session|separate session|new session|following session|multi.?session/i;
+  /다음\s*세션|다음\s*번\s*세션|다음번\s*세션|추후\s*세션|이후\s*세션|별도\s*세션|새\s*세션에|다른\s*세션에서|다세션|다중\s*세션|멀티\s*세션|여러\s*세션|next session|future session|later session|another session|separate session|new session|following session|multi.?session|rate.?limit|레이트\s*리밋/i;
 
 // True when the message CLOSES by deferring — deferral phrase within the last ~8
 // non-empty lines (the conclusion). Mid-message mentions don't count.

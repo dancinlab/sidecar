@@ -42,9 +42,9 @@ export function endsWithDefer(text: string): boolean {
 const REMNANT_NEG_RE =
   /^[^\n]{0,24}?(없|아니|0\s*[건개%]|완료(했|됐|됨|되었)|마무리(했|됐|됨|되었)|처리(했|됐|됨|되었)|해소(했|됐|됨|되었))/;
 
-// Leftover-work keywords, scanned whole-message ('남은' = the plain-word synonym
-// of '잔여').
-const REMNANT_KEYWORDS = ["잔여", "남은"];
+// Leftover-work keywords, scanned whole-message ('남은'/'잔존' = plain-word and
+// formal synonyms of '잔여').
+const REMNANT_KEYWORDS = ["잔여", "남은", "잔존"];
 
 // True when the message mentions leftover work ANYWHERE without negating it —
 // whole-message scan (a remnant reported mid-summary is still unfinished work),

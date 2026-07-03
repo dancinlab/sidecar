@@ -814,8 +814,22 @@
         "name": "pr-cycle",
         "role": "push→PR→검증머지→로컬 base sync",
         "id": "module-pr-cycle",
-        "detail": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→로컬 base ff-sync→merged worktree sweep→stale-PR reaper. main/master 에선 거부.",
+        "detail": "feature 브랜치에서 doc-gate→push→gh pr create→self-merge(squash/merge/rebase fallback·CI pending 재시도)→머지 커밋이 origin/base 에 올랐는지 검증→로컬 base ff-sync→merged worktree sweep→reap pass(modules/reap.ts 공용 엔진). main/master 에선 거부.",
         "children": [
+         {
+          "name": "reap",
+          "role": "방치 PR 배출구 (단독 sidecar reap · cron 가능)",
+          "id": "module-reap",
+          "detail": "modules/reap.ts. 내 열린 PR oldest-first: MERGEABLE→no-admin 스쿼시머지 · CONFLICTING→refresh-merge · 코드충돌+closeAfterDays 무활동→브랜치 보존 close · draft/외부저자 제외(외부는 카운트만) · run당 refresh 캡(reap.maxRefreshPerRun) · --dry-run=분류만.",
+          "children": [
+           {
+            "name": "refresh-merge",
+            "role": "충돌 PR 자동 해소 (문서파일만)",
+            "id": "module-reap-refresh-merge",
+            "detail": "임시 워크트리에서 base 를 브랜치로 merge(스쿼시 머지라 force-push 불요·plain push): CHANGELOG/ING+unionPaths=라인합집합(무손실) · ARCHITECTURE=base측 채택+pre-refresh head sha 를 PR 코멘트로 보존 · artifactPaths=브랜치측 · 코드 충돌 1개라도 있으면 통째 abort. GitHub 는 merge=union 을 서버측 무시 → 로컬 refresh 가 유일한 자동 해소 경로."
+           }
+          ]
+         },
          {
           "name": "로컬 ff-sync",
           "role": "로컬 base 뒤처짐 방지",

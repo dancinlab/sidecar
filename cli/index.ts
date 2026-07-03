@@ -20,6 +20,7 @@ import { runUninstall } from "../modules/uninstall.ts";
 import { runUpdate } from "../modules/update.ts";
 import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
+import { runReap } from "../modules/reap.ts";
 import { runShip } from "../modules/ship.ts";
 import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
@@ -120,7 +121,8 @@ hook delegates (wire these into your agent's settings.json):
   fleet lab [frontier:wall,…|go|…]      research-driven frontier lab (research-gate→implement→measure→SSOT→re-research; walls measured + reopenable)
   fleet abstract [layer:seed,…|go|…]    abstraction-driven layer dive (census LAWS→peel to shared trade-off/meta-law→invent escape→cast as falsifiable prediction; meta-laws reopenable · d6 honest)
   fleet full [frontier:goal,…|parallel|go|…]  full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped, weak lever still measures a wall before abstract) · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)
-  pr-cycle [--no-reap] [gh flags]   push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (auto-merge mergeable · report conflicting · --no-reap skips)
+  pr-cycle [--no-reap] [gh flags]   push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (--no-reap skips)
+  reap [--max-refresh N] [--no-close] [--dry-run] [--artifact RE]   drain stale open PRs: merge MERGEABLE (no-admin) · refresh-merge CONFLICTING (doc-files auto-resolved, code conflicts abort) · ≥7d code-conflict PRs closed with branch preserved · cron-able
   pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
   pod poll <id> [--ssh-check "<cmd>"|--done-match RE] [--teardown-on-done] [--pull "<remote> <local>"]   one-shot auto-poll via hexa cloud (alive→util/probe→optional pull+teardown · READ-ONLY default · pull-then-destroy)
   pod {watch <id> [--interval 600] [--cron]|unwatch <id>|list}   register ≥10-min cadence polling (cron OR agent-wakeup fallback · ~/.sidecar/pod-watch.json)
@@ -242,6 +244,8 @@ async function main(): Promise<number> {
       return runFleet(rest);
     case "pr-cycle":
       return runPrCycle(rest);
+    case "reap":
+      return runReap(rest);
     case "ship":
       return runShip(rest);
     case "pod":

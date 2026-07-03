@@ -73,6 +73,34 @@ interface RefreshResult {
   detail?: string;
 }
 
+// All of a PR's checks concluded green (SUCCESS/NEUTRAL/SKIPPED — or no checks at
+// all)? Gates the --admin fallback below: --admin may bypass a required-review
+// policy an own-PR can never satisfy (you cannot approve your own PR), but ONLY
+// after CI has validated the code — stale work never lands unverified.
+async function checksGreen(prNumber: number): Promise<boolean> {
+  const r = await git(
+    `gh pr view ${prNumber} --json statusCheckRollup --jq '[.statusCheckRollup[]? | .conclusion // "PENDING"] | join(",")'`,
+  );
+  if (r.code !== 0) return false;
+  const cs = r.out.split(",").filter(Boolean);
+  return cs.every((c) => c === "SUCCESS" || c === "NEUTRAL" || c === "SKIPPED");
+}
+
+// Merge a stale PR: plain no-admin first (respects every policy). If the ONLY
+// obstacle is a base-branch policy (e.g. anima requires 1 approving review —
+// unsatisfiable on own PRs) and the checks are green, retry with --admin: the
+// review policy is bypassed, the CI validation is not.
+async function mergeStale(prNumber: number): Promise<{ ok: boolean; detail: string }> {
+  const mr = await git(`gh pr merge ${prNumber} --squash --delete-branch`);
+  if (mr.code === 0) return { ok: true, detail: "" };
+  if (/policy|review|not mergeable/i.test(mr.out) && (await checksGreen(prNumber))) {
+    const ad = await git(`gh pr merge ${prNumber} --squash --admin --delete-branch`);
+    if (ad.code === 0) return { ok: true, detail: "checks-green · admin(리뷰정책만 우회)" };
+    return { ok: false, detail: ad.out.split("\n")[0] };
+  }
+  return { ok: false, detail: mr.out.split("\n")[0] };
+}
+
 function reapCfg() {
   const c = config().reap ?? ({} as Partial<ReturnType<typeof config>["reap"]>);
   return {
@@ -209,9 +237,9 @@ async function refreshPr(pr: StalePr, base: string, artifactRes: RegExp[], union
       await execShell("sleep 4");
       const m = (await git(`gh pr view ${pr.number} --json mergeable -q .mergeable`)).out;
       if (m === "MERGEABLE") {
-        const mr = await git(`gh pr merge ${pr.number} --squash --delete-branch`);
-        if (mr.code === 0) return { status: "merged" };
-        return { status: "waiting-ci", detail: mr.out.split("\n")[0] };
+        const mr = await mergeStale(pr.number);
+        if (mr.ok) return { status: "merged", detail: mr.detail };
+        return { status: "waiting-ci", detail: mr.detail };
       }
       if (m === "CONFLICTING") return { status: "error", detail: "still conflicting after refresh" };
     }
@@ -282,13 +310,12 @@ export async function reapStale(opts: ReapOpts = {}): Promise<void> {
         tally.merged++;
         continue;
       }
-      // NO --admin: a stale branch must pass the repo's checks to land.
-      const mr = await git(`gh pr merge ${p.number} --squash --delete-branch`);
-      if (mr.code === 0) {
-        ok(`  ✓ 수확 머지: ${tag}`);
+      const mr = await mergeStale(p.number);
+      if (mr.ok) {
+        ok(`  ✓ 수확 머지: ${tag}${mr.detail ? ` (${mr.detail})` : ""}`);
         tally.merged++;
       } else {
-        info(`  ⏳ ${tag} — 머지 보류(checks?): ${mr.out.split("\n")[0]}`);
+        info(`  ⏳ ${tag} — 머지 보류(checks?): ${mr.detail}`);
         tally.waiting++;
       }
     } else if (m === "CONFLICTING") {

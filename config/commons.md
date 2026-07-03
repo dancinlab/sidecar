@@ -66,6 +66,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Before terminal, check the measurement path — on divergence suspect tool/harness/env/incomplete-run · terminal only after `reference-match` clears artifacts
 - dont: Stamping failure terminal without the check · concluding divergence is the target's defect (suspect tool first)
 
+## infra-wall-noneval
+- do: Infra/toolchain/substrate walls (link/FFI symbol failure · missing ckpt/dep · OOM · compute-cost timeout · env/build defect) are QUARANTINED from a bench/experiment's evaluation verdict — log them as a separate infra blocker + `upstream-fix` the cause; the eval result stands only on runs that measured cleanly
+- dont: Folding an infra failure into the measured score/verdict (a toolchain defect != the target's performance/ceiling) · grading a degraded/blocked/never-cleanly-measured run as a real result (`break-walls`·`verdict-integrity`)
+
 ## session-terminal
 - do: A blocked goal (needs another session · async/external dep · human-only input · multi-session endpoint) is a VALID terminal → record wall + resume target to ING/ARCHITECTURE, then STOP
 - dont: Looping the same blocked/multi-session verdict every turn · faking completion to escape a goal-loop · calling a recorded cross-session handoff a failure

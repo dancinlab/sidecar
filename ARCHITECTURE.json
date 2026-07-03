@@ -1148,7 +1148,7 @@
         "name": "pool",
         "role": "호스트 로스터 + 원격 실행 + 자원 프로브",
         "id": "module-pool",
-        "detail": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단(allow 마커가 cwd 일치 시 해제·status 🔓 표기). ssh=execArgs 직접 spawn(로컬 $ 전개 방지). specs 가 코어/메모리/GPU 를 POSIX-sh 프로브해 캐시 · list·status 는 라이브 부하(CPU%·RAM%·GPU util)를 SSH 병렬 프로브 ⚡뱃지(status 는 이 프로브로 reachability 겸함 · 캐시 안 함 · RAM=total−available)"
+        "detail": "shared:false 제한 호스트는 allow 컨텍스트 밖에서 on/status 차단(allow 마커 cwd 일치 시 해제). ssh=execArgs 직접 spawn(로컬 $ 전개 방지). specs=코어/메모리/GPU POSIX-sh 프로브 캐시 · list·status=라이브 부하 SSH 병렬 ⚡뱃지(무캐시·RAM=total−available) · 프로브 타임아웃 시 connect-only 재확인으로 고부하(부하 미상)와 도달 불가 구분"
        }
       ]
      },

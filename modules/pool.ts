@@ -131,6 +131,17 @@ const LOAD_PROBE =
   `else G=none; fi; ` +
   `echo "LOAD=$L|CORES=$C|RAM=$R|GPU=$G"`;
 
+// Cheap connect-ONLY reachability check. Runs `true` on the remote — no awk/nproc/
+// nvidia-smi pipeline — so it distinguishes REACHABILITY (ssh handshake succeeds)
+// from RESPONSIVENESS (the heavy load probe finishing under load). A host saturated
+// to load ~23 answers this in well under the timeout even when the full LOAD_PROBE
+// blows past 15s, so a reachable-but-loaded host is never mislabeled `도달 불가`.
+// Returns true only when the ssh connection ESTABLISHES and the remote shell runs.
+async function probeReach(h: Host): Promise<boolean> {
+  const res = await execArgs("ssh", [...SSH_ARGS, h.target, "true"], { timeoutMs: 10_000 });
+  return res.code === 0;
+}
+
 // ssh-probe one host's live load. Returns null when unreachable or unparsable.
 async function probeLoad(h: Host): Promise<Load | null> {
   const res = await execArgs("ssh", [...SSH_ARGS, h.target, LOAD_PROBE], { timeoutMs: 15_000 });
@@ -261,10 +272,19 @@ export async function runPool(args: string[]): Promise<number> {
     // each non-blocked host in parallel. Blocked restricted hosts are not reached.
     info("  (라이브 부하 프로브 중…)");
     const loads = new Map<string, Load | null>();
+    // A null load = probe didn't complete. That is NOT the same as unreachable: a
+    // host saturated under load answers the heavy LOAD_PROBE too slowly (times out)
+    // yet still accepts an ssh connection. So on a null load, fall back to a cheap
+    // connect-only reach check to tell "reachable but slow" from "genuinely down".
+    const reachable = new Map<string, boolean>();
     const probed = await pmap(
       r.hosts.filter((h) => guard(h).ok),
       8,
-      async (h) => ({ name: h.name, load: await probeLoad(h) }),
+      async (h) => {
+        const load = await probeLoad(h);
+        if (load === null) reachable.set(h.name, await probeReach(h));
+        return { name: h.name, load };
+      },
     );
     for (const { name, load } of probed) loads.set(name, load);
     let anyProbed = false;
@@ -272,8 +292,18 @@ export async function runPool(args: string[]): Promise<number> {
       if (h.specs) anyProbed = true;
       const spec = h.specs ? `   〈${fmtSpecs(h.specs)}〉` : "";
       const g = guard(h);
-      // Load badge: only for hosts we actually reached (guard-ok + probe success).
-      const load = g.ok ? (loads.has(h.name) ? (loads.get(h.name) ? `   ⚡${fmtLoad(loads.get(h.name))}` : "   ⚡도달 불가") : "") : "";
+      // Load badge: only for hosts we actually reached (guard-ok). Probe success ⇒
+      // full load badge; probe timeout but ssh still connects ⇒ reachable-but-slow;
+      // ssh connect also fails ⇒ genuinely 도달 불가.
+      const load = g.ok
+        ? loads.has(h.name)
+          ? loads.get(h.name)
+            ? `   ⚡${fmtLoad(loads.get(h.name))}`
+            : reachable.get(h.name)
+              ? "   ⚡부하 미상(응답 느림 · 고부하)"
+              : "   ⚡도달 불가"
+          : ""
+        : "";
       if (!isRestricted(h)) {
         info(`  • ${h.name}  →  ${h.target}${spec}${load}`);
         continue;
@@ -344,21 +374,24 @@ export async function runPool(args: string[]): Promise<number> {
       // Restricted + blocked hosts are not pinged — they are not shared compute,
       // so we don't reach out to them outside their allowed project context.
       const g = guard(h);
-      if (!g.ok) return { h, blocked: true, up: false, unlocked: false, via: g.via, load: null as Load | null };
-      // ONE live probe doubles as the reachability check AND the load badge, so
-      // `status` surfaces live CPU/RAM/GPU occupancy too (probe success ⇒ reachable).
-      // Keeps `status` a single-command "everything" view — no more typing `status`
-      // and missing GPU usage that only `list` used to show.
+      if (!g.ok)
+        return { h, blocked: true, up: false, slow: false, unlocked: false, via: g.via, load: null as Load | null };
+      // The live probe surfaces CPU/RAM/GPU occupancy, but a null result is NOT
+      // proof of unreachability — a saturated host times out the heavy probe yet
+      // still accepts an ssh connection. So on a null load, a cheap connect-only
+      // reach check decides up-vs-down (slow = reachable but load unknown).
       const load = await probeLoad(h);
+      const up = load !== null ? true : await probeReach(h);
+      const slow = load === null && up;
       // A restricted host that passes the guard is UNLOCKED, not shared — surface
       // a 🔓 marker so `status` never conflates it with a genuinely shared host
       // (parity with `list`, which already shows `🔓 허용(via)`).
-      return { h, blocked: false, up: load !== null, unlocked: isRestricted(h), via: g.via, load };
+      return { h, blocked: false, up, slow, unlocked: isRestricted(h), via: g.via, load };
     });
-    for (const { h, blocked, up, unlocked, via, load } of out) {
+    for (const { h, blocked, up, slow, unlocked, via, load } of out) {
       const dot = blocked ? "🔒" : unlocked ? "🔓" : up ? "🟢" : "🔴";
       const spec = h.specs ? `  〈${fmtSpecs(h.specs)}〉` : "";
-      const badge = up && load ? `   ⚡${fmtLoad(load)}` : "";
+      const badge = load ? `   ⚡${fmtLoad(load)}` : slow ? "   ⚡부하 미상(응답 느림 · 고부하)" : "";
       const note = blocked
         ? "  — 차단(공용 아님)"
         : unlocked

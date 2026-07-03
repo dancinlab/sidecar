@@ -16,6 +16,7 @@ import { config, resolveRuleFile, repoPath, inGitRepo } from "../lib/config.ts";
 import { collectViolations, lintBlockers, governanceDocWriteViolation } from "./lint.ts";
 import { detectForcePush } from "./git-guard.ts";
 import { detectBranchSwitch, detectMainRefMove } from "./git-checkout-guard.ts";
+import { detectAddAll } from "./git-add-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
 import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
@@ -264,6 +265,29 @@ export async function preBash(_args: string[]): Promise<number> {
         "GIT-MAIN-REF-MOVE",
         `'${rm.label}' force-repoints/renames/deletes the shared main branch — hijacking it out from under the main checkout + parallel sessions (parallel-worktree incident, #3559). Do parallel work in an ISOLATED worktree (\`git worktree add <path> -b <branch>\`) and let \`sidecar pr-cycle\` land the verified main merge. No inline override; if genuinely required, run it outside the agent.`
       );
+    }
+  }
+
+  // built-in git add-all guard — DENIES a whole-tree `git add` (-A / --all / `.` /
+  // bare -u) in the SHARED main worktree when sibling linked worktrees exist. An
+  // all-form add there sweeps a parallel session's untracked WIP — plus any
+  // `.worktrees/*` as embedded gitlinks — into one index/commit (the 2026-07-04
+  // cd-fallback incident: a failed `cd <linked-worktree>` left the shell in the
+  // shared main, and `git add -A && git commit` captured foreign WIP). An explicit-
+  // file or scoped (`git add -u src/`) add passes. `git worktree list` runs ONLY
+  // after an all-form is parsed → no per-bash latency for ordinary commands.
+  if (config().git.guardAddAllShared) {
+    const aa = detectAddAll(cmd);
+    const effDir = aa?.dir ? (isAbsolute(aa.dir) ? aa.dir : join(cwd || ".", aa.dir)) : cwd;
+    if (aa && (await isMainWorktree(effDir))) {
+      const wl = await execShell("git worktree list --porcelain", { cwd: effDir || "." }).catch(() => null);
+      const nWt = wl && wl.code === 0 ? wl.stdout.split("\n").filter((l) => l.startsWith("worktree ")).length : 1;
+      if (nWt > 1) {
+        return emitBlock(
+          "GIT-ADD-ALL-SHARED-MAIN",
+          `'${aa.label}' stages the WHOLE tree in the SHARED main worktree while ${nWt - 1} sibling worktree(s) exist — this sweeps a parallel session's untracked WIP (and .worktrees/* as embedded gitlinks) into one index/commit (the 2026-07-04 cd-fallback incident). Stage EXPLICIT files instead (\`git add <path>…\`), or do parallel work in an ISOLATED worktree. No inline override; disable only via config git.guardAddAllShared=false.`
+        );
+      }
     }
   }
 

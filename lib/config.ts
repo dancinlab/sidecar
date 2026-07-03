@@ -208,6 +208,7 @@ export interface SidecarConfig {
     guardBranchSwitch: boolean;
     guardOffMainEdit: boolean;
     guardStaleMainEdit: boolean;
+    guardAddAllShared: boolean;
     staleFetchTtlSec: number;
   };
   // tmpGuard warns (pre bash/write) when progress/working data is written to a
@@ -400,7 +401,7 @@ const DEFAULTS: SidecarConfig = {
     ],
     rebuild: true,
   },
-  git: { guardForcePush: true, guardBranchSwitch: true, guardOffMainEdit: true, guardStaleMainEdit: true, staleFetchTtlSec: 300 },
+  git: { guardForcePush: true, guardBranchSwitch: true, guardOffMainEdit: true, guardStaleMainEdit: true, guardAddAllShared: true, staleFetchTtlSec: 300 },
   tmpGuard: true,
   handoffGuard: true,
   namingGuard: true,

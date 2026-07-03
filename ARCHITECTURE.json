@@ -911,7 +911,7 @@
         "name": "goal-guard",
         "role": "작업-punt 차단 Stop 게이트 (다음-세션 미루기 + 잔여 방치)",
         "id": "module-goal-guard",
-        "detail": "Stop-hook 가드 · 2중 캐치: ① 답변 꼬리(~8줄)가 '다음 세션' 미루기·rate-limit 핑계(rate limit/ratelimit/레이트리밋)면 block ② 본문 어디든 '잔여'가 부정형 없이 언급되면 block(없/0건/완료류 과거형 24자 창은 통과). decision:block 으로 지금 마무리 강제 · stop_hook_active 단발 → 진짜 블로커는 재-stop 통과(session-terminal). CC 전용 · 배선=hooks.json+setup.ts Stop[]."
+        "detail": "Stop-hook 가드 · 2중 캐치: ① 답변 꼬리(~8줄)가 '다음 세션' 미루기·핑계(rate limit/ratelimit/레이트리밋·규모)면 block ② 본문 어디든 '잔여'/'남은'이 부정형 없이 언급되면 block(없/0건/완료류 과거형 24자 창은 통과). decision:block 으로 지금 마무리 강제 · stop_hook_active 단발 → 진짜 블로커는 재-stop 통과(session-terminal). CC 전용 · 배선=hooks.json+setup.ts Stop[]."
        },
        {
         "name": "hypotheses",

@@ -21,10 +21,11 @@ import { lastAssistantText } from "./recommend.ts";
 
 // Deferral-to-a-FUTURE-SESSION phrases (KO + EN). Scoped to session-punting only
 // (not generic "나중에/later") to stay precise. Case-insensitive. Also catches
-// rate-limit excuses ("rate limit에 걸려서 나중에…") — a rate limit is a wait,
-// not a session boundary, so closing on it is still a punt.
+// excuse-shaped closes: rate-limit ("rate limit에 걸려서 나중에…" — a wait, not
+// a session boundary) and scale ("규모가 커서 여기까지…" — size is a reason to
+// keep going in chunks, not to stop).
 const DEFER_RE =
-  /다음\s*세션|다음\s*번\s*세션|다음번\s*세션|추후\s*세션|이후\s*세션|별도\s*세션|새\s*세션에|다른\s*세션에서|다세션|다중\s*세션|멀티\s*세션|여러\s*세션|next session|future session|later session|another session|separate session|new session|following session|multi.?session|rate.?limit|레이트\s*리밋/i;
+  /다음\s*세션|다음\s*번\s*세션|다음번\s*세션|추후\s*세션|이후\s*세션|별도\s*세션|새\s*세션에|다른\s*세션에서|다세션|다중\s*세션|멀티\s*세션|여러\s*세션|next session|future session|later session|another session|separate session|new session|following session|multi.?session|rate.?limit|레이트\s*리밋|규모/i;
 
 // True when the message CLOSES by deferring — deferral phrase within the last ~8
 // non-empty lines (the conclusion). Mid-message mentions don't count.
@@ -35,19 +36,25 @@ export function endsWithDefer(text: string): boolean {
   return DEFER_RE.test(tail);
 }
 
-// A '잔여' mention is NEGATED (= not live work) when the same line, right after
-// the keyword, says there is none or it is already finished. Window kept short
-// so an unrelated later clause can't accidentally clear a live mention.
+// A remnant-keyword mention is NEGATED (= not live work) when the same line,
+// right after the keyword, says there is none or it is already finished. Window
+// kept short so an unrelated later clause can't accidentally clear a live mention.
 const REMNANT_NEG_RE =
   /^[^\n]{0,24}?(없|아니|0\s*[건개%]|완료(했|됐|됨|되었)|마무리(했|됐|됨|되었)|처리(했|됐|됨|되었)|해소(했|됐|됨|되었))/;
 
-// True when the message mentions '잔여' (leftover work) ANYWHERE without negating
-// it — whole-message scan (a remnant reported mid-summary is still unfinished
-// work), unlike the tail-scoped defer check.
+// Leftover-work keywords, scanned whole-message ('남은' = the plain-word synonym
+// of '잔여').
+const REMNANT_KEYWORDS = ["잔여", "남은"];
+
+// True when the message mentions leftover work ANYWHERE without negating it —
+// whole-message scan (a remnant reported mid-summary is still unfinished work),
+// unlike the tail-scoped defer check.
 export function hasLiveRemnant(text: string): boolean {
   if (!text) return false;
-  for (let i = text.indexOf("잔여"); i !== -1; i = text.indexOf("잔여", i + 2)) {
-    if (!REMNANT_NEG_RE.test(text.slice(i + 2))) return true;
+  for (const kw of REMNANT_KEYWORDS) {
+    for (let i = text.indexOf(kw); i !== -1; i = text.indexOf(kw, i + kw.length)) {
+      if (!REMNANT_NEG_RE.test(text.slice(i + kw.length))) return true;
+    }
   }
   return false;
 }

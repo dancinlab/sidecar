@@ -269,6 +269,14 @@ export interface SidecarConfig {
   // a clean, unlocked, not-recently-touched AGENT worktree whose HEAD is older than this
   // is reaped (its tip preserved under refs/reaped/ first, so work is recoverable). 0 disables.
   worktree: { maxAgeDays: number };
+  // stale-PR reaper (modules/reap.ts — pr-cycle post-merge pass + standalone command).
+  // maxRefreshPerRun caps refresh-merges per pass (each = worktree + push + CI churn);
+  // closeAfterDays gates the code-conflict auto-close backstop (branch always preserved);
+  // artifactPaths = regexes for branch-side-wins conflict files (work outputs/data — the
+  // branch's new data beats the base's older copy; repos add their own, e.g. discovery dirs).
+  // unionPaths = ADDITIVE regexes for line-union (keep-both) conflict files beyond the
+  // built-in CHANGELOG/ING — any append-only log/registry a repo keeps (e.g. HYPOTHESES.jsonl).
+  reap: { maxRefreshPerRun: number; closeAfterDays: number; artifactPaths: string[]; unionPaths: string[] };
   // danger-guard — code-level destructive-command blocks. rmRfRoot gates ONLY the
   // catastrophic `rm -rf /` · `~` · `$HOME` · `*` block; default false = NOT guarded
   // (the user opted out). no-verify / reset-hard / curl|sh remain always-on (code).
@@ -399,6 +407,7 @@ const DEFAULTS: SidecarConfig = {
   ledger: { staleSec: 3600 },
   ing: { editThreshold: 5, staleDays: 5, maxActive: 12 },
   worktree: { maxAgeDays: 3 },
+  reap: { maxRefreshPerRun: 3, closeAfterDays: 7, artifactPaths: ["(^|/)state/"], unionPaths: [] },
   memGuard: { enabled: true, warnPct: 15, blockPct: 0, watchdogIntervalSec: 45 },
   dangerGuard: { rmRfRoot: false },
   annotationGuard: { enabled: true, file: ".harness/tool-annotations.json" },

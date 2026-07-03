@@ -12,6 +12,7 @@
 import { execShell } from "../lib/exec.ts";
 import { info, ok, loudFail } from "../lib/log.ts";
 import { repoPath } from "../lib/config.ts";
+import { reapStale } from "./reap.ts";
 
 async function git(cmd: string, cwd?: string): Promise<{ code: number; out: string }> {
   const r = await execShell(cmd, { cwd: cwd ?? repoPath(".") });
@@ -74,46 +75,11 @@ async function sweepMergedWorktrees(mergedBranch?: string): Promise<void> {
   await git("git worktree prune", main);
 }
 
-// Stale-PR reaper — the fix for "PRs that get created but never merged, then rot".
-// pr-cycle only ever handled ITS OWN branch's PR; a single interrupted/failed merge
-// left a PR open forever, and over days a once-MERGEABLE PR rots into CONFLICTING.
-// This runs at the END of every cycle: enumerate MY other open PRs and reconcile —
-// auto squash-merge the clean (MERGEABLE) ones (same trust model as the main flow:
-// own PR · admin · delete-branch), and LOUDLY report the ones a machine can't safely
-// land (CONFLICTING / blocked) with the exact next step. Never silently forgotten.
-// Opt-out: --no-reap. Failures here never fail the cycle (the primary merge is done).
-async function reapStalePrs(currentBranch: string): Promise<void> {
-  const list = await git(`gh pr list --author @me --state open --json number,title,headRefName,mergeable --limit 50`);
-  if (list.code !== 0) return; // no gh / no repo / offline — silent, non-fatal
-  let prs: Array<{ number: number; title: string; headRefName: string; mergeable: string }> = [];
-  try {
-    prs = JSON.parse(list.out);
-  } catch {
-    return;
-  }
-  const stale = prs.filter((p) => p.headRefName !== currentBranch);
-  if (!stale.length) return;
-  info(`pr-cycle: ♻ 방치 PR 수확 — 내 열린 PR ${stale.length}개 점검`);
-  for (const p of stale) {
-    // mergeable is async on GitHub's side — UNKNOWN means "not computed yet", re-poll.
-    let m = p.mergeable;
-    for (let i = 0; i < 3 && m === "UNKNOWN"; i++) {
-      await execShell("sleep 2");
-      m = (await git(`gh pr view ${p.number} --json mergeable -q .mergeable`)).out;
-    }
-    const tag = `#${p.number} ${p.title.slice(0, 48)}`;
-    if (m === "MERGEABLE") {
-      const mr = await git(`gh pr merge ${p.number} --squash --admin --delete-branch`);
-      if (mr.code === 0) ok(`  ✓ 수확 머지: ${tag}`);
-      else info(`  ⚠ ${tag} — 머지 시도 실패(권한/방법?): ${mr.out.split("\n")[0]}`);
-    } else if (m === "CONFLICTING") {
-      loudFail(`  🧱 충돌로 방치: ${tag}`);
-      info(`     → 자동 머지 불가. \`git fetch origin && git rebase origin/main\` 로 충돌 해소 후 다시 pr-cycle, 또는 폐기면 \`gh pr close ${p.number}\``);
-    } else {
-      info(`  ⏳ ${tag} — 상태 ${m} (blocked/draft?) — gh pr view ${p.number} 확인`);
-    }
-  }
-}
+// Stale-PR reaper — full engine lives in modules/reap.ts (refresh-merge for
+// CONFLICTING doc-hotspot PRs · no-admin merges · age-gated close with branch
+// preserved). pr-cycle runs it as a post-merge pass; `sidecar reap` runs the same
+// engine standalone (cron-able). Opt-out: --no-reap. Failures there never fail
+// the cycle (the primary merge is already done and verified).
 
 export async function runPrCycle(args: string[]): Promise<number> {
   const branch = (await git("git symbolic-ref --short -q HEAD || git rev-parse --abbrev-ref HEAD")).out;
@@ -305,7 +271,7 @@ export async function runPrCycle(args: string[]): Promise<number> {
 
   // 6. stale-PR reaper — reconcile any OTHER open PRs of mine so none rot abandoned.
   //    Runs only after a verified merge; opt-out with --no-reap.
-  if (onBase && !args.includes("--no-reap")) await reapStalePrs(branch);
+  if (onBase && !args.includes("--no-reap")) await reapStale({ currentBranch: branch });
 
   return merged && onBase ? 0 : (merged ? 0 : 1);
 }

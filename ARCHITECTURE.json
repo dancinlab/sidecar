@@ -826,7 +826,7 @@
             "name": "refresh-merge",
             "role": "충돌 PR 자동 해소 (문서파일만)",
             "id": "module-reap-refresh-merge",
-            "detail": "임시 워크트리에서 base 를 브랜치로 merge(스쿼시 머지라 force-push 불요·plain push): CHANGELOG/ING+unionPaths=라인합집합(무손실) · ARCHITECTURE=base측 채택+pre-refresh head sha 를 PR 코멘트로 보존 · artifactPaths=브랜치측 · 코드 충돌 1개라도 있으면 통째 abort. GitHub 는 merge=union 을 서버측 무시 → 로컬 refresh 가 유일한 자동 해소 경로."
+            "detail": "임시 워크트리에서 base 를 브랜치로 merge(스쿼시 머지라 force-push 불요·plain push): CHANGELOG/ING+unionPaths=라인합집합(무손실 · delete/modify 는 base측 삭제/버전 채택) · ARCHITECTURE=base측 채택 · 두 경우 모두 pre-refresh head sha 를 PR 코멘트로 보존 · artifactPaths=브랜치측 · 코드 충돌 1개라도 있으면 통째 abort. GitHub 는 merge=union 을 서버측 무시 → 로컬 refresh 가 유일한 자동 해소 경로."
            }
           ]
          },

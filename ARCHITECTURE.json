@@ -820,7 +820,7 @@
           "name": "reap",
           "role": "방치 PR 배출구 (단독 sidecar reap · cron 가능)",
           "id": "module-reap",
-          "detail": "modules/reap.ts. 내 열린 PR oldest-first: MERGEABLE→no-admin 스쿼시머지 · CONFLICTING→refresh-merge · 코드충돌+closeAfterDays 무활동→브랜치 보존 close · draft/외부저자 제외(외부는 카운트만) · run당 refresh 캡(reap.maxRefreshPerRun) · --dry-run=분류만.",
+          "detail": "modules/reap.ts. 내 열린 PR oldest-first: MERGEABLE→no-admin 스쿼시머지(정책 거부+체크 전부 그린이면 --admin 폴백 — 리뷰정책만 우회·CI 검증 유지) · CONFLICTING→refresh-merge · 코드충돌+closeAfterDays 무활동→브랜치 보존 close · draft/외부저자 제외 · run당 refresh 캡 · --dry-run=분류만.",
           "children": [
            {
             "name": "refresh-merge",

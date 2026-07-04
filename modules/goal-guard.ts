@@ -1,12 +1,16 @@
 // sidecar goal-guard stop-check
 // Stop-hook guard that CATCHES an agent punting the work instead of continuing
-// now. Two catches share one gate:
+// now. Three catches share one gate:
 //  1. FUTURE-SESSION defer — the reply CLOSES with "이건 다음 세션에서 이어가겠습니다"
 //     (deferral phrase in the last ~8 non-empty lines).
 //  2. LIVE REMNANT — the reply mentions '잔여' (leftover work) anywhere without
 //     negating it ("잔여 없음"/"잔여 작업 완료했" pass), i.e. it reports remaining
 //     work and stops instead of finishing it.
-// Both block the stop so the model presses on.
+//  3. INFRA PUNT — the reply mentions an 'infra'/'인프라' wall (keyword + a
+//     failure signal on the SAME line) AND a punt verb (우회/격리/미룸/fallback…)
+//     without fixing it, i.e. it works AROUND an infra defect instead of fixing
+//     the cause. commons `upstream-fix`: fix the cause in its canonical repo now.
+// All three block the stop so the model presses on.
 //
 // Precision + escape (so it never wedges a genuine multi-session handoff):
 //  - Defer fires ONLY on the closing tail (mirrors recommend `endsOnBox`);
@@ -96,6 +100,37 @@ export function hasSessionTerminalBlocker(text: string): boolean {
   return BLOCKER_RE.test(text) && ING_NEXT_RE.test(text);
 }
 
+// INFRA PUNT (commons `upstream-fix` · `infra-wall-noneval`): the reply reports an
+// infra/toolchain wall and STOPS by working around it (우회·격리·미룸·fallback)
+// instead of fixing the cause. 'infra'/'인프라' is a very common word, so this is
+// a TRIPLE AND to stay precise: (a) a punt verb somewhere in the message, (b) the
+// infra keyword and (c) a wall/failure signal on the SAME line (a bare infra
+// mention is harmless). A kebab-slug (`infra-wall-noneval`) or quote-wrapped
+// mention is meta-discussion → excluded. Negated when the same line already shows
+// a fix/green — line-scoped (not the remnant 24-char window) because a fix clause
+// ("infra 링크 에러를 upstream에서 직접 고쳐 머지했다") sits far from the keyword.
+const INFRA_KW_RE = /(?<![\w-])(infra(structure)?|인프라)(?![\w-])/gi;
+const INFRA_WALL_RE =
+  /실패|에러|오류|결함|깨(짐|져|졌)|안\s*됨|불가|막(힘|혀)|벽|블로커|타임아웃|누락|OOM|missing|broken|fail(ed|ure|ing)?|error|blocker|wall|timeout|link(er)?\s*(error|fail)|FFI|env|build\s*(fail|error|결함)/i;
+const INFRA_PUNT_RE =
+  /우회|격리|보류|스킵|미루|미룸|미뤄|나중에|추후|별도\s*(레포|repo|이슈|issue|트랙|작업|세션)|넘(김|겨)|남겨|폴백|fallback|래퍼|wrapper|shadow|fork|vendored|cached-?bin|symbol-?dodge|reimpl|workaround|bypass|skip|defer|park(ed|ing)?|punt|later|separate\s+(repo|issue|track)/i;
+const INFRA_FIX_RE =
+  /고(쳤|침|쳐)|수정(했|됐|됨|완료)|해결(했|됐|됨|완료)|해소(했|됐|됨)|복구(했|됐|됨)|정상|그린|green|머지(했|됐|됨)|merged|fixed|resolved/i;
+
+export function hasInfraPunt(text: string): boolean {
+  if (!text) return false;
+  if (!INFRA_PUNT_RE.test(text)) return false; // no punt verb anywhere → never fires
+  for (const line of text.split("\n")) {
+    for (const m of line.matchAll(INFRA_KW_RE)) {
+      if (isQuotedMention(line, m.index!, m[0].length)) continue; // '인프라'·`infra` meta
+      if (!INFRA_WALL_RE.test(line)) break; // no wall signal on this line → harmless
+      if (INFRA_FIX_RE.test(line)) break; // already fixed/green on the same line → negated
+      return true;
+    }
+  }
+  return false;
+}
+
 // Stop-hook entry. Best-effort: any parse/IO failure is a silent no-op (never
 // wedge a session on this backstop).
 function runStopCheck(): number {
@@ -110,24 +145,33 @@ function runStopCheck(): number {
   if (!tp) return 0;
   const last = lastAssistantText(String(tp));
   const defer = endsWithDefer(last);
-  // Remnant blocks UNLESS the reply is a genuine session-terminal (concrete blocker
-  // + recorded resume point) — commons `session-terminal`. Defer stays independent:
-  // a "다음 세션에" close still blocks even with a blocker phrase present.
-  const remnant = hasLiveRemnant(last) && !hasSessionTerminalBlocker(last);
-  if (!defer && !remnant) return 0;
+  // Remnant + infra-punt block UNLESS the reply is a genuine session-terminal
+  // (concrete blocker + recorded resume point) — commons `session-terminal`. Defer
+  // stays independent: a "다음 세션에" close still blocks even with a blocker phrase.
+  const term = hasSessionTerminalBlocker(last);
+  const remnant = hasLiveRemnant(last) && !term;
+  const infra = hasInfraPunt(last) && !term;
+  if (!defer && !remnant && !infra) return 0;
+  // Message priority: defer (closing punt) > infra (specific, actionable) > remnant.
   const reason = defer
     ? "당신의 답변이 작업을 '다음 세션'으로 미루며 끝났다 — 그건 멈출 지점이 아니다. " +
       "goal/작업이 아직 살아있으면 지금 이어서 실제로 진행하라(되묻지 말 것) — 다음 할 일의 도구 호출/변경/결과로 이어가라. " +
       "정말 이번 세션에서 불가한 CONCRETE 블로커(외부 의존·CI 대기·사람 승인·다른 머신 필요)일 때만 그 블로커를 명시하고 " +
       "재개지점을 `sidecar ing next <지점>`에 기록한 뒤 멈춰라(session-terminal). 근거 없는 미루기는 금지."
+    : infra
+    ? "당신의 답변이 infra/인프라 벽·결함을 언급한 채 우회·격리·미룸으로 멈췄다 — 벽은 덮는 게 아니라 지금 고치는 것이다. " +
+      "그 원인을 canonical repo에서 이번 세션에 직접 수정하라(upstream-fix · 고위험 변경은 isolated worktree) — 수정→세션 내 검증→해당 repo pr-cycle 머지까지 진행하라(되묻지 말 것). " +
+      "벽 덮기(reimpl·cached-bin·symbol-dodge·fallback·wrapper/shadow/fork)·vendored copy만 패치·upstream으로 미루기는 금지. " +
+      "정말 이번 세션에서 불가한 CONCRETE 블로커(외부 의존·CI 대기·사람 승인·다른 머신 필요)일 때만 그 블로커를 명시하고 " +
+      "재개지점을 `sidecar ing next <지점>`에 기록한 뒤 멈춰라(session-terminal). 이미 고쳤으면 같은 줄에 '수정 완료/그린'을 명시하라."
     : "당신의 답변에 '잔여'(남은 작업)가 언급됐다 — 잔여를 남긴 채 멈추지 마라. " +
       "지금 그 잔여 작업을 이어서 실제로 마무리하라(되묻지 말 것) — 잔여 항목 각각의 도구 호출/변경/결과로 이어가라. " +
       "정말 이번 세션에서 불가한 CONCRETE 블로커(외부 의존·CI 대기·사람 승인·다른 머신 필요)일 때만 그 블로커를 명시하고 " +
       "재개지점을 `sidecar ing next <지점>`에 기록한 뒤 멈춰라(session-terminal). 잔여가 이미 없으면 '잔여 없음'으로 명시하라.";
   // decision:block = FORCE continuation. Fires only on a closing-deferral (tail
-  // precise) or a live '잔여' mention (negation-aware), and only once per chain
-  // (stop_hook_active), so correct operation never trips it and a genuine
-  // terminal passes on the second stop.
+  // precise), a live '잔여' mention (negation-aware), or an infra-punt (keyword +
+  // wall + punt verb, negation-aware), and only once per chain (stop_hook_active),
+  // so correct operation never trips it and a genuine terminal passes on the 2nd stop.
   process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
   return 0;
 }

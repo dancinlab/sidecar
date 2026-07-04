@@ -911,12 +911,6 @@
                 "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
               },
               {
-                "name": "accounts",
-                "role": "멀티계정 로스터 (secret 스토어 파생 · 도메인 데이터 0)",
-                "id": "module-accounts",
-                "detail": "로스터 SSOT=secret 스토어: 그룹 패턴(~/.sidecar/accounts.json · {n}) 키에서 멤버십 파생. verbs: list/status·code(단일계정 OTP·fromHint)·inbox(전 계정 일괄·--wait 신착만)·add·retire(→legacy)·init. codeFetch 플러그블 gmail|postmark(Inbound API 3-큐 병합 — 기본 조회는 webhook-대기 메일 은닉). exit 0/1/2/3 · 비밀번호 미출력"
-              },
-              {
                 "name": "fable",
                 "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
                 "id": "module-fable",

@@ -382,8 +382,8 @@
       {
         "id": "goal-guard-ts-1",
         "state": "pos-conv",
-        "value": "goal-guard remnant scan('잔여'/'남은'/'잔존' 부정형없이=block)은 정밀도가 반복 이슈다(#376 잔존 추가에 이어). 2종 오탐: ① 정당한 session-terminal(CONCRETE 블로커+ing next 재개점 명시)인데 잔여 리포트라 첫정지 차단 ② 답변이 키워드 자체를 논의/인용(따옴표·백틱)하는데 잡힘. 해결=whole-message BLOCKER_RE(CI/승인/외부의존/머신만·변명형 규모/rate-limit 제외) AND ING_NEXT_RE 예외 + 따옴표감싼 키워드 skip. no-escape-hatch 정합: 블로커는 CONCRETE 명사+재개점 AND로 좁혀 남용차단, defer경로 독립유지.",
-        "threshold": "재발신호=정당한 블로커 종료가 오차단되거나(미탐측=변명이 통과) · 가드 논의 답변이 오탐. 해결=BLOCKER_RE를 CONCRETE 명사로만 좁게 유지하고 실측 오탐 로그 보고 확장(넓히면 escape-hatch) · 잔여 키워드 예외는 whole-message BLOCKER_RE+ing-next AND 유지.",
+        "value": "goal-guard Stop-hook 캐치(잔여 remnant + infra-punt)는 흔한 키워드('잔여'·'infra'/'인프라')를 쓰므로 정밀도가 반복 이슈다(#376 잔존→#383 잔여예외→infra 3rd catch). 공통 오탐패턴: ① 정당한 session-terminal인데 잡힘 ② 답변이 키워드 자체를 논의/인용(따옴표·백틱·kebab-slug)하는데 잡힘 ③ infra처럼 흔한 단어는 단독 언급도 잡힘. 해결원칙=좁은 AND 매칭: 잔여=whole-message BLOCKER_RE+ING_NEXT AND 예외 · infra=punt동사(whole)+키워드+벽신호(same-line) 3중 AND + fix부정형(line) · 공통 따옴표 skip + hasSessionTerminalBlocker 예외 재사용. no-escape-hatch: CONCRETE 신호로 좁혀 남용차단, defer경로 독립.",
+        "threshold": "재발신호=정당한 종료(블로커·infra 외부의존)가 오차단 · 가드/커밋요약 답변이 오탐 · 흔한단어 단독언급 오발화. 해결=매칭을 좁게(AND·same-line·CONCRETE 명사) 유지하고 실측 오탐 로그 보고만 확장(넓히면 escape-hatch) · 새 punt-키워드 캐치 추가 시 quote-skip+session-terminal 예외+좁은 AND 3장치 반드시 재사용.",
         "source": "modules/goal-guard.ts"
       }
     ]
@@ -932,7 +932,7 @@
                 "name": "goal-guard",
                 "role": "작업-punt 차단 Stop 게이트 (다음-세션 미루기 + 잔여 방치)",
                 "id": "module-goal-guard",
-                "detail": "Stop-hook 가드 · 2중 캐치: ① 꼬리(~8줄) '다음 세션'·핑계(rate-limit·규모)면 block ② 본문에 '잔여'/'남은'/'잔존' 부정형 없이 나오면 block. 잔여 예외 2종: 따옴표/백틱 감싼 키워드=메타언급 skip · CONCRETE 블로커(CI대기·승인·외부의존·다른머신)+`ing next` 재개점=session-terminal 첫정지 통과. decision:block · stop_hook_active 단발. CC 전용 · hooks.json+setup.ts Stop[]."
+                "detail": "Stop-hook punt-차단 가드 · 3중 캐치 block: ① 꼬리 '다음 세션'·핑계(rate-limit·규모) ② 본문 '잔여'/'남은'/'잔존' 부정형 없이 ③ infra/인프라 벽(키워드+벽신호 same-line)+우회/격리/미룸→upstream-fix. 공통 예외: 따옴표 감싼 키워드=메타 skip · CONCRETE 블로커+`ing next`=session-terminal 첫정지 통과. decision:block · stop_hook_active 단발. CC 전용 · hooks.json+setup.ts Stop[]."
               },
               {
                 "name": "hypotheses",

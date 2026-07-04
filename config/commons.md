@@ -114,6 +114,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Check a tool's subsystems/accel/build/version via the tool itself (`<tool> --help`/status; e.g. `hexa gpu`) · keep self-report in lockstep on release
 - dont: Guessing from stale docs/memory · inferring cross-repo capability from a repo-internal doc
 
+## help-lockstep
+- do: Any CLI impl/change (new/renamed/removed subcommand·verb·flag·arg · changed default/behavior) → update its `--help`/usage text + examples in the SAME change, in lockstep (`tool-self-report`)
+- dont: Shipping a CLI change with stale/missing `--help` · a flag/subcommand the help never lists · help output drifting from actual behavior
+
 ## fanout-workflow
 - do: Fanning independent work to many subagents at once (≥3 · `fleet`/`abg`/`gap full`) → one `Workflow` call
 - dont: Firing N direct `Agent` calls in one message (rate-limit death) (exception: a single one-off agent · `afg`)

@@ -11,6 +11,15 @@
 // Precision + escape (so it never wedges a genuine multi-session handoff):
 //  - Defer fires ONLY on the closing tail (mirrors recommend `endsOnBox`);
 //    remnant excludes negated/already-finished mentions.
+//  - Remnant is EXEMPT when the reply declares a CONCRETE session-terminal blocker
+//    (CI/checks wait · human approval/input · external dep/service/API · another
+//    machine) AND names the resume point (`ing next`) — commons `session-terminal`
+//    defines exactly that as a VALID stop, so it passes on the FIRST stop instead
+//    of eating a block cycle. Excuse-shaped closes (size · rate-limit) are NOT
+//    blockers — they stay with DEFER_RE, which runs independently of this exemption.
+//  - A keyword wrapped in quotes/backticks ('잔여' · `잔여`) is meta-discussion of
+//    the keyword itself, not live work → skipped (else a reply ABOUT the guard
+//    false-blocks).
 //  - Fires ONCE per chain: the native `stop_hook_active` flag on a block-induced
 //    Stop short-circuits it, so a GENUINE blocker (external dep / human input /
 //    another machine) that restates and re-stops passes through on the 2nd stop —
@@ -46,17 +55,45 @@ const REMNANT_NEG_RE =
 // formal synonyms of '잔여').
 const REMNANT_KEYWORDS = ["잔여", "남은", "잔존"];
 
+// Quote/backtick chars that wrap a META-mention of the keyword (a reply DISCUSSING
+// '잔여', e.g. guard docs, is not live work). Straight + curly + backtick.
+const QUOTE_CHARS = new Set(["`", "'", '"', "‘", "’", "“", "”"]);
+function isQuotedMention(text: string, i: number, len: number): boolean {
+  return QUOTE_CHARS.has(text[i - 1]) && QUOTE_CHARS.has(text[i + len]);
+}
+
 // True when the message mentions leftover work ANYWHERE without negating it —
 // whole-message scan (a remnant reported mid-summary is still unfinished work),
-// unlike the tail-scoped defer check.
+// unlike the tail-scoped defer check. A quote-wrapped keyword is meta-discussion,
+// not live work, so it is skipped.
 export function hasLiveRemnant(text: string): boolean {
   if (!text) return false;
   for (const kw of REMNANT_KEYWORDS) {
     for (let i = text.indexOf(kw); i !== -1; i = text.indexOf(kw, i + kw.length)) {
+      if (isQuotedMention(text, i, kw.length)) continue;
       if (!REMNANT_NEG_RE.test(text.slice(i + kw.length))) return true;
     }
   }
   return false;
+}
+
+// A CONCRETE session-terminal blocker (commons `session-terminal`): CI/checks wait ·
+// human approval/input · external dep/service/API · another machine — the exact list
+// the block reason enumerates. Excuse-shaped closes (size · rate-limit) are NOT here —
+// they stay with DEFER_RE, and the defer check runs independently of this exemption,
+// so an excuse-shaped close still blocks. KO + EN, case-insensitive.
+const BLOCKER_RE =
+  /CI\s*(대기|기다|통과)|checks?\s*(pending|running|대기)|waiting\s+(on|for)\s+(ci|checks?|approval|review)|(사람|사용자)\s*의?\s*(승인|입력|확인|응답)|승인\s*(대기|필요)|(human|user)\s+(approval|input|review)|approval\s+(pending|required|needed)|외부\s*(의존|서비스|API|시스템)|external\s+(dependenc|service|API|system)|API\s*(응답\s*)?대기|다른\s*머신|(another|other)\s+machine/i;
+
+// The resume point must be named (`sidecar ing next <지점>`) — session-terminal
+// requires recording where to pick up. Loose match on the verb pair.
+const ING_NEXT_RE = /ing\s+next/i;
+
+// True when the reply closes with a genuine session-terminal: a CONCRETE blocker
+// AND a recorded resume point. Raises the abuse cost so a bare "블로커: 규모가 큼"
+// (no concrete noun, no resume point) can NOT slip a remnant through.
+export function hasSessionTerminalBlocker(text: string): boolean {
+  return BLOCKER_RE.test(text) && ING_NEXT_RE.test(text);
 }
 
 // Stop-hook entry. Best-effort: any parse/IO failure is a silent no-op (never
@@ -73,7 +110,11 @@ function runStopCheck(): number {
   if (!tp) return 0;
   const last = lastAssistantText(String(tp));
   const defer = endsWithDefer(last);
-  if (!defer && !hasLiveRemnant(last)) return 0;
+  // Remnant blocks UNLESS the reply is a genuine session-terminal (concrete blocker
+  // + recorded resume point) — commons `session-terminal`. Defer stays independent:
+  // a "다음 세션에" close still blocks even with a blocker phrase present.
+  const remnant = hasLiveRemnant(last) && !hasSessionTerminalBlocker(last);
+  if (!defer && !remnant) return 0;
   const reason = defer
     ? "당신의 답변이 작업을 '다음 세션'으로 미루며 끝났다 — 그건 멈출 지점이 아니다. " +
       "goal/작업이 아직 살아있으면 지금 이어서 실제로 진행하라(되묻지 말 것) — 다음 할 일의 도구 호출/변경/결과로 이어가라. " +

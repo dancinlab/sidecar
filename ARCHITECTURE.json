@@ -392,6 +392,13 @@
         "value": "job-id 등 인자를 join(baseDir, id) 로 리졸브할 때 id 가 빈 문자열이면 join(base,'')===base 가 되어 existsSync(base) 를 오탐 통과 → 존재하지 않는 대상을 '유령 job'(exitcode·pid 없는 것)으로 오인해 'process gone — likely crashed' 같은 엉뚱한 진단을 낸다. 해결=경로 리졸버 입구에서 무효(빈) id 를 먼저 가드(if(!id) return null) 해 깔끔한 no-such/usage 에러로 떨군다.",
         "threshold": "재발조건: join(baseDir, userArg) 결과를 existsSync 로만 검사하며 userArg 가 빈 문자열/undefined 일 수 있는 옵셔널-id 서브커맨드(fable result/wait/tail 등). 해결: 리졸버 최상단 빈-id 가드 + 옵셔널 id 서브커맨드는 usage 에러 경로 확보.",
         "source": "modules/fable.ts"
+      },
+      {
+        "id": "pool-ts-1",
+        "state": "pos-conv",
+        "value": "sidecar pool on <host> <cmd>: 로컬 ssh 세션이 끊기면 원격 커맨드 트리가 고아화(systemd/init로 입양)됨. 커맨드가 루프/재시도형(예: gh release download 다운로드 루프)이고 대상 바이너리가 멈추면(mem_cgroup throttle로 D-state) 자기증식 fork storm이 되어 호스트를 load 2x까지 밀어올림. 자식(gh 등)만 reap하면 생산기가 다시 뽑으므로(6→1→재생성) 반드시 고아 생산기 트리(PPID=1 bash 래퍼)를 죽여야 근절됨. hexa_run fork storm(mini freeze)과 동일 계열.",
+        "threshold": "재발신호=호스트 부하 급등 + 동일 단명 프로세스(gh/hexa) 떼가 D-state(wchan=mem_cgroup_handle_over_high)로 누적. 해결=자식이 아니라 고아 생산기(run_dl.sh/bash -c 래퍼)를 kill. 근본예방=pool on을 setsid+timeout+cleanup trap으로 실행해 세션 드롭 시 원격 트리 자동 수거(미배선 follow-on).",
+        "source": "modules/pool.ts"
       }
     ]
   },

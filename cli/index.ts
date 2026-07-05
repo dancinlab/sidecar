@@ -59,7 +59,6 @@ import { runModels } from "../modules/models.ts";
 import { runChangelog } from "../modules/changelog.ts";
 import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
-import { runSwitch } from "../modules/switch.ts";
 import { runPi } from "../modules/pi.ts";
 import { runInjects } from "../modules/injects.ts";
 import { runFable } from "../modules/fable.ts";
@@ -85,9 +84,6 @@ setup:
   self-update              git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main
   shadow [plan|remove|--force]  mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)
   ship [--no-doc]          SIDECAR-REPO ONLY — propagate sidecar's OWN change across its install surfaces: inject-bloat guard (context-rot) → pr-cycle → self-update (global CLI) → shadow (slash mirror). Other repos use pr-cycle for a plain verified merge
-  switch {glm|claude|toggle|status}   swap Claude Code's backend between the OFFICIAL Anthropic API and Z.AI GLM by
-                                       rewriting the GLOBAL ~/.claude/settings.json env (ANTHROPIC_BASE_URL/AUTH_TOKEN + GLM model map) — Z.AI key from
-                                       'secret get zai.api_key' (never on argv); env loads at startup so a Claude Code restart is needed to take effect
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -226,8 +222,6 @@ async function main(): Promise<number> {
       return runPi(rest);
     case "self-update":
       return runSelfUpdate(rest);
-    case "switch":
-      return runSwitch(rest);
     case "fable":
       return runFable(rest);
     case "hypotheses":

@@ -266,6 +266,7 @@ interface JobStatus {
   pid?: number;
 }
 function readJob(id: string): { dir: string; st: JobStatus } | null {
+  if (!id) return null; // empty id would resolve join(root,"") === jobsRoot() and falsely pass existsSync
   const dir = join(jobsRoot(), id);
   if (!existsSync(dir)) return null;
   const exitF = join(dir, "exitcode");

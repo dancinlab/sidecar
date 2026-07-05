@@ -62,7 +62,7 @@ const REMNANT_KEYWORDS = ["잔여", "남은", "잔존"];
 // Quote/backtick chars that wrap a META-mention of the keyword (a reply DISCUSSING
 // '잔여', e.g. guard docs, is not live work). Straight + curly + backtick.
 const QUOTE_CHARS = new Set(["`", "'", '"', "‘", "’", "“", "”"]);
-function isQuotedMention(text: string, i: number, len: number): boolean {
+export function isQuotedMention(text: string, i: number, len: number): boolean {
   return QUOTE_CHARS.has(text[i - 1]) && QUOTE_CHARS.has(text[i + len]);
 }
 
@@ -86,12 +86,15 @@ export function hasLiveRemnant(text: string): boolean {
 // the block reason enumerates. Excuse-shaped closes (size · rate-limit) are NOT here —
 // they stay with DEFER_RE, and the defer check runs independently of this exemption,
 // so an excuse-shaped close still blocks. KO + EN, case-insensitive.
-const BLOCKER_RE =
+// Exported: the ship stop-check gate reuses this SAME session-terminal class list so the
+// two gates never drift (single SSOT · commons root-cause · convergence goal-guard-ts-1).
+export const BLOCKER_RE =
   /CI\s*(대기|기다|통과)|checks?\s*(pending|running|대기)|waiting\s+(on|for)\s+(ci|checks?|approval|review)|(사람|사용자)\s*의?\s*(승인|입력|확인|응답)|승인\s*(대기|필요)|(human|user)\s+(approval|input|review)|approval\s+(pending|required|needed)|외부\s*(의존|서비스|API|시스템)|external\s+(dependenc|service|API|system)|API\s*(응답\s*)?대기|다른\s*머신|(another|other)\s+machine/i;
 
 // The resume point must be named (`sidecar ing next <지점>`) — session-terminal
-// requires recording where to pick up. Loose match on the verb pair.
-const ING_NEXT_RE = /ing\s+next/i;
+// requires recording where to pick up. Loose match on the verb pair. Exported: the ship
+// gate reuses it for its self-granted multi-step deferral class (see ship.ts).
+export const ING_NEXT_RE = /ing\s+next/i;
 
 // True when the reply closes with a genuine session-terminal: a CONCRETE blocker
 // AND a recorded resume point. Raises the abuse cost so a bare "블로커: 규모가 큼"

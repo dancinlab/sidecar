@@ -275,8 +275,10 @@ function writeConvergence(records: ConvergenceRecord[]): boolean {
     return false;
   }
   let root: Record<string, unknown>;
+  let raw = "";
   try {
-    root = JSON.parse(readFileSync(found.path, "utf8"));
+    raw = readFileSync(found.path, "utf8");
+    root = JSON.parse(raw);
   } catch {
     loudFail("architecture convergence: ARCHITECTURE.json is not valid JSON");
     return false;
@@ -284,8 +286,18 @@ function writeConvergence(records: ConvergenceRecord[]): boolean {
   const conv = (root.convergence as { note?: string; records?: ConvergenceRecord[] }) ?? {};
   conv.records = records;
   root.convergence = conv;
-  writeFileSync(found.path, JSON.stringify(root, null, 2) + "\n");
+  writeFileSync(found.path, JSON.stringify(root, null, detectJsonIndent(raw)) + "\n");
   return true;
+}
+
+// Preserve the existing file's indentation width on rewrite. Forcing a fixed indent onto a
+// file authored with a different one reserializes the ENTIRE tree — a downstream repo whose
+// ARCHITECTURE.json is indent=1 got a 13k-line churn diff every time this writer touched it,
+// re-gating stacked PRs (convergence architecture-json-1, 4× recurrence). Default 2 for a
+// new/ambiguous file (the canonical width); otherwise mirror what is already on disk.
+function detectJsonIndent(raw: string): number {
+  const m = raw.match(/^\{[^\n]*\n( +)"/);
+  return m ? m[1].length : 2;
 }
 
 async function convergenceVerb(args: string[]): Promise<number> {

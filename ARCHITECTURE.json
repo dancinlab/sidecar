@@ -385,6 +385,13 @@
         "value": "goal-guard Stop-hook 캐치(잔여 remnant + infra-punt)는 흔한 키워드('잔여'·'infra'/'인프라')를 쓰므로 정밀도가 반복 이슈다(#376 잔존→#383 잔여예외→infra 3rd catch). 공통 오탐패턴: ① 정당한 session-terminal인데 잡힘 ② 답변이 키워드 자체를 논의/인용(따옴표·백틱·kebab-slug)하는데 잡힘 ③ infra처럼 흔한 단어는 단독 언급도 잡힘. 해결원칙=좁은 AND 매칭: 잔여=whole-message BLOCKER_RE+ING_NEXT AND 예외 · infra=punt동사(whole)+키워드+벽신호(same-line) 3중 AND + fix부정형(line) · 공통 따옴표 skip + hasSessionTerminalBlocker 예외 재사용. no-escape-hatch: CONCRETE 신호로 좁혀 남용차단, defer경로 독립.",
         "threshold": "재발신호=정당한 종료(블로커·infra 외부의존)가 오차단 · 가드/커밋요약 답변이 오탐 · 흔한단어 단독언급 오발화. 해결=매칭을 좁게(AND·same-line·CONCRETE 명사) 유지하고 실측 오탐 로그 보고만 확장(넓히면 escape-hatch) · 새 punt-키워드 캐치 추가 시 quote-skip+session-terminal 예외+좁은 AND 3장치 반드시 재사용.",
         "source": "modules/goal-guard.ts"
+      },
+      {
+        "id": "fable-ts-2",
+        "state": "pos-conv",
+        "value": "job-id 등 인자를 join(baseDir, id) 로 리졸브할 때 id 가 빈 문자열이면 join(base,'')===base 가 되어 existsSync(base) 를 오탐 통과 → 존재하지 않는 대상을 '유령 job'(exitcode·pid 없는 것)으로 오인해 'process gone — likely crashed' 같은 엉뚱한 진단을 낸다. 해결=경로 리졸버 입구에서 무효(빈) id 를 먼저 가드(if(!id) return null) 해 깔끔한 no-such/usage 에러로 떨군다.",
+        "threshold": "재발조건: join(baseDir, userArg) 결과를 existsSync 로만 검사하며 userArg 가 빈 문자열/undefined 일 수 있는 옵셔널-id 서브커맨드(fable result/wait/tail 등). 해결: 리졸버 최상단 빈-id 가드 + 옵셔널 id 서브커맨드는 usage 에러 경로 확보.",
+        "source": "modules/fable.ts"
       }
     ]
   },

@@ -19,6 +19,7 @@ import { REPO_ROOT } from "../lib/paths.ts";
 import { readStdin, execShell } from "../lib/exec.ts";
 import { injectCapViolations } from "./lint.ts";
 import { lastAssistantText } from "./recommend.ts";
+import { BLOCKER_RE, ING_NEXT_RE, isQuotedMention } from "./goal-guard.ts";
 import { runPrCycle } from "./pr-cycle.ts";
 import { runSelfUpdate } from "./setup.ts";
 import { runShadow } from "./shadow.ts";
@@ -30,14 +31,17 @@ function isSidecarRepo(): boolean {
 }
 
 export async function runShip(args: string[]): Promise<number> {
-  // stop-check (Stop hook) — pr-cycle/ship ENTRY enforce (hybrid). The governance rule
-  // "impl/fix done → verified merge" (commons cycle-docs-pr) was previously carried ONLY by
-  // per-turn inject TEXT (advisory) — nothing GATED the entry, so a turn could leave
-  // uncommitted code and just end. This makes it deterministic: if the tree still holds
-  // uncommitted CODE changes AND the response carries no `🚢 SHIP` marker, block. Two legit
-  // exits (hybrid, not marker-only): (a) actually run ship/pr-cycle → the tree ends clean
-  // (merged + ff-synced) → no code diff → auto-pass; (b) an intended WIP → declare it with
-  // `🚢 SHIP: 보류(<사유>)`. Scoped to sidecar-managed repos; anti-wedge caps it once/chain.
+  // stop-check (Stop hook) — pr-cycle/ship ENTRY enforce. The governance rule "impl/fix done
+  // → verified merge" (commons cycle-docs-pr) was previously carried ONLY by per-turn inject
+  // TEXT (advisory). This GATES the entry deterministically: uncommitted CODE in the tree →
+  // block, UNLESS the reply carries a VALIDATED deferral. "done" has NO text form — the only
+  // success path is a clean tree (real ship/pr-cycle → merged + ff-synced → no code diff →
+  // auto-pass BEFORE any text is read), so a "완료/merged" claim over a dirty tree cannot lie
+  // its way through. The lone escape is `🚢 SHIP: 보류(<사유>)` whose <사유> matches a CONCRETE
+  // legitimacy class (foreign WIP · session-terminal blocker · user directive · declared
+  // multi-step + `ing next`); a bare excuse ("나중에"·"귀찮음") matches none → blocks. Mirrors
+  // goal-guard's remnant hardening (shared BLOCKER_RE/ING_NEXT_RE/isQuotedMention · single
+  // SSOT). Anti-wedge caps it once/chain. CC-only (Pi has no blocking Stop).
   if (args[0] === "stop-check") return shipStopCheck();
 
   // pre. sidecar-repo gate — ship is sidecar-development-only (self-update + shadow act on
@@ -105,9 +109,29 @@ export async function runShip(args: string[]): Promise<number> {
 }
 
 // Stop-hook gate: force pr-cycle/ship at the END of a turn that produced impl/fix code.
-// Marker-only Stop gates (architecture/ing) can be satisfied by TEXT alone — this one is a
-// hybrid: the clean-tree success path can ONLY be reached by actually merging, so text
-// cannot fake "done"; the `🚢 SHIP` marker is reserved for an explicit, reasoned deferral.
+// TWO earlier defects (see convergence ship-ts-1): (1) SURFACE — the old `/🚢 SHIP/` check
+// was keyword-existence, not validation, so a bare `보류(귀찮음)` cost one line; (2) STRUCTURAL
+// — that check ran BEFORE the dirty-tree trigger, making the marker a global bypass that also
+// let a "완료/merged" claim pass over a dirty tree (text faking a state the tree could prove).
+// Fix: DETERMINISTIC TRIGGER FIRST (clean tree = the only "done", text-unfakeable), then the
+// marker as a validated LAST-RESORT deferral. "done" has no text form; the marker means
+// deferral ONLY, and its <사유> must match a CONCRETE legitimacy class.
+//
+// Deferral legitimacy classes (a bare excuse matches none → blocks · commons no-escape-hatch):
+//   (a) foreign WIP  — uncommitted files THIS session did not author
+//   (b) session-terminal blocker — CI wait · human approval · external dep · another machine
+//       (reuses goal-guard BLOCKER_RE verbatim — the class list is single-SSOT across gates)
+//   (c) explicit user directive — the user told the agent to hold/stage the work
+//   (d) declared multi-step WIP — intent phrase AND an `ing next` resume point (the only
+//       self-granted class, so it alone carries the ing-next tax, mirroring goal-guard)
+const SHIP_DEFER_MARKER_RE = /🚢\s*SHIP\s*[:：]\s*보류\s*[(（]\s*([^)）\n]{2,160})\s*[)）]/g;
+const SHIP_FOREIGN_RE =
+  /(다른|타|이전|형제)\s*(세션|소유|주인|에이전트|작업자)|(내|이\s*세션)(가|이|의|에서)?\s*(만들|생성|작성|수정)(하지|치)?\s*않|기존\s*(미커밋|WIP|변경)|사전\s*존재|(another|other|sibling|previous)\s+(session|owner|agent)('s)?|pre-?existing|not\s+(mine|created|authored)|foreign\s+WIP/i;
+const SHIP_USER_RE =
+  /(사용자|유저)\s*의?\s*(지시|요청|결정|승인|보류)|명시(적)?\s*지시|(user|owner)\s+(direct(ed|ive)|request(ed)?|decision|asked|told)|per\s+user/i;
+const SHIP_WIP_RE =
+  /(다단계|멀티\s*스텝|여러\s*단계|단계\s*\d|다음\s*(턴|단계)에\s*(이어|계속)|계속\s*진행|이어서\s*진행|multi-?step|in\s+progress|continu(e|ing)|step\s+\d+\s*(of|\/)\s*\d+|next\s+(turn|step))/i;
+
 async function shipStopCheck(): Promise<number> {
   let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
   try {
@@ -117,15 +141,11 @@ async function shipStopCheck(): Promise<number> {
   }
   if (payload?.stop_hook_active) return 0; // already nudged this chain — don't wedge
   if (!inGitRepo()) return 0; // any git repo (managed-marker abolished · config.ts inGitRepo)
-  const tp = payload?.transcript_path ?? payload?.transcriptPath;
-  if (!tp) return 0;
-  const text = lastAssistantText(String(tp));
-  if (!text) return 0;
-  if (/🚢\s*SHIP/.test(text)) return 0; // explicit deferral / ship-report marker present → pass
-  // deterministic trigger: uncommitted CODE changes remain in the tree. A completed
-  // pr-cycle/ship leaves the tree clean (verified merge + local main ff-sync) → no diff →
-  // auto-pass. Restricted to code extensions so pure-doc/config turns don't nag (config-only
-  // merges use `pr-cycle --no-doc` on their own cadence).
+
+  // DETERMINISTIC TRIGGER FIRST — uncommitted CODE in the tree. A completed pr-cycle/ship
+  // leaves it clean (verified merge + local main ff-sync) → no diff → auto-pass here, before
+  // any text is read (success is text-unfakeable). Restricted to code extensions so pure-
+  // doc/config turns don't nag (config-only merges use `pr-cycle --no-doc` on their own cadence).
   let changed = "";
   try {
     changed = (await execShell("git diff --name-only && git diff --cached --name-only", { cwd: REPO_ROOT })).stdout;
@@ -134,10 +154,25 @@ async function shipStopCheck(): Promise<number> {
   }
   const CODE = /\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|c|h|cpp|hpp|cc|java|kt|swift|rb|php|sh|hexa)$/i;
   if (!changed.split("\n").some((f) => CODE.test(f.trim()))) return 0; // no code change → pass
+
+  // dirty code remains — the ONLY exit now is a VALIDATED deferral marker.
+  const tp = payload?.transcript_path ?? payload?.transcriptPath;
+  if (!tp) return 0;
+  const text = lastAssistantText(String(tp));
+  if (!text) return 0;
+  for (const m of text.matchAll(SHIP_DEFER_MARKER_RE)) {
+    if (isQuotedMention(text, m.index ?? 0, m[0].length)) continue; // quoted = meta-discussion, not live
+    const why = m[1];
+    if (SHIP_FOREIGN_RE.test(why) || BLOCKER_RE.test(why) || SHIP_USER_RE.test(why)) return 0;
+    if (SHIP_WIP_RE.test(why) && ING_NEXT_RE.test(text)) return 0;
+  }
+
   const reason =
-    "이번 턴에 impl/fix(미커밋 코드 변경)를 해놓고 verified merge 없이 턴을 끝내려 한다 — `sidecar ship`(sidecar 레포) 또는 " +
-    "`sidecar pr-cycle`(그 외 repo)로 검증 머지해 tree 를 정리하거나, 의도한 WIP 면 응답에 `🚢 SHIP: 보류(<사유>)` 한 줄로 " +
-    "명시하라 (둘 중 하나 필수 · commons cycle-docs-pr). 머지가 끝나 working tree 가 깨끗하면 이 게이트는 자동 통과한다.";
+    "이번 턴에 impl/fix(미커밋 코드 변경)를 남긴 채 verified merge 없이 턴을 끝내려 한다 — `sidecar ship`(sidecar 레포)/" +
+    "`sidecar pr-cycle`(그 외)로 머지해 tree 를 정리하라. 머지가 진짜면 tree 는 깨끗해져 이 게이트는 자동 통과한다 " +
+    "(dirty tree + '완료/merged' 주장만으로는 통과 불가). 정당한 보류일 때만 `🚢 SHIP: 보류(<사유>)` 를 쓰되, <사유>는 다음 중 하나가 " +
+    "CONCRETE 하게 명시돼야 한다: ① 다른 세션/소유자의 기존 WIP(내가 만들지 않음) ② CI 대기·사람 승인·외부 의존 등 " +
+    "session-terminal 블로커 ③ 사용자의 명시 지시 ④ 다단계 진행 중 + `sidecar ing next <지점>` 기록. 근거 없는 보류(나중에·귀찮음 등)는 통과하지 않는다.";
   process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
   return 0;
 }

@@ -399,6 +399,13 @@
         "value": "sidecar pool on <host> <cmd>: 로컬 ssh 세션이 끊기면 원격 커맨드 트리가 고아화(systemd/init로 입양)됨. 커맨드가 루프/재시도형(예: gh release download 다운로드 루프)이고 대상 바이너리가 멈추면(mem_cgroup throttle로 D-state) 자기증식 fork storm이 되어 호스트를 load 2x까지 밀어올림. 자식(gh 등)만 reap하면 생산기가 다시 뽑으므로(6→1→재생성) 반드시 고아 생산기 트리(PPID=1 bash 래퍼)를 죽여야 근절됨. hexa_run fork storm(mini freeze)과 동일 계열.",
         "threshold": "재발신호=호스트 부하 급등 + 동일 단명 프로세스(gh/hexa) 떼가 D-state(wchan=mem_cgroup_handle_over_high)로 누적. 해결=자식이 아니라 고아 생산기(run_dl.sh/bash -c 래퍼)를 kill. 근본예방=pool on을 setsid+timeout+cleanup trap으로 실행해 세션 드롭 시 원격 트리 자동 수거(미배선 follow-on).",
         "source": "modules/pool.ts"
+      },
+      {
+        "id": "ship-ts-1",
+        "state": "pos-conv",
+        "value": "governance Stop-게이트의 '마커 존재=통과' 탈출구는 검증이 아니라 키워드 매칭이라 임의 텍스트(🚢 SHIP: 보류(귀찮음))로 뚫린다. 더 깊은 결함: marker 체크를 dirty-tree 트리거보다 FIRST로 두면 marker가 global bypass가 되어 'done' 텍스트 주장이 dirty tree 위에서도 통과(텍스트가 트리로 증명가능한 상태를 위조). 해결=① 결정적 상태검증(clean tree=유일한 done)을 FIRST로 재배치, marker는 last-resort deferral 전용 ② 탈출구를 CONCRETE 클래스로 검증(foreign WIP·session-terminal 블로커·user 지시·다단계+ing next) ③ goal-guard의 BLOCKER_RE/ING_NEXT_RE/isQuotedMention 재사용해 클래스목록 single-SSOT. goal-guard-ts-1의 좁은-AND 원칙을 ship 게이트로 확장.",
+        "threshold": "재발조건: Stop-게이트 탈출 마커를 정규식 존재검사만으로 통과 · marker 체크를 상태검증(git diff)보다 먼저 배치 · 성공을 텍스트로 신뢰. 해결: 상태검증 FIRST(텍스트-위조불가 경로) + 탈출구 CONCRETE 사유 클래스 AND 매칭 + 클래스목록 gate간 single-SSOT + 따옴표 meta-skip 재사용.",
+        "source": "modules/ship.ts"
       }
     ]
   },

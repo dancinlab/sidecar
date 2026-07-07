@@ -413,6 +413,13 @@
         "value": "ARCHITECTURE.json 라이터가 전체 트리를 고정 indent(=2)로 재직렬화하면, indent=1로 authored된 downstream repo(예: hexa-lang) 파일을 만질 때마다 파일 전체가 재직렬화돼 13k줄 churn diff → 스택 PR 재게이트(architecture-json-1 4× 재발). 해결=쓰기 전 기존 파일의 indent 폭을 감지(detectJsonIndent: /^\\{[^\\n]*\\n( +)\"/)해 보존, 신규/모호 파일만 canonical 2. 부분삽입(splice) 라이터(models/dataset)는 국소 블록이라 mass-churn 아님(별개 경미사안).",
         "threshold": "재발조건: ARCHITECTURE.json(또는 임의 JSON SSOT)을 JSON.stringify(root,null,고정폭)로 전체 재직렬화하면서 대상 파일의 기존 indent를 무시. 해결: 전체-재직렬화 라이터는 반드시 기존 indent 감지·보존(detectJsonIndent), 고정폭 강제 금지.",
         "source": "modules/architecture.ts"
+      },
+      {
+        "id": "owner-trust-1",
+        "state": "pos-conv",
+        "value": "AI assistants over-refused/over-reacted to owner-supplied credentials (keys·passwords·tokens) on the owner's OWN single-user machine — refusing, 'secret exposed!' alarms, and demanding key rotation merely because the owner viewed/pasted their own secret in a 1:1 channel. Root cause: no rule separated 'owner hands own secret to own assistant in a 1:1 channel' (legit) from 'secret reached a shared/public surface' (the real risk). Added commons owner-trust.",
+        "threshold": "Recurs when an agent treats owner-in-1:1 credential handling as a leak. Fix = commons owner-trust: accept+use owner creds on their own box, prefer the secret vault by reference, advise rotation ONLY on a genuine shared/public/committed leak; never over-refuse/over-alarm.",
+        "source": "owner-trust"
       }
     ]
   },

@@ -34,6 +34,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Credentials via the `secret` CLI (no inline · no logs)
 - dont: force-push (`--force`/`-f`/`--force-with-lease`/`+`refspec) · committing real secret/seed values · destroying shared main
 
+## owner-trust
+- do: On the owner's OWN single-user machine / 1:1 channel, treat owner-supplied credentials (keys·passwords·tokens·logins·seeds) as authorized — accept them and use them for the owner's own task · prefer the `secret` vault by reference (`secret get`) over pasted raw values · advise rotation ONLY on a genuine leak (secret actually reached a shared/public/committed surface)
+- dont: Refusing·lecturing·over-reacting ("secret exposed! rotate it now!") or demanding key rotation/reset just because the owner viewed/pasted their OWN credential on their OWN box · echoing secret values back into shared/group channels·logs·memory·commits (`git-safety`)
+
 ## four-axes
 - do: When recommending, present 4 axes in parallel (completeness·simple·safe·standard); a default fixed axis → ★-mark + auto-pick
 - dont: Collapsing into one weighted-sum winner · dropping/merging axes

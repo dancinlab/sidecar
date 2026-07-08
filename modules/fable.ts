@@ -60,9 +60,12 @@ const USAGE = `usage: sidecar fable [flags] <prompt...> | --file <f> | -
                        prior --json run) — SAME --cwd as that run
       --write          grant WRITE/EXECUTE — --permission-mode bypassPermissions
                        (Write·Edit·Bash·git, no approval prompts) so the child can
-                       actually implement (worktree·edits·build·commit). DEFAULT is
-                       read-only: headless can't approve, so writes are auto-denied.
+                       actually implement (worktree·edits·build·commit).
                        aliases: --bypass · --agent
+                       DEFAULT (no --write) is INVESTIGATE: bypass + --disallowedTools
+                       Write Edit NotebookEdit — Bash/Read/Grep/Glob run freely so the
+                       child can MEASURE (git·grep·pipelines), file-write tools blocked
+                       (analyzes, doesn't mutate — matches fable-mode).
       --bg             fire-and-forget: launch DETACHED, print a job id + poll
                        command, return immediately (no blocking wait) — collect
                        with \`sidecar fable result <id>\` / \`wait <id>\`
@@ -432,17 +435,28 @@ export async function runFable(args: string[]): Promise<number> {
   // safety-classifier-flagged request refuses on the delegated model instead of
   // silently falling back to Opus (unconditional — see noFallbackSettings). It
   // sits BEFORE o.extra so a user's own `-- --settings <…>` still wins.
-  // Headless `claude -p` runs in the `default` permission mode: with no one to
-  // approve prompts, Write/Edit/Bash calls are auto-DENIED, so a delegated child
-  // is effectively READ-ONLY (Read/Grep/Glob) out of the box. `--write` opts into
-  // `--permission-mode bypassPermissions` — a full unattended agent that can edit,
-  // run bash, and drive git (create a worktree, build, commit). It sits BEFORE
-  // o.extra so a user's own `-- --permission-mode <x>` still wins.
-  const writeArgs = o.write ? ["--permission-mode", "bypassPermissions"] : [];
+  // Permission model — two tiers, both under `bypassPermissions` (headless has no
+  // one to answer approval prompts, so plain `default` mode auto-DENIES every tool
+  // incl. Bash — which left a delegated analysis child BLIND: it could not grep/git/
+  // ls to MEASURE, only reason from the given context. Empirically confirmed:
+  // `--disallowedTools` is honored as a deny even under bypassPermissions).
+  //   · DEFAULT (analysis/investigate) = bypass + disallow the file-WRITE tools
+  //     (Write·Edit·NotebookEdit). Read/Grep/Glob/Bash all run freely so Fable can
+  //     investigate (git log, grep, pipelines, loops — the measurement work), but it
+  //     cannot mutate repo files via the write tools. Matches fable-mode: Fable
+  //     analyzes, the caller implements. (Not a hermetic sandbox — a Bash `>` redirect
+  //     could still write; the guarantee is "no casual file editing", not isolation.)
+  //   · --write (implement) = bypass with NO disallow → full unattended agent that can
+  //     edit, run bash, drive git (worktree·build·commit).
+  // Both sit BEFORE o.extra so a user's own `-- --permission-mode <x>` / `-- --allowedTools …` still wins.
+  const READONLY_DISALLOW = ["Write", "Edit", "NotebookEdit"];
+  const writeArgs = o.write
+    ? ["--permission-mode", "bypassPermissions"]
+    : ["--permission-mode", "bypassPermissions", "--disallowedTools", ...READONLY_DISALLOW];
   const claudeArgs = ["-p", "--model", o.model, "--setting-sources", o.sources, "--settings", noFallbackSettings(o.model), ...writeArgs, ...contArgs, ...(o.json ? ["--output-format", "json"] : []), ...o.extra];
   if (o.dry) {
     info(`fable --dry: claude ${claudeArgs.join(" ")}`);
-    info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""} · timeout=${effTimeoutSec(o) === null ? "off" : effTimeoutSec(o) + "s"}${o.cont ? " · continue" : o.resume !== null ? ` · resume=${o.resume}` : ""}${o.bg ? " · bg" : ""} · opus-fallback=off · ${o.write ? "write=on(bypassPermissions)" : "write=off(read-only)"}`);
+    info(`  prompt: ${prompt.length} chars via child stdin${o.cwd ? ` · cwd=${o.cwd}` : ""} · timeout=${effTimeoutSec(o) === null ? "off" : effTimeoutSec(o) + "s"}${o.cont ? " · continue" : o.resume !== null ? ` · resume=${o.resume}` : ""}${o.bg ? " · bg" : ""} · opus-fallback=off · ${o.write ? "write=on(bypassPermissions)" : "write=off(investigate: bash/read ok, Write/Edit denied)"}`);
     return 0;
   }
 

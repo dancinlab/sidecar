@@ -18,23 +18,23 @@ Flags: `-m <model>` (override) · `--json` (machine output) · `--dry` (argv pre
 · `--cwd <dir>` (child working dir) · `--sources <l>` (setting sources, default `project,local`)
 · `--timeout <s>` (stall backstop) · `--write` (grant write/execute) · after `--` verbatim to claude.
 
-## READ-ONLY by default — `--write` to let fable implement
+## INVESTIGATE by default — `--write` to let fable implement
 
-Headless `claude -p` runs in the `default` permission mode. There is no human to
-approve permission prompts, so **Write / Edit / Bash / git calls are auto-DENIED** —
-a delegated fable child can Read/Grep/Glob and produce TEXT (its `.result`), but
-CANNOT create files, edit, run bash, or drive git out of the box. (Symptom: a
-"implement X in a worktree" delegation reads + plans forever and never creates the
-worktree — the `git worktree add` was silently denied. With `--json` you don't even
-see the denial.)
+Headless `claude -p` has no human to approve permission prompts, so plain `default`
+mode auto-DENIES **every** tool (incl. Bash) — which left a delegated analysis child
+BLIND: it could reason from the given context but could NOT grep/git/ls to MEASURE.
+So both tiers now run under `--permission-mode bypassPermissions`, split by the
+file-WRITE tools:
 
-`--write` (aliases `--bypass` · `--agent`) opts into `--permission-mode bypassPermissions`
-— a full unattended agent: Write, Edit, Bash, git, no prompts. This is what an
-implementer delegation needs (worktree · edits · build · commit).
-
-- DEFAULT (no `--write`) = read-only. Good for analysis / design / review / codegen
-  that returns text you apply yourself.
-- `--write` = full autonomy. Use for "go implement this in an isolated worktree".
+- **DEFAULT (no `--write`) = INVESTIGATE.** bypass + `--disallowedTools Write Edit
+  NotebookEdit`. Bash / Read / Grep / Glob run freely so fable can measure (git log,
+  grep, pipelines, loops — real investigation), but the file-write TOOLS are blocked:
+  it analyzes, it does not mutate your repo. Matches fable-mode (Fable analyzes, the
+  caller implements). *Not a hermetic sandbox — a Bash `>` redirect could still write;
+  the guarantee is "no casual file editing", not isolation.*
+- **`--write` (aliases `--bypass` · `--agent`) = IMPLEMENT.** bypass with no disallow —
+  a full unattended agent: Write, Edit, Bash, git, no prompts (worktree · edits ·
+  build · commit). Use for "go implement this in an isolated worktree".
   Point `--cwd` at the repo; pair with `-- --safe-mode` to drop the repo's CLAUDE.md
   context overhead, and a `--timeout` backstop.
 - A user's own `-- --permission-mode <mode>` after `--` still wins (e.g. narrow it to

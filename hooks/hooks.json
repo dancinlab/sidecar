@@ -139,6 +139,14 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" ing inject"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" frontier inject"
+          }
+        ]
       }
     ],
     "SessionStart": [
@@ -219,6 +227,14 @@
           {
             "type": "command",
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" ing inject"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" frontier inject"
           }
         ]
       }

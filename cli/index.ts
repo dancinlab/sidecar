@@ -25,6 +25,7 @@ import { runShip } from "../modules/ship.ts";
 import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runIng } from "../modules/ing.ts";
+import { runFrontier } from "../modules/frontier.ts";
 import { runUpstream } from "../modules/upstream.ts";
 import { runVerdict } from "../modules/verdict.ts";
 import { runAtlas } from "../modules/atlas.ts";
@@ -188,6 +189,7 @@ reports:
   worktree {scan|gc|inject|stop-check|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped)
                            (\`inject\`=SessionStart/Compact WARN surfacing stranded worktrees+no-worktree branches+refs/reaped (+ING task link) · \`stop-check\`=Stop-time WARN for committed-but-unpushed worktree work (keyed dedup·never blocks) · \`scan\` exit 1 gates new work · \`gc\` auto-sweep)
   ing [show|add|done|next|pod ...|inject]   in-progress board → ING.jsonl (작업·POD·next · done=scrub · SessionStart inject · 내 repo 전용 — cross-repo 전달 폐기)
+  frontier [show|set <목표>|go [노트]|swap <새목표>|clear|inject]   single north-star objective (최전선) → FRONTIER.jsonl on a dedicated 'frontier' git ref (single-slot · unlike ing's multi-item board). 지정=set(clobber 거부 → swap) · 진행=go(push-now directive + 진행노트) · 교체=swap(은퇴→CHANGELOG) · 해제=clear · 한글 별칭 허용 · inject surfaces it (silent when unset)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
   models {list|show|add|set|gate|feat|verify|prune|rm}   model registry → ARCHITECTURE.json .models[] (id·arch·params·tier·sha256·path·hf + gates 검증충족도·progress·features · byte-invariant splice · verify=sha256 · prune=HF+sha guard)
@@ -354,6 +356,8 @@ async function main(): Promise<number> {
       return runWatch(rest);
     case "ing":
       return runIng(rest);
+    case "frontier":
+      return runFrontier(rest);
     case "verdict":
       return runVerdict(rest);
     case "atlas":

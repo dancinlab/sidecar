@@ -1063,6 +1063,19 @@
                 ]
               },
               {
+                "name": "frontier",
+                "role": "최전선 목표 (전용 `frontier` git ref · 단일슬롯)",
+                "id": "module-frontier",
+                "detail": "단 하나의 north-star 목표(최전선)를 추적 — ing(다건 보드)과 달리 SINGLE-SLOT. 저장은 ing ref 패턴 미러(refs/heads/frontier·FRONTIER.jsonl 1줄·plumbing+push). clear/swap 은 옛 최전선을 은퇴(→CHANGELOG); ref 는 ACTIVE 만. SessionStart+per-turn inject 로 표면화(미지정=0B 침묵). advisory only — Stop 강제게이트 없음.",
+                "children": [
+                  {
+                    "name": "verb 의미 (지정·진행·교체·해제)",
+                    "id": "detail-frontier-verbs",
+                    "detail": "set(지정)=지정, 기존 있으면 clobber 거부→swap 유도(유실 방지). go(진행)=push-now 지시 출력+선택인자를 진행노트 append. swap(교체)=기존 은퇴(id 증가)+신규 지정(없으면 set). clear(해제)=해제. 한글별칭+designate/advance/replace/release 허용. 셸특수문자 텍스트는 `--stdin`."
+                  }
+                ]
+              },
+              {
                 "name": "bitter-gate",
                 "role": "JSONL 빈도 분석",
                 "id": "module-bitter-gate",

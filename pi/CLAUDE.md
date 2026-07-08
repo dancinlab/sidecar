@@ -16,7 +16,7 @@ file is the adapter that translates Pi events ↔ CC-style hook JSON.
 ## Surface mapping (CC hooks.json ↔ Pi events)
 | Claude Code | Pi event | sidecar verb |
 |------|------|------|
-| UserPromptSubmit (per-turn inject + prompt-scan) | `before_agent_start` | commons·claudemd·recommend·prefs·easy·load·ing inject + prompt |
+| UserPromptSubmit (per-turn inject + prompt-scan) | `before_agent_start` | commons·claudemd·recommend·prefs·easy·load·ing·frontier inject + prompt |
 | SessionStart (one-time inject + gc) | `session_start` + first `before_agent_start` | architecture·git-context·toolkit·companions inject · worktree gc |
 | PreToolUse (guards) | `tool_call` (can block) | pre bash/write/touch/tool |
 | PostToolUse (Write\|Edit) | `tool_result` (advisory) | post edit |

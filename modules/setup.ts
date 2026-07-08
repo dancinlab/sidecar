@@ -56,6 +56,7 @@ function hookSpec(): Record<string, unknown[]> {
       // (cost proportional to risk: nothing when current, one reminder every turn when not).
       entry("sidecar git-context inject"),
       entry("sidecar ing inject"),
+      entry("sidecar frontier inject"), // single north-star objective — silent when unset (wire BOTH: also hooks/hooks.json + pi PER_TURN)
     ],
     SessionStart: [
       entry("sidecar commons inject"),
@@ -69,6 +70,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar worktree inject"), // AFTER gc — surface stranded worktrees/branches left by prior sessions (0 bytes when clean · wire BOTH: also hooks/hooks.json)
       entry("sidecar changelog autoprune"),
       entry("sidecar ing inject"),
+      entry("sidecar frontier inject"), // single north-star objective — silent when unset (wire BOTH: also hooks/hooks.json + pi PER_TURN)
     ],
     Stop: [
       entry("sidecar recommend stop-check"),
@@ -99,6 +101,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar companions inject"),
       entry("sidecar worktree inject"),
       entry("sidecar ing inject"),
+      entry("sidecar frontier inject"), // single north-star objective — silent when unset (wire BOTH: also hooks/hooks.json + pi PER_TURN)
     ],
     PostCompact: [
       entry("sidecar commons inject"),
@@ -109,6 +112,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar companions inject"),
       entry("sidecar worktree inject"),
       entry("sidecar ing inject"),
+      entry("sidecar frontier inject"), // single north-star objective — silent when unset (wire BOTH: also hooks/hooks.json + pi PER_TURN)
     ],
   };
 }

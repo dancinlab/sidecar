@@ -1152,7 +1152,7 @@
                     "name": "3축 신호등",
                     "role": "CPU·RAM·swap·wt readout",
                     "id": "detail-3",
-                    "detail": "CPU(load1÷cores·🟢<0.7 🟡<1.0 🔴≥1.0), RAM((active+wired+compressor)%+pressure), swap(🟢<2G 🟡<6G 🔴≥6G), wt(추가 worktree·🟢0-2 🟡3-9 🔴≥10). 어느 축이든 🔴/pressure≥warn 이면 선두 `⚠️` 마커 + 가드 노트(대량빌드·병렬agent·GPU 자제)"
+                    "detail": "CPU(load1÷cores·🟢<0.7 🟡<1.0 🔴≥1.0), RAM((active+wired+compressor)%+pressure), swap(🟢<2G 🟡<6G 🔴≥6G), wt(추가 worktree·🟢0-2 🟡3-9 🔴≥10 · stranded>0면 `N(M⚠)`🔴 무조건, TTL캐시). 어느 축이든 🔴/pressure≥warn 이면 선두 `⚠️` 마커 + 가드 노트(대량빌드·병렬agent·GPU 자제)"
                   },
                   {
                     "name": "동기·비용안전",

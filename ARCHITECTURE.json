@@ -630,7 +630,7 @@
             "name": "PreCompact·PostCompact",
             "role": "자동 컴팩션 전/후 → 세션-스코프 inject 재주입(컴팩션 생존)",
             "id": "surface-precompact-postcompact",
-            "detail": "매-턴 inject(commons·recommend·prefs·easy·load·ing)=UserPromptSubmit · 세션-스코프(architecture·git-context·toolkit·companions+easy풀)=SessionStart→컴팩션증발→Pre/PostCompact 재주입. `lib/inject.ts` emitInject=이중배선(settings+plugin) 2×를 프롬프트/세션키 dedup→매턴·SessionStart 1회(inject-ts-1). `injects`=footprint"
+            "detail": "매-턴 inject(commons·recommend·prefs·easy·load·ing)=UserPromptSubmit · 세션-스코프(architecture·git-context·toolkit·companions·worktree+easy풀)=SessionStart→컴팩션증발→Pre/PostCompact 재주입. `lib/inject.ts` emitInject=이중배선(settings+plugin) 2×를 프롬프트/세션키 dedup→매턴·SessionStart 1회(inject-ts-1). `injects`=footprint"
           },
           {
             "name": "체크포인트",
@@ -888,7 +888,7 @@
                     "name": "worktree 누적 한계",
                     "role": "[gone] 못 거두는 워크트리",
                     "id": "detail-worktree",
-                    "detail": "sweep 은 자기 머지 브랜치만 [gone] 으로 걷음 — fleet/sub-agent 의 isolation:worktree 워크트리는 개별 push/삭제가 없어 [gone] 이 안 떠 누적. SessionStart `worktree gc` 의 age 백스톱(HEAD>maxAgeDays 기본3일 → 팁을 refs/reaped/ 보존 후 reap)이 수거."
+                    "detail": "sweep=[gone] 머지브랜치만 걷어 isolation:worktree(fleet·sub-agent·push/삭제 없음) 누적; `worktree gc` age 백스톱(HEAD>maxAgeDays·기본3일→refs/reaped 보존 후 reap) 수거. `worktree inject`(SessionStart/Compact WARN·gc후)=stranded 워크트리+no-wt stranded 브랜치+refs/reaped 를 이전세션 방치작업으로 surface(clean=0B·prompt-scan per-turn 재확인)."
                   }
                 ]
               },

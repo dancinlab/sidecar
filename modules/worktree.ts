@@ -1,5 +1,8 @@
-// sidecar worktree {scan|gc|guard <cmd>}
+// sidecar worktree {scan|gc|inject|guard <cmd>}
 // Enforces the no-pileup / no-stranded-work principle:
+//   inject       SessionStart/Compact WARN inject — surface stranded worktrees +
+//                stranded no-worktree branches + refs/reaped tips from prior sessions
+//                the moment a new one begins (0 bytes when clean · reuses classify()).
 //   scan         classify every linked worktree (clean/dirty/unpushed/[gone]) and
 //                LOUDLY flag STRANDED ones — uncommitted or unpushed work left in a
 //                worktree. Exit 1 when any are stranded (usable as a gate).
@@ -14,9 +17,10 @@
 //   guard <cmd>  advisory for `git worktree add`: if stranded work already exists,
 //                steer to finish/clean it BEFORE starting new work (principle 3);
 //                plus the branch-reuse stale-base warning.
-import { execShell } from "../lib/exec.ts";
+import { execShell, readStdin } from "../lib/exec.ts";
 import { repoPath, config } from "../lib/config.ts";
 import { info, ok, warn, loudFail } from "../lib/log.ts";
+import { emitInject } from "../lib/inject.ts";
 
 async function git(cmd: string, cwd?: string): Promise<{ code: number; out: string }> {
   const r = await execShell(cmd, { cwd: cwd ?? repoPath(".") });
@@ -192,15 +196,84 @@ export async function worktreeAddAdvisory(cmd: string): Promise<string> {
   return lines.join("\n");
 }
 
+// A stranded LOCAL BRANCH with NO worktree — the blind spot classify() (worktree-only)
+// can't see: a feature branch left behind by a prior session, carrying its own commits,
+// never pushed/merged. Deterministic: local branch, not main/master, not checked out in
+// any worktree, has commits beyond origin/main (rev-list>0), HEAD age > 1h (skip in-flight),
+// not in the config allowlist (worktree.branchAllow — intentional long-lived branches).
+export interface StrandedBranch {
+  branch: string;
+  ahead: number; // commits beyond origin/main
+  upstream: boolean; // has a tracking upstream (pushed) or not
+  ageDays: number;
+}
+export async function strandedBranches(): Promise<StrandedBranch[]> {
+  const allow = new Set((config().worktree?.branchAllow ?? []) as string[]);
+  const defaults = new Set(["main", "master"]);
+  // branches currently checked out in a worktree are NOT stranded-without-worktree
+  const inWt = new Set((await classify()).map((w) => w.branch).filter(Boolean));
+  const raw = (await git("git for-each-ref --format='%(refname:short)|%(upstream:short)|%(committerdate:unix)' refs/heads/")).out;
+  if (!raw) return [];
+  const out: StrandedBranch[] = [];
+  for (const line of raw.split("\n").map((l) => l.trim()).filter(Boolean)) {
+    const [branch, up, ct] = line.split("|");
+    if (!branch || defaults.has(branch) || allow.has(branch) || inWt.has(branch)) continue;
+    const ahead = parseInt((await git(`git rev-list --count origin/main..${JSON.stringify(branch)} 2>/dev/null`)).out || "0", 10) || 0;
+    if (ahead <= 0) continue; // no own commits beyond main → nothing abandoned
+    const ageDays = ct ? (Date.now() / 1000 - parseInt(ct, 10)) / 86400 : Infinity;
+    if (ageDays * 24 < 1) continue; // touched < 1h ago → likely in-flight
+    out.push({ branch, ahead, upstream: !!up, ageDays });
+  }
+  return out;
+}
+
+// SessionStart/Compact WARN inject — surface abandoned work from prior sessions the
+// moment a new one begins, so it isn't silently piled onto. Reuses strandedWorktrees()
+// + strandedBranches() (canonical-cli — no new detection). Emits 0 bytes when clean
+// (self-limiting: no per-session context cost unless something genuinely needs a decision).
+async function worktreeInject(): Promise<number> {
+  let ev = "";
+  try {
+    const j = JSON.parse(readStdin());
+    ev = String(j.hook_event_name ?? j.hookEventName ?? "");
+  } catch {
+    /* no payload → still emit under a default event below */
+  }
+  if (!ev) ev = "SessionStart";
+  const [wts, brs, reaped] = await Promise.all([strandedWorktrees(), strandedBranches(), countReaped()]);
+  if (wts.length === 0 && brs.length === 0 && reaped === 0) return 0; // clean → silent
+
+  const lines: string[] = ["⚠️ stranded-work — 이전 세션의 방치 작업 감지 (새 작업 시작 전 항목별 처리 결정 필수)"];
+  const CAP = 5;
+  for (const w of wts.slice(0, CAP)) {
+    const state = `${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`.trim();
+    lines.push(`  • wt ${w.path} [${w.branch}] ${state}  → 이어서: \`cd ${w.path} && sidecar pr-cycle\``);
+  }
+  if (wts.length > CAP) lines.push(`  • … +${wts.length - CAP} more worktree(s)`);
+  for (const b of brs.slice(0, CAP)) {
+    lines.push(`  • br ${b.branch} — unpushed:${b.ahead}${b.upstream ? "" : " · upstream 없음"} · ${b.ageDays.toFixed(0)}d전  → 보존: \`git push -u origin ${b.branch}\` / 폐기: \`git branch -D ${b.branch}\``);
+  }
+  if (brs.length > CAP) lines.push(`  • … +${brs.length - CAP} more branch(es)`);
+  if (reaped) lines.push(`  (refs/reaped ${reaped}건 — 복구 가능한 보존 tip · \`git branch <name> refs/reaped/<name>\`)`);
+  emitInject("worktree-stranded", ev, lines.join("\n"));
+  return 0;
+}
+
+async function countReaped(): Promise<number> {
+  const raw = (await git("git for-each-ref --format='%(refname)' refs/reaped/")).out;
+  return raw ? raw.split("\n").filter(Boolean).length : 0;
+}
+
 export async function runWorktree(args: string[]): Promise<number> {
   const sub = args[0] ?? "scan";
   if (sub === "scan" || sub === "status") return scan();
   if (sub === "gc") return gc();
+  if (sub === "inject") return worktreeInject();
   if (sub === "guard") {
     const adv = await worktreeAddAdvisory(args.slice(1).join(" "));
     if (adv) process.stderr.write(adv + "\n");
     return 0;
   }
-  info("usage: sidecar worktree {scan|gc|guard <cmd>}");
+  info("usage: sidecar worktree {scan|gc|inject|guard <cmd>}");
   return 1;
 }

@@ -80,6 +80,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar ing staleness-check"),
       entry("sidecar injects context-check"), // turn-close context-rot alarm — warn (never block) when the live window enters the ~150-400K degradation band
       entry("sidecar prefs stop-check"), // turn-close prefs language-drift WARN (never blocks) — code/doc authored in wrong lang or response drifted from prefs
+      entry("sidecar worktree stop-check"), // turn-close stranded-worktree WARN (never blocks · keyed dedup) — committed-but-unpushed worktree work at the last Stop (wire BOTH: also hooks/hooks.json)
     ],
     // Compaction survival — the per-turn injects (commons/recommend/prefs/easy-lean) ride
     // UserPromptSubmit so they always return, but the SESSION-scoped injects

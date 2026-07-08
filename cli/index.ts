@@ -185,8 +185,8 @@ reports:
                                add/rm mutate harness.config.json lockdown.files
   folders [scan|scaffold <dir>]   per-subfolder CLAUDE.md coverage + scaffolding (enforced: lint blocks FOLDER-GUIDE-MISSING for the folder of any staged file lacking a guide · commons folder-docs)
   end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)
-  worktree {scan|gc|inject|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped)
-                           (\`inject\`=SessionStart/Compact WARN surfacing stranded worktrees+no-worktree branches+refs/reaped from prior sessions · \`scan\` exit 1 gates new work · \`gc\` auto-sweep)
+  worktree {scan|gc|inject|stop-check|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped)
+                           (\`inject\`=SessionStart/Compact WARN surfacing stranded worktrees+no-worktree branches+refs/reaped (+ING task link) · \`stop-check\`=Stop-time WARN for committed-but-unpushed worktree work (keyed dedup·never blocks) · \`scan\` exit 1 gates new work · \`gc\` auto-sweep)
   ing [show|add|done|next|pod ...|inject]   in-progress board → ING.jsonl (작업·POD·next · done=scrub · SessionStart inject · 내 repo 전용 — cross-repo 전달 폐기)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)

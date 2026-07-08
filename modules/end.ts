@@ -4,6 +4,7 @@
 import { execShell } from "../lib/exec.ts";
 import { repoPath } from "../lib/config.ts";
 import { classify, strandedBranches } from "./worktree.ts";
+import { loadIngItems, findIngForBranch } from "./ing.ts";
 
 async function git(cmd: string): Promise<string> {
   return (await execShell(cmd, { cwd: repoPath(".") })).stdout.trim();
@@ -82,6 +83,12 @@ export async function runEnd(_args: string[]): Promise<number> {
   // 6. linked worktrees — distinguish STRANDED (dirty/unpushed = abandoned work → attention)
   //    from clean pending-sweep worktrees (merged, awaiting gc → informational). classify()
   //    reused (canonical) instead of a raw count that can't tell abandoned from about-to-sweep.
+  // #7 — link each stranded item to its ING task for resume context (load once).
+  const ingItems = await loadIngItems().catch(() => []);
+  const ingTag = (branch: string): string => {
+    const hit = findIngForBranch(branch, ingItems);
+    return hit ? ` — 🔄 ING#${hit.id}: ${hit.text}` : "";
+  };
   const linked = (await classify()).filter((w) => !w.isMain);
   const strandedWt = linked.filter((w) => w.stranded);
   if (linked.length === 0) out("✓ worktrees       0 linked");
@@ -91,7 +98,7 @@ export async function runEnd(_args: string[]): Promise<number> {
   } else {
     warn++;
     out(`⚠ worktrees       ${strandedWt.length}/${linked.length} STRANDED (dirty/unpushed = abandoned work)`);
-    for (const w of strandedWt) out(`  • ${w.path} [${w.branch}] ${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`);
+    for (const w of strandedWt) out(`  • ${w.path} [${w.branch}] ${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}${ingTag(w.branch)}`);
     out("  → 이어서: cd <path> && sidecar pr-cycle  ·  폐기: git worktree remove <path>");
   }
 
@@ -102,7 +109,7 @@ export async function runEnd(_args: string[]): Promise<number> {
   else {
     warn++;
     out(`⚠ branches        ${strandedBr.length} stranded (no worktree · unpushed own commits)`);
-    for (const b of strandedBr) out(`  • ${b.branch} unpushed:${b.ahead}${b.upstream ? "" : " · upstream 없음"} · ${b.ageDays.toFixed(0)}d`);
+    for (const b of strandedBr) out(`  • ${b.branch} unpushed:${b.ahead}${b.upstream ? "" : " · upstream 없음"} · ${b.ageDays.toFixed(0)}d${ingTag(b.branch)}`);
     out("  → 보존: git push -u origin <br>  ·  폐기: git branch -D <br>");
   }
 

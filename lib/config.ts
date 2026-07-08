@@ -272,7 +272,9 @@ export interface SidecarConfig {
   // no-push agent worktrees never get it and pile up. `maxAgeDays` is the age backstop:
   // a clean, unlocked, not-recently-touched AGENT worktree whose HEAD is older than this
   // is reaped (its tip preserved under refs/reaped/ first, so work is recoverable). 0 disables.
-  worktree: { maxAgeDays: number };
+  // branchAllow: local branches EXEMPT from the stranded-branch inject (intentional
+  // long-lived branches with own commits that should not be nagged as abandoned).
+  worktree: { maxAgeDays: number; branchAllow?: string[] };
   // stale-PR reaper (modules/reap.ts — pr-cycle post-merge pass + standalone command).
   // maxRefreshPerRun caps refresh-merges per pass (each = worktree + push + CI churn);
   // closeAfterDays gates the code-conflict auto-close backstop (branch always preserved);

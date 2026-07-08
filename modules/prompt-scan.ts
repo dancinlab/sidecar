@@ -2,14 +2,18 @@
 // the recommended playbook / hint / tool for each match. Mirrors the project's
 // CLAUDE.md / AGENTS.md triggers so the agent doesn't have to remember them.
 //
-// Wired as a UserPromptSubmit hook delegate, the output is injected back to the
-// agent as additional context.
+// Wired as a UserPromptSubmit hook delegate. The stranded-worktree block is injected
+// back to the agent as additionalContext (stdout, via emitInject — the gate-adjacent
+// "no new work over abandoned work" signal MUST reach context); the keyword/hint
+// playbook surfacing stays on stderr (user-facing, kept out of context to avoid
+// per-turn inject bloat).
 import { readJson } from "../lib/json.ts";
 import { LOGS } from "../lib/paths.ts";
 import { appendJsonl, info } from "../lib/log.ts";
 import { config, resolveRuleFile } from "../lib/config.ts";
 import { matchPromptHints } from "./pre.ts";
 import { strandedWorktrees } from "./worktree.ts";
+import { emitInject } from "../lib/inject.ts";
 
 interface KeywordRule {
   id: string;
@@ -87,11 +91,25 @@ export async function runPromptScan(args: string[]): Promise<number> {
   });
   if (matches.length === 0 && hints.length === 0 && stranded.length === 0) return 0;
 
-  const lines: string[] = [];
+  // Stranded worktrees are a GATE-adjacent signal (no new work while prior work is
+  // abandoned) — it MUST reach the agent's context, not just the user's terminal.
+  // Route it through emitInject (stdout additionalContext, the Claude Code protocol),
+  // NOT stderr — a UserPromptSubmit hook's stderr never becomes context, so the block
+  // built below was invisible despite this file's header claiming otherwise (the fix).
+  // Self-limiting: 0 stranded → 0 bytes emitted, so a clean session pays no per-turn cost.
   if (stranded.length) {
-    lines.push(`⚠ ${stranded.length} stranded worktree(s) — 방치된 작업을 먼저 완료(sidecar pr-cycle)/정리한 뒤 새 작업을 시작하세요:`);
-    for (const w of stranded) lines.push(`  • ${w.path} [${w.branch}] ${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`);
+    const s: string[] = [];
+    s.push(`⚠ ${stranded.length} stranded worktree(s) — 이전 세션의 방치 작업. 새 작업 시작 전 항목별 처리 결정(이어서 완료/보존/폐기):`);
+    for (const w of stranded) {
+      const state = `${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`.trim();
+      s.push(`  • ${w.path} [${w.branch}] ${state}  → 이어서: \`cd ${w.path} && sidecar pr-cycle\``);
+    }
+    emitInject("prompt-scan-stranded", "UserPromptSubmit", s.join("\n"));
   }
+
+  // Keyword/hint playbook surfacing stays on stderr (user-facing, per-turn — kept OUT
+  // of context to avoid per-turn inject bloat / context-rot on every keyworded prompt).
+  const lines: string[] = [];
   if (matches.length) lines.push(`▶ sidecar prompt-scan: ${matches.length} keyword match(es)`);
   for (const m of matches) {
     lines.push(`  • ${m.id}  (← "${m.matched}")`);
@@ -111,6 +129,6 @@ export async function runPromptScan(args: string[]): Promise<number> {
     lines.push(`▶ enforcement prompt-hints: ${hints.length}`);
     for (const h of hints) lines.push(`  • ${h.id}: ${h.hint}`);
   }
-  process.stderr.write(lines.join("\n") + "\n");
+  if (lines.length) process.stderr.write(lines.join("\n") + "\n");
   return 0;
 }

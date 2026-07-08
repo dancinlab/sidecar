@@ -58,6 +58,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar toolkit inject"),
       entry("sidecar companions inject"),
       entry("sidecar worktree gc"),
+      entry("sidecar worktree inject"), // AFTER gc — surface stranded worktrees/branches left by prior sessions (0 bytes when clean · wire BOTH: also hooks/hooks.json)
       entry("sidecar changelog autoprune"),
       entry("sidecar ing inject"),
     ],
@@ -87,6 +88,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar git-context inject"),
       entry("sidecar toolkit inject"),
       entry("sidecar companions inject"),
+      entry("sidecar worktree inject"),
       entry("sidecar ing inject"),
     ],
     PostCompact: [
@@ -96,6 +98,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar git-context inject"),
       entry("sidecar toolkit inject"),
       entry("sidecar companions inject"),
+      entry("sidecar worktree inject"),
       entry("sidecar ing inject"),
     ],
   };

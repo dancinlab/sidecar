@@ -135,7 +135,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
     // (recurrence learning ARCH_INJECT_IGNORED → ARCHITECTURE.json convergence array.)
     const gate =
       "🏛️ 턴 마감 게이트 (코드·구조 변경 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** ARCHITECTURE.json 의 해당 노드를 제자리 교체(update-in-place)하고 " +
-      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — working tree 에 미커밋 코드/ARCHITECTURE 변경이 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단).";
+      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — working tree 에 미커밋 코드/ARCHITECTURE 변경이 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단). " +
+      "갱신 = 해당 노드 role/detail/children 을 실제 재작성 (한 단어 수정·빈 재스테이징은 갱신 아님) · `갱신` 주장은 diff 에서 ARCHITECTURE.json 실변경 여부로 검증된다(위조 차단).";
     const fence = isJson ? "" : `\n\n\`\`\`${lang}\n${body}\n\`\`\``;
     const ctx = isJson
       ? `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n${body}\n\n${pointer}\n${gate}`
@@ -234,7 +235,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
     if (!tp) return 0;
     const text = lastAssistantText(String(tp));
     if (!text) return 0;
-    if (/🏛️\s*ARCHITECTURE/.test(text)) return 0; // a design-report line is present → ok
+    const hasMarker = /🏛️\s*ARCHITECTURE/.test(text);
+    const claimsUpdate = /🏛️\s*ARCHITECTURE\s*갱신/.test(text); // "갱신: <무엇을>" — an explicit UPDATE claim (not "변동 없음")
     // deterministic per-turn trigger: uncommitted code/ARCHITECTURE changes in the tree.
     let changed = "";
     try {
@@ -242,6 +244,29 @@ export async function runArchitecture(args: string[]): Promise<number> {
     } catch {
       return 0;
     }
+    // Case B — 갱신 forgery: the reply CLAIMS `🏛️ ARCHITECTURE 갱신` but ARCHITECTURE.json is
+    //   NOWHERE in the turn's git footprint (working diff · staged · the just-made commit). The
+    //   marker gate was presence-only, so "갱신: X" with zero JSON change passed = self-report
+    //   forgery (commons verify-done bans LLM self-judging). Reconcile the CLAIM against the diff.
+    //   The last-commit leg keeps this false-positive-averse in the isolated-worktree/ship flow:
+    //   an agent that updated the tree AND already merged mid-turn passes via the merge commit's files.
+    if (claimsUpdate) {
+      let lastCommit = "";
+      try {
+        lastCommit = (await execShell("git log -1 --name-only --pretty=format:", { cwd: REPO_ROOT })).stdout;
+      } catch {
+        lastCommit = "";
+      }
+      const footprint = new Set([...changed.split("\n"), ...lastCommit.split("\n")].map((f) => f.trim()).filter(Boolean));
+      if (!footprint.has("ARCHITECTURE.json")) {
+        const reason =
+          "`🏛️ ARCHITECTURE 갱신` 을 주장했는데 ARCHITECTURE.json 실변경이 없다 (working tree·staged·직전 커밋 모두 미포함) — " +
+          "마커만 쓰는 위조 금지(commons verify-done). 해당 노드를 실제로 update-in-place 갱신한 뒤 다시 보고하거나, 설계영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 으로 정정하라.";
+        process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
+        return 0;
+      }
+    }
+    if (hasMarker) return 0; // a design-report line is present (verified 갱신, or 변동 없음) → ok
     const DESIGN_RELEVANT =
       /(\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|c|h|cpp|hpp|cc|java|kt|swift|rb|php|sh|hexa)$)|(^|\/)ARCHITECTURE\.json$/i;
     if (!changed.split("\n").some((f) => DESIGN_RELEVANT.test(f.trim()))) return 0; // no code/arch change → ok

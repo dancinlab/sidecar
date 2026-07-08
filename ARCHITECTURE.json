@@ -604,7 +604,7 @@
                 "name": "architecture stop-check",
                 "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
                 "id": "guard-architecture-stop-check",
-                "detail": "ing stop-check 의 설계판 — **조건부**: 미커밋 코드/ARCHITECTURE 변경이 있는데 응답에 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. clean tree=no-op·git diff 결정적 트리거. 코드↔ARCHITECTURE drift 차단(cycle-docs-pr). 게이트=`pick()`(ARCHITECTURE.json/.md 존재)=설계 SSOT subject-게이트, 설계파일 생기는 순간 자동 발화. (modules/architecture.ts)"
+                "detail": "ing stop-check 의 설계판 — 미커밋 코드/ARCHITECTURE 변경 있는데 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`) 없으면 차단(clean tree=no-op·git diff 결정적). `갱신` 주장은 diff(working·staged·직전커밋)에서 ARCHITECTURE.json 실변경 여부로 대조검증=마커-only 위조 차단(verify-done). 게이트=`pick()`(설계 SSOT 존재)=설계파일 생기는 순간 자동발화. (modules/architecture.ts)"
               },
               {
                 "name": "ship stop-check",
@@ -730,7 +730,7 @@
                 "name": "lint",
                 "role": "staged-L0·신선도·수렴 + doc-gate (commit 전 게이트)",
                 "id": "module-lint",
-                "detail": "staged 변경에 대한 commit-time 게이트 모음. CHANGELOG·ARCHITECTURE(.json|.md) 미동반=block (README 는 비강제·advisory update-in-place · pr-cycle은 ing 보드 현행화도 gate). 개별 체크는 children.",
+                "detail": "staged 변경에 대한 commit-time 게이트 모음. CHANGELOG·ARCHITECTURE(.json|.md) 미동반=block · ARCH-NOOP=ARCHITECTURE.json whitespace-only 재스테이징 차단(게이트 통과용 위장터치 봉쇄) · README 비강제·advisory · pr-cycle은 ing 현행화도 gate. 개별 체크는 children.",
                 "children": [
                   {
                     "name": "SHADOW-DESC (4f)",

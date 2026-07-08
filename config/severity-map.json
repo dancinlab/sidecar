@@ -28,6 +28,7 @@
       "ARCH-ID-DUPE": "block",
       "ARCH-ID-FORMAT": "block",
       "ARCH-SCHEMA-UNRECOGNIZED": "warn",
+      "ARCH-NOOP": "block",
       "FOLDER-GUIDE-MISSING": "block",
       "HELP-BACKTICK": "block",
       "CONVERGENCE-MALFORMED": "block",

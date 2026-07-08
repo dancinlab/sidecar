@@ -191,6 +191,25 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
     }
   }
 
+  // 1d. ARCH-NOOP: ARCHITECTURE.json staged but its staged diff is whitespace-only.
+  //     The 1c doc-gate is satisfied by ARCHITECTURE.json merely being STAGED — so the
+  //     cheapest way to pass it is a cosmetic 1-byte/whitespace touch, which trains
+  //     hollow "compliance-theater" updates (root cause: presence-only verification).
+  //     This turns that cosmetic escape into a BLOCK: either the tree genuinely changed,
+  //     or the change is truly N/A → be honest with `--no-verify` / pr-cycle `--no-doc`.
+  //     -w --ignore-blank-lines = a real content edit passes; a pure re-stage does not.
+  //     A brand-new ARCHITECTURE.json (fully added) shows content → never a no-op.
+  if (staged.includes("ARCHITECTURE.json") && existsSync(repoPath("ARCHITECTURE.json"))) {
+    const d = (await execShell("git diff --cached -w --ignore-blank-lines -- ARCHITECTURE.json", { cwd: repoPath(".") })).stdout.trim();
+    if (d === "") {
+      violations.push({
+        rule: "ARCH-NOOP",
+        file: "ARCHITECTURE.json",
+        msg: "ARCHITECTURE.json 스테이징됐지만 실변경 없음(whitespace-only) — 게이트 통과용 빈 터치 금지(presence-only 위장). 해당 노드를 실제 갱신하거나, 정말 설계무관이면 `git commit --no-verify` / `pr-cycle --no-doc` 로 정직하게 우회하라",
+      });
+    }
+  }
+
   // 2. freshness
   for (const ff of cfg.lint.freshnessFiles ?? []) {
     const abs = repoPath(ff.path);

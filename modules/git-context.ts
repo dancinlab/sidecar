@@ -1,15 +1,23 @@
-// git-context — SessionStart inject that surfaces the working git position so a
-// session never silently starts on a STALE branch and reads outdated code. The
-// recurring failure (stale-branch trap): a session began on an old feature branch
+// git-context — inject that surfaces the working git position so a session never
+// silently starts on (or stays parked on) a STALE branch and reads outdated code.
+// The recurring failure (stale-branch trap): a session began on an old feature branch
 // (HEAD behind origin/<default> after a merge), the agent read the pre-merge code,
-// believed it was current, and re-implemented already-merged work. Nothing flagged
-// that HEAD ≠ the merged tip.
+// believed it was current, and re-implemented already-merged work — or ANSWERED
+// "is X in the code?" from pre-merge source. Nothing flagged that HEAD ≠ the merged tip.
 //
 // This guard computes HEAD vs origin/<default> (main|master) from LOCAL refs (no
-// network) and emits an additionalContext block at SessionStart. When HEAD is
-// BEHIND the default tip — or detached on an unknown commit — it emits a loud ⚠️
-// with the exact remedy: `git log origin/<default> -- <file>` before trusting any
-// file's contents. On the up-to-date default branch it stays a one-line OK.
+// network) and emits an additionalContext block. When HEAD is BEHIND the default tip
+// — or detached on an unknown commit — it emits a loud ⚠️ with the exact remedy:
+// `git log origin/<default> -- <file>` before trusting any file's contents. On the
+// up-to-date default branch it stays SILENT (returns 0 — no context noise).
+//
+// Wired on BOTH surfaces (see setup.ts / hooks.json):
+//   • SessionStart — the initial position check every session.
+//   • UserPromptSubmit (per-turn) — re-surfaces the warning EVERY turn WHILE stale,
+//     because the SessionStart line gets buried mid-session and the Write/Edit stale
+//     guards (GIT-EDIT-OFF-MAIN/STALE-MAIN) never cover the READ-to-answer path. The
+//     conditional-silence above makes this zero-cost on a clean checkout (cost tracks
+//     risk: nothing when current, one reminder per turn when behind).
 //
 
 import { execArgs, readStdin } from "../lib/exec.ts";

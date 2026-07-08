@@ -47,6 +47,14 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar easy inject"),
       entry("sidecar fable-mode inject"),
       entry("sidecar load inject"),
+      // git-context is per-turn UNLIKE architecture (above): it is SILENT on a clean
+      // on-default checkout (0 bytes — no large-doc anti-pattern) and only emits the
+      // loud STALE warning when HEAD is BEHIND origin/<default>. SessionStart alone
+      // buried the warning mid-session, leaving a READ-STALE gap the Write/Edit guards
+      // (GIT-EDIT-OFF-MAIN/STALE-MAIN) never cover — an agent reading pre-merge code to
+      // ANSWER "is X in the code?" got no re-warning. Per-turn keeps it alive WHILE stale
+      // (cost proportional to risk: nothing when current, one reminder every turn when not).
+      entry("sidecar git-context inject"),
       entry("sidecar ing inject"),
     ],
     SessionStart: [

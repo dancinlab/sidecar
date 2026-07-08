@@ -102,7 +102,7 @@
       {
         "id": "STALE_BRANCH_TRAP",
         "state": "pos-conv",
-        "value": "stale-branch 함정 3중 방어. (1) git-context SessionStart 경고(HEAD vs origin/<default> behind/detached). (2) 경고 무시 재발(anima #3736) → GIT-EDIT-OFF-MAIN 가드: main 워크트리가 non-default 브랜치에 주차된 채 Write/Edit 하면 deny. (3) ON-main 변종 재발(hexa-codex 증류섹션: 원격이 앞서갔는데 fetch 가 없어 로컬 ref 는 '최신'으로 보임 → 낡은 base 에 SSOT 재작성, pr-cycle 충돌로만 발각) → GIT-EDIT-STALE-MAIN 가드: TTL fetch(git.staleFetchTtlSec) 후 origin/<default> 가 대상 파일을 건드리며 앞서 있으면 deny, 무관 behind 는 warn. 경고=인지, 블록=예방. probeGitContext 는 cwd 파라미터화.",
+        "value": "stale-branch 함정 4중 방어. (1) git-context 경고(HEAD vs origin/<default> behind/detached) — SessionStart + per-turn-when-stale 둘 다(behind>0 일 때만 매턴 재방출, clean+on-default 이면 0바이트 silent). (1b) READ-STALE 갭 봉합: (2)(3) 가드는 Write/Edit 만 deny 하므로 stale 코드를 '읽어서' 'X 가 코드에 있나?'에 답하는 경로(anima ρ-AXON 재프레임 오판)는 블록 불가 — per-turn 경고가 그 read-판정 실수를 능동 상기(경고=인지의 지속화). (2) 경고 무시 재발(anima #3736) → GIT-EDIT-OFF-MAIN 가드: main 워크트리가 non-default 브랜치에 주차된 채 Write/Edit 하면 deny. (3) ON-main 변종 재발(hexa-codex 증류섹션: 원격이 앞서갔는데 fetch 가 없어 로컬 ref 는 '최신'으로 보임 → 낡은 base 에 SSOT 재작성, pr-cycle 충돌로만 발각) → GIT-EDIT-STALE-MAIN 가드: TTL fetch(git.staleFetchTtlSec) 후 origin/<default> 가 대상 파일을 건드리며 앞서 있으면 deny, 무관 behind 는 warn. 경고=인지, 블록=예방(READ 는 블록 불가 → 지속-경고가 최선). probeGitContext 는 cwd 파라미터화.",
         "threshold": "재발조건: main 워크트리에서 stale base 로 편집 — 브랜치가 non-default 이거나(2), default 인데 원격이 앞서감(3·fetch 부재로 로컬 ref 가 가림). 해결: 경고+가드 셋 다 유지(git.guardOffMainEdit·git.guardStaleMainEdit 기본 ON) — 복귀는 ff-sync(merge --ff-only origin/<default>) 또는 최신 tip 에서 격리 워크트리. 격리 워크트리 면제(탈출구). warn-only 회귀·옵트인 마커 키잉 금지(config-ts-1).",
         "source": "modules/git-context.ts"
       },

@@ -303,6 +303,14 @@
             "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" prefs stop-check"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/run.sh\" worktree stop-check"
+          }
+        ]
       }
     ]
   }

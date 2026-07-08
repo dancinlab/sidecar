@@ -45,11 +45,12 @@ function boardRoot(): string {
 
 const BOARD_ROOT = boardRoot();
 
-interface Item {
+export interface Item {
   kind: "work" | "next" | "pod";
   id: string;
   ts: string;
   text?: string;
+  branch?: string; // git branch the entry was added on (≠main) — links a stranded branch/worktree back to its task (worktree inject · end)
   provider?: string;
   gpu?: string;
   purpose?: string;
@@ -91,6 +92,31 @@ async function readItems(cwd: string = BOARD_ROOT): Promise<Item[]> {
     }
   }
   return [];
+}
+
+// Public reader for other modules (worktree inject · end) that want to link a stranded
+// branch/worktree back to its ING task. Read-only, board-format-owner stays here.
+export async function loadIngItems(): Promise<Item[]> {
+  return readItems();
+}
+
+// Match a branch name to its ING entry (#7). Deterministic, false-positive-averse — a
+// wrong match mis-directs a resume, which is worse than no match, so every fuzzy path is
+// conservative and ambiguity resolves to null:
+//   Tier 1 (authoritative): an entry STAMPED with this exact branch (newest wins).
+//   Tier 2 (legacy, unstamped): the full branch literal appears in the text, but ONLY when
+//     the name is distinctive (len ≥ 8 OR contains "/") and the match is unique.
+// Returns null on no/ambiguous match → the caller shows nothing extra.
+export function findIngForBranch(branch: string, items: Item[]): Item | null {
+  if (!branch) return null;
+  const tasks = items.filter((i) => i.kind !== "pod");
+  const stamped = tasks.filter((i) => i.branch === branch);
+  if (stamped.length) return stamped[stamped.length - 1]; // newest (append-order)
+  if (branch.length >= 8 || branch.includes("/")) {
+    const hits = tasks.filter((i) => (i.text ?? "").includes(branch));
+    if (hits.length === 1) return hits[0];
+  }
+  return null;
 }
 
 // Write the board to the `ing` ref via plumbing (no working-tree touch) + best-effort
@@ -166,7 +192,12 @@ export async function runIng(args: string[]): Promise<number> {
       : parts.filter((a) => a !== "--stdin").join(" ").trim();
     if (!text) return usage();
     const rows = await readItems();
-    const item: Item = { kind: sub === "add" ? "work" : "next", id: nextId(rows), ts: nowIso(), text };
+    // Stamp the branch this task was added on (BOARD_ROOT is worktree-aware) so a later
+    // stranded worktree/branch can be linked back to its task (#7). Skip main/master/
+    // detached — only a real feature branch is a useful resume anchor.
+    const br = (await git(["rev-parse", "--abbrev-ref", "HEAD"], BOARD_ROOT)).stdout.trim();
+    const branch = br && br !== "HEAD" && br !== "main" && br !== "master" ? br : undefined;
+    const item: Item = { kind: sub === "add" ? "work" : "next", id: nextId(rows), ts: nowIso(), text, ...(branch ? { branch } : {}) };
     await writeItems([...rows, item], `ing: + ${sub === "add" ? "work" : "next"} ${text}`);
     resetIngStaleness(); // c6: board touched → clear the edits-since-update counter
     ok(`ing: + ${sub === "add" ? "작업" : "다음"} — ${text}`);

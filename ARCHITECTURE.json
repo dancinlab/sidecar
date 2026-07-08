@@ -574,7 +574,7 @@
             "name": "Stop",
             "role": "에이전트 응답 종료 → 마지막 assistant 텍스트 기반 marker 게이트들 + staleness warn",
             "id": "surface-stop",
-            "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 Stop 훅 (아래). decision:block marker 게이트(recommend·convergence·ing·architecture·ship) + warn-only(staleness·context-rot·prefs-drift). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
+            "detail": "transcript 의 마지막 assistant 텍스트를 읽어 후처리하는 Stop 훅 (아래). decision:block marker 게이트(recommend·convergence·ing·architecture·ship) + warn-only(staleness·context-rot·prefs-drift·wt-stranded). 공통 리더 lastAssistantText(modules/recommend.ts · export).",
             "children": [
               {
                 "name": "recommend stop-check",
@@ -888,7 +888,7 @@
                     "name": "worktree 누적 한계",
                     "role": "[gone] 못 거두는 워크트리",
                     "id": "detail-worktree",
-                    "detail": "sweep=[gone] 머지브랜치만 걷어 isolation:worktree(fleet·sub-agent·push/삭제 없음) 누적; `worktree gc` age 백스톱(HEAD>maxAgeDays·기본3일→refs/reaped 보존 후 reap) 수거. `worktree inject`(SessionStart/Compact WARN·gc후)=stranded 워크트리+no-wt stranded 브랜치+refs/reaped 를 이전세션 방치작업으로 surface(clean=0B·prompt-scan per-turn 재확인)."
+                    "detail": "sweep=[gone] 머지브랜치만→isolation:worktree(fleet·sub-agent) 누적; `worktree gc` age백스톱(HEAD>maxAgeDays→refs/reaped 보존 후 reap). `worktree inject`(SessionStart/Compact)+`stop-check`(Stop·미push worktree·keyed dedup·never block)=stranded 워크트리+no-wt 브랜치+refs/reaped surface(항목별 ING 링크·clean=0B·prompt-scan)."
                   }
                 ]
               },
@@ -1043,7 +1043,7 @@
                 "name": "ing",
                 "role": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
                 "id": "module-ing",
-                "detail": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다.",
+                "detail": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다. add/next 는 현재 branch(≠main)를 스탬프→stranded 브랜치/워크트리↔태스크 링크(findIngForBranch·worktree inject·end).",
                 "children": [
                   {
                     "name": "저장 = ing ref (worktree 아님)",

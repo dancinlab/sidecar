@@ -1,8 +1,11 @@
-// sidecar worktree {scan|gc|inject|guard <cmd>}
+// sidecar worktree {scan|gc|inject|stop-check|guard <cmd>}
 // Enforces the no-pileup / no-stranded-work principle:
 //   inject       SessionStart/Compact WARN inject — surface stranded worktrees +
 //                stranded no-worktree branches + refs/reaped tips from prior sessions
 //                the moment a new one begins (0 bytes when clean · reuses classify()).
+//   stop-check   Stop-time WARN (never blocks) — catches the session's LAST Stop where
+//                committed-but-unpushed worktree work would otherwise go unnoticed until
+//                next session · keyed dedup so a long session isn't nagged every Stop.
 //   scan         classify every linked worktree (clean/dirty/unpushed/[gone]) and
 //                LOUDLY flag STRANDED ones — uncommitted or unpushed work left in a
 //                worktree. Exit 1 when any are stranded (usable as a gate).
@@ -17,10 +20,12 @@
 //   guard <cmd>  advisory for `git worktree add`: if stranded work already exists,
 //                steer to finish/clean it BEFORE starting new work (principle 3);
 //                plus the branch-reuse stale-base warning.
+import { readFileSync, writeFileSync } from "node:fs";
 import { execShell, readStdin } from "../lib/exec.ts";
 import { repoPath, config } from "../lib/config.ts";
 import { info, ok, warn, loudFail } from "../lib/log.ts";
 import { emitInject } from "../lib/inject.ts";
+import { loadIngItems, findIngForBranch } from "./ing.ts";
 
 async function git(cmd: string, cwd?: string): Promise<{ code: number; out: string }> {
   const r = await execShell(cmd, { cwd: cwd ?? repoPath(".") });
@@ -243,15 +248,21 @@ async function worktreeInject(): Promise<number> {
   const [wts, brs, reaped] = await Promise.all([strandedWorktrees(), strandedBranches(), countReaped()]);
   if (wts.length === 0 && brs.length === 0 && reaped === 0) return 0; // clean → silent
 
+  // #7 — link each stranded item back to its ING task for resume context (load once).
+  const ingItems = await loadIngItems().catch(() => []);
+  const ingTag = (branch: string): string => {
+    const hit = findIngForBranch(branch, ingItems);
+    return hit ? ` — 🔄 ING#${hit.id}: ${hit.text}` : "";
+  };
   const lines: string[] = ["⚠️ stranded-work — 이전 세션의 방치 작업 감지 (새 작업 시작 전 항목별 처리 결정 필수)"];
   const CAP = 5;
   for (const w of wts.slice(0, CAP)) {
     const state = `${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`.trim();
-    lines.push(`  • wt ${w.path} [${w.branch}] ${state}  → 이어서: \`cd ${w.path} && sidecar pr-cycle\``);
+    lines.push(`  • wt ${w.path} [${w.branch}] ${state}${ingTag(w.branch)}  → 이어서: \`cd ${w.path} && sidecar pr-cycle\``);
   }
   if (wts.length > CAP) lines.push(`  • … +${wts.length - CAP} more worktree(s)`);
   for (const b of brs.slice(0, CAP)) {
-    lines.push(`  • br ${b.branch} — unpushed:${b.ahead}${b.upstream ? "" : " · upstream 없음"} · ${b.ageDays.toFixed(0)}d전  → 보존: \`git push -u origin ${b.branch}\` / 폐기: \`git branch -D ${b.branch}\``);
+    lines.push(`  • br ${b.branch} — unpushed:${b.ahead}${b.upstream ? "" : " · upstream 없음"} · ${b.ageDays.toFixed(0)}d전${ingTag(b.branch)}  → 보존: \`git push -u origin ${b.branch}\` / 폐기: \`git branch -D ${b.branch}\``);
   }
   if (brs.length > CAP) lines.push(`  • … +${brs.length - CAP} more branch(es)`);
   if (reaped) lines.push(`  (refs/reaped ${reaped}건 — 복구 가능한 보존 tip · \`git branch <name> refs/reaped/<name>\`)`);
@@ -264,16 +275,67 @@ async function countReaped(): Promise<number> {
   return raw ? raw.split("\n").filter(Boolean).length : 0;
 }
 
+// Stop-time WARN (never blocks) — the ONE window the other surfaces miss: the session's
+// LAST Stop, where the agent left committed-but-unpushed work in a worktree and the user
+// closes the terminal without another prompt (prompt-scan/worktree inject only re-fire on
+// the NEXT prompt/session · shipStopCheck only blocks UNcommitted). Warm-context chance to
+// finish. Keyed dedup (branch@tip in the common dir) so a long session isn't nagged every
+// Stop — warns once per tip; a NEW commit re-warns; a resolved item's key is pruned.
+async function worktreeStopCheck(): Promise<number> {
+  let payload: { stop_hook_active?: boolean };
+  try {
+    payload = JSON.parse(readStdin());
+  } catch {
+    return 0;
+  }
+  if (payload?.stop_hook_active) return 0; // anti-wedge: already nudged this chain
+  // fast-exit before the per-worktree git calls classify() makes: no linked worktrees → nothing.
+  const list = (await git("git worktree list --porcelain")).out;
+  if (Math.max(0, (list.match(/^worktree /gm) || []).length - 1) === 0) return 0;
+  const stranded = await strandedWorktrees();
+  if (stranded.length === 0) return 0;
+  const commonDir = (await git("git rev-parse --git-common-dir")).out;
+  if (!commonDir) return 0;
+  const markerPath = `${commonDir}/sidecar-wt-stop-warned.json`;
+  let warned: Record<string, number> = {};
+  try {
+    warned = JSON.parse(readFileSync(markerPath, "utf8"));
+  } catch {
+    /* no marker yet */
+  }
+  const fresh: WT[] = [];
+  const nextWarned: Record<string, number> = {};
+  for (const w of stranded) {
+    const tip = (await git(`git -C ${JSON.stringify(w.path)} rev-parse --short HEAD`)).out || "?";
+    const key = `${w.branch}@${tip}`;
+    nextWarned[key] = warned[key] ?? Date.now(); // carry forward; prunes keys no longer stranded
+    if (!(key in warned)) fresh.push(w);
+  }
+  try {
+    writeFileSync(markerPath, JSON.stringify(nextWarned));
+  } catch {
+    /* best-effort */
+  }
+  if (fresh.length === 0) return 0; // all current stranded tips already warned
+  warn("[wt-stranded] 이 세션이 worktree 에 미push 작업을 남겼다 (터미널 닫기 전 처리 권장):");
+  for (const w of fresh) {
+    const state = `${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`.trim();
+    warn(`  • ${w.path} [${w.branch}] ${state}  → 지금: cd ${w.path} && sidecar pr-cycle · 폐기: git worktree remove ${w.path}`);
+  }
+  return 0;
+}
+
 export async function runWorktree(args: string[]): Promise<number> {
   const sub = args[0] ?? "scan";
   if (sub === "scan" || sub === "status") return scan();
   if (sub === "gc") return gc();
   if (sub === "inject") return worktreeInject();
+  if (sub === "stop-check") return worktreeStopCheck();
   if (sub === "guard") {
     const adv = await worktreeAddAdvisory(args.slice(1).join(" "));
     if (adv) process.stderr.write(adv + "\n");
     return 0;
   }
-  info("usage: sidecar worktree {scan|gc|inject|guard <cmd>}");
+  info("usage: sidecar worktree {scan|gc|inject|stop-check|guard <cmd>}");
   return 1;
 }

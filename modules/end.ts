@@ -3,6 +3,7 @@
 // recommended actions, and a closing ✅/⚠ verdict. Never mutates anything.
 import { execShell } from "../lib/exec.ts";
 import { repoPath } from "../lib/config.ts";
+import { classify, strandedBranches } from "./worktree.ts";
 
 async function git(cmd: string): Promise<string> {
   return (await execShell(cmd, { cwd: repoPath(".") })).stdout.trim();
@@ -78,12 +79,31 @@ export async function runEnd(_args: string[]): Promise<number> {
     }
   }
 
-  // 6. linked worktrees
-  const wt = (await git("git worktree list")).split("\n").filter(Boolean);
-  if (wt.length <= 1) out("✓ worktrees       0 linked");
+  // 6. linked worktrees — distinguish STRANDED (dirty/unpushed = abandoned work → attention)
+  //    from clean pending-sweep worktrees (merged, awaiting gc → informational). classify()
+  //    reused (canonical) instead of a raw count that can't tell abandoned from about-to-sweep.
+  const linked = (await classify()).filter((w) => !w.isMain);
+  const strandedWt = linked.filter((w) => w.stranded);
+  if (linked.length === 0) out("✓ worktrees       0 linked");
+  else if (strandedWt.length === 0) {
+    out(`○ worktrees       ${linked.length} linked, 0 stranded (clean · pending sweep)`);
+    out("  → sidecar worktree gc  (auto-sweeps merged)");
+  } else {
+    warn++;
+    out(`⚠ worktrees       ${strandedWt.length}/${linked.length} STRANDED (dirty/unpushed = abandoned work)`);
+    for (const w of strandedWt) out(`  • ${w.path} [${w.branch}] ${w.dirty ? "dirty " : ""}${w.ahead ? "unpushed:" + w.ahead : ""}`);
+    out("  → 이어서: cd <path> && sidecar pr-cycle  ·  폐기: git worktree remove <path>");
+  }
+
+  // 6b. stranded LOCAL branches with no worktree (the "left on a stale branch" case) —
+  //     unpushed own commits, not merged, not in the config allowlist.
+  const strandedBr = await strandedBranches();
+  if (strandedBr.length === 0) out("✓ branches        0 stranded (no-worktree)");
   else {
-    out(`○ worktrees       ${wt.length - 1} linked (review if stale)`);
-    out("  → git worktree list  ·  git worktree remove <path>");
+    warn++;
+    out(`⚠ branches        ${strandedBr.length} stranded (no worktree · unpushed own commits)`);
+    for (const b of strandedBr) out(`  • ${b.branch} unpushed:${b.ahead}${b.upstream ? "" : " · upstream 없음"} · ${b.ageDays.toFixed(0)}d`);
+    out("  → 보존: git push -u origin <br>  ·  폐기: git branch -D <br>");
   }
 
   out("");

@@ -29,6 +29,7 @@ interface Snapshot {
   swapUsedGiB: number;
   swapLight: string;
   worktrees: number; // extra git worktrees (main checkout excluded) — hygiene at-a-glance
+  strandedWt: number; // of those, how many are STRANDED (dirty OR unpushed) — abandoned work · TTL-cached
   openPRs: number | null; // open PRs on this repo (gh · TTL-cached) — null = unknown (no repo/gh)
   danger: boolean;
 }
@@ -100,8 +101,36 @@ export function readSnapshot(): Snapshot | null {
   return {
     load1, cores, cpuLight,
     ramUsedPct, pressure, pressureLabel, ramLight,
-    swapUsedGiB, swapLight, worktrees, openPRs: readOpenPRs(), danger,
+    swapUsedGiB, swapLight, worktrees, strandedWt: readStrandedWt(wtRaw), openPRs: readOpenPRs(), danger,
   };
+}
+
+// STRANDED worktree count for the wt gauge — TTL-cached like readOpenPRs so the per-prompt
+// hook stays instant. classify() (modules/worktree.ts) is async + shells ~4 git calls PER
+// worktree, too heavy for the every-turn sync load path; this is a cheap SYNC proxy of the
+// SAME "stranded = non-main worktree with dirty OR unpushed work" definition, reusing the
+// porcelain list load already fetched. Only a cold (past-TTL) turn pays the git calls.
+const WT_CACHE_TTL_MS = 60_000;
+function readStrandedWt(wtRaw: string): number {
+  const commonDir = sh("git rev-parse --git-common-dir 2>/dev/null");
+  if (!commonDir) return 0;
+  const cachePath = `${commonDir}/sidecar-stranded-wt.json`;
+  try {
+    const c = JSON.parse(readFileSync(cachePath, "utf8"));
+    if (Number.isFinite(c?.count) && Number.isFinite(c?.ts) && Date.now() - c.ts < WT_CACHE_TTL_MS) return c.count;
+  } catch { /* no/corrupt cache → recompute */ }
+  // paths from the porcelain blocks; the FIRST is the main checkout (excluded).
+  const paths = (wtRaw.match(/^worktree (.+)$/gm) || []).map((l) => l.replace(/^worktree /, "")).slice(1);
+  let count = 0;
+  for (const p of paths) {
+    const q = p.replace(/'/g, "'\\''");
+    const dirty = sh(`git -C '${q}' status --porcelain 2>/dev/null`).length > 0;
+    const base = sh(`git -C '${q}' rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null`) || "origin/main";
+    const ahead = parseInt(sh(`git -C '${q}' rev-list --count '${base.replace(/'/g, "'\\''")}'..HEAD 2>/dev/null`) || "0", 10) || 0;
+    if (dirty || ahead > 0) count++;
+  }
+  try { writeFileSync(cachePath, JSON.stringify({ count, ts: Date.now() })); } catch { /* best-effort */ }
+  return count;
 }
 
 // Open-PR count for the current repo, TTL-cached in the git common dir so the
@@ -151,7 +180,7 @@ function line(s: Snapshot): string {
     `${head}CPU ${s.load1.toFixed(2)}/${s.cores} ${s.cpuLight} · ` +
     `RAM ${s.ramUsedPct}%(${s.pressureLabel}) ${s.ramLight} · ` +
     `swap ${swap} ${s.swapLight} · ` +
-    `wt ${s.worktrees} ${light(s.worktrees, 3, 10)} · ` +
+    `wt ${s.worktrees}${s.strandedWt > 0 ? `(${s.strandedWt}⚠)` : ""} ${s.strandedWt > 0 ? "🔴" : light(s.worktrees, 3, 10)} · ` +
     (s.openPRs === null ? "" : `PR ${s.openPRs} ${light(s.openPRs, 3, 10)} · `) +
     `🕐 ${nowStamp()}`
   );
@@ -166,7 +195,7 @@ function body(s: Snapshot): string {
     line(s) + "\n" +
     "- CPU = load1/cores (🟢<0.7 🟡<1.0 🔴≥1.0) · RAM = active+wired+compressor used% + kernel pressure(normal/warn/critical) · swap used (🟢<2G 🟡<6G 🔴≥6G).\n" +
     "- A Mac that dies under load fails on MEMORY (compressor+swap), not CPU — when RAM/swap light is 🔴 or pressure≥warn, say so loudly.\n" +
-    "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10) — 누적되면 `sidecar worktree gc` 로 정리.\n" +
+    "- wt = extra git worktrees (main excluded · 🟢0-2 🟡3-9 🔴≥10). `wt N(M⚠)` = M개가 STRANDED(dirty/unpushed=방치작업) → 무조건 🔴; `sidecar worktree inject` 로 항목 확인 후 이어서(pr-cycle)/폐기.\n" +
     "- PR = this repo's open PRs (gh · 5min cache · 🟢0-2 🟡3-9 🔴≥10) — 쌓이면 머지/정리 (`cycle-docs-pr`) · 저장소/gh 없으면 생략.\n" +
     "- 🕐 = the machine's REAL current local date+time (the session-start date in context is fixed; trust this line for 'now')." +
     warn + "\n"

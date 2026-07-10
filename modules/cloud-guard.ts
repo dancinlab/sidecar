@@ -1,11 +1,13 @@
-// cloud-guard — built-in code-level block for raw GPU-provider CLI/API use AND
-// raw training-job / input-deck launches in `pre bash`. The canonical path is
-// hexa's builtins (`hexa cloud` / `hexa dojo` / `hexa deck`, commons canonical-cli); calling
-// a provider's own CLI/API — or hand-running a train script / deck generator —
-// directly bypasses that layer (and the `ing pod` board / cost accounting). This
-// is enforced in CODE — before config rules, default-on, NO `# raw-cloud-ok`-style
-// escape — so a regex profile edit can't silently weaken it (unlike an
-// enforcement.json rule).
+// cloud-guard — built-in code-level block for raw GPU-provider CLI/API use in
+// `pre bash`. The canonical path is hexa's `hexa cloud` builtin (commons
+// canonical-cli); calling a provider's own CLI/API directly bypasses that layer
+// (and the `ing pod` board / cost accounting). This is enforced in CODE — before
+// config rules, default-on, NO `# raw-cloud-ok`-style escape — so a regex profile
+// edit can't silently weaken it (unlike an enforcement.json rule).
+//
+// NOTE: raw training-launcher forcing (route `python train.py`/`torchrun`/
+// `deepspeed`/`accelerate launch`/`dojo` run.sh through `hexa dojo`) was REMOVED —
+// there is no longer a `hexa dojo` mandate here.
 //
 
 // strip ' and " so a quoted token still resolves to its bare form
@@ -60,8 +62,8 @@ function isHexaBuiltin(cmd: string): boolean {
 // `label`, `reboot`, …) so any whitelist leaks the moment a new verb ships — the
 // exact recurring bypass. `vast` as a literal command head is essentially always
 // the vast.ai CLI (a path collision would be `./vast`/`/usr/bin/vast`, which do
-// NOT match the bare head), so — like DOJO_TRAIN_NAME_BROAD on this no-override
-// guard — we bias to the false-positive and block bare `vast` outright.
+// NOT match the bare head), so on this no-override guard we bias to the
+// false-positive and block bare `vast` outright.
 // RunPod ships TWO CLIs — the Go `runpodctl` and the official Python `runpod`
 // (`runpod config`/`project deploy`/`pod create`/`exec`) — so both heads must be
 // blocked; listing only `runpodctl` left the entire `runpod` CLI surface open.
@@ -98,37 +100,6 @@ export function detectRawCloudCli(rawCmd: string): string | null {
   const api = /\b(api\.runpod\.io|rest\.runpod\.io|api\.runpod\.ai|console\.vast\.ai)\b/.exec(cmd);
   if (api) return `provider API endpoint \`${api[1]}\``;
 
-  return detectRawDojoDeck(rawCmd);
-}
-
-// Always-a-training-launcher in command position → must go through `hexa dojo`.
-// (`accelerate` is handled separately — only `accelerate launch`, not `accelerate config`.)
-const DOJO_LAUNCHERS = new Set(["torchrun", "deepspeed"]);
-
-// Raw training-job launch or hand-run dojo/deck script — bypasses `hexa dojo`/`hexa
-// deck` (which scaffold + register the job). Detected:
-//   • a distributed launcher in command position: `torchrun …`, `deepspeed …`,
-//     `accelerate launch …`
-//   • `python[3] …train….py` / `…finetune….py` / `…sft….py` in command position
-//   • executing a `run.sh` that lives in a `dojo/` or `decks/` tree (the builtin's
-//     own output — running it by hand skips the builtin's dispatch + ing-pod reg)
-//
-function detectRawDojoDeck(rawCmd: string): string | null {
-  for (const seg of segments(rawCmd)) {
-    const { head, rest } = leadToken(seg);
-    if (!head) continue;
-    if (head === "accelerate" && rest[0] === "launch") return "raw training launcher `accelerate launch` — use `hexa dojo`";
-    if (DOJO_LAUNCHERS.has(head)) return `raw training launcher \`${head}\` — use \`hexa dojo\``;
-    if (/^python3?$/.test(head)) {
-      const script = rest.find((t) => /\.py$/.test(t)) ?? "";
-      if (/(train|finetune|fine_tune|sft|pretrain)[^/]*\.py$/i.test(script))
-        return `raw training script \`${script}\` — use \`hexa dojo\``;
-    }
-    // hand-run dojo/deck run.sh (bash/sh/./ a script under a dojo|decks tree)
-    const runsh = rest.concat(head).find((t) => /(^|\/)(dojo|decks)\/.*run\.sh$/.test(t) || /(dojo|decks)\/[^ ]*\/run\.sh$/.test(t));
-    if (runsh && (/^(bash|sh)$/.test(head) || /run\.sh$/.test(head) || head.startsWith("./")))
-      return `hand-run dojo/deck script \`${runsh}\` — use \`hexa dojo\`/\`hexa deck\``;
-  }
   return null;
 }
 

@@ -44,13 +44,6 @@
         "source": "modules/cloud-guard.ts"
       },
       {
-        "id": "NO_RAW_DOJO_DECK",
-        "state": "pos-conv",
-        "value": "raw `python train.py`/`torchrun`/`accelerate launch`/`deepspeed` training launches AND hand-run run.sh in a dojo/decks tree are blocked in code — use `hexa dojo`/`hexa deck`",
-        "threshold": "c11 named dojo/deck builtins but only cloud CLI was code-guarded; training launches and deck run.sh slipped through",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
         "id": "NO_HANDROLLED_SHARD_FANOUT",
         "state": "in-prog",
         "value": "a hand-rolled launcher loop (split -n l/N + a for/while loop that setsid/nohup-backgrounds repeated `hexa run`/training launches) is the exact bypass that defeated NO_RAW_CLOUD_CLI — copy-to is whitelisted so the .sh sails through, then the fanout runs remotely unseen. Detected as a WARN that redirects to `hexa cloud fire-shards`",
@@ -76,13 +69,6 @@
         "state": "pos-conv",
         "value": "both RunPod CLI heads (`runpodctl` Go + `runpod` Python) are blocked, plus the serverless host `api.runpod.ai` alongside the control-plane `api.runpod.io`/`rest.runpod.io`",
         "threshold": "only `runpodctl` was listed, so `runpod config`/`runpod project deploy`/`runpod pod create` and serverless `curl api.runpod.ai/v2/<id>/run` all leaked — same whitelist-too-narrow bypass as VAST_VERBS",
-        "source": "modules/cloud-guard.ts"
-      },
-      {
-        "id": "DOJO_TRAIN_NAME_BROAD",
-        "state": "pos-conv",
-        "value": "the `(train|finetune|sft|pretrain)*.py` script match is INTENTIONALLY broad — it over-blocks helpers like `train_utils.py`/`trainer.py` too. Name alone can't separate a launcher (train_lora.py) from a helper (train_utils.py), and this guard is no-override, so we bias to false-positive: a missed launch (FN) leaks uncounted GPU $, a false block (FP) is recoverable (route via `hexa dojo`, or rename the non-launch script)",
-        "threshold": "someone proposes narrowing the regex (e.g. only `train.py`) to cut FPs — DON'T: it reopens the FN hole (run_training.py, train_model.py launchers slip through). Keep broad; accept the FP.",
         "source": "modules/cloud-guard.ts"
       },
       {

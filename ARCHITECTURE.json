@@ -382,8 +382,8 @@
       {
         "id": "pool-ts-1",
         "state": "pos-conv",
-        "value": "sidecar pool on <host> <cmd>: 로컬 ssh 세션이 끊기면 원격 커맨드 트리가 고아화(systemd/init로 입양)됨. 커맨드가 루프/재시도형(예: gh release download 다운로드 루프)이고 대상 바이너리가 멈추면(mem_cgroup throttle로 D-state) 자기증식 fork storm이 되어 호스트를 load 2x까지 밀어올림. 자식(gh 등)만 reap하면 생산기가 다시 뽑으므로(6→1→재생성) 반드시 고아 생산기 트리(PPID=1 bash 래퍼)를 죽여야 근절됨. hexa_run fork storm(mini freeze)과 동일 계열.",
-        "threshold": "재발신호=호스트 부하 급등 + 동일 단명 프로세스(gh/hexa) 떼가 D-state(wchan=mem_cgroup_handle_over_high)로 누적. 해결=자식이 아니라 고아 생산기(run_dl.sh/bash -c 래퍼)를 kill. 근본예방=pool on을 setsid+timeout+cleanup trap으로 실행해 세션 드롭 시 원격 트리 자동 수거(미배선 follow-on).",
+        "value": "sidecar pool on <host> <cmd>: 로컬 ssh 가 죽어도(--timeout SIGKILL·ctrl-C·링크 끊김) 원격 커맨드 트리는 안 죽는다 — PTY 없는 sshd 는 파이프만 닫고 SIGHUP 을 보내지 않기 때문(실측 확인: HUP 트랩은 아예 발화하지 않음). 그래서 원격 자손이 init 으로 reparent(PPID=1)돼 RSS 를 문 채 잔류한다. 루프/재시도형 커맨드면 자기증식 fork storm 이 되고(자식만 reap 하면 생산기가 재생성 — 반드시 PPID=1 생산기 트리를 죽여야 함), 대용량 hexa 잡이면 cgroup throttle(D-state, wchan=mem_cgroup_handle_over_high)에 갇혀 호스트를 '다운'으로 오진시킨다(2026-07: 15GB iv_s 고아가 summer 를 25일간 죽은 호스트로 만듦). ✅ FIXED — fence() 가 커맨드를 백그라운드로 띄우고 자기 PPID 를 폴링하다 1 이 되면(=sshd 사망=고아화 신호) kill -- -$$ 로 프로세스그룹 전체를 수거한다. 그룹 멤버십은 reparent 후에도 유지되므로 이미 고아가 된 손자까지 닿는다. A/B 실측: 생 ssh=고아 2 생존 · fenced pool on=0. EXIT 는 의도적으로 트랩하지 않음(정상 종료 시 nohup 데몬은 살려둬야 함).",
+        "threshold": "재발신호=호스트 부하 급등 + 동일 프로세스 떼가 D-state(wchan=mem_cgroup_handle_over_high)로 누적 · 풀 호스트가 🔴 인데 ssh 인증은 통과. 재도입 금지=pool on 의 원격 exec 를 fence() 없이 생 cmd 로 되돌리는 것, HUP 트랩만으로 충분하다고 믿는 것(PTY 없이는 HUP 이 안 옴). 이미 생긴 고아=자식 말고 PPID=1 생산기 트리를 kill.",
         "source": "modules/pool.ts"
       },
       {
@@ -1183,7 +1183,39 @@
                 "name": "pool",
                 "role": "호스트 로스터 + 원격 실행 + 자원 프로브",
                 "id": "module-pool",
-                "detail": "shared:false 호스트는 allow 밖에서 on/status 차단(allow 마커 cwd 일치=해제). ssh=execArgs 직접 spawn($ 전개 방지). specs=코어/메모리/GPU 프로브 캐시 · list·status=라이브 부하 SSH 병렬 ⚡뱃지 · 타임아웃 시 connect-only로 고부하/도달불가 구분. on <h> [--timeout <sec>|0] <cmd>: 기본 120s·0=무제한(120s SIGKILL 절단 제거·heavy-on-pool) · 무출력 잡=nohup detached+scp 우회"
+                "detail": "호스트 로스터(~/.sidecar/pool.json · 글로벌) + ssh 원격 실행 + 자원 프로브. ssh=execArgs 직접 spawn($ 전개 방지).",
+                "children": [
+                  {
+                    "name": "guard",
+                    "id": "module-pool-guard",
+                    "role": "제한 호스트 차단",
+                    "detail": "shared:false 호스트는 allow 밖에서 on/status 차단 (allow 마커 cwd 일치 = 해제)."
+                  },
+                  {
+                    "name": "on",
+                    "id": "module-pool-on",
+                    "role": "원격 실행",
+                    "detail": "on <h> [--timeout <sec>|0] <cmd> — 기본 120s, 0=무제한 (고정 120s SIGKILL 절단 제거 · heavy-on-pool). 무출력 잡은 nohup detached + scp 로 우회."
+                  },
+                  {
+                    "name": "orphan-fence",
+                    "id": "module-pool-fence",
+                    "role": "로컬 ssh 사망 시 원격 프로세스그룹 수거 (pool-ts-1)",
+                    "detail": "PTY 없는 sshd 는 SIGHUP 을 안 보내므로 HUP 트랩은 무용 — 신뢰할 신호는 고아화 자체다. fence() 가 커맨드를 백그라운드로 띄우고 자기 PPID 를 폴링, 1 이 되면(=sshd 사망) kill -- -$$ 로 그룹 전체를 수거한다. 그룹 멤버십은 reparent 후에도 유지되어 이미 고아가 된 손자·재생성 래퍼까지 닿는다. EXIT 는 미트랩 (정상 종료 시 nohup 데몬 보존)."
+                  },
+                  {
+                    "name": "probes",
+                    "id": "module-pool-probes",
+                    "role": "스펙·부하 프로브",
+                    "detail": "specs=코어/메모리/GPU 캐시 · list·status=라이브 부하 SSH 병렬 ⚡뱃지. 프로브 타임아웃 시 connect-only 로 폴백해 '고부하'와 '도달 불가'를 구분 (SSH_ARGS ServerAlive* 로 idle 링크 유지)."
+                  },
+                  {
+                    "name": "harden",
+                    "id": "module-pool-harden",
+                    "role": "OOM 메모리 펜스",
+                    "detail": "cgroup user-slice cap + system 예약 + earlyoom prefer/avoid — 무거운 잡이 박스를 OOM-리부트 시키지 못하게. 멱등 · passwordless sudo 필요."
+                  }
+                ]
               }
             ]
           },

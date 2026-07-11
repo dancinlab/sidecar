@@ -7,7 +7,10 @@
 //                        + earlyoom prefer/avoid) so a heavy job can never OOM-reboot the box;
 //                        all shared hosts (or one named) · idempotent · needs passwordless sudo
 //   rm <name>            remove host
-//   on <name> <cmd...>   run a command on a host over ssh
+//   on <name> [--timeout <sec>|0] <cmd...>
+//                        run a command on a host over ssh · ORPHAN-FENCED: if the local ssh
+//                        dies (timeout/ctrl-C/dropped link) the remote process GROUP is reaped,
+//                        so no descendant strands at PPID=1 holding its RSS (pool-ts-1)
 //   status               reachability + LIVE CPU/RAM/GPU load (one probe per host)
 //   specs [name]         ssh-probe cores/mem/GPU + cache into roster (all or one)
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -87,7 +90,48 @@ function save(r: Roster): void {
 
 // ssh options as an argv array (NOT a shell string). We spawn ssh directly via
 // execArgs so the local shell never gets a chance to parse the remote command.
-const SSH_ARGS = ["-o", "StrictHostKeyChecking=no", "-o", "ConnectTimeout=10", "-o", "BatchMode=yes"];
+// ServerAlive* keeps an output-idle link (a long `on --timeout 0` sweep) from being
+// dropped by a NAT/firewall idle reaper, and lets the client notice a truly dead peer
+// within 30s*6 rather than blocking forever on a half-open socket.
+const SSH_ARGS = [
+  "-o",
+  "StrictHostKeyChecking=no",
+  "-o",
+  "ConnectTimeout=10",
+  "-o",
+  "BatchMode=yes",
+  "-o",
+  "ServerAliveInterval=30",
+  "-o",
+  "ServerAliveCountMax=6",
+];
+
+// Orphan fence for `pool on` (pool-ts-1). When the local ssh dies — our --timeout
+// SIGKILL, a dropped link, ctrl-C — the remote command tree does NOT die with it: a
+// PTY-less sshd just closes the pipes, it does not SIGHUP the session. So the remote
+// descendants reparent to init (PPID=1) and strand there holding their RSS. That is how
+// a 15GB hexa orphan wedged summer into a cgroup-throttle thrash (D-state, wchan=
+// mem_cgroup_handle_over_high) that read as a DEAD host for 25 days, and how a retry-loop
+// command turns into a self-replicating fork storm.
+//
+// A HUP trap alone is therefore useless (verified: nothing is ever delivered). The signal
+// that IS reliable is the orphaning itself — when sshd exits, OUR shell's PPID becomes 1.
+// So: run the command in the background, poll our own PPID, and on reparent kill the whole
+// process group. Group membership survives reparenting, so `kill -- -$$` reaches every
+// descendant, including the "orphan producer" wrapper that would otherwise respawn children.
+// HUP/INT/TERM stay trapped as a cheap belt-and-braces for the PTY/`kill` cases.
+// EXIT is deliberately NOT trapped: a command that finishes cleanly must still be allowed to
+// leave an intentionally backgrounded daemon (nohup/&) running.
+const fence = (cmd: string) =>
+  `trap 'trap - HUP INT TERM; kill -- -$$ 2>/dev/null' HUP INT TERM\n` +
+  `{ ${cmd}\n} & __sc_c=$!\n` +
+  `{ while kill -0 $__sc_c 2>/dev/null; do\n` +
+  `    if [ "$(ps -o ppid= -p $$ 2>/dev/null | tr -d '[:space:]')" = "1" ]; then kill -- -$$ 2>/dev/null; break; fi\n` +
+  `    sleep 2\n` +
+  `  done; } & __sc_w=$!\n` +
+  `wait $__sc_c; __sc_rc=$?\n` +
+  `kill $__sc_w 2>/dev/null\n` +
+  `exit $__sc_rc`;
 
 // Remote hardware probe. POSIX-sh, Linux + macOS aware. Emits ONE parseable line
 // `CORES=<n>|MEM=<GiB>|GPU=<model|none>`. Single-quoted awk/sed protect remote
@@ -374,7 +418,7 @@ export async function runPool(args: string[]): Promise<number> {
     // local shell). This prevents the LOCAL mac shell from expanding $VAR/$(...)/
     // backticks inside the remote command — ssh forwards `cmd` verbatim to the
     // REMOTE login shell, which expands it (and pipes/redirects) correctly there.
-    const res = await execArgs("ssh", [...SSH_ARGS, h.target, cmd], { timeoutMs });
+    const res = await execArgs("ssh", [...SSH_ARGS, h.target, fence(cmd)], { timeoutMs });
     process.stdout.write(res.stdout);
     if (res.stderr) process.stderr.write(res.stderr);
     if (res.code !== 0) loudFail(`pool on ${name}: exit ${res.code}`);

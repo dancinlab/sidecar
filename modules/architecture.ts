@@ -11,6 +11,7 @@ import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
 import { readStdin, execShell } from "../lib/exec.ts";
 import { resolveRuleFile, config } from "../lib/config.ts";
 import { lastAssistantText } from "./recommend.ts";
+import { isQuotedMention } from "./goal-guard.ts";
 import { emitInject } from "../lib/inject.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
 
@@ -277,9 +278,7 @@ export async function runArchitecture(args: string[]): Promise<number> {
     const resultSignal = ((): string | undefined => {
       const { patterns } = loadResultSignals();
       if (!patterns?.length) return undefined; // no file → leg inert, stop-check = diff-only
-      const hay = text.toLowerCase();
-      const seen = nudgedSignals(transcript, RESULT_NUDGE_STATE);
-      return patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
+      return findSignal(text, patterns, nudgedSignals(transcript, RESULT_NUDGE_STATE));
     })();
     if (resultSignal && hasMarker) {
       // accounted (verified 갱신, or an explicit 변동 없음) → consume this signal for the session
@@ -513,6 +512,28 @@ function nudgedSignals(transcript: string, stateFile: string = NUDGE_STATE): Set
   return new Set();
 }
 
+// The ONE signal matcher every Stop-gate scanner here uses (convergence · gate · result), so
+// their precision never drifts apart. Returns the first pattern that occurs in the agent's own
+// text as a LIVE signal and has not already been accounted-for this session.
+// A quote/backtick-wrapped occurrence is a META-mention — a reply that DISCUSSES a signal
+// (guard docs, "`META-LAW` 같은 토큰만 잡는다", a changelog line) is not the agent reporting one.
+// Same isQuotedMention skip goal-guard uses for `잔여`/`infra` (single SSOT · convergence
+// goal-guard-ts-1: common-word signals need narrow AND-matching or they false-fire on their
+// own documentation). Case-insensitive; the quote check indexes the ORIGINAL text.
+function findSignal(text: string, patterns: string[], seen: Set<string>): string | undefined {
+  const hay = text.toLowerCase();
+  for (const p of patterns) {
+    if (seen.has(p)) continue;
+    const needle = p.toLowerCase();
+    if (!needle) continue;
+    for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + needle.length)) {
+      if (isQuotedMention(text, i, needle.length)) continue; // meta-mention → not a live signal
+      return p;
+    }
+  }
+  return undefined;
+}
+
 function markNudged(transcript: string, seen: Set<string>, stateFile: string = NUDGE_STATE): void {
   try {
     writeFileSync(stateFile, JSON.stringify({ transcript, seen: [...seen] }) + "\n");
@@ -554,9 +575,8 @@ function gateStopCheck(): number {
   if (!text) return 0;
   const { patterns, hint } = loadGateSignals();
   if (!patterns?.length) return 0;
-  const hay = text.toLowerCase();
   const seen = nudgedSignals(transcript, GATE_NUDGE_STATE);
-  const matched = patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
+  const matched = findSignal(text, patterns, seen);
   if (!matched) return 0;
   // ACCOUNTED: the marker is present (updated or dismissed) → consume the signal, pass.
   if (GATE_MARKER.test(text)) {
@@ -596,11 +616,10 @@ function convergenceStopCheck(): number {
 
   const { patterns, hint } = loadTriggers();
   if (!patterns?.length) return 0;
-  const hay = text.toLowerCase();
   const seen = nudgedSignals(transcript);
   // First recurrence signal that matched AND hasn't already been accounted-for this
   // session — a dismissed false positive doesn't suppress a different, real signal later.
-  const matched = patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
+  const matched = findSignal(text, patterns, seen);
   if (!matched) return 0;
 
   // ACCOUNTED: the response already carries the marker (recorded or dismissed). Consume

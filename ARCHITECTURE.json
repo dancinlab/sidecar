@@ -369,7 +369,7 @@
         "id": "goal-guard-ts-1",
         "state": "pos-conv",
         "value": "goal-guard Stop-hook 캐치(잔여 remnant + infra-punt)는 흔한 키워드('잔여'·'infra'/'인프라')를 쓰므로 정밀도가 반복 이슈다(#376 잔존→#383 잔여예외→infra 3rd catch). 공통 오탐패턴: ① 정당한 session-terminal인데 잡힘 ② 답변이 키워드 자체를 논의/인용(따옴표·백틱·kebab-slug)하는데 잡힘 ③ infra처럼 흔한 단어는 단독 언급도 잡힘. 해결원칙=좁은 AND 매칭: 잔여=whole-message BLOCKER_RE+ING_NEXT AND 예외 · infra=punt동사(whole)+키워드+벽신호(same-line) 3중 AND + fix부정형(line) · 공통 따옴표 skip + hasSessionTerminalBlocker 예외 재사용. no-escape-hatch: CONCRETE 신호로 좁혀 남용차단, defer경로 독립.",
-        "threshold": "재발신호=정당한 종료(블로커·infra 외부의존)가 오차단 · 가드/커밋요약 답변이 오탐 · 흔한단어 단독언급 오발화. 해결=매칭을 좁게(AND·same-line·CONCRETE 명사) 유지하고 실측 오탐 로그 보고만 확장(넓히면 escape-hatch) · 새 punt-키워드 캐치 추가 시 quote-skip+session-terminal 예외+좁은 AND 3장치 반드시 재사용.",
+        "threshold": "재발신호=정당한 종료(블로커·infra 외부의존)가 오차단 · 가드/커밋요약 답변이 오탐 · 흔한단어 단독언급 오발화. 4번째 재발(2026-07-13, #405): 교훈이 goal-guard 안에만 갇혀 architecture 의 Stop 스캐너 3종(convergence·gate·result)이 각자 patterns.find(includes) 를 손으로 굴리다 백틱 인용된 예시 토큰(설명문의 게이트 이름)에 자기 자신이 발화. 해결=매칭을 좁게(AND·same-line·CONCRETE 명사) 유지 + 실측 오탐만 보고 확장(넓히면 escape-hatch) · **어느 모듈이든 새 Stop 신호 스캐너를 추가할 때 patterns.find(hay.includes) 를 손으로 쓰지 말고 공용 매처(architecture findSignal → goal-guard isQuotedMention)를 반드시 경유**할 것 (quote-skip + session-terminal 예외 + 좁은 AND 3장치 재사용).",
         "source": "modules/goal-guard.ts"
       },
       {

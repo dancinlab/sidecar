@@ -595,9 +595,23 @@
               },
               {
                 "name": "architecture stop-check",
-                "role": "코드·구조 변경 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
+                "role": "코드·구조 변경 또는 실험·벤치 결과 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
                 "id": "guard-architecture-stop-check",
-                "detail": "ing stop-check 의 설계판 — 미커밋 코드/ARCHITECTURE 변경 있는데 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`) 없으면 차단(clean tree=no-op·git diff 결정적). `갱신` 주장은 diff(working·staged·직전커밋)에서 ARCHITECTURE.json 실변경 여부로 대조검증=마커-only 위조 차단(verify-done). 게이트=`pick()`(설계 SSOT 존재)=설계파일 생기는 순간 자동발화. (modules/architecture.ts)"
+                "detail": "ing stop-check 의 설계판 — 트리거 2다리(아래 diff·result) 중 하나라도 걸렸는데 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`) 없으면 차단. `갱신` 주장은 diff(working·staged·직전커밋)의 ARCHITECTURE.json 실변경으로 대조검증=마커-only 위조 차단(verify-done). 게이트=`pick()`(설계 SSOT 존재)=설계파일 생기는 순간 자동발화. (modules/architecture.ts)",
+                "children": [
+                  {
+                    "name": "leg1 — diff (코드·구조 변경)",
+                    "role": "미커밋 코드/ARCHITECTURE 변경 = 트리거",
+                    "id": "guard-arch-stop-leg-diff",
+                    "detail": "git diff(working+staged)에 DESIGN_RELEVANT 확장자(.ts/.py/.rs/.hexa…)나 ARCHITECTURE.json 이 있으면 발화. clean tree=no-op — 응답 텍스트가 아니라 트리 상태로 판정(결정적·위조불가)."
+                  },
+                  {
+                    "name": "leg2 — result (실험·벤치 결과)",
+                    "role": "결과-턴은 로컬 코드변경 0 이어도 트리거",
+                    "id": "guard-arch-stop-leg-result",
+                    "detail": "응답의 결과신호(config/result-signals.json · `.harness/` 오버라이드) 매칭 시 발화 — 원격런 종료·보드에서 읽은 수치처럼 diff 가 0 인 결과-턴은 leg1 이 구조적으로 못 봐 결과가 SSOT 에 영영 안 들어가던 누수를 막는다. 넓은 키워드 그물 + 정밀도는 에이전트 마커. 신호별 1회(result-nudge.json) · 마커=신호 소비."
+                  }
+                ]
               },
               {
                 "name": "ship stop-check",

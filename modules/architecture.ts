@@ -134,8 +134,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
     // model updates+reports when it touches design, not only when asked.
     // (recurrence learning ARCH_INJECT_IGNORED → ARCHITECTURE.json convergence array.)
     const gate =
-      "🏛️ 턴 마감 게이트 (코드·구조 변경 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨으면 **지금** ARCHITECTURE.json 의 해당 노드를 제자리 교체(update-in-place)하고 " +
-      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — working tree 에 미커밋 코드/ARCHITECTURE 변경이 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단). " +
+      "🏛️ 턴 마감 게이트 (코드·구조 변경 **또는 실험·벤치·측정 결과** 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨거나 **실험/벤치 결과가 나왔으면** (결과-턴은 코드 변경 0 이어도 트리거) **지금** ARCHITECTURE.json 의 해당 노드를 제자리 교체(update-in-place)하고 " +
+      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — 미커밋 코드/ARCHITECTURE 변경 또는 결과-신호가 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단). " +
       "갱신 = 해당 노드 role/detail/children 을 실제 재작성 (한 단어 수정·빈 재스테이징은 갱신 아님) · `갱신` 주장은 diff 에서 ARCHITECTURE.json 실변경 여부로 검증된다(위조 차단).";
     const fence = isJson ? "" : `\n\n\`\`\`${lang}\n${body}\n\`\`\``;
     const ctx = isJson
@@ -233,7 +233,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
     if (!pick()) return 0; // gate on the design SSOT itself — no ARCHITECTURE.json ⇒ nothing to drift from (and the "update it" nag would be nonsensical). Auto-activates the moment a repo grows one, no harness.config.json needed.
     const tp = payload?.transcript_path ?? payload?.transcriptPath;
     if (!tp) return 0;
-    const text = lastAssistantText(String(tp));
+    const transcript = String(tp);
+    const text = lastAssistantText(transcript);
     if (!text) return 0;
     const hasMarker = /🏛️\s*ARCHITECTURE/.test(text);
     const claimsUpdate = /🏛️\s*ARCHITECTURE\s*갱신/.test(text); // "갱신: <무엇을>" — an explicit UPDATE claim (not "변동 없음")
@@ -266,13 +267,38 @@ export async function runArchitecture(args: string[]): Promise<number> {
         return 0;
       }
     }
+    // LEG 2 — RESULT signal (output-based). The diff leg below is blind to the case that
+    // matters most for a design tree: a turn where an experiment/bench RESULT lands with ZERO
+    // local code change (remote run finished · numbers read off a board) — clean tree ⇒ the
+    // diff leg no-ops ⇒ the turn closes on "변동 없음" and the result never reaches the SSOT.
+    // Same shape as convergence/gate stop-check: WIDE keyword net over the agent's OWN last
+    // message (config/result-signals.json · per-repo .harness/result-signals.json), precision
+    // in the agent (the marker), per-signal nudge state so a dismissal never re-fires.
+    const resultSignal = ((): string | undefined => {
+      const { patterns } = loadResultSignals();
+      if (!patterns?.length) return undefined; // no file → leg inert, stop-check = diff-only
+      const hay = text.toLowerCase();
+      const seen = nudgedSignals(transcript, RESULT_NUDGE_STATE);
+      return patterns.find((p) => hay.includes(p.toLowerCase()) && !seen.has(p));
+    })();
+    if (resultSignal && hasMarker) {
+      // accounted (verified 갱신, or an explicit 변동 없음) → consume this signal for the session
+      const seen = nudgedSignals(transcript, RESULT_NUDGE_STATE);
+      seen.add(resultSignal);
+      markNudged(transcript, seen, RESULT_NUDGE_STATE);
+    }
     if (hasMarker) return 0; // a design-report line is present (verified 갱신, or 변동 없음) → ok
     const DESIGN_RELEVANT =
       /(\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|c|h|cpp|hpp|cc|java|kt|swift|rb|php|sh|hexa)$)|(^|\/)ARCHITECTURE\.json$/i;
-    if (!changed.split("\n").some((f) => DESIGN_RELEVANT.test(f.trim()))) return 0; // no code/arch change → ok
-    const reason =
-      "이번 턴 코드·구조 변경(working tree 미커밋)이 있는데 응답에 `🏛️ ARCHITECTURE` 보고가 없다 — 설계가 바뀌었으면 ARCHITECTURE.json 해당 노드를 제자리 갱신하고 " +
-      "`🏛️ ARCHITECTURE 갱신: <무엇을>` 로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수 · commons cycle-docs-pr).";
+    const codeChanged = changed.split("\n").some((f) => DESIGN_RELEVANT.test(f.trim()));
+    if (!codeChanged && !resultSignal) return 0; // neither code/arch change nor a result signal → ok
+    const reason = codeChanged
+      ? "이번 턴 코드·구조 변경(working tree 미커밋)이 있는데 응답에 `🏛️ ARCHITECTURE` 보고가 없다 — 설계가 바뀌었으면 ARCHITECTURE.json 해당 노드를 제자리 갱신하고 " +
+        "`🏛️ ARCHITECTURE 갱신: <무엇을>` 로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수 · commons cycle-docs-pr)."
+      : `실험·벤치 결과 신호 "${resultSignal}" 를 렌더했는데 응답에 \`🏛️ ARCHITECTURE\` 보고가 없다 (코드 변경이 0 이어도 결과-턴은 갱신 트리거다) — ` +
+        (loadResultSignals().hint ??
+          "`sidecar architecture search <실험/게이트>` 로 해당 노드를 찾아 그 결과·verdict 를 update-in-place 로 제자리 갱신하라 (별도 report/summary 로 흩지 말 것 · commons single-doc).") +
+        " 그런 다음 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 결과가 설계에 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수).";
     process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
     return 0;
   }
@@ -458,6 +484,21 @@ const NUDGE_STATE = resolve(LOG_DIR, "convergence-nudge.json");
 // gate-stop-check keeps a SEPARATE per-signal nudge state so a convergence dismissal never
 // consumes a gate-verdict challenge (or vice-versa).
 const GATE_NUDGE_STATE = resolve(LOG_DIR, "gate-nudge.json");
+// stop-check's RESULT leg gets its own state for the same reason — an experiment-result
+// challenge and a convergence/gate one are different questions about the same turn.
+const RESULT_NUDGE_STATE = resolve(LOG_DIR, "result-nudge.json");
+
+// Experiment/bench/measurement RESULT signals — the output-based (2nd) trigger leg of
+// `architecture stop-check`, which the git-diff leg structurally cannot see: a result-turn
+// often changes NO local file (remote run · numbers off a board), so the design tree would
+// silently never learn the result. Data-driven like the convergence/gate signal sets.
+function loadResultSignals(): ConvergenceTriggers {
+  try {
+    return JSON.parse(readFileSync(resolveRuleFile("result-signals.json", "result-signals.json"), "utf8")) as ConvergenceTriggers;
+  } catch {
+    return {};
+  }
+}
 
 // Which signals already nudged in THIS session (transcript), for the given state file. Reset
 // when the transcript changes (= new session). Per-signal so a broad false positive doesn't

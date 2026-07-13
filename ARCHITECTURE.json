@@ -609,7 +609,13 @@
                     "name": "leg2 — result (실험·벤치 결과)",
                     "role": "결과-턴은 로컬 코드변경 0 이어도 트리거",
                     "id": "guard-arch-stop-leg-result",
-                    "detail": "응답의 결과신호(config/result-signals.json · `.harness/` 오버라이드) 매칭 시 발화 — 원격런 종료·보드에서 읽은 수치처럼 diff 가 0 인 결과-턴은 leg1 이 구조적으로 못 봐 결과가 SSOT 에 영영 안 들어가던 누수를 막는다. 넓은 키워드 그물 + 정밀도는 에이전트 마커. 신호별 1회(result-nudge.json) · 마커=신호 소비."
+                    "detail": "응답의 결과신호(config/result-signals.json · `.harness/` 오버라이드) 매칭 시 발화 — 원격런 종료·보드에서 읽은 수치처럼 diff 가 0 인 결과-턴은 leg1 이 구조적으로 못 봐 결과가 SSOT 에 영영 안 들어가던 누수를 막는다. 넓은 키워드 그물 + 정밀도는 에이전트 마커. 신호별 1회(result-nudge.json) · 마커=신호 소비. 매칭=공용 findSignal."
+                  },
+                  {
+                    "name": "findSignal (공용 신호 매처)",
+                    "role": "3개 Stop 스캐너(convergence·gate·result)의 단일 매칭 SSOT",
+                    "id": "guard-arch-find-signal",
+                    "detail": "패턴 substring(case-insens) 매칭 + 이미 회계된 신호 skip + **따옴표/백틱 감싼 occurrence = 메타-언급으로 skip**(goal-guard `isQuotedMention` 재사용) — 게이트를 문서/설명하는 응답이 자기 자신을 발화시키던 오탐(예: 설명문의 `META-LAW` 인용)을 막는다. 세 스캐너가 각자 find() 를 굴리면 정밀도가 갈라지므로 하나로 고정."
                   }
                 ]
               },

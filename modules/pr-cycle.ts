@@ -158,7 +158,52 @@ export async function runPrCycle(args: string[]): Promise<number> {
   let mi = 0;
   let merged = false;
   let lastOut = "";
+
+  // A PR is green when EVERY check concluded green — not when the repo's REQUIRED
+  // subset did. Branch protection only guards its required list, and `--admin`
+  // bypasses even that, so this is the only thing standing between a RED PR and
+  // the default branch. Measured 2026-07-13: hexa-lang #4930 landed with 15 RED
+  // gates (byte-eq + faithful-nobaseline on all three targets, own-link,
+  // cfallback-zero) purely because the one required check, selfhost-gates-summary,
+  // was green — and it broke main's build (aprime_cc FATAL). Release integrity
+  // outranks merge convenience: RED refuses outright, PENDING waits.
+  const rollup = async (): Promise<{ failed: string[]; pending: number }> => {
+    const r = await git(
+      `gh pr view ${b} --json statusCheckRollup --jq '[.statusCheckRollup[]? | ((.conclusion // "PENDING") + "|" + (.name // .context // "?"))] | join(";;")'`,
+    );
+    // Can't read the rollup -> treat as pending and retry; never as permission to merge.
+    if (r.code !== 0) return { failed: [], pending: 1 };
+    const failed: string[] = [];
+    let pending = 0;
+    for (const e of r.out.split(";;").map((s) => s.trim()).filter(Boolean)) {
+      const i = e.indexOf("|");
+      const c = e.slice(0, i);
+      const name = e.slice(i + 1);
+      if (c === "SUCCESS" || c === "NEUTRAL" || c === "SKIPPED") continue;
+      // A still-running check reports conclusion "" (EMPTY, not null) — so jq's
+      // `// "PENDING"` fallback never fires for it. Anything unconcluded is
+      // pending: mistaking it for a failure would refuse every PR whose CI is
+      // merely still in flight.
+      if (c === "" || c === "PENDING") pending++;
+      else failed.push(`${c}  ${name}`);
+    }
+    return { failed, pending };
+  };
+
   for (let attempt = 0; attempt < 12 && !merged; attempt++) {
+    const g = await rollup();
+    if (g.failed.length > 0) {
+      loudFail(`pr-cycle: CI RED — 머지 거부 (${g.failed.length}개 체크 실패)`);
+      for (const f of g.failed.slice(0, 10)) info(`    ✗ ${f}`);
+      if (g.failed.length > 10) info(`    … +${g.failed.length - 10}건`);
+      info("   RED 를 고치고 다시 실행하세요 (릴리스 무결성 — required 체크만 초록이어도 머지 금지).");
+      return 1;
+    }
+    if (g.pending > 0) {
+      info(`  ⏳ CI 진행중 (${g.pending}건 대기) — 20s 후 재확인 (${attempt + 1}/12)`);
+      await execShell("sleep 20");
+      continue;
+    }
     const m = await git(`gh pr merge ${b} ${methods[mi]} --admin --delete-branch`);
     lastOut = m.out;
     if (m.code === 0) {

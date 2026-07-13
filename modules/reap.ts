@@ -90,7 +90,19 @@ async function checksGreen(prNumber: number): Promise<boolean> {
 // obstacle is a base-branch policy (e.g. anima requires 1 approving review —
 // unsatisfiable on own PRs) and the checks are green, retry with --admin: the
 // review policy is bypassed, the CI validation is not.
+//
+// The green gate lives HERE, not in the repo's branch protection. Protection only
+// enforces its REQUIRED subset, so a PR is happily MERGEABLE with every gate
+// outside that subset RED — and gh merges it without a murmur. Measured
+// 2026-07-13: hexa-lang #4930 was harvested with 15 failing checks (byte-eq +
+// faithful-nobaseline on all three targets, own-link, cfallback-zero) because the
+// one required check, selfhost-gates-summary, happened to be green; it landed a
+// codegen flip that broke main's build (aprime_cc FATAL). Trusting protection to
+// be the gate is what let that through, so reap checks the FULL rollup itself.
 async function mergeStale(prNumber: number): Promise<{ ok: boolean; detail: string }> {
+  if (!(await checksGreen(prNumber))) {
+    return { ok: false, detail: "CI 미그린 — 필수체크만 초록이고 나머지가 RED/PENDING (수확 보류)" };
+  }
   const mr = await git(`gh pr merge ${prNumber} --squash --delete-branch`);
   if (mr.code === 0) return { ok: true, detail: "" };
   if (await mergedDespiteLocalError(prNumber, mr.out)) return { ok: true, detail: "merged (로컬 브랜치 삭제만 스킵 — 워크트리 점유)" };

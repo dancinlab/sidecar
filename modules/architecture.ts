@@ -7,11 +7,9 @@
 //
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
-import { readStdin, execShell } from "../lib/exec.ts";
-import { resolveRuleFile, config } from "../lib/config.ts";
-import { lastAssistantText } from "./recommend.ts";
-import { isQuotedMention } from "./goal-guard.ts";
+import { REPO_ROOT } from "../lib/paths.ts";
+import { readStdin } from "../lib/exec.ts";
+import { config } from "../lib/config.ts";
 import { emitInject } from "../lib/inject.ts";
 import { info, ok, loudFail, warn } from "../lib/log.ts";
 
@@ -25,13 +23,16 @@ const CAP = 12_000;
 
 // Repo-root design SSOT, JSON tree preferred over prose (c4 — JSON = AI/tool
 // parse target). Returns null when the repo ships neither.
-function pick(): { path: string; rel: string } | null {
+export function designSsot(): { path: string; rel: string } | null {
   for (const rel of ["ARCHITECTURE.json", "ARCHITECTURE.md"]) {
     const p = resolve(REPO_ROOT, rel);
     if (existsSync(p)) return { path: p, rel };
   }
   return null;
 }
+
+// internal shorthand — the design SSOT is looked up all over this module.
+const pick = designSsot;
 
 type TNode = {
   // English keys are canonical; the Korean/`slug` aliases are legacy and still READ
@@ -103,7 +104,11 @@ export async function runArchitecture(args: string[]): Promise<number> {
 
   if (sub === "convergence") return convergenceVerb(args.slice(1));
   if (sub === "result" || sub === "results") return resultVerb(args.slice(1));
-  if (sub === "gate-stop-check") return gateStopCheck();
+  // tombstone — `stop-check` and `gate-stop-check` are superseded by the ONE `turn-close check`
+  // trio gate. Kept as SILENT no-ops for one release so a stale ~/.claude/settings.json (not yet
+  // re-run through `install-hooks`) does not spew a Stop-hook error every turn. Drop once the
+  // fleet has re-installed hooks.
+  if (sub === "stop-check" || sub === "gate-stop-check") return 0;
 
   if (sub === "show") {
     if (!found) {
@@ -148,13 +153,11 @@ export async function runArchitecture(args: string[]): Promise<number> {
       "⚠️ 현재상태 스냅샷이지 이력 로그 아님 — 변경 시 해당 노드를 제자리 교체(update-in-place)하고 옛 서술은 지운다. " +
       "트리에 변경이력·버전·날짜·`previous`/`이전엔…`/`deprecated` 노드 금지 (이력은 CHANGELOG + git · commons c4).";
     const note = `설계 SSOT 스켈레톤 (전체는 ${found.rel} · 코드/설계 변경 시 lockstep 갱신 · commons c4·c14). ${snapshot}`;
-    // Turn-close gate placed AFTER the skeleton (recency = most-attended) so the
-    // model updates+reports when it touches design, not only when asked.
-    // (recurrence learning ARCH_INJECT_IGNORED → ARCHITECTURE.json convergence array.)
+    // The turn-close TRIO directive (all three legs together) now rides `turn-close inject`,
+    // per-turn; this session-scoped inject keeps only the one-line design pointer so the tree
+    // and the gate guarding it never drift apart.
     const gate =
-      "🏛️ 턴 마감 게이트 (코드·구조 변경 **또는 실험·벤치·측정 결과** 시 필수 · Stop 게이트 강제) — 이번 턴에 코드·구조·데이터흐름을 바꿨거나 **실험/벤치 결과가 나왔으면** (결과-턴은 코드 변경 0 이어도 트리거) **지금** ARCHITECTURE.json 의 해당 노드를 제자리 교체(update-in-place)하고 " +
-      "응답에 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 — 미커밋 코드/ARCHITECTURE 변경 또는 결과-신호가 있으면 둘 중 하나 필수 (`architecture stop-check` 가 누락 시 차단). " +
-      "갱신 = 해당 노드 role/detail/children 을 실제 재작성 (한 단어 수정·빈 재스테이징은 갱신 아님) · `갱신` 주장은 diff 에서 ARCHITECTURE.json 실변경 여부로 검증된다(위조 차단).";
+      "🏛️ 설계·구조 변경 · 게이트 verdict · 실험/벤치 결과 → ARCHITECTURE.json 해당 노드를 제자리 교체(update-in-place · 한 단어 수정·빈 재스테이징은 갱신 아님) 후 턴 마감 트리오의 `🏛️ ARCHITECTURE 갱신: <무엇을>` 줄로 보고 (`turn-close check` 강제 · 갱신 주장은 diff 로 검증).";
     const fence = isJson ? "" : `\n\n\`\`\`${lang}\n${body}\n\`\`\``;
     const ctx = isJson
       ? `🏛️ ARCHITECTURE — ${found.rel} (${note})\n\n${body}\n\n${pointer}\n${gate}`
@@ -237,93 +240,8 @@ export async function runArchitecture(args: string[]): Promise<number> {
     return 0;
   }
 
-  // stop-check (Stop hook) — design-report enforce. CONDITIONAL (unlike `ing stop-check`,
-  // which is every-turn): design rarely changes, so this fires ONLY when the working tree
-  // has uncommitted code/ARCHITECTURE changes AND the response carries no `🏛️ ARCHITECTURE`
-  // line — forcing the agent to update the design tree (or affirm `🏛️ ARCHITECTURE: 변동 없음`)
-  // before ending a turn that touched code/structure (catches code↔ARCHITECTURE drift,
-  // commons cycle-docs-pr). Clean tree (read-only turn) → no-op. Gated on ARCHITECTURE.json
-  // presence (the design SSOT it protects), not on harness.config.json.
-  if (sub === "stop-check") {
-    let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
-    try {
-      payload = JSON.parse(readStdin());
-    } catch {
-      return 0;
-    }
-    if (payload?.stop_hook_active) return 0; // already nudged this chain
-    if (!pick()) return 0; // gate on the design SSOT itself — no ARCHITECTURE.json ⇒ nothing to drift from (and the "update it" nag would be nonsensical). Auto-activates the moment a repo grows one, no harness.config.json needed.
-    const tp = payload?.transcript_path ?? payload?.transcriptPath;
-    if (!tp) return 0;
-    const transcript = String(tp);
-    const text = lastAssistantText(transcript);
-    if (!text) return 0;
-    const hasMarker = /🏛️\s*ARCHITECTURE/.test(text);
-    const claimsUpdate = /🏛️\s*ARCHITECTURE\s*갱신/.test(text); // "갱신: <무엇을>" — an explicit UPDATE claim (not "변동 없음")
-    // deterministic per-turn trigger: uncommitted code/ARCHITECTURE changes in the tree.
-    let changed = "";
-    try {
-      changed = (await execShell("git diff --name-only && git diff --cached --name-only", { cwd: REPO_ROOT })).stdout;
-    } catch {
-      return 0;
-    }
-    // Case B — 갱신 forgery: the reply CLAIMS `🏛️ ARCHITECTURE 갱신` but ARCHITECTURE.json is
-    //   NOWHERE in the turn's git footprint (working diff · staged · the just-made commit). The
-    //   marker gate was presence-only, so "갱신: X" with zero JSON change passed = self-report
-    //   forgery (commons verify-done bans LLM self-judging). Reconcile the CLAIM against the diff.
-    //   The last-commit leg keeps this false-positive-averse in the isolated-worktree/ship flow:
-    //   an agent that updated the tree AND already merged mid-turn passes via the merge commit's files.
-    if (claimsUpdate) {
-      let lastCommit = "";
-      try {
-        lastCommit = (await execShell("git log -1 --name-only --pretty=format:", { cwd: REPO_ROOT })).stdout;
-      } catch {
-        lastCommit = "";
-      }
-      const footprint = new Set([...changed.split("\n"), ...lastCommit.split("\n")].map((f) => f.trim()).filter(Boolean));
-      if (!footprint.has("ARCHITECTURE.json")) {
-        const reason =
-          "`🏛️ ARCHITECTURE 갱신` 을 주장했는데 ARCHITECTURE.json 실변경이 없다 (working tree·staged·직전 커밋 모두 미포함) — " +
-          "마커만 쓰는 위조 금지(commons verify-done). 해당 노드를 실제로 update-in-place 갱신한 뒤 다시 보고하거나, 설계영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 으로 정정하라.";
-        process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
-        return 0;
-      }
-    }
-    // LEG 2 — RESULT signal (output-based). The diff leg below is blind to the case that
-    // matters most for a design tree: a turn where an experiment/bench RESULT lands with ZERO
-    // local code change (remote run finished · numbers read off a board) — clean tree ⇒ the
-    // diff leg no-ops ⇒ the turn closes on "변동 없음" and the result never reaches the SSOT.
-    // Same shape as convergence/gate stop-check: WIDE keyword net over the agent's OWN last
-    // message (config/result-signals.json · per-repo .harness/result-signals.json), precision
-    // in the agent (the marker), per-signal nudge state so a dismissal never re-fires.
-    const resultSignal = ((): string | undefined => {
-      const { patterns } = loadResultSignals();
-      if (!patterns?.length) return undefined; // no file → leg inert, stop-check = diff-only
-      return findSignal(text, patterns, nudgedSignals(transcript, RESULT_NUDGE_STATE));
-    })();
-    if (resultSignal && hasMarker) {
-      // accounted (verified 갱신, or an explicit 변동 없음) → consume this signal for the session
-      const seen = nudgedSignals(transcript, RESULT_NUDGE_STATE);
-      seen.add(resultSignal);
-      markNudged(transcript, seen, RESULT_NUDGE_STATE);
-    }
-    if (hasMarker) return 0; // a design-report line is present (verified 갱신, or 변동 없음) → ok
-    const DESIGN_RELEVANT =
-      /(\.(ts|tsx|js|jsx|mjs|cjs|py|rs|go|c|h|cpp|hpp|cc|java|kt|swift|rb|php|sh|hexa)$)|(^|\/)ARCHITECTURE\.json$/i;
-    const codeChanged = changed.split("\n").some((f) => DESIGN_RELEVANT.test(f.trim()));
-    if (!codeChanged && !resultSignal) return 0; // neither code/arch change nor a result signal → ok
-    const reason = codeChanged
-      ? "이번 턴 코드·구조 변경(working tree 미커밋)이 있는데 응답에 `🏛️ ARCHITECTURE` 보고가 없다 — 설계가 바뀌었으면 ARCHITECTURE.json 해당 노드를 제자리 갱신하고 " +
-        "`🏛️ ARCHITECTURE 갱신: <무엇을>` 로, 설계 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수 · commons cycle-docs-pr)."
-      : `실험·벤치 결과 신호 "${resultSignal}" 를 렌더했는데 응답에 \`🏛️ ARCHITECTURE\` 보고가 없다 (코드 변경이 0 이어도 결과-턴은 갱신 트리거다) — ` +
-        (loadResultSignals().hint ??
-          "`sidecar architecture search <실험/게이트>` 로 해당 노드를 찾아 그 결과·verdict 를 update-in-place 로 제자리 갱신하라 (별도 report/summary 로 흩지 말 것 · commons single-doc).") +
-        " 그런 다음 `🏛️ ARCHITECTURE 갱신: <무엇을>` 한 줄로, 결과가 설계에 영향이 없으면 `🏛️ ARCHITECTURE: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수).";
-    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
-    return 0;
-  }
 
-  process.stdout.write("usage: sidecar architecture {inject|show|search <q>|lint|stop-check|convergence {list|add|rm|edit}}\n");
+  process.stdout.write("usage: sidecar architecture {inject|show|search <q>|lint|convergence {list|add|rm|edit}}\n");
   return 1;
 }
 
@@ -373,7 +291,7 @@ function detectJsonIndent(raw: string): number {
 
 async function convergenceVerb(args: string[]): Promise<number> {
   const verb = args[0] ?? "list";
-  if (verb === "stop-check") return convergenceStopCheck();
+  if (verb === "stop-check") return 0; // tombstone — superseded by `turn-close check` (see above)
   const records = loadConvergence();
 
   if (verb === "list") {
@@ -464,215 +382,8 @@ async function convergenceVerb(args: string[]): Promise<number> {
     return 0;
   }
 
-  info("usage: sidecar architecture convergence {list|for <file>|add --source <f> --value <v> [--state|--threshold|--new]|rm <id>|edit <id> [--state|--value|--threshold|--source]|stop-check}");
+  info("usage: sidecar architecture convergence {list|for <file>|add --source <f> --value <v> [--state|--threshold|--new]|rm <id>|edit <id> [--state|--value|--threshold|--source]}");
   return 1;
-}
-
-// --- convergence stop-check: agent-OUTPUT recurrence trigger (Stop hook) -------
-// The trigger scans the AI agent's OWN last message (NOT the user prompt) for
-// recurrence-signal words; when the agent itself reports a recurring defect /
-// regression / crash-class signal, it nudges to record the root-cause learning
-// into ARCHITECTURE.json `convergence.records[]` (root-cause). The keyword is a
-// WIDE net, not the decision — a match only re-prompts; the AGENT judges whether
-// it's a real recurrence (records) or a passing mention / false positive (just
-// stops). So broad patterns are fine: precision lives in the agent, not the list.
-// Patterns live as DATA (config/convergence-triggers.json · per-repo override at
-// .harness/convergence-triggers.json) — the engine never hardcodes them.
-// Reads the Stop stdin payload, pulls the last assistant text, and on a hit ENFORCES
-// (config.convergenceEnforce, default on): if the response carries no `🧬 CONVERGENCE`
-// accounting marker it emits decision:block, demanding the agent either record the
-// learning (`🧬 CONVERGENCE 기록: <id>`) or dismiss it (`🧬 CONVERGENCE: 해당 없음`) —
-// the same response-marker gate as the ing/architecture Stop checks. stop_hook_active
-// bounds it to one block per stop-chain (anti-wedge). With enforce off it degrades to
-// the legacy non-blocking stderr warn. The marker, once present, consumes the signal
-// (keyed PER DISTINCT MATCHED SIGNAL) so it never re-fires. IO/parse failure = no-op.
-interface ConvergenceTriggers {
-  patterns?: string[];
-  hint?: string;
-}
-
-function loadTriggers(): ConvergenceTriggers {
-  const file = resolveRuleFile("convergence-triggers.json", "convergence-triggers.json");
-  try {
-    return JSON.parse(readFileSync(file, "utf8")) as ConvergenceTriggers;
-  } catch {
-    return {};
-  }
-}
-
-const NUDGE_STATE = resolve(LOG_DIR, "convergence-nudge.json");
-// gate-stop-check keeps a SEPARATE per-signal nudge state so a convergence dismissal never
-// consumes a gate-verdict challenge (or vice-versa).
-const GATE_NUDGE_STATE = resolve(LOG_DIR, "gate-nudge.json");
-// stop-check's RESULT leg gets its own state for the same reason — an experiment-result
-// challenge and a convergence/gate one are different questions about the same turn.
-const RESULT_NUDGE_STATE = resolve(LOG_DIR, "result-nudge.json");
-
-// Experiment/bench/measurement RESULT signals — the output-based (2nd) trigger leg of
-// `architecture stop-check`, which the git-diff leg structurally cannot see: a result-turn
-// often changes NO local file (remote run · numbers off a board), so the design tree would
-// silently never learn the result. Data-driven like the convergence/gate signal sets.
-function loadResultSignals(): ConvergenceTriggers {
-  try {
-    return JSON.parse(readFileSync(resolveRuleFile("result-signals.json", "result-signals.json"), "utf8")) as ConvergenceTriggers;
-  } catch {
-    return {};
-  }
-}
-
-// Which signals already nudged in THIS session (transcript), for the given state file. Reset
-// when the transcript changes (= new session). Per-signal so a broad false positive doesn't
-// burn the nudge budget for a different, real signal later in the session.
-function nudgedSignals(transcript: string, stateFile: string = NUDGE_STATE): Set<string> {
-  try {
-    const j = JSON.parse(readFileSync(stateFile, "utf8")) as { transcript?: string; seen?: string[] };
-    if (j.transcript === transcript) return new Set(j.seen ?? []);
-  } catch {
-    /* no state yet → nothing nudged */
-  }
-  return new Set();
-}
-
-// The ONE signal matcher every Stop-gate scanner here uses (convergence · gate · result), so
-// their precision never drifts apart. Returns the first pattern that occurs in the agent's own
-// text as a LIVE signal and has not already been accounted-for this session.
-// A quote/backtick-wrapped occurrence is a META-mention — a reply that DISCUSSES a signal
-// (guard docs, "`META-LAW` 같은 토큰만 잡는다", a changelog line) is not the agent reporting one.
-// Same isQuotedMention skip goal-guard uses for `잔여`/`infra` (single SSOT · convergence
-// goal-guard-ts-1: common-word signals need narrow AND-matching or they false-fire on their
-// own documentation). Case-insensitive; the quote check indexes the ORIGINAL text.
-function findSignal(text: string, patterns: string[], seen: Set<string>): string | undefined {
-  const hay = text.toLowerCase();
-  for (const p of patterns) {
-    if (seen.has(p)) continue;
-    const needle = p.toLowerCase();
-    if (!needle) continue;
-    for (let i = hay.indexOf(needle); i !== -1; i = hay.indexOf(needle, i + needle.length)) {
-      if (isQuotedMention(text, i, needle.length)) continue; // meta-mention → not a live signal
-      return p;
-    }
-  }
-  return undefined;
-}
-
-function markNudged(transcript: string, seen: Set<string>, stateFile: string = NUDGE_STATE): void {
-  try {
-    writeFileSync(stateFile, JSON.stringify({ transcript, seen: [...seen] }) + "\n");
-  } catch {
-    /* best-effort — a missed mark only risks one extra nudge next turn */
-  }
-}
-
-// --- gate-stop-check: verdict-output → DIRECT in-tree type:"gate" node update (Stop hook) -----
-// Enforce direct-update induction (NOT an auto-store): when the agent's own last message reports
-// a research/gate verdict signal (config/gate-signals.json · per-repo .harness/gate-signals.json)
-// but carries no `🔬 GATE` accounting line, BLOCK — demanding the agent DIRECTLY update the
-// matching `type:"gate"` node's verdict in ARCHITECTURE.json (검토후 update-in-place, no separate
-// store) then report `🔬 GATE 갱신: <gate-id>` (or dismiss `🔬 GATE: 해당 없음`). Mirrors
-// convergenceStopCheck: WIDE keyword net, precision in the agent (the marker); per-signal nudge
-// (once per session) · stop_hook_active bound (anti-wedge). No signals file → inert no-op.
-const GATE_MARKER = /🔬\s*GATE/i;
-
-function loadGateSignals(): ConvergenceTriggers {
-  try {
-    return JSON.parse(readFileSync(resolveRuleFile("gate-signals.json", "gate-signals.json"), "utf8")) as ConvergenceTriggers;
-  } catch {
-    return {};
-  }
-}
-
-function gateStopCheck(): number {
-  let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
-  try {
-    payload = JSON.parse(readStdin());
-  } catch {
-    return 0;
-  }
-  if (!pick()) return 0; // no ARCHITECTURE.json → no typed tree to update
-  const tp = payload?.transcript_path ?? payload?.transcriptPath;
-  if (!tp) return 0;
-  const transcript = String(tp);
-  const text = lastAssistantText(transcript);
-  if (!text) return 0;
-  const { patterns, hint } = loadGateSignals();
-  if (!patterns?.length) return 0;
-  const seen = nudgedSignals(transcript, GATE_NUDGE_STATE);
-  const matched = findSignal(text, patterns, seen);
-  if (!matched) return 0;
-  // ACCOUNTED: the marker is present (updated or dismissed) → consume the signal, pass.
-  if (GATE_MARKER.test(text)) {
-    seen.add(matched);
-    markNudged(transcript, seen, GATE_NUDGE_STATE);
-    return 0;
-  }
-  const reason =
-    `게이트/verdict 신호 "${matched}" 를 렌더했는데 응답에 \`🔬 GATE\` 계정 줄이 없다 — ` +
-    (hint ??
-      "이 verdict 는 별도 store 가 아니라 ARCHITECTURE.json 의 해당 `type:\"gate\"` 노드에 직접 들어가야 한다. `sidecar architecture search <gate>` 로 그 노드를 찾아 `verdict` 필드를 update-in-place(검토후 직접 갱신)하라.") +
-    " 그런 다음 응답에 `🔬 GATE 갱신: <gate-id>` 한 줄로, 게이트 verdict 가 아니면 `🔬 GATE: 해당 없음` 한 줄로 명시하라 (둘 중 하나 필수).";
-  if (!payload?.stop_hook_active) {
-    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
-  }
-  return 0;
-}
-
-// The `🧬 CONVERGENCE` accounting marker — the agent's per-signal acknowledgement,
-// either a record id (`🧬 CONVERGENCE 기록: <id>`) or an explicit dismissal
-// (`🧬 CONVERGENCE: 해당 없음`). Same response-marker enforcement shape as the
-// `🔄 ING` / `🏛️ ARCHITECTURE` Stop gates.
-const CONVERGENCE_MARKER = /🧬\s*CONVERGENCE/i;
-
-function convergenceStopCheck(): number {
-  let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
-  try {
-    payload = JSON.parse(readStdin());
-  } catch {
-    return 0;
-  }
-  const tp = payload?.transcript_path ?? payload?.transcriptPath;
-  if (!tp) return 0;
-  const transcript = String(tp);
-  const text = lastAssistantText(transcript);
-  if (!text) return 0;
-
-  const { patterns, hint } = loadTriggers();
-  if (!patterns?.length) return 0;
-  const seen = nudgedSignals(transcript);
-  // First recurrence signal that matched AND hasn't already been accounted-for this
-  // session — a dismissed false positive doesn't suppress a different, real signal later.
-  const matched = findSignal(text, patterns, seen);
-  if (!matched) return 0;
-
-  // ACCOUNTED: the response already carries the marker (recorded or dismissed). Consume
-  // the signal so it never re-fires — even on a stop_hook_active re-prompt, so the marker
-  // the agent just added in response to a block is what clears it. Pass.
-  if (CONVERGENCE_MARKER.test(text)) {
-    seen.add(matched);
-    markNudged(transcript, seen);
-    return 0;
-  }
-
-  const reason =
-    `재발 신호 "${matched}" 감지 — 응답에 \`🧬 CONVERGENCE\` 계정 줄이 없다. 진짜 재발(첫 발생 아님)이면 ` +
-    (hint ??
-      "그 학습을 ARCHITECTURE.json `convergence.records[]` 한곳에 기록하라 — 먼저 `sidecar architecture convergence for <원인파일>` 로 그 파일의 기존 학습을 꺼내 보고: 같은 결함의 재발/연장이면 `sidecar architecture convergence edit <id> --value … [--threshold …]` 로 그 레코드를 갱신(중복 누적 금지), 정말 새 학습이면 `sidecar architecture convergence add --source <원인파일> --value \"<핵심>\" --threshold \"<재발조건/해결>\"` (id 자동 부여 · 파일 터치 시 자동 표면화 · commons root-cause).") +
-    " 그런 다음 응답에 `🧬 CONVERGENCE 기록: <ID>` 한 줄로, 첫 발생·오탐이면 `🧬 CONVERGENCE: 해당 없음` 한 줄로 명시하라 (둘 중 하나 필수).";
-
-  // ENFORCE (config.convergenceEnforce, default on) — BLOCK until the marker appears.
-  // stop_hook_active bounds it to ONE block per stop-chain (anti-wedge, like
-  // architecture stop-check); legacy advisory warn-only when enforce is off.
-  if (config().convergenceEnforce && !payload?.stop_hook_active) {
-    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
-    return 0;
-  }
-  warn(`[convergence] ${reason} (advisory · 같은 신호는 세션당 1회.)`);
-  // advisory path consumes the signal (warn-once); enforce path leaves it unseen so a
-  // fresh chain re-blocks until the marker is supplied.
-  if (!config().convergenceEnforce) {
-    seen.add(matched);
-    markNudged(transcript, seen);
-  }
-  return 0;
 }
 
 // architecture lint - c4 tree_convention enforcement.
@@ -864,7 +575,7 @@ export function nextConvergenceId(source: string, existing: Set<string>): string
   }
 }
 
-function loadConvergence(): ConvergenceRecord[] {
+export function loadConvergence(): ConvergenceRecord[] {
   const found = pick();
   if (!found || !found.rel.endsWith(".json")) return [];
   try {
@@ -908,14 +619,14 @@ export function convergenceForFile(file: string): string {
 }
 
 // --- results store: DISCARDED (owner decision) — experiment/bench verdicts go DIRECTLY into the
-// ARCHITECTURE.json `type:"gate"` node's `verdict` field (update-in-place, enforced by gate-stop-check),
+// ARCHITECTURE.json `type:"gate"` node's `verdict` field (update-in-place, enforced by the turn-close trio gate),
 // NOT a separate accumulation store (it duplicated HYPOTHESES.jsonl + drifted). The `result` verb is a
 // tombstone that refuses and redirects, so no session re-populates the removed store.
 async function resultVerb(_args: string[]): Promise<number> {
   loudFail(
     "architecture result: the separate result store is DISCARDED. 실험/벤치 verdict 는 별도 store 가 아니라 " +
       'ARCHITECTURE.json 의 해당 `type:"gate"` 노드 `verdict` 를 직접 update-in-place 하라 ' +
-      "(`sidecar architecture search <gate>` 로 노드 찾기 → Edit). gate-stop-check 가 이를 강제한다.",
+      "(`sidecar architecture search <gate>` 로 노드 찾기 → Edit). 턴 마감 트리오의 🏛️ 줄(`turn-close check`)이 이를 강제한다.",
   );
   return 1;
 }

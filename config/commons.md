@@ -55,7 +55,7 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - dont: Raw curl/manual runpod/vast/train scripts · reinvent when a native primitive exists · needless wrapper/shim/shadow/fork · stale submodule binaries (`@root-cause-ok`)
 
 ## cycle-docs-pr
-- do: Each cycle: docs (CHANGELOG + ARCHITECTURE/ING · README if touched) → merge verified main `sidecar pr-cycle` · report `🏛️ ARCHITECTURE`/`🔄 ING` · branch off latest base
+- do: Each cycle: docs (CHANGELOG + ARCHITECTURE/ING · README if touched) → merge verified main `sidecar pr-cycle` · report the trio (`🔄 ING`·`🏛️ ARCHITECTURE`·`🧬 CONVERGENCE`) · branch off latest base
 - dont: Piling commits without merging · merging without docs (`--no-doc` only if truly N/A) · ending a turn with staged uncommitted
 
 ## no-unsolicited-paper

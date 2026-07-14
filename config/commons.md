@@ -19,7 +19,7 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - dont: Scattered `*-report/summary/notes` · piling history/versions/dates/`previously`/`deprecated` in the tree/README · many facts in one cell (split to child nodes)
 
 ## preserve-state
-- do: All work outputs (experiments·benches·verdicts·scratch) flat in one git-tracked repo-root `state/`, committed
+- do: All work outputs (experiments·benches·verdicts·scratch) flat in one git-tracked repo-root `{scratchDir}/`, committed
 - dont: Leaving only in `/tmp` · new dirs like `scripts/scratch`·`.verdicts`·`bench`
 
 ## folder-docs

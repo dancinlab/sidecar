@@ -27,10 +27,13 @@ function claudeMdExempt(): Set<string> {
   return new Set(secs.map((s) => s.replace(/^#+\s*/, "").split("—")[0].trim().toLowerCase()));
 }
 
+// `{scratchDir}` in the rule text resolves from docs.scratchDir, so a repo that
+// relocates (or forbids) the default `state/` root is not handed a governance rule
+// that contradicts its own config every turn.
 function body(): string {
   const f = resolveRuleFile(".harness/commons.md", "commons.md");
   try {
-    return readFileSync(f, "utf8");
+    return readFileSync(f, "utf8").replaceAll("{scratchDir}", config().docs.scratchDir);
   } catch {
     return "";
   }

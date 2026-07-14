@@ -43,25 +43,43 @@ type TNode = {
   이름?: string; // legacy alias of name
   역할?: string; // legacy alias of role
   상세?: string; // legacy alias of detail
+  value?: string; // alias of detail — the body text key several trees use
   slug?: string; // legacy alias of id
   children?: TNode[];
   [k: string]: unknown;
 };
 
-// Field readers — canonical English key first, legacy alias as fallback.
-const nodeKey = (n: TNode): string | undefined => n.id ?? n.slug; // stable searchable key
-const nodeName = (n: TNode): string | undefined => n.name ?? n.이름;
-const nodeRole = (n: TNode): string | undefined => n.role ?? n.역할;
-const nodeDetail = (n: TNode): string | undefined => n.detail ?? n.상세;
+// Field readers — canonical English key first, alias as fallback. A key can hold a
+// non-string (a `value` object, say), so every read is narrowed to text: a search that
+// lowercases whatever it finds must never meet an object.
+const text = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
+const nodeKey = (n: TNode): string | undefined => text(n.id) ?? text(n.slug); // stable searchable key
+const nodeName = (n: TNode): string | undefined => text(n.name) ?? text(n.이름);
+const nodeRole = (n: TNode): string | undefined => text(n.role) ?? text(n.역할);
+const nodeDetail = (n: TNode): string | undefined => text(n.detail) ?? text(n.상세) ?? text(n.value);
+
+// Two scaffolds are in the wild and both are canonical: a WRAPPER doc ({title, summary,
+// tree}) and a doc that IS the root node ({name, children}). Reading only `.tree` gives a
+// root-node doc an empty skeleton and crashes the search walk, so every reader goes
+// through here.
+type ArchDoc = { title?: string; summary?: string; tree?: TNode } & TNode;
+function rootNode(doc: unknown): TNode | undefined {
+  if (!doc || typeof doc !== "object") return undefined;
+  const d = doc as ArchDoc;
+  if (d.tree && typeof d.tree === "object") return d.tree;
+  return nodeName(d) || d.children ? d : undefined;
+}
 
 // Build a 2-level table-of-contents from the JSON tree — enough for the agent to
 // know the design's shape (and that the file exists) without carrying every cell.
 // Detail lives in the file, pulled via `show`/`search`/Read.
-function skeleton(root: { title?: string; summary?: string; tree?: TNode }): string {
+function skeleton(doc: ArchDoc): string {
+  const root = rootNode(doc);
   const lines: string[] = [];
-  if (root.title) lines.push(root.title);
-  if (root.summary) lines.push(`요약: ${root.summary}`);
-  const top = root.tree?.children ?? [];
+  const title = doc.title ?? (doc.tree ? undefined : nodeName(doc));
+  if (title) lines.push(title);
+  if (doc.summary) lines.push(`요약: ${doc.summary}`);
+  const top = root?.children ?? [];
   if (top.length) {
     lines.push("");
     lines.push("목차 (top-level · 2단계 · 전체 트리·`detail`셀은 파일에):");
@@ -116,8 +134,7 @@ export async function runArchitecture(args: string[]): Promise<number> {
     let lang = "markdown";
     if (isJson) {
       try {
-        const root = JSON.parse(text) as { title?: string; summary?: string; tree?: TNode };
-        body = skeleton(root);
+        body = skeleton(JSON.parse(text) as ArchDoc);
       } catch {
         body = text.slice(0, CAP); // invalid JSON → head excerpt as a fallback
       }
@@ -185,11 +202,15 @@ export async function runArchitecture(args: string[]): Promise<number> {
       );
       return 1;
     }
-    let tree: TNode;
+    let tree: TNode | undefined;
     try {
-      tree = (JSON.parse(readFileSync(found.path, "utf8")) as { tree: TNode }).tree;
+      tree = rootNode(JSON.parse(readFileSync(found.path, "utf8")));
     } catch {
       process.stdout.write("architecture search: ARCHITECTURE.json is not valid JSON\n");
+      return 1;
+    }
+    if (!tree) {
+      process.stdout.write(`architecture search: ${found.rel} carries no node tree (no \`tree\` key, no root node)\n`);
       return 1;
     }
     const hits: { id: string; name: string; role: string; crumb: string }[] = [];

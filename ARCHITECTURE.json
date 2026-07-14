@@ -1141,6 +1141,18 @@
                     "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
                     "id": "detail-gate-stop-check",
                     "detail": "Stop 훅 — 출력에 게이트/verdict 신호(config/gate-signals.json)+`🔬 GATE` 마커 없으면 block → ARCHITECTURE.json 의 `type:\"gate\"` 노드 verdict 직접 update-in-place 유도(별도 store 아님) → `🔬 GATE 갱신/해당없음`. CC-only·세션당1회. 배선 TWO surface: setup.ts Stop[](install-hooks→settings.json)+hooks.json (setup-ts-1)"
+                  },
+                  {
+                    "id": "arch-doc-shape",
+                    "name": "doc-shape",
+                    "detail": "Two doc shapes are canonical and every reader goes through rootNode(): the WRAPPER ({title,summary,tree}) and the doc that IS the root node ({name,children}). Reading `.tree` alone gave root-node repos an empty skeleton and crashed the search walk.",
+                    "children": [
+                      {
+                        "id": "arch-doc-shape-aliases",
+                        "name": "field-aliases",
+                        "detail": "Body text is read as detail ?? 상세 ?? value — root-node trees keep theirs in `value`. Every read is narrowed to string, so a non-text key can never reach the lowercasing search."
+                      }
+                    ]
                   }
                 ]
               },

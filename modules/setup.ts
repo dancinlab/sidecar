@@ -40,7 +40,7 @@ function hookSpec(): Record<string, unknown[]> {
       // NOTE: `architecture inject` is SESSION-scoped (SessionStart + Compact), NOT
       // per-turn — the design tree is a static reference doc; re-injecting it every
       // prompt is the large-doc anti-pattern (token cost for content read once). Its
-      // turn-close gate is enforced deterministically by `architecture stop-check`
+      // turn-close gate is enforced deterministically by `turn-close check`
       // (Stop), not by a per-turn reminder. See ARCHITECTURE.json inject-strategy.
       entry("sidecar recommend inject"),
       entry("sidecar prefs inject"),
@@ -56,6 +56,7 @@ function hookSpec(): Record<string, unknown[]> {
       // (cost proportional to risk: nothing when current, one reminder every turn when not).
       entry("sidecar git-context inject"),
       entry("sidecar ing inject"),
+      entry("sidecar turn-close inject"), // per-turn trio directive + ing-ref baseline snapshot (the Stop-time forgery check compares against it · wire BOTH: also hooks/hooks.json + pi PER_TURN)
       entry("sidecar frontier inject"), // single north-star objective — silent when unset (wire BOTH: also hooks/hooks.json + pi PER_TURN)
     ],
     SessionStart: [
@@ -75,10 +76,8 @@ function hookSpec(): Record<string, unknown[]> {
     Stop: [
       entry("sidecar recommend stop-check"),
       entry("sidecar goal-guard stop-check"), // turn-close anti-punt gate — reply that defers work to a future session ('다음 세션에…') OR reports live '잔여' leftover work ⇒ block; single-fire, genuine blocker passes on re-stop (wire BOTH: also in hooks/hooks.json)
-      entry("sidecar architecture stop-check"), // turn-close design-report gate (was missing here vs hooks.json)
-      entry("sidecar architecture convergence stop-check"),
-      entry("sidecar architecture gate-stop-check"), // turn-close gate-verdict gate — verdict signal w/o `🔬 GATE` marker ⇒ block, induce DIRECT type:gate node update (wire BOTH: also in hooks/hooks.json)
       entry("sidecar ship stop-check"), // turn-close pr-cycle/ship ENTRY gate — impl/fix code left uncommitted ⇒ block (clean tree or `🚢 SHIP` marker exits)
+      entry("sidecar turn-close check"), // turn-close TRIO gate — 🔄 ING · 🏛️ ARCHITECTURE · 🧬 CONVERGENCE mandatory on EVERY reply, one combined block, claims diff-verified (supersedes the 4 signal-scan stop-checks · wire BOTH: also hooks/hooks.json)
       entry("sidecar ing staleness-check"),
       entry("sidecar injects context-check"), // turn-close context-rot alarm — warn (never block) when the live window enters the ~150-400K degradation band
       entry("sidecar prefs stop-check"), // turn-close prefs language-drift WARN (never blocks) — code/doc authored in wrong lang or response drifted from prefs

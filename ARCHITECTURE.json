@@ -299,7 +299,7 @@
         "id": "setup-ts-1",
         "state": "pos-conv",
         "value": "거버넌스 규칙(pr-cycle/ship 진입 등)을 per-turn inject 텍스트로만 실으면 advisory 라 실제 강제가 안 된다 — inject 는 '상기'일 뿐, 진짜 강제는 Stop[] 에 decision:block stop-check 를 배선해야 성립. 또 라이브 Stop 훅의 SSOT 는 글로벌 ~/.claude/settings.json(setup.ts hookSpec)이고 plugin hooks.json 는 /plugin 설치용 별개 표면 — 새 Stop 게이트는 둘 다 배선 + install-hooks 재실행해야 라이브 반영된다.",
-        "threshold": "재발조건: 새 거버넌스 규칙을 commons/CLAUDE.md inject 로만 추가하고 Stop 게이트 미배선, 또는 setup.ts 한쪽만 배선. 해결: 강제하려면 modules/<x>.ts 에 stop-check(marker/clean-state 기반) 추가 → setup.ts Stop[] + hooks.json 양쪽 → install-hooks 재실행 → 스모크.",
+        "threshold": "재발조건: 새 거버넌스 규칙을 commons/CLAUDE.md inject 로만 추가하고 Stop 게이트 미배선, 또는 setup.ts/hooks.json 한쪽만 배선. 실사례: `ing stop-check` 는 hooks.json 에만 있고 setup.ts Stop[] 에 없어 라이브 ~/.claude/settings.json 에서 평생 한 번도 안 떴다 — inject 문구는 \"차단\"을 약속했는데 이빨 0(=자율 준수). 해결: modules/<x>.ts stop-check → setup.ts Stop[] + hooks.json 양쪽 → install-hooks --global → `grep <verb> ~/.claude/settings.json` 으로 라이브 존재를 눈으로 확인 → 스모크.",
         "source": "modules/setup.ts"
       },
       {
@@ -576,46 +576,54 @@
                 "detail": "non-present default mode 인데 답변이 **진짜 박스/auto-pick 줄로 끝나면**(endsOnBox=마지막 ~2 비어있지않은 줄 검사) `decision:block` 으로 모델 재호출=강제. 정밀: tail=2 라 박스 뒤 작업/요약 따라오면 무발화 → 정상 땐 'Stop hook error' 안 뜨고 진짜 박스-멈춤만 강제(에러≠노이즈). 루프가드=stop_hook_active. (modules/recommend.ts)"
               },
               {
-                "name": "convergence stop-check",
-                "role": "에이전트 출력의 재발-신호 → SSOT 기록 넛지",
-                "id": "guard-convergence-stop-check",
-                "detail": "응답의 재발신호(config/convergence-triggers.json) 감지 시 enforce(`convergenceEnforce` 기본 ON): `🧬 CONVERGENCE` 계정 줄 없으면 `decision:block` — 기록 id 또는 `해당 없음` 강제(ing/architecture stop-check 동형 marker 게이트 · stop_hook_active anti-wedge 체인당 1블록 · off=레거시 warn). 신호별 1회(convergence-nudge.json)."
-              },
-              {
                 "name": "ing staleness-check",
                 "role": "코드 다수 편집인데 ing 보드 무변동 경고 (c6)",
                 "id": "guard-ing-staleness-check",
                 "detail": "warn-only(stderr) — 코드 ≥editThreshold(기본 5) 편집했는데 ing 보드 무변동이면 1회 경고 후 카운터 리셋. 강제 불가(ground truth 없음). (modules/ing.ts)"
               },
               {
-                "name": "ing stop-check",
-                "role": "매턴 ING 상태 보고 강제 (decision:block)",
-                "id": "guard-ing-stop-check",
-                "detail": "매 응답에 `🔄 ING` 줄(`갱신:…`/`변동 없음`)이 없으면 차단. 코드편집뿐 아니라 측정·verdict·에이전트착륙도 포착(response-marker 기반·recommend stop-check 동형). 게이트=`isManaged()`(lib/config.ts): 내구성 거버넌스 마커(config.json·ARCHITECTURE·.harness/.sidecar dir·repo-root CLAUDE.md) 중 하나라도 있으면 발화. loop guard 1회/chain. (modules/ing.ts)"
-              },
-              {
-                "name": "architecture stop-check",
-                "role": "코드·구조 변경 또는 실험·벤치 결과 시 🏛️ ARCHITECTURE 보고 강제 (decision:block)",
-                "id": "guard-architecture-stop-check",
-                "detail": "ing stop-check 의 설계판 — 트리거 2다리(아래 diff·result) 중 하나라도 걸렸는데 `🏛️ ARCHITECTURE` 줄(`갱신:…`/`변동 없음`) 없으면 차단. `갱신` 주장은 diff(working·staged·직전커밋)의 ARCHITECTURE.json 실변경으로 대조검증=마커-only 위조 차단(verify-done). 게이트=`pick()`(설계 SSOT 존재)=설계파일 생기는 순간 자동발화. (modules/architecture.ts)",
+                "name": "turn-close check (턴 마감 트리오)",
+                "role": "매 응답에 🔄 ING · 🏛️ ARCHITECTURE · 🧬 CONVERGENCE 세 줄 강제 (단일 decision:block)",
+                "id": "guard-turn-close",
+                "detail": "세 줄을 함께 요구하는 단일 Stop 게이트. 각 줄 = `갱신`/`기록` 주장 또는 명시적 무변동(`변동 없음`/`해당 없음`). 게이트1·block1·reason1 에 누락/위조 leg 를 전부 나열 → 1회 re-turn 으로 복구. 배선 TWO-SURFACE(hooks.json + setup.ts Stop[] · setup-ts-1).",
                 "children": [
                   {
-                    "name": "leg1 — diff (코드·구조 변경)",
-                    "role": "미커밋 코드/ARCHITECTURE 변경 = 트리거",
-                    "id": "guard-arch-stop-leg-diff",
-                    "detail": "git diff(working+staged)에 DESIGN_RELEVANT 확장자(.ts/.py/.rs/.hexa…)나 ARCHITECTURE.json 이 있으면 발화. clean tree=no-op — 응답 텍스트가 아니라 트리 상태로 판정(결정적·위조불가)."
+                    "name": "스캐너 4종 대체 (왜)",
+                    "role": "키워드 신호 → 결정적 트리오",
+                    "id": "detail-turn-close-why",
+                    "detail": "ing/architecture/convergence/gate stop-check 을 대체. 키워드 신호는 응답이 쓰인 뒤 예측불가하게 난입했고(가로채기), `stop_hook_active`(anti-wedge) 때문에 첫 게이트만 차단하고 나머지는 스킵 = 트리오의 2/3 이 구조적으로 강제 불가였다. 구 verb 는 silent no-op 툼스톤(stale settings.json 대비)."
                   },
                   {
-                    "name": "leg2 — result (실험·벤치 결과)",
-                    "role": "결과-턴은 로컬 코드변경 0 이어도 트리거",
-                    "id": "guard-arch-stop-leg-result",
-                    "detail": "응답의 결과신호(config/result-signals.json · `.harness/` 오버라이드) 매칭 시 발화 — 원격런 종료·보드에서 읽은 수치처럼 diff 가 0 인 결과-턴은 leg1 이 구조적으로 못 봐 결과가 SSOT 에 영영 안 들어가던 누수를 막는다. 넓은 키워드 그물 + 정밀도는 에이전트 마커. 신호별 1회(result-nudge.json) · 마커=신호 소비. 매칭=공용 findSignal."
+                    "name": "주장 검증 (위조 차단)",
+                    "role": "마커만 쓰는 자기보고 위조를 diff 로 대조",
+                    "id": "detail-turn-close-forgery",
+                    "detail": "ING=`ing` ref sha 전진(베이스라인은 inject 가 UserPromptSubmit 에 스냅샷·transcript 키) · ARCHITECTURE=파일 diff(working·staged·직전커밋 3다리 — 직전커밋 다리는 worktree/ship 흐름에서 mid-turn 머지를 통과시킴) · CONVERGENCE=`records[]` 에 그 id 존재 + 같은 diff. 무변동 확인(`변동 없음`/`해당 없음`)은 검증하지 않음 = false-positive 회피 비대칭 (commons verify-done)."
                   },
                   {
-                    "name": "findSignal (공용 신호 매처)",
-                    "role": "3개 Stop 스캐너(convergence·gate·result)의 단일 매칭 SSOT",
-                    "id": "guard-arch-find-signal",
-                    "detail": "패턴 substring(case-insens) 매칭 + 이미 회계된 신호 skip + **따옴표/백틱 감싼 occurrence = 메타-언급으로 skip**(goal-guard `isQuotedMention` 재사용) — 게이트를 문서/설명하는 응답이 자기 자신을 발화시키던 오탐(예: 설명문의 `META-LAW` 인용)을 막는다. 세 스캐너가 각자 find() 를 굴리면 정밀도가 갈라지므로 하나로 고정."
+                    "name": "활성 leg (inert-by-default)",
+                    "role": "지킬 게 없으면 완전 무음",
+                    "id": "detail-turn-close-legs",
+                    "detail": "leg 활성 조건 — 🔄=`ing` ref 또는 레거시 ING.jsonl 존재 · 🏛️=ARCHITECTURE.json/.md 존재 · 🧬=ARCHITECTURE.json(레코드 store 는 JSON 트리에만). 3개 다 꺼지면 check 는 exit 0 무음 → 설계트리·보드 없는 평범한 repo 는 게이트 자체가 없다. block reason 도 활성 leg 만 나열."
+                  },
+                  {
+                    "name": "turn-close inject (매턴)",
+                    "role": "트리오 지시 + ing 베이스라인 스냅샷",
+                    "id": "detail-turn-close-inject",
+                    "detail": "UserPromptSubmit 마다 트리오 계약 재주입(활성 leg 만 · ~630B · dynamic = 고정 injectBudget 밖) + `ing` ref sha 를 `.harness/logs/turn-close-base.json` 에 스냅샷(Stop 시 ING 위조 대조용 · LOG_DIR mkdir 보장).",
+                    "children": [
+                      {
+                        "name": "스냅샷 부재 = 검증 SKIP",
+                        "role": "오차단보다 미검출을 택함",
+                        "id": "detail-turn-close-base-missing",
+                        "detail": "베이스라인이 없으면(Pi · 신규 세션 · 쓰기 실패) ING 위조 검증은 건너뛴다 — 절대 오차단하지 않는다. Pi 는 inject 만 탄다(블로킹 stop 훅 없음 → advisory)."
+                      }
+                    ]
+                  },
+                  {
+                    "name": "🔬 GATE 마커 폐기",
+                    "role": "게이트 verdict = ARCHITECTURE 노드 편집 → 🏛️ 줄이 흡수",
+                    "id": "detail-turn-close-gate-absorbed",
+                    "detail": "gate verdict 는 곧 ARCHITECTURE.json `type:\"gate\"` 노드의 update-in-place 편집이라, 이미 매턴 필수인 🏛️ 줄이 보고+위조검증한다(single-doc). 4번째 마커는 같은 파일을 이중보고 → 삭제. gate-id 는 `🏛️ ARCHITECTURE 갱신:` 자유텍스트에 적는다."
                   }
                 ]
               },
@@ -1135,12 +1143,6 @@
                     "role": "재발방지 학습 SSOT — 인라인 @convergence 마커 폐기",
                     "id": "detail-convergence-store-convergence",
                     "detail": "재발방지 학습 SSOT=`convergence.records[]`(id·state·value·threshold·source). `add`=`--source` 필수·id 자동(파일명 slug)·동일 source 레코드 있으면 BLOCK→`for <file>` 검토 후 `edit`/`--new`(중복누적 금지). 터치 시 `convergenceForFile` 가 그 학습을 PreToolUse `additionalContext` inject(`convergenceOnTouch` ON)"
-                  },
-                  {
-                    "name": "gate-stop-check (type:gate 직접갱신 강제)",
-                    "role": "실험 verdict → 트리 노드 직접 update 유도 Stop 게이트",
-                    "id": "detail-gate-stop-check",
-                    "detail": "Stop 훅 — 출력에 게이트/verdict 신호(config/gate-signals.json)+`🔬 GATE` 마커 없으면 block → ARCHITECTURE.json 의 `type:\"gate\"` 노드 verdict 직접 update-in-place 유도(별도 store 아님) → `🔬 GATE 갱신/해당없음`. CC-only·세션당1회. 배선 TWO surface: setup.ts Stop[](install-hooks→settings.json)+hooks.json (setup-ts-1)"
                   },
                   {
                     "id": "arch-doc-shape",

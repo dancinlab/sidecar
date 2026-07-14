@@ -15,7 +15,9 @@
 //   CC Stop (hard stop-gates that force a re-turn)         -> NOT bridged: Pi has no
 //     blocking stop hook (agent_end cannot force continuation). The per-turn injects
 //     re-assert the same rules every turn, so governance salience is preserved; only
-//     the hard stop-gate teeth (recommend/ing/architecture stop-check) are CC-exclusive.
+//     the hard stop-gate teeth (recommend/goal-guard/ship stop-check + the `turn-close check`
+//     trio gate) are CC-exclusive. `turn-close inject` still rides Pi every turn, so the
+//     🔄/🏛️/🧬 trio contract is asserted there too — advisory, just not enforced.
 //
 // Placement: `~/.pi/agent/extensions/sidecar.ts` (auto-discovered, /reload-able).
 // `sidecar pi install` symlinks it there from the global CLI clone so `sidecar
@@ -107,7 +109,7 @@ function extractBlock(r: VerbResult): { reason: string } | null {
 const PER_TURN: string[][] = [
   ["commons", "inject"], ["claudemd", "inject"], ["recommend", "inject"],
   ["prefs", "inject"], ["easy", "inject"], ["fable-mode", "inject"],
-  ["load", "inject"], ["ing", "inject"], ["frontier", "inject"],
+  ["load", "inject"], ["ing", "inject"], ["turn-close", "inject"], ["frontier", "inject"],
 ];
 // CC SessionStart-only inject set (run ONCE per session — first turn).
 const SESSION_ONCE: string[][] = [

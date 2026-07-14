@@ -300,15 +300,6 @@ export interface SidecarConfig {
   // applies that file's Rule-of-Two policy (warn on mutation · block on the
   // destructive+openWorld combo). enabled=false off. See modules/annotation-guard.ts.
   annotationGuard: { enabled: boolean; file: string };
-  // convergence enforce — when ON, the Stop hook `architecture convergence stop-check`
-  // BLOCKS (not just advisory-warns) when the agent's OWN last message carries a
-  // recurrence signal (config/convergence-triggers.json) but no `🧬 CONVERGENCE`
-  // accounting line — forcing the root-cause learning to be either recorded into
-  // ARCHITECTURE.json convergence.records[] (`🧬 CONVERGENCE 기록: <id>`) or
-  // consciously dismissed (`🧬 CONVERGENCE: 해당 없음`). Mirrors the ing/architecture
-  // stop-check marker gate; stop_hook_active bounds it to one block per chain (no
-  // wedge). false = legacy advisory warn-only. See modules/architecture.ts.
-  convergenceEnforce: boolean;
   // convergenceOnTouch surfaces a file's recorded recurrence-prevention learnings as
   // INJECTED context (PreToolUse additionalContext) the moment the agent Writes/Edits
   // that file, so it can't reintroduce a defect already learned-from. Keyed by the
@@ -417,7 +408,6 @@ const DEFAULTS: SidecarConfig = {
   memGuard: { enabled: true, warnPct: 15, blockPct: 0, watchdogIntervalSec: 45 },
   dangerGuard: { rmRfRoot: false },
   annotationGuard: { enabled: true, file: ".harness/tool-annotations.json" },
-  convergenceEnforce: true,
   convergenceOnTouch: true,
 };
 

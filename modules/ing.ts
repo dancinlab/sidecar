@@ -15,7 +15,6 @@ import { info, ok, warn, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
 import { config, inGitRepo } from "../lib/config.ts";
 import { ingStalenessWarn, resetIngStaleness } from "./ing-staleness.ts";
-import { lastAssistantText } from "./recommend.ts";
 
 const ING_REF = "ing";
 const ING_FILE = "ING.jsonl";
@@ -140,6 +139,18 @@ async function writeItems(rows: Item[], msg: string, cwd: string = BOARD_ROOT): 
   return true;
 }
 
+// Board identity for the turn-close trio gate: the `ing` ref sha (a board mutation ALWAYS
+// advances it — writeItems commits via plumbing) and whether a board exists at all (leg
+// active). Sha-unchanged across a turn + a `🔄 ING 갱신` claim = self-report forgery.
+export async function ingRefSha(cwd: string = BOARD_ROOT): Promise<string> {
+  return (await git(["rev-parse", "--verify", "--quiet", `refs/heads/${ING_REF}`], cwd)).stdout.trim();
+}
+
+export async function ingBoardActive(cwd: string = BOARD_ROOT): Promise<boolean> {
+  if (await ingRefSha(cwd)) return true;
+  return existsSync(resolve(cwd, ING_FILE)); // legacy in-tree board
+}
+
 function nextId(rows: Item[]): string {
   return String(rows.reduce((m, r) => Math.max(m, parseInt(r.id, 10) || 0), 0) + 1);
 }
@@ -261,10 +272,6 @@ export async function runIng(args: string[]): Promise<number> {
       if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
       if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
       let ctx = `🔄 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
-      // Turn-close gate: make per-turn board upkeep + reporting actual, not on-request only.
-      ctx +=
-        `\n🔄 턴 마감 게이트 (매턴 필수 · Stop 게이트 강제) — 진행상황이 바뀌었으면(코드 편집뿐 아니라 측정·verdict·벤치·에이전트 착륙도 포함) **지금** \`sidecar ing done <id>\`(완료=scrub→CHANGELOG)/\`add\`/\`next\` 로 보드를 갱신하고 응답에 \`🔄 ING 갱신: <무엇을>\` 한 줄로, ` +
-        "변동이 없으면 `🔄 ING: 변동 없음` 한 줄로 — 매 응답에 둘 중 하나를 반드시 포함하라 (`ing stop-check` 가 누락 시 차단).";
       // pileup gate: a finished-but-unscrubbed item shows its age every turn; once an
       // item is stale or the board overflows, shout for a scrub so it can't accumulate.
       const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
@@ -284,34 +291,10 @@ export async function runIng(args: string[]): Promise<number> {
     return 0;
   }
 
-  // stop-check (Stop hook) — per-turn ING enforce. Progress can change WITHOUT a code
-  // edit (a measurement / verdict / bench result / background-agent landing), so this
-  // gate is NOT tied to file edits: it requires EVERY response to carry one `🔄 ING`
-  // status line — either `🔄 ING 갱신: …` (board mutated) or `🔄 ING: 변동 없음` (a
-  // conscious no-change affirmation). Mirrors `recommend stop-check`: reads the last
-  // assistant text, `decision:block` if the marker is absent (forcing the model to add
-  // it). Scoped to sidecar-managed repos; native loop guard caps it at once per chain.
-  if (sub === "stop-check") {
-    let payload: { stop_hook_active?: boolean; transcript_path?: string; transcriptPath?: string };
-    try {
-      payload = JSON.parse(readStdin());
-    } catch {
-      return 0;
-    }
-    if (payload?.stop_hook_active) return 0; // already nudged this chain — don't wedge
-    if (!inGitRepo()) return 0; // any git repo (managed-marker abolished · config.ts inGitRepo)
-    const tp = payload?.transcript_path ?? payload?.transcriptPath;
-    if (!tp) return 0;
-    const text = lastAssistantText(String(tp));
-    if (!text) return 0;
-    if (/🔄\s*ING/.test(text)) return 0; // a status line is present → compliant
-    const reason =
-      "매턴 ING 상태 보고 필수 — 이번 응답에 `🔄 ING` 줄이 없다. 진행상황이 바뀌었으면(코드 편집뿐 아니라 " +
-      "측정·verdict·벤치·에이전트 착륙도 포함) `sidecar ing add/next/done` 으로 보드를 갱신하고 `🔄 ING 갱신: <무엇을>` 로, " +
-      "변동이 없으면 `🔄 ING: 변동 없음` 한 줄로 보고하라 (둘 중 하나 필수).";
-    process.stdout.write(JSON.stringify({ decision: "block", reason }) + "\n");
-    return 0;
-  }
+  // tombstone — the per-turn ING marker gate is now one leg of the single `turn-close check`
+  // trio gate (which also forgery-verifies a `🔄 ING 갱신` claim against the `ing` ref). Kept as a
+  // SILENT no-op for one release so a stale ~/.claude/settings.json does not error every turn.
+  if (sub === "stop-check") return 0;
 
   // show
   const rows = await readItems();

@@ -87,6 +87,7 @@ export async function runInjects(args: string[]): Promise<number> {
     { source: "easy   (styles/easy.*.md)", bytes: existsSync(easyBase) ? bytesOf(easyBase) : null, cap: null, counted: false },
     { source: "ing    (ING.jsonl board)", bytes: null, cap: null, counted: false },
     { source: "load   (macOS resource readout)", bytes: null, cap: null, counted: false },
+    { source: "turn-close (trio directive)", bytes: null, cap: null, counted: false },
   ];
 
   // ---- render ----

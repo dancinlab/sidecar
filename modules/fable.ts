@@ -27,7 +27,7 @@ const DEFAULT_MODEL = "claude-fable-5";
 // Setting sources the child `claude -p` loads (user = global ~/.claude, project
 // = repo .claude, local = repo .claude/*.local). DEFAULT DROPS `user`: the
 // host-wide governance Stop-hooks live there, and a headless child that hits a
-// BLOCKING Stop-hook (architecture/convergence stop-check when the cwd repo has
+// BLOCKING Stop-hook (the `turn-close check` trio gate when the cwd repo has
 // uncommitted changes) loops forever → --timeout kills it at exit 124, AFTER the
 // answer was already produced (observed: --cwd anima → 124 stall + boilerplate-
 // polluted .result). Keychain auth is NOT a setting source, so dropping `user`

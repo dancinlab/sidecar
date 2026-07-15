@@ -1,5 +1,5 @@
 ---
-description: /pod — GPU cloud pod dispatch runbook + auto-polling. `pod poll <id>` one-shot checks a pod via hexa cloud (alive→util) — READ-ONLY unless --teardown-on-done/--pull. `pod watch <id> [--cron]`/`unwatch`/`list` = ≥10-min cadence polling. Triggers — "GPU 포드", "pod 발사", "rent gpu", "pod 폴링", "watch pod", "/pod".
+description: /pod — GPU cloud pod 로스터 + dispatch + auto-polling (공용 ~/.sidecar/pods.jsonl SSOT). `pod add/rm/list` = 실행중 팟 로스터(was `ing pod`). `pod poll <id>` = one-shot via hexa cloud(READ-ONLY 기본). `pod watch/unwatch` = ≥10분 cadence. Triggers — "GPU 포드", "pod 발사", "rent gpu", "pod 폴링", "watch pod", "/pod".
 allowed-tools: Bash
 ---
 

@@ -991,10 +991,10 @@
                 "detail": "config `hypotheses.dir`(기본 HYPOTHESES/)로 가설(pre-register→falsify→run→verdict) 작업을 한 폴더 고정. hypothesis-guard(pre write/bash)가 신규 stray 폴더(per-repo aliases 예 UNIVERSE·내장 hypothes*/가설* 패턴) 차단(신규=block·기존=warn·name-pattern 상시). check=감사(--gate) · migrate=git mv→canonical(병합) · scaffold · show."
               },
               {
-                "name": "pod {poll|watch|unwatch|list}",
-                "role": "GPU pod 자동 폴링 (>=10분 cadence)",
+                "name": "pod {add|rm|list|watch|unwatch|poll}",
+                "role": "GPU pod 로스터 + 자동 폴링 (단일 공용 pods.jsonl SSOT)",
                 "id": "module-pod-poll",
-                "detail": "modules/pod-poll.ts — 발사 후 수동 ssh 확인을 canonical 명령으로 일반화(runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북). 모든 원격 op 은 `hexa cloud` 경유(commons c11, 직접 ssh/curl 금지).",
+                "detail": "modules/pod-poll.ts — 로스터(provider/gpu/purpose/cost)와 watch/poll 설정을 하나의 엔트리로 합친 단일 공용 SSOT. 옛 `ing pod`(ING ref) + 옛 pod-watch.json 통합 → 팟은 ING 에 저장 안 함(ING 은 read-only 표면). runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북. 모든 원격 op 은 `hexa cloud` 경유(commons c11).",
                 "children": [
                   {
                     "name": "hexa cloud 경유 op",
@@ -1009,10 +1009,10 @@
                     "detail": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
                   },
                   {
-                    "name": "watch cadence",
-                    "role": "레지스트리 + 구동",
+                    "name": "roster + watch cadence",
+                    "role": "공용 pods.jsonl + 구동",
                     "id": "detail-pod-poll-cadence",
-                    "detail": "레지스트리 `~/.sidecar/pod-watch.json`(flat 전역 규약 · pool.json 동형) + cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(기본 비파괴 · crontab write 불가 환경 자동 fallback · interval >=600s c19)."
+                    "detail": "SSOT `~/.sidecar/pods.jsonl`(호스트전역 append형 jsonl · pool.json 위치 + ING.jsonl 포맷 동형 · 옛 pod-watch.json 1회 마이그레이션). add/rm=로스터 · watch=cadence 표시 · unwatch=폴링만 중단(로스터 유지). cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(interval >=600s c19)."
                   }
                 ]
               },

@@ -1,11 +1,13 @@
-// sidecar ing {show|add <text>|done <id|match>|next <text>|pod ...|inject}
+// sidecar ing {show|add <text>|done <id|match>|next <text>|inject}
 // In-progress board stored on a DEDICATED git ref (refs/heads/ing) as a single
 // ING.jsonl file — NOT in the working tree.
 // The `ing` ref is a board-only branch: read via `git show ing:ING.jsonl`, write via
 // plumbing (hash-object→mktree→commit-tree→update-ref) + best-effort `push origin ing`.
 // → branch-switch-proof (never in worktree) · committed · shared (push) · protected-safe.
 // `done` SCRUBS (completed work graduates to CHANGELOG; ING holds only what's ACTIVE).
-// SessionStart `inject` surfaces open work + running pods so the board is seen.
+// SessionStart `inject` surfaces open work + running pods so the board is seen — but
+// pods are NOT stored here anymore: the pod store is the shared ~/.sidecar/pods.jsonl
+// SSOT (`sidecar pod` · modules/pod-poll.ts); this file only READS it for the inject.
 import { execFileSync } from "node:child_process";
 import { emitInject } from "../lib/inject.ts";
 import { existsSync, readFileSync } from "node:fs";
@@ -15,6 +17,7 @@ import { info, ok, warn, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
 import { config, inGitRepo } from "../lib/config.ts";
 import { ingStalenessWarn, resetIngStaleness } from "./ing-staleness.ts";
+import { loadPods } from "./pod-poll.ts";
 
 const ING_REF = "ing";
 const ING_FILE = "ING.jsonl";
@@ -45,15 +48,11 @@ function boardRoot(): string {
 const BOARD_ROOT = boardRoot();
 
 export interface Item {
-  kind: "work" | "next" | "pod";
+  kind: "work" | "next";
   id: string;
   ts: string;
   text?: string;
   branch?: string; // git branch the entry was added on (≠main) — links a stranded branch/worktree back to its task (worktree inject · end)
-  provider?: string;
-  gpu?: string;
-  purpose?: string;
-  cost?: string;
 }
 
 function git(args: string[], cwd: string, input?: string) {
@@ -108,11 +107,10 @@ export async function loadIngItems(): Promise<Item[]> {
 // Returns null on no/ambiguous match → the caller shows nothing extra.
 export function findIngForBranch(branch: string, items: Item[]): Item | null {
   if (!branch) return null;
-  const tasks = items.filter((i) => i.kind !== "pod");
-  const stamped = tasks.filter((i) => i.branch === branch);
+  const stamped = items.filter((i) => i.branch === branch);
   if (stamped.length) return stamped[stamped.length - 1]; // newest (append-order)
   if (branch.length >= 8 || branch.includes("/")) {
-    const hits = tasks.filter((i) => (i.text ?? "").includes(branch));
+    const hits = items.filter((i) => (i.text ?? "").includes(branch));
     if (hits.length === 1) return hits[0];
   }
   return null;
@@ -219,15 +217,15 @@ export async function runIng(args: string[]): Promise<number> {
     const tokens = args.slice(1).filter(Boolean);
     const m = tokens.join(" ");
     const rows = await readItems();
-    const openIds = () => rows.map((r) => r.id + (r.kind === "pod" ? "(pod)" : "")).join(", ") || "none";
+    const openIds = () => rows.map((r) => r.id).join(", ") || "none";
     if (!tokens.length) {
       info(`ing: usage — sidecar ing done <id|id...|match>. open ids: ${openIds()}`);
       return 1;
     }
     // EXACT id match wins — `done 1` removes ONLY id=1, never items whose text
-    // merely contains "1". ANY kind matches by id (work/next AND pods). `done 1 2 3`
-    // scrubs several at once — but ONLY when EVERY token is a real id (so `done task 1`
-    // still text-searches instead of the "1" token hijacking it).
+    // merely contains "1". `done 1 2 3` scrubs several at once — but ONLY when EVERY
+    // token is a real id (so `done task 1` still text-searches instead of the "1"
+    // token hijacking it).
     const allIds = tokens.every((t) => rows.some((r) => r.id === t));
     const byId = allIds ? rows.filter((r) => tokens.includes(r.id)) : [];
     let toRemove: Item[];
@@ -236,7 +234,7 @@ export async function runIng(args: string[]): Promise<number> {
     } else {
       // Text fallback only when it resolves to EXACTLY ONE item — ambiguous
       // multi-matches are refused so a loose term can't mass-scrub the board.
-      const byText = rows.filter((r) => r.kind !== "pod" && (r.text ?? "").includes(m));
+      const byText = rows.filter((r) => (r.text ?? "").includes(m));
       if (byText.length === 0) {
         info(`ing: no item matching "${m}". open ids: ${openIds()}`);
         return 1;
@@ -255,8 +253,6 @@ export async function runIng(args: string[]): Promise<number> {
     return 0;
   }
 
-  if (sub === "pod") return pod(args.slice(1));
-
   if (sub === "inject") {
     try {
       const j = JSON.parse(readStdin());
@@ -265,12 +261,12 @@ export async function runIng(args: string[]): Promise<number> {
       const rows = await readItems();
       const work = rows.filter((r) => r.kind === "work");
       work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
-      const pods = rows.filter((r) => r.kind === "pod");
+      const pods = loadPods(); // running pods from the shared ~/.sidecar/pods.jsonl SSOT (not stored in ING)
       if (!work.length && !pods.length) return 0; // silent when nothing active
       const now = Date.now();
       const parts: string[] = [];
       if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
-      if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((r) => `${r.id}(${r.gpu ?? "?"})`).join(" · "));
+      if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((p) => `${p.id}(${p.gpu ?? "?"})`).join(" · "));
       let ctx = `🔄 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
       // pileup gate: a finished-but-unscrubbed item shows its age every turn; once an
       // item is stale or the board overflows, shout for a scrub so it can't accumulate.
@@ -299,12 +295,12 @@ export async function runIng(args: string[]): Promise<number> {
   // show
   const rows = await readItems();
   if (!rows.length) {
-    info("ing: empty (ing ref). add: sidecar ing add <text> · next <text> · pod add ...");
+    info("ing: empty (ing ref). add: sidecar ing add <text> · next <text> (팟은 `sidecar pod`)");
     return 0;
   }
   const work = rows.filter((r) => r.kind === "work");
   work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
-  const pods = rows.filter((r) => r.kind === "pod");
+  const pods = loadPods(); // shared pods.jsonl SSOT (`sidecar pod` owns the store)
   const next = rows.filter((r) => r.kind === "next");
   const now = Date.now();
   info(`ING — 진행중 (ing ref · git show ing:ING.jsonl) · 완료→CHANGELOG · 최종설계→ARCHITECTURE`);
@@ -313,8 +309,8 @@ export async function runIng(args: string[]): Promise<number> {
   const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
   if (bloat) warn(bloat.replace(/\*\*/g, ""));
   if (pods.length) {
-    info(`POD (running): ${pods.length}`);
-    for (const r of pods) info(`  • ${r.id} | ${r.provider ?? "-"} | ${r.gpu ?? "-"} | ${r.purpose ?? "-"} | ${r.cost ?? "-"} | since ${r.ts.slice(0, 10)}`);
+    info(`POD (running · ~/.sidecar/pods.jsonl · sidecar pod): ${pods.length}`);
+    for (const p of pods) info(`  • ${p.id} | ${p.provider ?? "-"} | ${p.gpu ?? "-"} | ${p.purpose ?? "-"} | ${p.cost ?? "-"}${p.addedAt ? ` | since ${p.addedAt.slice(0, 10)}` : ""}`);
   }
   if (next.length) {
     info(`다음 (next): ${next.length}`);
@@ -323,46 +319,9 @@ export async function runIng(args: string[]): Promise<number> {
   return 0;
 }
 
-async function pod(args: string[]): Promise<number> {
-  const verb = args[0] ?? "list";
-  const rows = await readItems();
-  if (verb === "list") {
-    const pods = rows.filter((r) => r.kind === "pod");
-    if (!pods.length) info("ing pod: no running pods.");
-    else for (const r of pods) info(`  ${r.id} | ${r.provider ?? "-"} | ${r.gpu ?? "-"} | ${r.purpose ?? "-"} | ${r.cost ?? "-"}`);
-    return 0;
-  }
-  if (verb === "add") {
-    const [, id, provider, gpu, ...rest] = args;
-    if (!id) {
-      info("usage: sidecar ing pod add <id> <provider> <gpu> <purpose> [cost/hr]");
-      return 1;
-    }
-    const cost = rest.length && /^[\d.$]/.test(rest[rest.length - 1]) ? rest.pop()! : "-";
-    const purpose = rest.join(" ") || "-";
-    const kept = rows.filter((r) => !(r.kind === "pod" && r.id === id));
-    kept.push({ kind: "pod", id, ts: nowIso(), provider: provider ?? "-", gpu: gpu ?? "-", purpose, cost });
-    await writeItems(kept, `ing: pod + ${id}`);
-    ok(`ing pod: + ${id} (${gpu ?? "-"} · ${purpose})`);
-    return 0;
-  }
-  if (verb === "rm") {
-    const id = args[1];
-    if (!id) {
-      info("usage: sidecar ing pod rm <id>");
-      return 1;
-    }
-    const afterRm = rows.filter((r) => !(r.kind === "pod" && r.id === id));
-    await writeItems(afterRm, `ing: pod rm ${id}`);
-    info(`ing pod: removed ${id}`);
-    return 0;
-  }
-  info("usage: sidecar ing pod {add <id> <provider> <gpu> <purpose> [cost]|rm <id>|list}");
-  return 1;
-}
-
 function usage(): number {
-  info("usage: sidecar ing {show|add <text>|done <id|match>|next <text>|pod {add|rm|list}|inject}");
+  info("usage: sidecar ing {show|add <text>|done <id|match>|next <text>|inject}");
+  info("  팟(GPU pod) 로스터/폴링은 `sidecar pod {add|rm|list|watch|unwatch|poll}` (공용 ~/.sidecar/pods.jsonl)");
   info("  free text with shell-special chars (parens·quotes·$·→): pipe via --stdin —");
   info("    printf '%s' \"<text>\" | sidecar ing add --stdin");
   return 1;

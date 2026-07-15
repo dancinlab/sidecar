@@ -130,7 +130,7 @@
         "ING.md"
       ],
       "tool": "sidecar ing",
-      "hint": "진행중 작업·실행중 POD 는 ING.md 단일 보드로: `sidecar ing add <작업>` · `sidecar ing pod add <id> <provider> <gpu> <목적> [cost]` · `sidecar ing` (보기). 완료분은 CHANGELOG, 최종설계는 ARCHITECTURE 로."
+      "hint": "진행중 작업은 ING 단일 보드로: `sidecar ing add <작업>` · `sidecar ing` (보기). 실행중 GPU 팟은 별도 공용 로스터 `sidecar pod add <id> <provider> <gpu> <목적> [cost]`(~/.sidecar/pods.jsonl). 완료분은 CHANGELOG, 최종설계는 ARCHITECTURE 로."
     },
     {
       "id": "folder-guides",
@@ -199,7 +199,7 @@
         "원격 gpu"
       ],
       "tool": "hexa cloud",
-      "hint": "GPU 클라우드 작업은 raw runpod/vast 우회 대신 `hexa cloud` 로: `hexa cloud run <host> -- <argv...>` (run|nohup|poll|copy-to|copy-from, 31 sub-verbs · structured-argv remote dispatch). 실행중 작업은 `sidecar ing pod add` 로 보드에 등록. (c12)"
+      "hint": "GPU 클라우드 작업은 raw runpod/vast 우회 대신 `hexa cloud` 로: `hexa cloud run <host> -- <argv...>` (run|nohup|poll|copy-to|copy-from, 31 sub-verbs · structured-argv remote dispatch). 실행중 팟은 `sidecar pod add` 로 공용 로스터(~/.sidecar/pods.jsonl)에 등록. (c12)"
     },
     {
       "id": "training-job",

@@ -1,6 +1,7 @@
 // sidecar pod | demi | dojo | micro-exp — sidecar runbooks.
 //   pod       — GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down);
-//               sub-verbs poll|watch|unwatch|list delegate to pod-poll (auto-polling)
+//               sub-verbs add|rm|list|watch|unwatch|poll delegate to pod-poll
+//               (roster + auto-polling · shared ~/.sidecar/pods.jsonl SSOT)
 //   demi      — design-architecture program runbook (7-verb spine)
 //   dojo      — cloud training-job scaffolder: prints runbook + (with a slug) emits
 //               exports/dojo/<slug>/{job,train,run.sh}
@@ -14,7 +15,7 @@ import { config } from "../lib/config.ts";
 import { execArgs } from "../lib/exec.ts";
 import { runPodPoll } from "./pod-poll.ts";
 
-const POD_SUBCMDS = ["poll", "watch", "unwatch", "list"];
+const POD_SUBCMDS = ["add", "rm", "list", "watch", "unwatch", "poll"];
 
 function printTemplate(name: string): number {
   const tpl = resolve(SIDECAR_ROOT, "templates", `${name}.md`);

@@ -1,6 +1,6 @@
 ---
-description: /ing [show|add|done|next|pod ...|inject] — in-progress board → ING.jsonl (작업·POD·next; done=scrub; my-repo only). Free text with shell-special chars → `printf '%s' "<text>" | sidecar ing add --stdin`. Triggers — "진행보드", "ING 등록", "작업 남겨놔", "ing add", "인계", "/ing".
-argument-hint: "[show|add|done|next|pod ...|inject]"
+description: /ing [show|add|done|next|inject] — in-progress board → ING.jsonl (작업·next; done=scrub; my-repo only). GPU 팟은 공용 pods.jsonl(`sidecar pod`)로 이관 — inject 는 표면만. Free text → `printf '%s' "<text>" | sidecar ing add --stdin`. Triggers — "진행보드", "ING 등록", "작업 남겨놔", "ing add", "인계", "/ing".
+argument-hint: "[show|add|done|next|inject]"
 allowed-tools: Bash
 ---
 

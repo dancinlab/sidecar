@@ -53,7 +53,7 @@ Stage 1.5 auto-detects YES/PARTIAL/NO and HALTs with a steer when infra is missi
      required first (build before fire)` + per-candidate table. STOP; do not advance.
    - if all ready → `✅ infra check: M/M ready · proceeding` → Stage 2.
 
-2. **Pre-flight** — current pod count (`sidecar pod` / `hexa cloud list`) vs `pod_concurrent_max`.
+2. **Pre-flight** — current pod count (`hexa cloud list`) vs `pod_concurrent_max`.
    `wave_size = min(budget_remaining, candidates_pending)`. Print `wave 1: M / N · remaining K`.
 
 3. **Plan table (print BEFORE dispatch)**:
@@ -63,7 +63,7 @@ Stage 1.5 auto-detects YES/PARTIAL/NO and HALTs with a steer when infra is missi
    wave-1 rows marked; queued rows marked `queued`. Cite `exports/sweep/<batch_id>/`.
 
 4. **Dispatch** (parallel where inputs allow, ≤ budget):
-   1. rent (`sidecar pod` runbook / `hexa cloud rent`) or `sidecar pool on <host>` → record
+   1. rent (`hexa cloud rent`) or `sidecar pool on <host>` → record
       `pod_id`/host in `exports/sweep/<batch_id>/state.json` (state: `dispatched`).
    2. copy inputs into the pod/host workdir (`hexa cloud copy-to` / `scp`).
    3. run detached (`SAVE_POD=1` sticky so an SSH drop survives).

@@ -5,9 +5,7 @@
 // plumbing (hash-object→mktree→commit-tree→update-ref) + best-effort `push origin ing`.
 // → branch-switch-proof (never in worktree) · committed · shared (push) · protected-safe.
 // `done` SCRUBS (completed work graduates to CHANGELOG; ING holds only what's ACTIVE).
-// SessionStart `inject` surfaces open work + running pods so the board is seen — but
-// pods are NOT stored here anymore: the pod store is the shared ~/.sidecar/pods.jsonl
-// SSOT (`sidecar pod` · modules/pod-poll.ts); this file only READS it for the inject.
+// SessionStart `inject` surfaces open work so the board is seen.
 import { execFileSync } from "node:child_process";
 import { emitInject } from "../lib/inject.ts";
 import { existsSync, readFileSync } from "node:fs";
@@ -17,7 +15,6 @@ import { info, ok, warn, nowIso } from "../lib/log.ts";
 import { readStdin, execArgs } from "../lib/exec.ts";
 import { config, inGitRepo } from "../lib/config.ts";
 import { ingStalenessWarn, resetIngStaleness } from "./ing-staleness.ts";
-import { loadPods } from "./pod-poll.ts";
 
 const ING_REF = "ing";
 const ING_FILE = "ING.jsonl";
@@ -261,12 +258,10 @@ export async function runIng(args: string[]): Promise<number> {
       const rows = await readItems();
       const work = rows.filter((r) => r.kind === "work");
       work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
-      const pods = loadPods(); // running pods from the shared ~/.sidecar/pods.jsonl SSOT (not stored in ING)
-      if (!work.length && !pods.length) return 0; // silent when nothing active
+      if (!work.length) return 0; // silent when nothing active
       const now = Date.now();
       const parts: string[] = [];
       if (work.length) parts.push(`작업 ${work.length}: ` + work.map((r) => `#${r.id}(⏳${ageDays(r.ts, now)}d) ${r.text}`).join(" · "));
-      if (pods.length) parts.push(`POD ${pods.length}: ` + pods.map((p) => `${p.id}(${p.gpu ?? "?"})`).join(" · "));
       let ctx = `🔄 ING (진행중 · ing ref) — ${parts.join("  |  ")}  · \`sidecar ing show\` / done <id>`;
       // pileup gate: a finished-but-unscrubbed item shows its age every turn; once an
       // item is stale or the board overflows, shout for a scrub so it can't accumulate.
@@ -295,12 +290,11 @@ export async function runIng(args: string[]): Promise<number> {
   // show
   const rows = await readItems();
   if (!rows.length) {
-    info("ing: empty (ing ref). add: sidecar ing add <text> · next <text> (팟은 `sidecar pod`)");
+    info("ing: empty (ing ref). add: sidecar ing add <text> · next <text>");
     return 0;
   }
   const work = rows.filter((r) => r.kind === "work");
   work.sort((a, b) => resumeRank(a) - resumeRank(b)); // c17: ↩resume first
-  const pods = loadPods(); // shared pods.jsonl SSOT (`sidecar pod` owns the store)
   const next = rows.filter((r) => r.kind === "next");
   const now = Date.now();
   info(`ING — 진행중 (ing ref · git show ing:ING.jsonl) · 완료→CHANGELOG · 최종설계→ARCHITECTURE`);
@@ -308,10 +302,6 @@ export async function runIng(args: string[]): Promise<number> {
   for (const r of work) info(`  • #${r.id} ${r.text}   (⏳${ageDays(r.ts, now)}d · since ${r.ts.slice(0, 10)})`);
   const bloat = bloatDirective(work, config().ing.staleDays, config().ing.maxActive, now);
   if (bloat) warn(bloat.replace(/\*\*/g, ""));
-  if (pods.length) {
-    info(`POD (running · ~/.sidecar/pods.jsonl · sidecar pod): ${pods.length}`);
-    for (const p of pods) info(`  • ${p.id} | ${p.provider ?? "-"} | ${p.gpu ?? "-"} | ${p.purpose ?? "-"} | ${p.cost ?? "-"}${p.addedAt ? ` | since ${p.addedAt.slice(0, 10)}` : ""}`);
-  }
   if (next.length) {
     info(`다음 (next): ${next.length}`);
     for (const r of next) info(`  • #${r.id} ${r.text}`);
@@ -321,7 +311,6 @@ export async function runIng(args: string[]): Promise<number> {
 
 function usage(): number {
   info("usage: sidecar ing {show|add <text>|done <id|match>|next <text>|inject}");
-  info("  팟(GPU pod) 로스터/폴링은 `sidecar pod {add|rm|list|watch|unwatch|poll}` (공용 ~/.sidecar/pods.jsonl)");
   info("  free text with shell-special chars (parens·quotes·$·→): pipe via --stdin —");
   info("    printf '%s' \"<text>\" | sidecar ing add --stdin");
   return 1;

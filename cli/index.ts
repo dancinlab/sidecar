@@ -22,7 +22,7 @@ import { runFleet } from "../modules/fleet.ts";
 import { runPrCycle } from "../modules/pr-cycle.ts";
 import { runReap } from "../modules/reap.ts";
 import { runShip } from "../modules/ship.ts";
-import { runPod, runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
+import { runDemi, runDojo, runMicroExp, runBypass, runGo, runBrainstorm, runGap } from "../modules/runbooks.ts";
 import { runPool } from "../modules/pool.ts";
 import { runIng } from "../modules/ing.ts";
 import { runFrontier } from "../modules/frontier.ts";
@@ -56,8 +56,6 @@ import { runLockdown } from "../modules/lockdown-cmd.ts";
 import { runCommons } from "../modules/commons.ts";
 import { runArchitecture } from "../modules/architecture.ts";
 import { runTurnClose } from "../modules/turn-close.ts";
-import { runDataset } from "../modules/dataset.ts";
-import { runModels } from "../modules/models.ts";
 import { runChangelog } from "../modules/changelog.ts";
 import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
@@ -121,10 +119,6 @@ hook delegates (wire these into your agent's settings.json):
   fleet full [frontier:goal,…|parallel|go|…]  full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped, weak lever still measures a wall before abstract) · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)
   pr-cycle [--no-reap] [gh flags]   push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (--no-reap skips)
   reap [--max-refresh N] [--no-close] [--dry-run] [--artifact RE]   drain stale open PRs: merge MERGEABLE (no-admin) · refresh-merge CONFLICTING (doc-files auto-resolved, code conflicts abort) · ≥7d code-conflict PRs closed with branch preserved · cron-able
-  pod                      GPU cloud pod dispatch runbook (preflight→fire→poll→harvest→down · cost-gated)
-  pod {add <id> <provider> <gpu> <purpose> [cost]|rm <id>|list}   roster bookkeeping — running pods + cost/purpose (shared ~/.sidecar/pods.jsonl SSOT · was ing pod)
-  pod poll <id> [--ssh-check "<cmd>"|--done-match RE] [--teardown-on-done] [--pull "<remote> <local>"]   one-shot auto-poll via hexa cloud (alive→util/probe→optional pull+teardown · READ-ONLY default · pull-then-destroy)
-  pod {watch <id> [--interval 600] [--cron]|unwatch <id>}   mark/stop ≥10-min cadence polling (cron OR agent-wakeup fallback · unwatch keeps the roster entry)
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
   micro-exp [<scope>]      context-driven micro-experiment sweep (infra-gate→budget→dispatch→monitor→absorb→ledger)
   bypass                   anti-punt self-check runbook (proceed on local+reversible; ask only when outward/decision)
@@ -191,12 +185,10 @@ reports:
   end                          session-closure safety check (uncommitted·unpushed·stash·PRs·branches·worktrees)
   worktree {scan|gc|inject|stop-check|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped)
                            (\`inject\`=SessionStart/Compact WARN surfacing stranded worktrees+no-worktree branches+refs/reaped (+ING task link) · \`stop-check\`=Stop-time WARN for committed-but-unpushed worktree work (keyed dedup·never blocks) · \`scan\` exit 1 gates new work · \`gc\` auto-sweep)
-  ing [show|add|done|next|inject]   in-progress board → ING.jsonl (작업·next · done=scrub · SessionStart inject · 내 repo 전용) · 팟은 별도 공용 pods.jsonl(sidecar pod)에서 읽어 표면만 표시
+  ing [show|add|done|next|inject]   in-progress board → ING.jsonl (작업·next · done=scrub · SessionStart inject · 내 repo 전용)
   frontier [show|set <목표>|go [노트]|swap <새목표>|clear|inject]   single north-star objective (최전선) → FRONTIER.jsonl on a dedicated 'frontier' git ref (single-slot · unlike ing's multi-item board). 지정=set(clobber 거부 → swap) · 진행=go(push-now directive + 진행노트) · 교체=swap(은퇴→CHANGELOG) · 해제=clear · 한글 별칭 허용 · inject surfaces it (silent when unset)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
-  models {list|show|add|set|gate|feat|verify|prune|rm}   model registry → ARCHITECTURE.json .models[] (id·arch·params·tier·sha256·path·hf + gates 검증충족도·progress·features · byte-invariant splice · verify=sha256 · prune=HF+sha guard)
-  dataset {list|show|add|set|feat|rm} [--lang ko|en] [--register general|sns]   dataset registry → ARCHITECTURE.json .datasets[] (4-cell lang×register · byte-invariant top-level splice · parallel to models)
   upstream {list|fix <name|repo>}   in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)
   sync {run|diff}              run configured shared-file sync script
 
@@ -241,8 +233,6 @@ async function main(): Promise<number> {
       return runReap(rest);
     case "ship":
       return runShip(rest);
-    case "pod":
-      return runPod(rest);
     case "mem-guard":
     case "mem":
       return runMemGuard(rest);
@@ -326,10 +316,6 @@ async function main(): Promise<number> {
       return runArchitecture(rest);
     case "turn-close":
       return runTurnClose(rest);
-    case "models":
-      return runModels(rest);
-    case "dataset":
-      return runDataset(rest);
     case "changelog":
       return runChangelog(rest);
     case "git-context":

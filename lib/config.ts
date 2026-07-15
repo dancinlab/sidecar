@@ -77,6 +77,11 @@ export interface SidecarConfig {
     // it must decompose (ARCH-PILED). 0 = off.
     archCellCap?: number;
     archPiledMax?: number;
+    // regex source for a legal node id (ARCH-ID-FORMAT). Default kebab-case; a repo
+    // whose ids deliberately encode the parent (`mech-3.falsifier`) declares its own
+    // rather than mangling its semantics. Search matches ids as substrings, so a
+    // non-kebab id stays addressable.
+    archIdPattern?: string;
     // per-inject byte-cap MAP — EACH source sidecar injects to the agent (re-injected
     // every turn/session) gets its OWN size lint (INJECT-OVERSIZED), so prose bloat is
     // caught per inject, not as a lump. Keyed by repo-relative path; a key ending "/"
@@ -333,6 +338,7 @@ const DEFAULTS: SidecarConfig = {
     cmdDescCap: 320,
     archCellCap: 300,
     archPiledMax: 6,
+    archIdPattern: "^[a-z0-9][a-z0-9-]*$",
     // ALWAYS-ON byte cap for every tracked CLAUDE.md (re-injected every turn → context-rot).
     // ~2x a lean governance CLAUDE.md; diff-aware so legacy bloated ones block only on touch.
     claudeMdCap: 8000,

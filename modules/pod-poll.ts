@@ -1,21 +1,28 @@
-// sidecar pod {poll|watch|unwatch|list} — GPU pod auto-polling (generic, cross-project).
+// sidecar pod {add|rm|list|watch|unwatch|poll} — GPU pod roster + auto-polling.
 //
-// Generalizes the "fire a GPU pod, then check it every ~10 min" loop into a
-// canonical command instead of hand-rolled ScheduleWakeup + manual ssh. Every
-// remote op goes through `hexa cloud` (commons canonical-cli — never raw
+// ONE shared jsonl SSOT for pods: `~/.sidecar/pods.jsonl` (host-global, append-log
+// jsonl — one pod object per line, last line per id wins — the same flat convention
+// as pool.json/companions.json but jsonl like ING.jsonl/CHANGELOG.jsonl). Replaces
+// the split of a keyed `pod-watch.json` registry + an `ing pod` roster on the `ing`
+// ref: bookkeeping (provider/gpu/purpose/cost) and watch/poll config now live on the
+// SAME entry. `ing` no longer stores pods — it only READS this file to surface running
+// pods in its inject (store fully out of ING).
+//
+// Every remote op goes through `hexa cloud` (commons canonical-cli — never raw
 // ssh/curl/provider-API): `cloud alive` (liveness), `cloud exec` (status probe),
 // `cloud copy-from` (pull), `cloud rm` (teardown).
 //
-//   poll <id>    one-shot, idempotent: alive → status probe → optional pull+teardown
-//   watch <id>   register for ≥10-min cadence polling (cron, or agent-wakeup fallback)
-//   unwatch <id> deregister (+ remove any cron entry)
-//   list         show watched pods + last poll status
+//   add <id> <provider> <gpu> <purpose> [cost]  register a running pod (roster only, no polling)
+//   rm <id>                                      drop a pod from the roster (+ any cron entry)
+//   list                                         show roster + watch/poll status
+//   watch <id>                                   mark for ≥10-min cadence polling (cron, or agent-wakeup fallback)
+//   unwatch <id>                                 stop polling (clear cadence + cron) — KEEPS the roster entry
+//   poll <id>                                    one-shot, idempotent: alive → status probe → optional pull+teardown
 //
 // SAFE BY DEFAULT (no-escape-hatch): poll is READ-ONLY — pull/teardown happen
 // ONLY with explicit --pull / --teardown-on-done. Teardown order is
 // pull-THEN-destroy (a_fire_recover_complete: never drop a pod before its ckpt
-// is recovered). Watch registry is global (~/.sidecar/pod-watch.json, the same
-// flat convention as pool.json/companions.json).
+// is recovered). A successful teardown removes the pod from the roster (it's gone).
 
 import { homedir } from "node:os";
 import { resolve, dirname } from "node:path";
@@ -23,7 +30,8 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { execArgs } from "../lib/exec.ts";
 import { info, ok, warn, loudFail, nowIso } from "../lib/log.ts";
 
-const WATCH_FILE = resolve(homedir(), ".sidecar", "pod-watch.json");
+const PODS_FILE = resolve(homedir(), ".sidecar", "pods.jsonl");
+const LEGACY_WATCH_FILE = resolve(homedir(), ".sidecar", "pod-watch.json"); // pre-jsonl keyed registry (one-time migration)
 const CRON_LOG = resolve(homedir(), ".sidecar", "pod-watch.log");
 const MIN_INTERVAL = 600; // commons c19: ≥10-min self-paced cadence floor
 const DEFAULT_INTERVAL = 600;
@@ -38,9 +46,15 @@ interface PollState {
   done: boolean;
   action: string;
 }
-interface PodEntry {
+export interface PodEntry {
   id: string;
+  // roster bookkeeping (was `ing pod` · optional so a watch-only entry omits them)
   provider?: string;
+  gpu?: string;
+  purpose?: string;
+  cost?: string; // per-hour, free-form (e.g. "$1.9/hr")
+  // watch/poll config
+  watched?: boolean; // true once `pod watch` marked it for cadence polling
   interval: number;
   teardownOnDone: boolean;
   pull?: string; // "<remote> <local>" forwarded to `hexa cloud copy-from`
@@ -56,21 +70,55 @@ interface Registry {
   pods: Record<string, PodEntry>;
 }
 
-// ── registry I/O ────────────────────────────────────────────────────────────
+// Default skeleton for an entry created before any `pod watch` config exists.
+function blankEntry(id: string): PodEntry {
+  return { id, interval: DEFAULT_INTERVAL, teardownOnDone: false, doneAfter: DEFAULT_DONE_AFTER, cron: false, addedAt: nowIso() };
+}
+
+// ── registry I/O (pods.jsonl · append-log, last line per id wins) ─────────────
 function load(): Registry {
-  if (!existsSync(WATCH_FILE)) return { version: 1, pods: {} };
-  try {
-    const r = JSON.parse(readFileSync(WATCH_FILE, "utf8")) as Registry;
-    if (!r.pods) r.pods = {};
-    return r;
-  } catch {
-    return { version: 1, pods: {} };
+  const pods: Record<string, PodEntry> = {};
+  if (existsSync(PODS_FILE)) {
+    try {
+      for (const line of readFileSync(PODS_FILE, "utf8").split("\n")) {
+        const t = line.trim();
+        if (!t) continue;
+        try {
+          const e = JSON.parse(t) as PodEntry;
+          if (e && e.id) pods[e.id] = e; // last line wins
+        } catch {
+          /* skip malformed line */
+        }
+      }
+    } catch {
+      /* unreadable → empty */
+    }
+    return { version: 1, pods };
   }
+  // one-time migration: seed from the pre-jsonl keyed `pod-watch.json` registry.
+  if (existsSync(LEGACY_WATCH_FILE)) {
+    try {
+      const r = JSON.parse(readFileSync(LEGACY_WATCH_FILE, "utf8")) as Registry;
+      if (r?.pods) return { version: 1, pods: r.pods };
+    } catch {
+      /* unreadable → empty */
+    }
+  }
+  return { version: 1, pods };
 }
 function save(r: Registry): void {
-  const dir = dirname(WATCH_FILE);
+  const dir = dirname(PODS_FILE);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(WATCH_FILE, JSON.stringify(r, null, 2) + "\n", "utf8");
+  const body = Object.keys(r.pods)
+    .map((id) => JSON.stringify(r.pods[id]))
+    .join("\n");
+  writeFileSync(PODS_FILE, body ? body + "\n" : "", "utf8");
+}
+
+// Read-only reader for other modules (ing inject/show) that surface running pods
+// without owning the store. The pods.jsonl format-owner stays here.
+export function loadPods(): PodEntry[] {
+  return Object.values(load().pods);
 }
 
 // ── arg parsing (value-flags vs bool-flags vs positionals) ────────────────────
@@ -273,18 +321,21 @@ async function watch(args: string[]): Promise<number> {
     interval = MIN_INTERVAL;
   }
   const reg = load();
+  const prev = reg.pods[id];
   const entry: PodEntry = {
+    ...(prev ?? blankEntry(id)),
     id,
-    provider: opts["--provider"],
+    // preserve roster bookkeeping (provider/gpu/purpose/cost) from a prior `pod add`
+    provider: opts["--provider"] ?? prev?.provider,
+    watched: true,
     interval,
     teardownOnDone: bools.has("--teardown-on-done"),
-    pull: opts["--pull"],
-    sshCheck: opts["--ssh-check"],
-    doneMatch: opts["--done-match"],
-    doneAfter: parseInt(opts["--done-after"] ?? "", 10) || DEFAULT_DONE_AFTER,
+    pull: opts["--pull"] ?? prev?.pull,
+    sshCheck: opts["--ssh-check"] ?? prev?.sshCheck,
+    doneMatch: opts["--done-match"] ?? prev?.doneMatch,
+    doneAfter: parseInt(opts["--done-after"] ?? "", 10) || prev?.doneAfter || DEFAULT_DONE_AFTER,
     cron: bools.has("--cron"),
-    addedAt: nowIso(),
-    lastPoll: reg.pods[id]?.lastPoll,
+    lastPoll: prev?.lastPoll,
   };
   reg.pods[id] = entry;
   save(reg);
@@ -309,6 +360,9 @@ async function watch(args: string[]): Promise<number> {
   return 0;
 }
 
+// unwatch = stop polling but KEEP the roster entry (the pod is still running/renting).
+// Use `pod rm` to drop it from the roster entirely; a successful teardown-on-done poll
+// removes it automatically.
 async function unwatch(args: string[]): Promise<number> {
   const { pos } = parse(args);
   const id = pos[0];
@@ -317,13 +371,61 @@ async function unwatch(args: string[]): Promise<number> {
     return 1;
   }
   const reg = load();
-  const had = !!reg.pods[id];
-  delete reg.pods[id];
+  const entry = reg.pods[id];
+  if (!entry) {
+    info(`pod unwatch: ${id} not in roster`);
+    await removeCron(id);
+    return 0;
+  }
+  entry.watched = false;
+  entry.cron = false;
   save(reg);
   const cronOk = await removeCron(id);
   const cronNote = cronOk ? "" : " (⚠ cron entry remove FAILED — clear it manually)";
-  if (had) ok(`pod unwatch: ${id} removed${cronNote}`);
-  else info(`pod unwatch: ${id} was not registered${cronNote}`);
+  ok(`pod unwatch: ${id} polling stopped (still in roster — \`pod rm ${id}\` to drop)${cronNote}`);
+  return 0;
+}
+
+// add = roster-only registration (bookkeeping: what am I renting + cost). No polling.
+async function addRoster(args: string[]): Promise<number> {
+  const { pos } = parse(args);
+  const [id, provider, gpu, ...rest] = pos;
+  if (!id) {
+    loudFail("pod add: missing <id>", { usage: "sidecar pod add <id> <provider> <gpu> <purpose> [cost/hr]" });
+    return 1;
+  }
+  const cost = rest.length && /^[\d.$]/.test(rest[rest.length - 1]) ? rest.pop()! : undefined;
+  const purpose = rest.join(" ") || undefined;
+  const reg = load();
+  const prev = reg.pods[id];
+  reg.pods[id] = {
+    ...(prev ?? blankEntry(id)),
+    id,
+    provider: provider ?? prev?.provider,
+    gpu: gpu ?? prev?.gpu,
+    purpose: purpose ?? prev?.purpose,
+    cost: cost ?? prev?.cost,
+  };
+  save(reg);
+  ok(`pod add: ${id} (${provider ?? "-"} · ${gpu ?? "-"} · ${purpose ?? "-"}${cost ? " · " + cost : ""})`);
+  return 0;
+}
+
+// rm = drop a pod from the roster entirely (+ any cron entry).
+async function rmRoster(args: string[]): Promise<number> {
+  const { pos } = parse(args);
+  const id = pos[0];
+  if (!id) {
+    loudFail("pod rm: missing <id>", { usage: "sidecar pod rm <id>" });
+    return 1;
+  }
+  const reg = load();
+  const had = !!reg.pods[id];
+  delete reg.pods[id];
+  save(reg);
+  await removeCron(id);
+  if (had) ok(`pod rm: ${id} removed from roster`);
+  else info(`pod rm: ${id} was not in roster`);
   return 0;
 }
 
@@ -331,17 +433,21 @@ function list(): number {
   const reg = load();
   const ids = Object.keys(reg.pods);
   if (!ids.length) {
-    info("pod list: no watched pods — register with `sidecar pod watch <id>`");
+    info("pod list: roster empty — `sidecar pod add <id> <provider> <gpu> <purpose>` or `pod watch <id>`");
     return 0;
   }
-  info(`watched pods (${ids.length}) · ${WATCH_FILE}`);
+  info(`pods (${ids.length}) · ${PODS_FILE}`);
   for (const id of ids) {
     const e = reg.pods[id];
     const lp = e.lastPoll;
+    const roster = `${e.provider ?? "-"} · ${e.gpu ?? "-"} · ${e.purpose ?? "-"}${e.cost ? " · " + e.cost : ""}`;
+    const watch = e.watched
+      ? `watch every ${e.interval}s · teardown ${e.teardownOnDone ? "ON" : "OFF"} · cron ${e.cron ? "ON" : "OFF"}`
+      : "roster-only";
     const last = lp
-      ? `${lp.alive}/${lp.idle ? `idle ${lp.idleStreak}` : "busy"}${lp.done ? " DONE" : ""}${lp.action !== "none" ? ` (${lp.action})` : ""} @${lp.ts.slice(11, 19)}`
-      : "never polled";
-    info(`  • ${id} [${e.provider ?? "auto"}] every ${e.interval}s · teardown ${e.teardownOnDone ? "ON" : "OFF"} · cron ${e.cron ? "ON" : "OFF"} · last: ${last}`);
+      ? ` · last: ${lp.alive}/${lp.idle ? `idle ${lp.idleStreak}` : "busy"}${lp.done ? " DONE" : ""}${lp.action !== "none" ? ` (${lp.action})` : ""} @${lp.ts.slice(11, 19)}`
+      : "";
+    info(`  • ${id} | ${roster} | ${watch}${last}`);
   }
   return 0;
 }
@@ -392,6 +498,10 @@ async function removeCron(id: string): Promise<boolean> {
 // ── dispatcher ────────────────────────────────────────────────────────────────
 export async function runPodPoll(sub: string, args: string[]): Promise<number> {
   switch (sub) {
+    case "add":
+      return addRoster(args);
+    case "rm":
+      return rmRoster(args);
     case "poll":
       return poll(args);
     case "watch":
@@ -401,7 +511,7 @@ export async function runPodPoll(sub: string, args: string[]): Promise<number> {
     case "list":
       return list();
     default:
-      loudFail(`pod: unknown subcommand '${sub}'`, { valid: "poll|watch|unwatch|list" });
+      loudFail(`pod: unknown subcommand '${sub}'`, { valid: "add|rm|list|watch|unwatch|poll" });
       return 1;
   }
 }

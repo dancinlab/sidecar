@@ -342,7 +342,7 @@ export async function preBash(_args: string[]): Promise<number> {
   if (cloudLabel) {
     return emitBlock(
       "CLOUD-RAW-CLI",
-      `${cloudLabel} — raw GPU-provider CLI/API direct use is blocked (commons c11). Use the hexa builtin: GPU/cloud → \`hexa cloud run <host> -- <argv...>\`. Register running cloud work with \`sidecar ing pod add\`. No override — provider CLIs/APIs are not called directly from the agent.`
+      `${cloudLabel} — raw GPU-provider CLI/API direct use is blocked (commons c11). Use the hexa builtin: GPU/cloud → \`hexa cloud run <host> -- <argv...>\`. Register running cloud work with \`sidecar pod add\`. No override — provider CLIs/APIs are not called directly from the agent.`
     );
   }
 

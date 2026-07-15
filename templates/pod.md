@@ -3,6 +3,7 @@
 > runpod/vast.ai 등 GPU pod 표면. 구조화된 흐름으로만 다루고 raw runpodctl/vastai/ssh/scp/curl 직접 호출은 지양(가드 대상). 비용 발생 = 명시 `go` 필요.
 
 ## 서브흐름
+- **roster** (`pod add/rm/list`) — 지금 임대중인 팟 장부(provider·gpu·purpose·cost)를 **공용 `~/.sidecar/pods.jsonl`** 한 곳에 기록(호스트 전역 · append형 jsonl · 옛 `ing pod` 이관). `pod watch/poll` 도 같은 엔트리를 쓴다(단일 SSOT). ⚠️ repo별 `pods.json`(monitor/fire-shards 잡 매니페스트)과는 별개 층.
 - **preflight** — closed-form GPU mem 예산 체크(파라미터·배치·옵티마이저 상태 → VRAM 추정). pod spinup 없이 OOM 사전 판정.
 - **rent** — pod 임대(provider·GPU·디스크 명시). **비용 발생 → 4축 박스로 surface 후 명시 `go` 대기**(자동 rent 금지).
 - **run / nohup / fire** — 잡 실행. fire/nohup = 백그라운드 fire + 모니터 핸들 emit. CPU-local 폴링 가능(detached nohup → /tmp log).

@@ -1,7 +1,7 @@
 // cloud-guard — built-in code-level block for raw GPU-provider CLI/API use in
 // `pre bash`. The canonical path is hexa's `hexa cloud` builtin (commons
 // canonical-cli); calling a provider's own CLI/API directly bypasses that layer
-// (and the `ing pod` board / cost accounting). This is enforced in CODE — before
+// (and the `pod` roster / cost accounting). This is enforced in CODE — before
 // config rules, default-on, NO `# raw-cloud-ok`-style escape — so a regex profile
 // edit can't silently weaken it (unlike an enforcement.json rule).
 //

@@ -420,6 +420,13 @@
         "value": "search 의 walk 과 lint 의 ARCH-ID-MISSING 은 'rendered node' 판정을 공유해야 한다 — rendered = name/role/detail 중 아무거나. search 만 nodeName 유무로 게이트해서 c4 스켈레톤의 name-less {id, role} 트리는 전 노드가 스킵됐다(방문하되 한 건도 검사 안 함 ⇒ 파일에 그대로 있는 단어가 0 hit). lint 는 이미 같은 이유로 name 의존을 벗어났는데 search 만 안 따라옴",
         "threshold": "노드 판정 로직 수정 시: 한쪽(lint/search/inject/viewer)만 고치면 두 절반이 rendered-node 정의를 다르게 본다 — 판정을 공유하고 name 없는 트리로 회귀 테스트. 부수효과: ARCH-ID-FORMAT 의 명분(searchability)은 점 표기도 부분문자열 검색이 정상이라 kebab-case 를 정당화하지 못함",
         "source": "modules/architecture.ts"
+      },
+      {
+        "id": "config-ts-2",
+        "state": "pos-conv",
+        "value": "lint 규칙의 임계/형식은 config 로 노출한다 — archCellCap 은 처음부터 config-driven 인데 형제인 ARCH-ID-FORMAT 정규식만 하드코딩이라, 부모를 id 에 담는 의도적 관례(mech-3.falsifier · L4.arms)를 쓰는 저장소는 트리 의미를 뭉개거나(L1.one-bit-seam→l1-one-bit-seam 은 L1=Law 1 정보 상실) 게이트를 영구 우회하거나 둘 중 하나였다",
+        "threshold": "새 lint 규칙에 임계/패턴을 넣을 때: 하드코딩하면 정당한 반례 저장소에 탈출구가 없어 게이트가 영구 우회된다(anima-v4: 103노드 중 96 위반 → 첫 커밋부터 게이트 우회 = 자기 엄격함으로 무력화). 기본값은 유지하되 config 키로 노출하고, 규칙의 명분이 실제로 그 형식을 요구하는지 확인하라 — ARCH-ID-FORMAT 의 'searchability' 명분은 점 표기도 부분문자열 검색되므로 kebab 을 정당화하지 못했다",
+        "source": "lib/config.ts"
       }
     ]
   },

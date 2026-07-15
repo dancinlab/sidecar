@@ -417,6 +417,16 @@ export interface ArchLintHit {
 // Config-driven (lint.archCellCap); tightened 1500→700→300 to force a crisp tree
 // of short cells, not prose-leaves. 0 = off.
 const MAX_CELL_CHARS = config().lint?.archCellCap ?? 300;
+// Shape of a legal node id. Kebab-case is the default and stays the default — but a
+// tree whose ids encode the parent (`mech-3.falsifier`, `L4.arms`) is a real, coherent
+// convention, and hard-coding the pattern left such a repo with no move except mangling
+// its own semantics (`L1.one-bit-seam` -> `l1-one-bit-seam` loses that L1 is Law 1).
+// Its sibling cap (archCellCap) was always config-driven; this one was not, purely by
+// omission. Note the rule's stated rationale — "keep ids grep-clean so `sidecar
+// architecture search` can address it" — does NOT motivate kebab: search matches ids as
+// substrings, so a dotted id resolves fine. Repos that want the stricter shape keep it
+// for free; repos with a deliberate convention declare it (lint.archIdPattern).
+const ID_PATTERN = new RegExp(config().lint?.archIdPattern ?? "^[a-z0-9][a-z0-9-]*$");
 // A leaf gluing more than this many dot-joined items is a child list flattened
 // into one string - it belongs in a list block or nested nodes, not one cell.
 // Config-driven (lint.archPiledMax, default 6 — tightened from 10). 0 = off.
@@ -489,11 +499,12 @@ export function lintArchitectureTree(): ArchLintHit[] {
             path,
             msg: `tree node ${label} has no id — every rendered node (name/role/detail) needs a stable searchable id (\`sidecar architecture search\`)`,
           });
-        } else if (!/^[a-z0-9][a-z0-9-]*$/.test(id)) {
+        } else if (!ID_PATTERN.test(id)) {
           hits.push({
             rule: "ARCH-ID-FORMAT",
             path,
-            msg: `id "${id}" is not kebab-case ([a-z0-9-], no leading dash) — keep ids grep-clean`,
+            msg: `id "${id}" does not match ${ID_PATTERN.source} — keep ids grep-clean ` +
+              `(a repo with a deliberate id convention declares it: harness.config.json lint.archIdPattern)`,
           });
         } else {
           const prev = idSeen.get(id);

@@ -14,10 +14,10 @@ exports/dojo/<slug>/
 ## 흐름
 1. `sidecar dojo <slug>` → `exports/dojo/<slug>/` 에 3 파일 스캐폴드(이미 있으면 보존, `--force` 만 덮어쓰기).
 2. spec(데이터·모델·하이퍼) 채움.
-3. `run.sh` 가 `sidecar pod` 흐름(preflight→fire→poll→harvest→down)을 호출하도록 작성 — 비용 발생은 명시 `go`.
+3. `run.sh` 가 `hexa cloud` 흐름(rent→run/nohup→poll→copy-from→rm)을 호출하도록 작성 — 비용 발생은 명시 `go`.
 4. 산출 ckpt/로그는 회수 후 레지스트리(예: HF) 등록, teardown 전 pull 완료.
 
 ## 원칙
 - 임시 스크래치는 `scripts/scratch/`(tmp 휘발 금지).
 - 생성물은 단일 디렉토리(`exports/dojo/<slug>/`)에 모음 — 흩뿌리지 말 것.
-- GPU 잡은 `sidecar pod` 의 회수-우선·wall-time-first·비용 go 규칙을 따른다.
+- GPU 잡은 `hexa cloud` 의 회수-우선·wall-time-first·비용 go 규칙을 따른다.

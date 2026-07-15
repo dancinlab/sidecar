@@ -991,32 +991,6 @@
                 "detail": "config `hypotheses.dir`(기본 HYPOTHESES/)로 가설(pre-register→falsify→run→verdict) 작업을 한 폴더 고정. hypothesis-guard(pre write/bash)가 신규 stray 폴더(per-repo aliases 예 UNIVERSE·내장 hypothes*/가설* 패턴) 차단(신규=block·기존=warn·name-pattern 상시). check=감사(--gate) · migrate=git mv→canonical(병합) · scaffold · show."
               },
               {
-                "name": "pod {add|rm|list|watch|unwatch|poll}",
-                "role": "GPU pod 로스터 + 자동 폴링 (단일 공용 pods.jsonl SSOT)",
-                "id": "module-pod-poll",
-                "detail": "modules/pod-poll.ts — 로스터(provider/gpu/purpose/cost)와 watch/poll 설정을 하나의 엔트리로 합친 단일 공용 SSOT. 옛 `ing pod`(ING ref) + 옛 pod-watch.json 통합 → 팟은 ING 에 저장 안 함(ING 은 read-only 표면). runbooks.ts runPod 가 sub-verb 디스패치, bare 는 런북. 모든 원격 op 은 `hexa cloud` 경유(commons c11).",
-                "children": [
-                  {
-                    "name": "hexa cloud 경유 op",
-                    "role": "canonical-cli 재사용",
-                    "id": "detail-pod-poll-cloud",
-                    "detail": "`alive` 생존(RUNNING/GONE)·`exec` 프로브(GPU-util 또는 `--ssh-check`)·`copy-from` pull·`rm` teardown. poll=one-shot, idle-streak `--done-after N`(기본 2)로 sustained-idle done 판정."
-                  },
-                  {
-                    "name": "no-escape-hatch 기본값",
-                    "role": "안전 비파괴 (read-only)",
-                    "id": "detail-pod-poll-readonly",
-                    "detail": "poll 은 teardown/pull 플래그 없으면 순수 read-only(util 출력만). `--teardown-on-done`/`--pull \"<remote> <local>\"` 있을 때만 회수 후 teardown(pull-then-destroy a_fire_recover_complete · pull 실패 시 teardown 거부)."
-                  },
-                  {
-                    "name": "roster + watch cadence",
-                    "role": "공용 pods.jsonl + 구동",
-                    "id": "detail-pod-poll-cadence",
-                    "detail": "SSOT `~/.sidecar/pods.jsonl`(호스트전역 append형 jsonl · pool.json 위치 + ING.jsonl 포맷 동형 · 옛 pod-watch.json 1회 마이그레이션). add/rm=로스터 · watch=cadence 표시 · unwatch=폴링만 중단(로스터 유지). cadence: `--cron`(crontab `*/N`) 또는 agent `ScheduleWakeup` fallback(interval >=600s c19)."
-                  }
-                ]
-              },
-              {
                 "name": "fleet (+ lab/abstract/full)",
                 "role": "영구 멀티레인 오케스트레이터 런북 (fire-on-arrival · 4모드)",
                 "id": "module-fleet-lab-abstract-full",
@@ -1064,7 +1038,7 @@
                 "name": "ing",
                 "role": "진행보드 (전용 `ing` git ref · 내 repo 전용)",
                 "id": "module-ing",
-                "detail": "work/next/pod · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다. add/next 는 현재 branch(≠main)를 스탬프→stranded 브랜치/워크트리↔태스크 링크(findIngForBranch·worktree inject·end).",
+                "detail": "work/next · 보드는 내 현재 repo 전용 — cross-repo 전달(`--to`)은 폐기(직접수정 원칙 · commons upstream-fix). upstream 결함은 그 repo 에서 직접 고쳐 머지하고, 끊기는 작업만 `↩resume` 으로 내 보드에 남긴다. add/next 는 현재 branch(≠main)를 스탬프→stranded 브랜치/워크트리↔태스크 링크(findIngForBranch·worktree inject·end).",
                 "children": [
                   {
                     "name": "저장 = ing ref (worktree 아님)",
@@ -1157,18 +1131,6 @@
                     ]
                   }
                 ]
-              },
-              {
-                "name": "models",
-                "role": "모델 레지스트리 = ARCHITECTURE.json .models[] (사이즈 tier·검증·진행·특징 3축 · 슬래시 `/models` — CC 기본 `/model` 충돌 회피로 rename)",
-                "id": "module-models",
-                "detail": "`models {list|show|add|set|gate|feat|verify|prune|rm}` — 모델을 top-level `models[]`(SSOT)에 등록. 필드 id·arch·version·params·base·tier·sha256·path·hf·visibility + 3축(gates·progress·features). `verify`=sha256 재대조 · `prune`=HF+sha 확인 후 weight 삭제 · writer=byte-불변 splice(`dataset` 평행)"
-              },
-              {
-                "name": "dataset",
-                "role": "데이터셋 레지스트리 = ARCHITECTURE.json .datasets[] (모델 레지스트리의 데이터-짝)",
-                "id": "module-dataset",
-                "detail": "`dataset {list|show|add|set|feat|rm}` — 데이터셋을 top-level `datasets[]`(`models[]` 평행)에 등록. 필드 id·repo_id·version(family SemVer)·lang·register·rows·size·visibility·role·lang_verified·features[]. `list`=4칸 lang×register 그리드. `sidecar models` 과 동일 splice writer·flag 파서 미러(byte-불변)"
               },
               {
                 "name": "git-context",

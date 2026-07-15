@@ -218,12 +218,24 @@ export async function runArchitecture(args: string[]): Promise<number> {
     }
     const hits: { id: string; name: string; role: string; crumb: string }[] = [];
     const walk = (n: TNode, crumb: string[]): void => {
+      const key = nodeKey(n);
       const name = nodeName(n) ?? "";
-      const here = name ? [...crumb, name] : crumb;
-      if (name) {
-        const hay = [nodeKey(n), name, nodeRole(n), nodeDetail(n)].filter(Boolean).join(" ").toLowerCase();
+      const role = nodeRole(n);
+      const detail = nodeDetail(n);
+      // A RENDERED node carries ANY of name/role/detail — the same test `lint` applies when it
+      // demands an id (see ARCH-ID-MISSING). Gating the search on `name` alone made every
+      // name-less {id, role} tree — the shape the c4 skeleton actually emits — unsearchable:
+      // the walk visited each node and tested none, so `search` reported "no node matches" for
+      // terms sitting verbatim in the file. Same rendered-node rule on both sides, or the id
+      // gate enforces a searchable key that search then refuses to look at.
+      const rendered = Boolean(name || role || detail);
+      // Breadcrumbs fall back to the id so a name-less tree still yields a readable trail.
+      const label = name || key || "";
+      const here = label ? [...crumb, label] : crumb;
+      if (rendered) {
+        const hay = [key, name, role, detail].filter(Boolean).join(" ").toLowerCase();
         if (hay.includes(q)) {
-          hits.push({ id: nodeKey(n) ?? "(no id)", name, role: nodeRole(n) ?? "", crumb: crumb.join(" › ") });
+          hits.push({ id: key ?? "(no id)", name: label, role: role ?? "", crumb: crumb.join(" › ") });
         }
       }
       for (const c of n.children ?? []) walk(c, here);
@@ -234,7 +246,9 @@ export async function runArchitecture(args: string[]): Promise<number> {
       return 0;
     }
     for (const h of hits) {
-      process.stdout.write(`  ${h.id}\n      ${h.name} — ${h.role}\n      ↳ ${h.crumb || "(root)"}\n`);
+      // `name` falls back to the id for name-less trees, so don't echo it twice.
+      const head = h.name && h.name !== h.id ? `${h.name} — ${h.role}` : h.role;
+      process.stdout.write(`  ${h.id}\n      ${head}\n      ↳ ${h.crumb || "(root)"}\n`);
     }
     process.stdout.write(`architecture search: ${hits.length} match(es) for "${q}"\n`);
     return 0;

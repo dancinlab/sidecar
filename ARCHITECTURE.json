@@ -523,7 +523,7 @@
                 "name": "naming-guard",
                 "role": "비-canonical 작명 차단(생성) + 터치 시 넛지",
                 "id": "guard-naming",
-                "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · `@canonical-ok`/`# canonical-ok` 면제 · test/spec 제외"
+                "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · test/spec 제외. 면제 2단: ① 파일 단위 = 내용의 `@canonical-ok` / bash 의 `# canonical-ok` ② **디렉터리 단위 = `.canonical-ok` 마커 파일** — 그 디렉터리(또는 repo 루트까지의 상위)에 있으면 서브트리 전체 면제, Write/Edit·Bash 양쪽 적용(한쪽만이면 `mkdir zone/x` 가 막혀 반쪽 면제), `.git` 에서 탐색 중단(경계 밖 마커가 남의 레포를 면제 못 함). 용도 = 오너가 규칙 면제로 선언한 실험구역(예: dancinlab/anima 의 `anima-v2/`) — 파일마다 마커를 뿌리는 건 면제가 아니라 세금이므로 구역을 구역에서 한 번 선언한다."
               },
               {
                 "name": "portable-path 가드",

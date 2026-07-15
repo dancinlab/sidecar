@@ -413,6 +413,13 @@
         "value": "머지 게이트를 브랜치 보호에 위임한 것이 근인. 보호는 REQUIRED 부분집합만 강제하고, pr-cycle은 첫 시도부터 --admin이라 그마저 우회 → required 밖 체크가 전부 RED여도 머지된다. 2026-07-13 실측: hexa-lang #4930이 15개 RED(selfhost byte-eq·faithful-nobaseline 3타깃·own-link determinism/parity·cfallback-zero)인 채 reap에 수확 머지 — 유일한 required인 selfhost-gates-summary만 초록이었기 때문. codegen flip이 main 빌드를 깨뜨려(aprime_cc FATAL) 되돌려야 했다(#4932). 사람이 아니라 툴이 저지른 머지. FIX = 게이트를 툴 안으로 가져옴: pr-cycle이 매 머지 시도 전 전체 statusCheckRollup을 읽어 FAILURE면 실패 게이트 이름과 함께 거부, 미결이면 대기·재시도, 전체 그린일 때만 gh pr merge 도달. reap의 mergeStale도 plain 머지 전 checksGreen 요구(기존엔 --admin 폴백 앞에만 있었음). pr-cycle-ts-1(머지 성공을 실패로 오독=false-negative)과 반대 방향의 결함=false-positive.",
         "threshold": "재발조건: required 체크 집합이 실제 게이트 집합보다 좁은 repo에서 자동 머지(대부분의 repo가 그렇다). 진단: 머지된 PR의 statusCheckRollup에 FAILURE가 남아있으면 확진. ⚠️함정: 진행중 체크의 conclusion은 null이 아니라 빈 문자열 — jq의 // \"PENDING\" 폴백이 안 먹으므로 미결을 실패로 오분류하면 CI 도는 모든 PR을 가짜 RED로 거부하게 된다(미결=pending으로 취급할 것). gh pr merge 신규 호출부는 반드시 full-rollup 게이트 동반.",
         "source": "modules/pr-cycle.ts"
+      },
+      {
+        "id": "architecture-ts-3",
+        "state": "pos-conv",
+        "value": "search 의 walk 과 lint 의 ARCH-ID-MISSING 은 'rendered node' 판정을 공유해야 한다 — rendered = name/role/detail 중 아무거나. search 만 nodeName 유무로 게이트해서 c4 스켈레톤의 name-less {id, role} 트리는 전 노드가 스킵됐다(방문하되 한 건도 검사 안 함 ⇒ 파일에 그대로 있는 단어가 0 hit). lint 는 이미 같은 이유로 name 의존을 벗어났는데 search 만 안 따라옴",
+        "threshold": "노드 판정 로직 수정 시: 한쪽(lint/search/inject/viewer)만 고치면 두 절반이 rendered-node 정의를 다르게 본다 — 판정을 공유하고 name 없는 트리로 회귀 테스트. 부수효과: ARCH-ID-FORMAT 의 명분(searchability)은 점 표기도 부분문자열 검색이 정상이라 kebab-case 를 정당화하지 못함",
+        "source": "modules/architecture.ts"
       }
     ]
   },

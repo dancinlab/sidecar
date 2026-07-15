@@ -8,7 +8,8 @@
 // `detectVersionedNameBash`). A genuinely API-versioned name keeps going via the marker.
 //
 
-import { basename, extname, dirname } from "node:path";
+import { existsSync } from "node:fs";
+import { basename, extname, dirname, isAbsolute, join } from "node:path";
 
 // suffix tokens that mark a name as a version/copy/scratch sibling rather than canonical.
 // matched only at the END of the name stem (so `final_report` is fine, `report_final` warns).
@@ -25,6 +26,24 @@ const PLATFORM_NATIVE = /^[a-z][a-z0-9]*(-[a-z0-9]+)*-v\d{2,}$/;
 const DUP = /( \d+|\(\d+\)|[ _-]copy)$/i;
 // an explicit opt-out: a name carrying this marker is intentional (e.g. real API versioning)
 const ALLOW = /@canonical-ok/;
+// DIRECTORY-level opt-out: a `.canonical-ok` marker file in the target's dir (or any
+// ancestor up to the repo root) exempts the whole subtree. Without this, a deliberately
+// rule-exempt sandbox (`anima-v2/` — an owner-declared experiment zone) had to sprinkle
+// an `@canonical-ok` string into EVERY file, which is not an exemption, it is a tax.
+// Declaring the zone once, at the zone, is what "this folder is exempt" should mean.
+const DIR_MARKER = ".canonical-ok";
+
+function dirExempt(filePath: string): boolean {
+  let dir = dirname(filePath);
+  for (let i = 0; i < 40; i++) {
+    if (existsSync(join(dir, DIR_MARKER))) return true;
+    if (existsSync(join(dir, ".git"))) return false; // stop at the repo root
+    const up = dirname(dir);
+    if (up === dir) return false;
+    dir = up;
+  }
+  return false;
+}
 
 export function offendingToken(name: string): string | null {
   if (!name) return null;
@@ -38,6 +57,7 @@ export function offendingToken(name: string): string | null {
 
 export function detectVersionedName(filePath: string, content = ""): string | null {
   if (ALLOW.test(content)) return null;
+  if (dirExempt(filePath)) return null;
   const base = basename(filePath);
   // check the file name AND its immediate parent dir (the folder most likely created
   // alongside this write) — catches both `model_v2.py` and `model_v2/config.json`.
@@ -68,7 +88,7 @@ const MKDIR = new Set(["mkdir"]);
 
 // Bash file-creation/rename into a versioned/copy name — the CLI sibling of the
 // Write/Edit naming guard. Returns the offending {offender, token}, or null.
-export function detectVersionedNameBash(rawCmd: string): { offender: string; token: string } | null {
+export function detectVersionedNameBash(rawCmd: string, cwd = process.cwd()): { offender: string; token: string } | null {
   if (CANONICAL_OK.test(rawCmd)) return null;
   for (const seg of rawCmd.split(/[\n;|&()]+/)) {
     let toks = seg.trim().split(/\s+/).filter(Boolean);
@@ -90,6 +110,8 @@ export function detectVersionedNameBash(rawCmd: string): { offender: string; tok
       // mkdir creates every segment; for a move/copy dest or touch, only the new
       // basename is novel (the parent dir already exists), so check just that.
       const parts = MKDIR.has(head) ? clean.split("/") : [basename(clean)];
+      // a `.canonical-ok` zone exempts its whole subtree (same rule as the Write guard)
+      if (dirExempt(isAbsolute(clean) ? clean : join(cwd, clean))) continue;
       for (const part of parts) {
         const token = offendingToken(part);
         if (token) return { offender: part, token };

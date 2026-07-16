@@ -1220,7 +1220,7 @@
                   {
                     "name": "on",
                     "id": "module-pool-on",
-                    "role": "원격 실행",
+                    "role": "원격 실행 · 기본 orphan-fenced(ssh 사망→원격 그룹 수거) · --bg = setsid 분리(새 세션)로 ssh 끊김 생존 — 장시간 train/sweep/eval용, 즉시 반환+로그경로 폴링",
                     "detail": "on <h> [--timeout <sec>|0] <cmd> — 기본 120s, 0=무제한 (고정 120s SIGKILL 절단 제거 · heavy-on-pool). 무출력 잡은 nohup detached + scp 로 우회."
                   },
                   {

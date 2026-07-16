@@ -73,7 +73,7 @@ setup:
                                          curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
   init [--force] [--dry-run]   scaffold THIS repo: config + .harness rules + gitignore + wrapper (hooks are GLOBAL-ONLY → sidecar install)
                                          (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
-  lab <fable|sol|full> [flags] <prompt...> | --file <f> | -   model-delegation hub — hand ONE instruction to a frontier model per-CALL (session backend untouched):
+  lab <fable|sol|full> [flags] <prompt...> | --file <f> | -   model-delegation hub — 1 instruction/call to a frontier model — fable=Claude Fable 5 · sol=Codex 5.6 · full=BOTH parallel (session backend untouched):
                                          fable = Claude Fable 5 (headless 'claude -p' · default -m claude-fable-5 · opus fallback FORBIDDEN) · sol = OpenAI Codex 5.6 ('codex exec' · default -m gpt-5.6-sol) · full = BOTH in parallel (── fable ── / ── sol ── sections)
                                          · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting · --json = machine-clean answer on stdout · --dry = print resolved argv · --cwd <dir> · --timeout <s> (default UNLIMITED, exit 124)
                                          · --write = IMPLEMENT tier (fable: bypassPermissions · sol: -s workspace-write); DEFAULT is INVESTIGATE (fable: Write/Edit/NotebookEdit denied · sol: -s read-only) · -c/--continue · -r/--resume <id> · --sources <l> (fable only) · flags after -- go to the backend CLI verbatim

@@ -68,8 +68,8 @@ export const HELP = `dancinlab/sidecar — project-agnostic AI coding sidecar
 usage: sidecar <cmd> [args]
 
 setup:
-  install [--no-hooks] [--ref main] [--dry-run]   COMMON/global setup — clone dancinlab/sidecar → ~/.sidecar/cli +
-                                         a sidecar wrapper on ~/.local/bin + global hooks (idempotent). NOT a per-repo scaffold (that's init).
+  install [--no-hooks] [--ref main] [--dry-run]   COMMON/global setup — clone dancinlab/sidecar → ~/.sidecar/cli + a sidecar wrapper on ~/.local/bin + global hooks (idempotent)
+                                         NOT a per-repo scaffold (that's init).
                                          curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
   init [--force] [--dry-run]   scaffold THIS repo: config + .harness rules + gitignore + wrapper (hooks are GLOBAL-ONLY → sidecar install)
                                          (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
@@ -85,7 +85,8 @@ setup:
                                          ~/.pi/agent/extensions/ + add ~/.claude/skills to Pi settings. Same engine as the CC plugin; governance parity (Stop-gates CC-only)
   self-update              git-pull the sidecar CLI clone this binary runs from (e.g. ~/.sidecar/cli) to latest main
   shadow [plan|remove|--force]  mirror sidecar's own commands/ into ~/.claude/commands/ as bare /cmd delegators (marker-tracked · regenerable · --force heals pre-marker stale shadows from source)
-  ship [--no-doc]          SIDECAR-REPO ONLY — propagate sidecar's OWN change across its install surfaces: inject-bloat guard (context-rot) → pr-cycle → self-update (global CLI) → shadow (slash mirror). Other repos use pr-cycle for a plain verified merge
+  ship [--no-doc]          SIDECAR-REPO ONLY — propagate sidecar's OWN change across its install surfaces: inject-bloat guard (context-rot) → pr-cycle → self-update (global CLI) → shadow (slash mirror)
+                                         Other repos use pr-cycle for a plain verified merge
 
 hook delegates (wire these into your agent's settings.json):
   pre bash                 PreToolUse(Bash)  — enforcement match → block/warn
@@ -96,17 +97,25 @@ hook delegates (wire these into your agent's settings.json):
   post edit <file>         PostToolUse(Write/Edit) — flag L0 edits
   prompt <text>            UserPromptSubmit  — keyword triggers + prompt hints
   commons {inject|show}    always-on cross-project governance SSOT (config/commons.md; repo override .harness/commons.md)
-  architecture {inject|show|search <q>|lint|convergence ...|result ...}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart; search <q> = substring over id/name/role/detail → matching node ids+breadcrumb; lint = c4 tree hygiene + id presence/uniqueness; convergence {list|for|add|rm|edit} = 재발학습 store CRUD (id-keyed · add upsert · value/threshold '--value -'=stdin); result = DISCARDED (실험 verdict 는 별도 store 아님 → ARCHITECTURE type:\"gate\" 노드 verdict 직접 update-in-place · 턴 마감 트리오의 🏛️ 줄이 강제). 재발-신호/게이트-신호 키워드 스캐너(stop-check · gate-stop-check · convergence stop-check)는 폐기 → turn-close check 로 통합
-  turn-close {check|inject}   턴 마감 트리오 게이트 — 매 응답에 🔄 ING · 🏛️ ARCHITECTURE · 🧬 CONVERGENCE 세 줄을 함께 강제(Stop 훅 · 누락/위조 = decision:block 1회 · stop_hook_active anti-wedge). 갱신/기록 주장은 검증된다: ING = ing ref 전진 · ARCHITECTURE = 파일 diff(working·staged·직전 커밋) · CONVERGENCE = records[] id + diff (마커만 쓰는 자기보고 위조 차단). 활성 leg 이 없으면(설계트리·보드 둘 다 없음) 완전 무음. inject = 매턴 트리오 지시 주입 + ing ref 베이스라인 스냅샷. 키워드 스캔 방식 전면 폐기(신호 난입 → 결정적 트리오)
-  changelog {add "<title>"|list [N]|render [N]|prune --keep N|--older-than D|autoprune|migrate}   append-only history as CHANGELOG.jsonl (newest-first JSONL · ts+title+body) — add appends(body via stdin) + auto-trims to keep-N(config lint.changelog.keep, default 30), prune deletes old entries(keep-N or age), autoprune = SessionStart-wired trim to keep-N (silent under cap · history stays in git), render = markdown view, migrate = one-shot CHANGELOG.md→.jsonl. The CHANGELOG-MISSING gate now wants CHANGELOG.jsonl staged
+  architecture {inject|show|search <q>|lint|convergence ...|result ...}   surface repo-root ARCHITECTURE.json/.md (design SSOT) at SessionStart · verbs: inject · show · search · lint · convergence · result
+                                         search <q> = substring over id/name/role/detail → matching node ids+breadcrumb; lint = c4 tree hygiene + id presence/uniqueness; convergence {list|for|add|rm|edit} = 재발학습 store CRUD (id-keyed · add upsert · value/threshold '--value -'=stdin)
+                                         result = DISCARDED (실험 verdict 는 별도 store 아님 → ARCHITECTURE type:\"gate\" 노드 verdict 직접 update-in-place · 턴 마감 트리오의 🏛️ 줄이 강제). 재발-신호/게이트-신호 키워드 스캐너(stop-check · gate-stop-check · convergence stop-check)는 폐기 → turn-close check 로 통합
+  turn-close {check|inject}   턴 마감 트리오 게이트 — 매 응답 끝에 🔄 ING · 🏛️ ARCHITECTURE · 🧬 CONVERGENCE 세 줄 강제 (Stop 훅 · 누락/위조 = decision:block 1회)
+                                         갱신/기록 주장은 검증된다: ING = ing ref 전진 · ARCHITECTURE = 파일 diff(working·staged·직전 커밋) · CONVERGENCE = records[] id + diff (마커만 쓰는 자기보고 위조 차단) · stop_hook_active anti-wedge
+                                         활성 leg 이 없으면(설계트리·보드 둘 다 없음) 완전 무음. inject = 매턴 트리오 지시 주입 + ing ref 베이스라인 스냅샷. 키워드 스캔 방식 전면 폐기(신호 난입 → 결정적 트리오)
+  changelog {add "<title>"|list [N]|render [N]|prune --keep N|--older-than D|autoprune|migrate}   append-only history as CHANGELOG.jsonl (newest-first JSONL · ts+title+body)
+                                         add appends(body via stdin) + auto-trims to keep-N(config lint.changelog.keep, default 30), prune deletes old entries(keep-N or age), autoprune = SessionStart-wired trim to keep-N (silent under cap · history stays in git)
+                                         render = markdown view, migrate = one-shot CHANGELOG.md→.jsonl. The CHANGELOG-MISSING gate now wants CHANGELOG.jsonl staged
   git-context {inject|show}   SessionStart + per-turn-when-stale: warn when HEAD is BEHIND origin/<default> (stale-branch trap — reading pre-merge code as current). Silent on a clean on-default checkout.
   claudemd {inject|show}   re-inject repo-root CLAUDE.md (project rules) EACH UserPromptSubmit so they stay enforced (optional <!-- enforce:start/end --> block)
   toolkit {list|inject|json|write|check}   command catalog (SSOT = this HELP) — inject surfaces the WHOLE command surface at SessionStart so an agent knows every cmd; check gates TOOLKIT.jsonl drift
-  companions {inject|list}   sibling-CLI command surface — inject runs each configured neighbour CLI's catalog (config \`companions\` + ~/.sidecar/companions.json · DOMAIN-AGNOSTIC, e.g. hexa) at SessionStart so the agent knows \`hexa cloud\` exists without probing
+  companions {inject|list}   sibling-CLI command surface — inject runs each configured neighbour CLI's catalog at SessionStart so the agent knows \`hexa cloud\` exists without probing
+                                         config \`companions\` + ~/.sidecar/companions.json · DOMAIN-AGNOSTIC, e.g. hexa
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject|scaffold "<q>"|lint <file|->}
                            easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)
-  fable-mode {on|off|status|inject} [--repo]   session-scoped toggle — when ON, per-turn inject splits work: DESIGN/ANALYSIS delegated to Fable 5 via 'sidecar fable', IMPLEMENTATION done locally (scope: repo .harness > host ~/.sidecar; default host-wide · OFF emits nothing)
+  fable-mode {on|off|status|inject} [--repo]   session-scoped toggle — ON splits per-turn work: DESIGN/ANALYSIS delegated to Fable 5 via 'sidecar fable', IMPLEMENTATION done locally
+                                         scope: repo .harness > host ~/.sidecar; default host-wide · OFF emits nothing
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}
                            4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)
@@ -118,7 +127,8 @@ hook delegates (wire these into your agent's settings.json):
   fleet [name:goal,…|go|stop|status]   perpetual multi-lane orchestrator (runbook + roster)
   fleet lab [frontier:wall,…|go|…]      research-driven frontier lab (research-gate→implement→measure→SSOT→re-research; walls measured + reopenable)
   fleet abstract [layer:seed,…|go|…]    abstraction-driven layer dive (census LAWS→peel to shared trade-off/meta-law→invent escape→cast as falsifiable prediction; meta-laws reopenable · d6 honest)
-  fleet full [frontier:goal,…|parallel|go|…]  full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped, weak lever still measures a wall before abstract) · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)
+  fleet full [frontier:goal,…|parallel|go|…]  full-stack campaign — ALL 3 phases in order per frontier (research→implement→abstract→falsify · implement NEVER skipped)
+                                         weak lever still measures a wall before abstract · SEQUENTIAL by default (afg-style; pass 'parallel' to fan out) · cheap implement auto, only paid gates (c14)
   pr-cycle [--no-reap] [gh flags]   push branch → open PR → self-merge (squash·admin·delete-branch) → reap stale open PRs (--no-reap skips)
   reap [--max-refresh N] [--no-close] [--dry-run] [--artifact RE]   drain stale open PRs: merge MERGEABLE (no-admin) · refresh-merge CONFLICTING (doc-files auto-resolved, code conflicts abort) · ≥7d code-conflict PRs closed with branch preserved · cron-able
   dojo [<slug>] [--lang]   cloud training-job scaffolder (runbook + exports/dojo/<slug>/ emit)
@@ -141,8 +151,7 @@ hook delegates (wire these into your agent's settings.json):
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]
                            transactional email via Postmark API (POST /email) — token from \`secret get postmark.server_token\` (curl -K · never in argv)
                            | history [--count N][--offset N][--tag t][--json][--local] | list | help
-  paper <new|build|cover|list|publish|update|unpublish|status> [slug] [flags]   demiurge-house scientific paper: scaffold (emoji title ·
-                           g5 tier badges · TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate
+  paper <new|build|cover|list|publish|update|unpublish|status> [slug] [flags]   demiurge-house scientific paper — scaffold (emoji title · g5 badges · TikZ+pgfplots · fal.ai cover) → xelatex+bibtex×3 build → g51 ≥10-page gate
                            publish --to zenodo|arxiv|both [--sandbox][--source]: Zenodo REST lifecycle (DOI) · arXiv submission tarball+guide (no API)
                            update (Zenodo new-version) · unpublish (delete Zenodo draft) · status — keys via \`secret get zenodo.token\`
 
@@ -153,11 +162,13 @@ gates & ledgers:
                            pre-register->falsify->run->verdict work. The pre write/bash guards block NEW strays (a configured hypotheses.alias, e.g.
                            anima UNIVERSE, or the built-in hypothes*/가설* pattern); check audits the backlog (--gate exits 1), migrate = history-preserving
                            git mv <dir> -> HYPOTHESES/ (merges if it exists), scaffold = create the skeleton, show = active dir + aliases
-  ci [all|fast|list|scaffold [--force]]   run configured verification commands in parallel (was verify; config key stays verify.checks) · scaffold = emit a .github/workflows/ci.yml that runs 'sidecar ci' on config ci.{runner,setup,fallback,cachePaths} (init writes it too) · ci.fallback on = cost-free fast path (self-hosted pool then github-hosted fallback, probe-fail-safe, no Blacksmith) + cachePaths = warm actions/cache
+  ci [all|fast|list|scaffold [--force]]   run configured verification commands in parallel (was verify; config key stays verify.checks)
+                                         scaffold = emit a .github/workflows/ci.yml that runs 'sidecar ci' on config ci.{runner,setup,fallback,cachePaths} (init writes it too)
+                                         ci.fallback on = cost-free fast path (self-hosted pool then github-hosted fallback, probe-fail-safe, no Blacksmith) + cachePaths = warm actions/cache
   ci-track <pr|branch> [--watch] [--interval=60] [--timeout=1800] [--merge-on-green] [-R owner/repo]   track remote PR/CI checks (gh) → 🟢/🔴/🟡 verdict; --watch polls until terminal (no hand-rolled gh-poll loop)
   verify [rubric|fence "<claim>"]   tier-rubric claim verification (badges · no self-judge)
-  errors {route|list|drain_check|mark_fixed}
-  ledger {register|complete|list|gc|dup_check}
+  errors {route|list|drain_check|mark_fixed}   error-signal ledger — classify by (kind,code) → severity via a pluggable map, queue to append-only JSONL, gate on backlog (drain_check)
+  ledger {register|complete|list|gc|dup_check}   background-agent task ledger — dedupe register so parallel fan-outs don't double-spawn work in the same area
   bitter-gate audit [window]   rule-hit frequency → retire dormant rules
 
 reports:
@@ -173,7 +184,8 @@ reports:
   worktree {scan|gc|inject|stop-check|guard <cmd>}   no-pileup/no-stranded enforcement — flag stranded worktrees · auto-sweep merged([gone]) + aged(>maxAgeDays, tip→refs/reaped)
                            (\`inject\`=SessionStart/Compact WARN surfacing stranded worktrees+no-worktree branches+refs/reaped (+ING task link) · \`stop-check\`=Stop-time WARN for committed-but-unpushed worktree work (keyed dedup·never blocks) · \`scan\` exit 1 gates new work · \`gc\` auto-sweep)
   ing [show|add|done|next|inject]   in-progress board → ING.jsonl (작업·next · done=scrub · SessionStart inject · 내 repo 전용)
-  frontier [show|set <목표>|go [노트]|swap <새목표>|clear|inject]   single north-star objective (최전선) → FRONTIER.jsonl on a dedicated 'frontier' git ref (single-slot · unlike ing's multi-item board). 지정=set(clobber 거부 → swap) · 진행=go(push-now directive + 진행노트) · 교체=swap(은퇴→CHANGELOG) · 해제=clear · 한글 별칭 허용 · inject surfaces it (silent when unset)
+  frontier [show|set <목표>|go [노트]|swap <새목표>|clear|inject]   single north-star objective (최전선) → FRONTIER.jsonl on a dedicated 'frontier' git ref (single-slot · unlike ing's multi-item board)
+                                         지정=set(clobber 거부 → swap) · 진행=go(push-now directive + 진행노트) · 교체=swap(은퇴→CHANGELOG) · 해제=clear · 한글 별칭 허용 · inject surfaces it (silent when unset)
   verdict {record <id> <cmd>|list|show <id>}   verification evidence ledger → .verdicts/ (PASS/FAIL)
   atlas {add <id> <claim>|link <id> <vid>|list}   claim registry → ATLAS.md (verified via PASS verdict)
   upstream {list|fix <name|repo>}   in-session upstream (hexa-lang…) fix runbook (no inbox-only defer)

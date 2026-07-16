@@ -14,7 +14,7 @@ import { config, repoPath } from "../lib/config.ts";
 import { routeError, classify } from "./errors.ts";
 import { docViolations } from "./docs.ts";
 import { lintArchitectureTree, lintConvergenceRecords } from "./architecture.ts";
-import { toolkitDrift } from "./toolkit.ts";
+import { toolkitDrift, toolkitUseViolations } from "./toolkit.ts";
 import { lintCommandDescriptions } from "./shadow.ts";
 import { lintCommonsFormat, dodontLengthLint } from "./commons.ts";
 import { qualifiesMissing } from "./folders.ts";
@@ -282,6 +282,10 @@ export async function collectViolations(stagedOverride?: string[]): Promise<Viol
   // current surface; the committed file is just the external snapshot.
   const drift = toolkitDrift();
   if (drift) violations.push({ rule: "TOOLKIT-DRIFT", file: "TOOLKIT.jsonl", msg: drift });
+  // HELP line-1 summaries feed the SessionStart catalog inject VERBATIM (no emit-time
+  // cut — inject-lint); a bloated/missing/mid-clause line 1 must be fixed at the source.
+  for (const v of toolkitUseViolations())
+    violations.push({ rule: "INJECT-OVERSIZED", file: "cli/index.ts (HELP)", msg: v });
 
   // 4e'. HELP template-literal hygiene — an unescaped backtick in cli/index.ts's HELP
   // block breaks `sidecar help` + build silently (recurred twice). block (HELP_NO_RAW_BACKTICK).

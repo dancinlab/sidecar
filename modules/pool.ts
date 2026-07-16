@@ -7,10 +7,12 @@
 //                        + earlyoom prefer/avoid) so a heavy job can never OOM-reboot the box;
 //                        all shared hosts (or one named) · idempotent · needs passwordless sudo
 //   rm <name>            remove host
-//   on <name> [--timeout <sec>|0] <cmd...>
+//   on <name> [--timeout <sec>|0] [--bg] <cmd...>
 //                        run a command on a host over ssh · ORPHAN-FENCED: if the local ssh
 //                        dies (timeout/ctrl-C/dropped link) the remote process GROUP is reaped,
-//                        so no descendant strands at PPID=1 holding its RSS (pool-ts-1)
+//                        so no descendant strands at PPID=1 holding its RSS (pool-ts-1).
+//                        --bg = DETACH instead (setsid, new session): the job SURVIVES an ssh
+//                        drop, launch returns at once with a log path to poll (long train/sweep/eval)
 //   status               reachability + LIVE CPU/RAM/GPU load (one probe per host)
 //   specs [name]         ssh-probe cores/mem/GPU + cache into roster (all or one)
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -132,6 +134,25 @@ const fence = (cmd: string) =>
   `wait $__sc_c; __sc_rc=$?\n` +
   `kill $__sc_w 2>/dev/null\n` +
   `exit $__sc_rc`;
+
+// Detached run for `pool on --bg` (pool-ts-bg). The orphan fence above KILLS the remote
+// tree when the local ssh dies — correct for a foreground command, but fatal for a long job
+// the caller WANTS to outlive the session (a training run, a sweep, an LLM eval). `--bg`
+// instead writes the command to a remote script and launches it under `setsid` (a NEW session
+// + process group), so the fence's `kill -- -$$` cannot reach it and an ssh drop leaves it
+// running. Output streams to a remote log the caller polls (`pool on <host> 'cat <log>'`);
+// results are collected from there or from whatever files the job writes. The heredoc is
+// single-quoted so the remote shell stores `cmd` verbatim (no expansion at write time).
+const detach = (cmd: string, id: string) =>
+  `D="$HOME/.sidecar/pool-bg"; mkdir -p "$D"\n` +
+  `F="$D/${id}.sh"; LOG="$D/${id}.log"\n` +
+  `cat > "$F" <<'__SIDECAR_BG_EOF__'\n${cmd}\n__SIDECAR_BG_EOF__\n` +
+  `setsid bash "$F" > "$LOG" 2>&1 < /dev/null &\n` +
+  `disown 2>/dev/null || true\n` +
+  `echo "sidecar pool bg: ${id} launched (setsid-detached · survives ssh drop)"\n` +
+  `echo "  log:  $LOG"\n` +
+  `echo "  poll: sidecar pool on <host> 'tail $LOG'"\n` +
+  `sleep 1`;
 
 // Remote hardware probe. POSIX-sh, Linux + macOS aware. Emits ONE parseable line
 // `CORES=<n>|MEM=<GiB>|GPU=<model|none>`. Single-quoted awk/sed protect remote
@@ -397,10 +418,16 @@ export async function runPool(args: string[]): Promise<number> {
       if (!Number.isNaN(sec)) timeoutMs = sec <= 0 ? 0 : sec * 1000;
       rest = inline ? [...rest.slice(0, ti), ...rest.slice(ti + 1)] : [...rest.slice(0, ti), ...rest.slice(ti + 2)];
     }
+    // Optional `--bg`: DETACH the remote command (setsid, new session) so it survives an ssh
+    // drop, instead of the orphan-fence that kills it — for long jobs (training, sweeps, evals)
+    // the caller wants to outlive the session. The launch returns immediately with a log path.
+    let bg = false;
+    const gi = rest.findIndex((a) => a === "--bg");
+    if (gi !== -1) { bg = true; rest = [...rest.slice(0, gi), ...rest.slice(gi + 1)]; }
     const cmd = rest.join(" ");
     const h = r.hosts.find((x) => x.name === name);
     if (!h || !cmd) {
-      info("usage: sidecar pool on <name> [--timeout <sec>|0] <cmd...>");
+      info("usage: sidecar pool on <name> [--timeout <sec>|0] [--bg] <cmd...>");
       return 1;
     }
     const g = guard(h);
@@ -418,7 +445,8 @@ export async function runPool(args: string[]): Promise<number> {
     // local shell). This prevents the LOCAL mac shell from expanding $VAR/$(...)/
     // backticks inside the remote command — ssh forwards `cmd` verbatim to the
     // REMOTE login shell, which expands it (and pipes/redirects) correctly there.
-    const res = await execArgs("ssh", [...SSH_ARGS, h.target, fence(cmd)], { timeoutMs });
+    const wrapped = bg ? detach(cmd, `bg-${Date.now()}`) : fence(cmd);
+    const res = await execArgs("ssh", [...SSH_ARGS, h.target, wrapped], { timeoutMs: bg ? 30_000 : timeoutMs });
     process.stdout.write(res.stdout);
     if (res.stderr) process.stderr.write(res.stderr);
     if (res.code !== 0) loudFail(`pool on ${name}: exit ${res.code}`);

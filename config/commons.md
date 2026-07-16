@@ -125,3 +125,7 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 ## fanout-workflow
 - do: Fanning independent work to many subagents at once (≥3 · `fleet`/`abg`/`gap full`) → one `Workflow` call
 - dont: Firing N direct `Agent` calls in one message (rate-limit death) (exception: a single one-off agent · `afg`)
+
+## hexa-lang-model
+- do: A repo that consumes hexa (`.hexa` sources) follows hexa's memory + type model (SSOT `hexa-lang/docs/lang-model.md`): the DEFAULT (no annotation) is fn-scope arena AUTO-management (bump-alloc → `scope_pop` auto-reclaim → return/push auto-heapify) so general values need NO manual free · `@own` is opt-in precise ownership (not the default) · `farr_*` device handles are the sole manual-free path (`farr_free`, opt-in leak-lane `HEXA_BORROWCK_LEAK`) · static-typing unboxing is measure-first · FIX code that contradicts the model. hexa-lang itself keeps L4(static-typing)/L5(memory-management) reflected in `docs/lang-model.md` + `ARCHITECTURE.json` in lockstep
+- dont: Adding manual free/GC to general (arena-managed) values · aliasing a fn-arena composite into a module-global (dangling after `scope_pop` — `HEXA_ARENA_ESCAPE_LINT`) · leaking a `farr_*` handle · default-ON an unboxing lever without a measured census (measure-first) · leaving consumer code that violates the model unfixed · letting `docs/lang-model.md` drift from the compiler behaviour

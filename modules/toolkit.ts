@@ -28,9 +28,14 @@ export interface ToolkitEntry {
   id: string;
   kind: string;
   usage: string;
-  use: string;
+  use: string; // line-1 summary — complete + lean (<=USE_CAP_BYTES, gated); the inject emits it VERBATIM
+  detail?: string; // continuation lines joined — full fidelity, JSONL/`sidecar help` only (never injected)
   triggers?: string[];
 }
+
+// Author-time leanness cap for the inject surface: line 1 is emitted VERBATIM (no
+// emit-time cut — inject-lint), so line 1 itself must be a complete lean summary.
+export const USE_CAP_BYTES = 200;
 
 // Section header → kind tag.
 function sectionKind(header: string): string {
@@ -101,10 +106,13 @@ export function parseToolkit(): ToolkitEntry[] {
     if (!raw.trim()) { last = null; continue; }
     // section header: starts at column 0 and ends with ':'
     if (/^\S.*:\s*$/.test(raw)) { kind = sectionKind(raw); last = null; continue; }
-    // continuation: deeply indented, no command token → append to previous entry
+    // continuation: deeply indented, no command token → becomes the line-1 summary
+    // when the usage line carried none, else accumulates into detail (JSONL/help
+    // only, NEVER injected — the inject emits `use` verbatim, so it must stay lean).
     if (/^ {7,}\S/.test(raw) && last) {
       const cont = raw.trim();
-      last.use = last.use ? `${last.use} ${cont}` : cont;
+      if (!last.use) last.use = cont;
+      else last.detail = last.detail ? `${last.detail} ${cont}` : cont;
       continue;
     }
     // command entry: 2-space indent + usage [+ 2-space gap + description]
@@ -129,6 +137,22 @@ export function parseToolkit(): ToolkitEntry[] {
 
 function toJsonl(entries: ToolkitEntry[]): string {
   return entries.map((e) => JSON.stringify(e)).join("\n") + "\n";
+}
+
+// Author-time leanness gate for the inject surface: line 1 (`use`) is emitted
+// VERBATIM (no emit-time cut — inject-lint), so line 1 itself must be a complete,
+// standalone, lean summary. Flags: no summary at all · over the byte cap · ending
+// mid-clause (a hard-wrapped fragment). The fix is always to trim the SOURCE (HELP
+// line 1), never to re-add a `.slice`.
+export function toolkitUseViolations(): string[] {
+  const out: string[] = [];
+  for (const e of parseToolkit()) {
+    const b = Buffer.byteLength(e.use, "utf8");
+    if (!e.use) out.push(`${e.id}: no line-1 summary in HELP — every command needs one (it IS the inject entry)`);
+    else if (b > USE_CAP_BYTES) out.push(`${e.id}: line-1 summary ${b}B > ${USE_CAP_BYTES}B — front-load essentials on line 1, move the rest to continuation lines`);
+    else if (/[+·,]$/.test(e.use)) out.push(`${e.id}: line-1 summary ends mid-clause — line 1 must stand alone; wrap the rest to continuation lines`);
+  }
+  return out;
 }
 
 // Lint helper: null when the committed TOOLKIT.jsonl matches the HELP-derived
@@ -165,8 +189,11 @@ function renderInject(entries: ToolkitEntry[]): string {
     if (!group.length) continue;
     out.push(`## ${label[k] ?? k}`);
     for (const e of group) {
-      const use = e.use ? ` — ${e.use.slice(0, 140)}` : "";
-      const tg = e.triggers?.length ? `  ⟨triggers: ${e.triggers.slice(0, 6).join(" · ")}⟩` : "";
+      // no emit-time cut (inject-lint): `use` is author-bounded to <=USE_CAP_BYTES,
+      // triggers are source-bounded by keywords.json — emit both VERBATIM. `detail`
+      // is deliberately NOT emitted — the inject is the lean surface.
+      const use = e.use ? ` — ${e.use}` : "";
+      const tg = e.triggers?.length ? `  ⟨triggers: ${e.triggers.join(" · ")}⟩` : "";
       out.push(`- \`${e.id}\`${use}${tg}`);
     }
     out.push("");
@@ -212,6 +239,12 @@ export async function runToolkit(args: string[]): Promise<number> {
       loudFail(`toolkit: ${gaps.length} command(s) NOT in the catalog — every command must be documented in HELP`);
       return 1;
     }
+    const lean = toolkitUseViolations();
+    if (lean.length) {
+      for (const v of lean) warn(`  ${v}`);
+      loudFail(`toolkit: ${lean.length} HELP line-1 summary violation(s) — the inject emits line 1 verbatim (no emit-time cut)`);
+      return 1;
+    }
     const generated = toJsonl(entries);
     const committed = existsSync(TOOLKIT_FILE) ? readFileSync(TOOLKIT_FILE, "utf8") : "";
     if (committed === generated) {
@@ -227,8 +260,8 @@ export async function runToolkit(args: string[]): Promise<number> {
   let kind = "";
   for (const e of entries) {
     if (e.kind !== kind) { kind = e.kind; info(`\n[${kind}]`); }
-    info(`  ${e.id.padEnd(14)} ${e.use.slice(0, 90)}`);
-    if (e.triggers?.length) info(`  ${" ".repeat(14)} ⟨${e.triggers.slice(0, 8).join(" · ")}⟩`);
+    info(`  ${e.id.padEnd(14)} ${e.use}`);
+    if (e.triggers?.length) info(`  ${" ".repeat(14)} ⟨${e.triggers.join(" · ")}⟩`);
   }
   return 0;
 }

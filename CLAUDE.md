@@ -45,4 +45,5 @@ sidecar/
 
 ## inject-lint — no truncation, lint at authoring time (why: per-turn inject bloat = context-rot → agent degradation · `commons-md-1`)
 - do: keep each inject source lean **at author time** — per-turn bloat = context-rot → **agent dumber** · `lint.injectCaps` (per-source) + `lint.injectBudgetBytes` (aggregate) · lint+ship-0 block · new inject → add cap/budget
-- dont: **never truncate an inject at emit/runtime (truncate·tail-cut)** (silent content loss) · if bloated, trim the source to pass lint · no unlinted inject · don't empty injectCaps to kill the gate
+- do: injects from **emitters** (toolkit et al.) carry each item **complete-but-lean** — HELP line 1 = standalone summary ≤200B emitted VERBATIM (`toolkit check` gate) · overflow → JSONL `detail`
+- dont: **never truncate an inject at emit/runtime — truncate·tail-cut·emitter `.slice(0,N)`** (140B cut ate `lab full=BOTH`) · if bloated trim the source · no unlinted inject · don't empty injectCaps

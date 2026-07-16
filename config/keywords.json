@@ -231,15 +231,19 @@
       "hint": "도메인 input deck 은 `hexa deck <domain> <slug> '<spec-json>'` 로: exports/<domain>/decks/<slug>/ 생성. `hexa deck domains` (도메인 목록: rtsc·nuclear·material·chem·chip·bio) · stub 도메인은 honest exit-1. (c12)"
     },
     {
-      "id": "fable-delegate",
+      "id": "lab-delegate",
       "patterns": [
         "fable",
         "Fable",
         "파블",
-        "페이블"
+        "페이블",
+        "sol",
+        "codex",
+        "코덱스",
+        "솔"
       ],
-      "tool": "sidecar fable",
-      "hint": "Fable 5 delegation → `sidecar fable` (headless `claude -p` · claude-fable-5 · per-call). Free text → `sidecar fable --file <f> --timeout 600` (never inline). Runs hook-free by default (--sources project,local) so it won't stall in a dirty repo; --json for clean `.result`. Full sheet: templates/fable.md."
+      "tool": "sidecar lab",
+      "hint": "Frontier-model delegation hub → `sidecar lab <fable|sol|full>` (per-call · session backend untouched). fable = Claude Fable 5 (`claude -p` · claude-fable-5) · sol = OpenAI Codex 5.6 (`codex exec` · gpt-5.6-sol) · full = both in parallel. Free text → `sidecar lab fable --file <f> --timeout 600` (never inline). fable runs hook-free by default (--sources project,local) so it won't stall in a dirty repo; --json for a clean answer. Full sheet: templates/lab.md."
     },
     {
       "id": "hypothesis-convention",

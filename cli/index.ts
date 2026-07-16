@@ -61,7 +61,6 @@ import { runGitContext } from "../modules/git-context.ts";
 import { runClaudemd } from "../modules/claudemd.ts";
 import { runPi } from "../modules/pi.ts";
 import { runInjects } from "../modules/injects.ts";
-import { runFable } from "../modules/fable.ts";
 import { runHypotheses } from "../modules/hypotheses.ts";
 
 export const HELP = `dancinlab/sidecar — project-agnostic AI coding sidecar
@@ -74,8 +73,11 @@ setup:
                                          curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
   init [--force] [--dry-run]   scaffold THIS repo: config + .harness rules + gitignore + wrapper (hooks are GLOBAL-ONLY → sidecar install)
                                          (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
-  lab init [dir] [--force] [--dry-run] [--name N] [--desc D]   scaffold the lumen/rtsc/carbon-capture sibling-repo "lab" skeleton into a target repo:
-                                         src/ · state/ · ARCHITECTURE.json + architecture.html viewer + serve.py · CLAUDE/README/CHANGELOG · HYPOTHESES/ (pre-register→falsify→run→verdict) · tool/<slug>.py shared harness (tokenized templates/lab/ · never-clobber-unless --force)
+  lab <fable|sol|full> [flags] <prompt...> | --file <f> | -   model-delegation hub — hand ONE instruction to a frontier model per-CALL (session backend untouched):
+                                         fable = Claude Fable 5 (headless 'claude -p' · default -m claude-fable-5 · opus fallback FORBIDDEN) · sol = OpenAI Codex 5.6 ('codex exec' · default -m gpt-5.6-sol) · full = BOTH in parallel (── fable ── / ── sol ── sections)
+                                         · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting · --json = machine-clean answer on stdout · --dry = print resolved argv · --cwd <dir> · --timeout <s> (default UNLIMITED, exit 124)
+                                         · --write = IMPLEMENT tier (fable: bypassPermissions · sol: -s workspace-write); DEFAULT is INVESTIGATE (fable: Write/Edit/NotebookEdit denied · sol: -s read-only) · -c/--continue · -r/--resume <id> · --sources <l> (fable only) · flags after -- go to the backend CLI verbatim
+                                         · --bg = fire-and-forget (detached → prints a job id); collect with 'sidecar lab result <id>' (RUNNING=exit3) / 'tail <id>' / 'wait <id> [--timeout s]' / 'list' (~/.sidecar/lab-jobs)
   uninstall [--dry-run] [--keep-logs]   remove sidecar-injected files (config/.harness/hooks/wrapper); keeps user content
   update [--hooks]         bump .harness-engine submodule to latest (adopt new engine features) + optional hook refresh
   install-hooks [--global]   merge sidecar hooks into the GLOBAL ~/.claude/settings.json (per-repo --repo is banned → double-inject)
@@ -134,21 +136,6 @@ hook delegates (wire these into your agent's settings.json):
                            + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited
   research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang] | web <query> [--n N] | fetch <url>}   arXiv / YouTube transcript / keyless web search (DuckDuckGo) / page fetch (no key)
   watch <url|path> [question] [flags]   download (yt-dlp) → frames (ffmpeg) + transcript (captions/Whisper) for the agent
-  fable [flags] <prompt...> | --file <f> | -   delegate ONE instruction to the Fable 5 model via headless 'claude -p'
-                           (default -m claude-fable-5 · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting
-                           · --json = claude --output-format json · --dry = print resolved argv, no run · --cwd <dir>
-                           · --sources <l> = setting sources (default project,local — DROPS the global governance hooks that stall a
-                             headless child in a dirty repo; pass user,project,local to inherit the full session env)
-                           · -c/--continue = continue the most recent conversation in --cwd · -r/--resume <id> = resume a session_id
-                             from a prior --json run (stateful · same --cwd) · --timeout <s> = kill a stalled run after s seconds (default
-                             OPT-IN cap, default UNLIMITED, exit 124) · flags after -- go to claude verbatim)
-                           · --bg = fire-and-forget (launch detached → prints a job id, returns now); collect with
-                             'sidecar fable result <id>' (RUNNING=exit3) / 'tail <id>' (follow output live) / 'wait <id> [--timeout s]' / 'list' — no hand-rolled poll loop
-                           · --write (aliases --bypass/--agent) = grant WRITE/EXECUTE via --permission-mode bypassPermissions
-                             (Write/Edit/Bash/git · no prompts) so the child can implement; DEFAULT is READ-ONLY (headless can't
-                             approve, so writes auto-deny — Read/Grep/Glob only)
-                           · opus fallback FORBIDDEN (always, not a flag): pins an availableModels allowlist without Opus, so a
-                             safety-classifier-flagged request refuses on the delegated model instead of silently re-running on Opus)
   imagine <prompt-file> <out.png> [-s size] [-b fal|openai] [-m model] | list | help | history
                            AI image generator (fal/openai · keys via secret · prompt from FILE · canonical sizes)
   email send --to <a> --subject <s> [--from <a>] [--text <file>|-m <inline>] [--html <file>] [--cc][--bcc][--reply-to][--tag][--stream][--attach <f>]... [--dry]
@@ -219,8 +206,6 @@ async function main(): Promise<number> {
       return runPi(rest);
     case "self-update":
       return runSelfUpdate(rest);
-    case "fable":
-      return runFable(rest);
     case "hypotheses":
       return runHypotheses(rest);
     case "shadow":

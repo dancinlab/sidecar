@@ -342,14 +342,14 @@
         "state": "pos-conv",
         "value": "CC 슬래시 '!' 원라이너의 $ARGUMENTS 는 셸 실행 전 텍스트 치환 — 어떤 인용 전략(비인용→괄호/글롭 붕괴 · 쌍따옴표 감싸기/stdin 파이프→프롬프트 속 쌍따옴표에서 붕괴)도 임의 자유텍스트를 셸라인에 안전하게 못 넣는다. 자유텍스트 인자를 받는 커맨드는 '!' 원라이너 금지 → 런북형(에이전트가 Write 로 파일 저장 → --file 플래그)으로 배선.",
         "threshold": "재발조건: 자유텍스트 인자 커맨드(commands/*.md)를 '!' + $ARGUMENTS 인라인으로 배선. 해결: 런북형 Write→--file + 특수문자(따옴표·괄호·글롭·백틱) QA 케이스.",
-        "source": "commands/fable.md"
+        "source": "commands/lab.md"
       },
       {
         "id": "fable-ts-1",
         "state": "pos-conv",
         "value": "헤드리스 claude -p 자식은 전역 ~/.claude/settings.json 의 거버넌스 Stop-훅(architecture/convergence stop-check)을 상속한다 — cwd 가 미커밋 변경 있는 git repo면 자식이 답을 낸 뒤 그 Stop-훅이 블록→계속 루프를 걸어 프로세스가 안 죽고 --timeout 에 exit 124 로 킬되며, 최종턴 .result 도 발산 대신 거버넌스 메타로 덮인다. 해결=자식을 --setting-sources project,local 로 띄워 전역 user 소스(거버넌스 훅)를 걷어냄(keychain 인증은 설정소스가 아니라 유지 · --bare 는 인증까지 날려 Not-logged-in 이라 불가).",
-        "threshold": "재발조건: headless claude -p 를 전역 훅 상속(기본 setting-sources) + dirty git repo cwd 에서 실행. 해결: fable 기본 --sources project,local, 전체상속 필요시 --sources user,project,local + 사전 커밋.",
-        "source": "modules/fable.ts"
+        "threshold": "재발조건: headless claude -p 를 전역 훅 상속(기본 setting-sources) + dirty git repo cwd 에서 실행. 해결: lab fable 기본 --sources project,local, 전체상속 필요시 --sources user,project,local + 사전 커밋.",
+        "source": "modules/lab.ts"
       },
       {
         "id": "inject-ts-2",
@@ -376,8 +376,8 @@
         "id": "fable-ts-2",
         "state": "pos-conv",
         "value": "job-id 등 인자를 join(baseDir, id) 로 리졸브할 때 id 가 빈 문자열이면 join(base,'')===base 가 되어 existsSync(base) 를 오탐 통과 → 존재하지 않는 대상을 '유령 job'(exitcode·pid 없는 것)으로 오인해 'process gone — likely crashed' 같은 엉뚱한 진단을 낸다. 해결=경로 리졸버 입구에서 무효(빈) id 를 먼저 가드(if(!id) return null) 해 깔끔한 no-such/usage 에러로 떨군다.",
-        "threshold": "재발조건: join(baseDir, userArg) 결과를 existsSync 로만 검사하며 userArg 가 빈 문자열/undefined 일 수 있는 옵셔널-id 서브커맨드(fable result/wait/tail 등). 해결: 리졸버 최상단 빈-id 가드 + 옵셔널 id 서브커맨드는 usage 에러 경로 확보.",
-        "source": "modules/fable.ts"
+        "threshold": "재발조건: join(baseDir, userArg) 결과를 existsSync 로만 검사하며 userArg 가 빈 문자열/undefined 일 수 있는 옵셔널-id 서브커맨드(lab result/wait/tail 등). 해결: 리졸버 최상단 빈-id 가드 + 옵셔널 id 서브커맨드는 usage 에러 경로 확보.",
+        "source": "modules/lab.ts"
       },
       {
         "id": "pool-ts-1",
@@ -537,7 +537,15 @@
                 "name": "naming-guard",
                 "role": "비-canonical 작명 차단(생성) + 터치 시 넛지",
                 "id": "guard-naming",
-                "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · test/spec 제외. 면제 2단: ① 파일 단위 = 내용의 `@canonical-ok` / bash 의 `# canonical-ok` ② **디렉터리 단위 = `.canonical-ok` 마커 파일** — 그 디렉터리(또는 repo 루트까지의 상위)에 있으면 서브트리 전체 면제, Write/Edit·Bash 양쪽 적용(한쪽만이면 `mkdir zone/x` 가 막혀 반쪽 면제), `.git` 에서 탐색 중단(경계 밖 마커가 남의 레포를 면제 못 함). 용도 = 오너가 규칙 면제로 선언한 실험구역(예: dancinlab/anima 의 `anima-v2/`) — 파일마다 마커를 뿌리는 건 면제가 아니라 세금이므로 구역을 구역에서 한 번 선언한다."
+                "detail": "버전/복사 접미사 파일·폴더명(`_v2`·`_copy`·`foo 2`…). 새 생성 BLOCK → canonical update-in-place 강제(Write/Edit + Bash mv/cp/touch/mkdir). 기존 비표준 파일 터치는 warn-only 넛지(생성만 막던 갭 — 편집 허용해 고치게). c25 · test/spec 제외. 면제는 자식 노드 참조.",
+                "children": [
+                  {
+                    "name": "면제 2단",
+                    "role": "파일 단위 · 디렉터리 단위 면제",
+                    "id": "detail-naming-exempt",
+                    "detail": "① 파일 단위 = 내용의 `@canonical-ok` / bash 의 `# canonical-ok`. ② 디렉터리 단위 = `.canonical-ok` 마커 — 그 디렉터리(또는 상위)에 있으면 서브트리 전체 면제, Write/Edit·Bash 양쪽(한쪽만이면 `mkdir zone/x` 막혀 반쪽), `.git` 에서 탐색 중단(경계 밖 마커가 남의 레포 면제 못 함). 용도=오너 선언 실험구역(예 `anima-v2/`) — 파일마다 마커는 세금이라 구역을 한 번 선언."
+                  }
+                ]
               },
               {
                 "name": "portable-path 가드",
@@ -836,32 +844,6 @@
                 "detail": "SSOT=scripts/install.sh(curl 가능); `sidecar install`은 이를 위임. clone dancinlab/sidecar→~/.sidecar/cli(있으면 ff) · 래퍼(심볼릭 아님)→~/.local/bin/sidecar · install-hooks --global. 멱등 · 플래그 --no-hooks/--ref/--dir/--bin/--dry-run · 갱신은 self-update"
               },
               {
-                "name": "lab",
-                "role": "lumen/rtsc/carbon-capture 자매-repo \"lab\" 스켈레톤 스캐폴드 (init 과 별개 · 연구/설계 캠페인용)",
-                "id": "module-lab",
-                "detail": "`lab init [dir] [--force] [--dry-run] [--name N] [--desc D]` — lumen/rtsc/carbon-capture 형제 골격 1발 스캐폴드. files-only(git init/push 없음).",
-                "children": [
-                  {
-                    "name": "스켈레톤 치환·방출",
-                    "role": "토큰 템플릿 → 타깃",
-                    "id": "detail-lab-skeleton",
-                    "detail": "`templates/lab/` 토큰화 스켈레톤(`{{NAME}}`/`{{SLUG_SNAKE}}`/`{{DESC}}`/`{{DATE}}`)을 재귀 워크해 파일 경로(`tool/{{SLUG_SNAKE}}.py`)+내용 치환 방출. never-clobber(--force 만 덮어씀)·--dry-run 보고전용·빈 dir 은 .gitkeep"
-                  },
-                  {
-                    "name": "방출물",
-                    "role": "생성되는 파일셋",
-                    "id": "detail-lab-emitted",
-                    "detail": "src/·state/·ARCHITECTURE.json+architecture.html+serve.py·CLAUDE/README/CHANGELOG·.gitignore·.harness/fleet/·HYPOTHESES/(pre-register→falsify→run→verdict: CLAUDE.md+REGISTRY.jsonl+cards/_TEMPLATE.md)·tool/<slug>.py 공유 결정적 harness(Falsifier/evaluate ledger)"
-                  },
-                  {
-                    "name": "생성 CLAUDE.md 규약",
-                    "role": "demiurge 교차-repo 규약 2",
-                    "id": "detail-lab-claude-conventions",
-                    "detail": "생성 CLAUDE.md 가 명시: hexa-lang stdlib(d3 — 구현코드=canonical hexa-lang stdlib, repo는 docs/manifest만 consume) + QFORGE 컴퓨트 기본엔진(d_qforge_default — DFT/el-ph 기본=QFORGE-native, QE는 미전환 fallback·≤1% gate·deck=hexa deck · non-compute lab은 skip)"
-                  }
-                ]
-              },
-              {
                 "name": "shadow",
                 "role": "sidecar commands/ → ~/.claude/commands/ 미러 (bare /cmd 생성)",
                 "id": "module-shadow",
@@ -981,16 +963,36 @@
                 "detail": "`POST /email`(Postmark REST). 서버 토큰=`secret get postmark.server_token`·`-K` curl 로 argv 누출 0. send: --to/--from/--subject + 본문(--text/--html=FILE·-m 인라인) + cc/bcc/reply-to/tag/stream + --attach + --dry. history=outbound API·list=토큰 점검. 성공 조용·실패 큰소리 + email.jsonl 원장"
               },
               {
-                "name": "fable",
-                "role": "Fable 5 모델에 지시 1건 headless 위임 (claude -p)",
-                "id": "module-fable",
-                "detail": "`claude -p --model claude-fable-5` 위임(백엔드 불변). 자식 기본 --sources project,local=전역훅 미상속(스톨차단)·기본 read-only(헤드리스 무승인→쓰기거부; --write=bypassPermissions 로 Write/Bash/git). --timeout=opt-in. -c·-r 다중턴. --bg=detach→잡ID(result/tail/wait/list). opus fallback 무조건 금지(--settings·opus제외). 주의=fable.md."
+                "name": "lab",
+                "role": "프론티어 모델에 지시 1건 per-call 위임하는 허브 (fable·sol·full · 세션 백엔드 불변)",
+                "id": "module-lab",
+                "detail": "`lab <fable|sol|full>` 위임 허브. 백엔드=데이터(Backend descriptor: bin·defaultModel·buildArgv). 공용 1벌: 프롬프트=argv/--file/stdin→자식 stdin(argv누출0·배타), bg 잡(--bg→잡ID·result/tail/wait/list·~/.sidecar/lab-jobs), --dry·--cwd·--timeout(기본무제한·124). 주의=lab.md.",
+                "children": [
+                  {
+                    "name": "fable 백엔드",
+                    "role": "Claude Fable 5 위임 (claude -p)",
+                    "id": "detail-lab-fable",
+                    "detail": "`claude -p --model claude-fable-5`. 기본 --sources project,local(전역훅 미상속·스톨차단)·기본 investigate(Write/Edit/NotebookEdit 거부·bash/read 허용; --write=bypassPermissions). opus fallback 무조건 금지(--settings availableModels·opus제외). -c/-r 다중턴. --json=claude json blob(.result)."
+                  },
+                  {
+                    "name": "sol 백엔드",
+                    "role": "OpenAI Codex 5.6 위임 (codex exec)",
+                    "id": "detail-lab-sol",
+                    "detail": "`codex exec -m gpt-5.6-sol --skip-git-repo-check`·프롬프트=stdin(`-`). 기본 investigate=`-s read-only`·--write=`-s workspace-write`(resume 경로엔 -s 없어 `-c sandbox_mode` 오버라이드). -c/-r=`exec resume --last|<id>`. --json=codex `-o`로 최종 메시지만 클린 캡처(JSONL 파싱 안 함)."
+                  },
+                  {
+                    "name": "full",
+                    "role": "두 백엔드 병렬 자문",
+                    "id": "detail-lab-full",
+                    "detail": "같은 프롬프트를 fable+sol 동시 실행(Promise.all·버퍼 캡처)→`── fable ──`/`── sol ──` 라벨 섹션 출력. exit=fable≠0?fable:sol. --bg=백엔드별 잡 2개. -c/-r/-- 거부(백엔드별 세션·플래그 모호)·--sources는 fable leg 만."
+                  }
+                ]
               },
               {
                 "name": "fable-mode",
                 "role": "세션 스코프 분업 토글 (on/off)",
                 "id": "module-fable-mode",
-                "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 분업 지시: **설계·분석·리서치·리뷰·계획·난제(막힌 문제·까다로운 버그/증명/알고리즘)=Fable 5 위임**(sidecar fable), **실제 구현·빌드·git·commit·ship=로컬(기본진행)**. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 재귀금지. 3표면 배선."
+                "detail": "세션 스코프 토글. ON이면 매턴 UserPromptSubmit inject가 분업 지시: **설계·분석·리서치·리뷰·계획·난제(막힌 문제·까다로운 버그/증명/알고리즘)=Fable 5 위임**(sidecar lab fable), **실제 구현·빌드·git·commit·ship=로컬(기본진행)**. 스코프=repo .harness/fable-mode > host ~/.sidecar (기본 host · --repo=팀공유). OFF=기본·무주입(budget 0). 재귀금지. 3표면 배선."
               },
               {
                 "name": "goal-guard",

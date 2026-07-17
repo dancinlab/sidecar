@@ -69,7 +69,7 @@
   "docs": {
     "architecture": "ARCHITECTURE.md",
     "log": "CHANGELOG.md",
-    "scratchDir": "scripts/scratch",
+    "scratchDir": "state",
     "scatterPatterns": [
       "-(report|summary|notes?|audit|status|plan|analysis|design)\\.md$",
       "\\d{6,8}[-_].*\\.md$"

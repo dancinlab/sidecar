@@ -20,7 +20,7 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 
 ## preserve-state
 - do: All work outputs (experiments·benches·verdicts·scratch) flat in one git-tracked repo-root `{scratchDir}/`, committed
-- dont: Leaving only in `/tmp` · new dirs like `scripts/scratch`·`.verdicts`·`bench`
+- dont: Leaving only in `/tmp` · a second outputs dir outside `{scratchDir}/` (`.verdicts`·`bench`)
 
 ## folder-docs
 - do: On commit in a qualifying folder (`folderGuides`) keep local `CLAUDE.md` current — missing staged → `FOLDER-GUIDE-MISSING` (`sidecar folders scaffold`)

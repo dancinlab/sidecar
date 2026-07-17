@@ -45,7 +45,7 @@ function hookSpec(): Record<string, unknown[]> {
       entry("sidecar recommend inject"),
       entry("sidecar prefs inject"),
       entry("sidecar easy inject"),
-      entry("sidecar fable-mode inject"),
+      entry("sidecar lab-mode inject"),
       entry("sidecar load inject"),
       // git-context is per-turn UNLIKE architecture (above): it is SILENT on a clean
       // on-default checkout (0 bytes — no large-doc anti-pattern) and only emits the

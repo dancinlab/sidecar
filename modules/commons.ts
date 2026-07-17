@@ -10,7 +10,7 @@ import { emitInject } from "../lib/inject.ts";
 import { resolve } from "node:path";
 import { resolveRuleFile, config } from "../lib/config.ts";
 import { readStdin } from "../lib/exec.ts";
-import { REPO_ROOT } from "../lib/paths.ts";
+import { REPO_ROOT, SIDECAR_CONFIG_DIR } from "../lib/paths.ts";
 
 // A repo-ROOT CLAUDE.md (the project-rules SSOT, do/dont-disciplined) vs a SUBFOLDER
 // CLAUDE.md (folder-docs local guide, free-form). Path may be absolute (write-guard)
@@ -27,16 +27,62 @@ function claudeMdExempt(): Set<string> {
   return new Set(secs.map((s) => s.replace(/^#+\s*/, "").split("—")[0].trim().toLowerCase()));
 }
 
+// Split a commons doc into its preamble + `## <slug>` sections, keyed by slug
+// (the text before any `— title`), preserving file order.
+function splitRules(text: string): { preamble: string[]; order: string[]; sec: Map<string, string[]> } {
+  const preamble: string[] = [];
+  const order: string[] = [];
+  const sec = new Map<string, string[]>();
+  let cur: string | null = null;
+  for (const line of text.split("\n")) {
+    const m = /^##\s+(.+?)\s*$/.exec(line);
+    if (m) {
+      cur = m[1].split("—")[0].trim();
+      if (!sec.has(cur)) order.push(cur);
+      sec.set(cur, [line]);
+      continue;
+    }
+    if (cur === null) preamble.push(line);
+    else sec.get(cur)!.push(line);
+  }
+  return { preamble, order, sec };
+}
+
+// A repo override (`.harness/commons.md`) is KEYED BY SLUG, not a whole-file swap:
+// it LAYERS repo-specific exceptions over the cross-project SSOT, so a repo that
+// overrides one rule still receives every other one (commons.md's own header says
+// "Keyed by stable slug"; anima's override says it verbatim — "Only the slugs listed
+// here override commons; every other commons rule still applies"). Resolving to a
+// single file silently dropped the rest: anima was injected 1 of 32 rules, missing
+// git-safety/honesty/verify-done/root-cause — and even `pi5-akida-anima`, the rule
+// about anima itself. An unreadable override falls back to the shared SSOT: partial
+// governance beats none.
 // `{scratchDir}` in the rule text resolves from docs.scratchDir, so a repo that
 // relocates (or forbids) the default `state/` root is not handed a governance rule
 // that contradicts its own config every turn.
 function body(): string {
-  const f = resolveRuleFile(".harness/commons.md", "commons.md");
+  let text: string;
   try {
-    return readFileSync(f, "utf8").replaceAll("{scratchDir}", config().docs.scratchDir);
+    text = readFileSync(resolve(SIDECAR_CONFIG_DIR, "commons.md"), "utf8");
   } catch {
     return "";
   }
+  const over = resolve(REPO_ROOT, ".harness/commons.md");
+  if (existsSync(over)) {
+    try {
+      const base = splitRules(text);
+      const ov = splitRules(readFileSync(over, "utf8"));
+      for (const slug of ov.order) {
+        if (!base.sec.has(slug)) base.order.push(slug); // repo-only rule → append
+        base.sec.set(slug, ov.sec.get(slug)!); // same slug → repo wins, in place
+      }
+      const parts = [base.preamble.join("\n").trimEnd(), ...base.order.map((s) => base.sec.get(s)!.join("\n").trimEnd())];
+      text = parts.filter((p) => p !== "").join("\n\n") + "\n";
+    } catch {
+      // unreadable override → keep the shared SSOT rather than emit nothing
+    }
+  }
+  return text.replaceAll("{scratchDir}", config().docs.scratchDir);
 }
 
 // commons do/dont format lint — each `## <slug> — <title>` section body must be

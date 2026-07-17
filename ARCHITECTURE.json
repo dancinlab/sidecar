@@ -971,9 +971,9 @@
               },
               {
                 "name": "lab",
-                "role": "프론티어 모델에 지시 1건 per-call 위임하는 허브 (fable·sol·full · 세션 백엔드 불변)",
+                "role": "프론티어 모델에 지시 1건 per-call 위임하는 허브 (fable·sol·full · 기본 full · 세션 백엔드 불변)",
                 "id": "module-lab",
-                "detail": "`lab <fable|sol|full>` 위임 허브. 백엔드=데이터(Backend descriptor: bin·defaultModel·buildArgv). 공용 1벌: 프롬프트=argv/--file/stdin→자식 stdin(argv누출0·배타), bg 잡(--bg→잡ID·result/tail/wait/list·~/.sidecar/lab-jobs), --dry·--cwd·--timeout(기본무제한·124). 주의=lab.md.",
+                "detail": "`lab [fable|sol|full]` 위임 허브. **백엔드=선택 위치인자 · 생략=full(기본·둘 병렬)** · 첫 단어가 백엔드명 근접오타면 프롬프트 오인 없이 거부. 백엔드=데이터(descriptor: bin·defaultModel·buildArgv). 공용 1벌: 프롬프트=argv/--file/stdin→자식 stdin(누출0·배타), bg 잡(--bg→ID·result/tail/wait/list), --dry·--cwd·--timeout(기본무제한·124). 주의=lab.md.",
                 "children": [
                   {
                     "name": "fable 백엔드",
@@ -997,9 +997,9 @@
               },
               {
                 "name": "lab-mode",
-                "role": "세션 스코프 분업 토글 (on [fable|sol|full]/off)",
+                "role": "세션 스코프 분업 토글 (on [fable|sol|full] · 기본 full / off)",
                 "id": "module-lab-mode",
-                "detail": "세션 스코프 토글. ON이면 매턴 inject가 분업 지시: **설계·분석·난제=lab <target> 위임**, **구현·빌드·git·ship=로컬**. 타깃=lab 과 동일 3종(fable·sol·full) · **플래그 파일 내용**으로 보관(스코프당 1파일=모순 불가) · full=둘 병렬→caller가 화해. 스코프=repo .harness/lab-mode > host ~/.sidecar (둘 다면 repo 우승) · 구 fable-mode 파일은 read 시 fable 로 자동이관. OFF=기본·무주입. 3표면 배선."
+                "detail": "세션 스코프 토글. ON이면 매턴 inject가 분업 지시: **설계·분석·난제=lab <target> 위임**, **구현·빌드·git·ship=로컬**. 타깃=lab 과 동일 3종 · **기본=full**(둘 병렬→caller가 화해) · **플래그 파일 내용**으로 보관(스코프당 1파일=모순 불가). 스코프=repo > host (둘 다면 repo 우승) · 구 fable-mode 파일은 fable 로 자동이관(기본값 아님=의미보존). OFF=기본·무주입. 3표면 배선."
               },
               {
                 "name": "goal-guard",

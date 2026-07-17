@@ -73,8 +73,8 @@ setup:
                                          curl one-liner: curl -fsSL https://raw.githubusercontent.com/dancinlab/sidecar/main/scripts/install.sh | bash
   init [--force] [--dry-run]   scaffold THIS repo: config + .harness rules + gitignore + wrapper (hooks are GLOBAL-ONLY → sidecar install)
                                          (strict by default: block-everything + branch protection + pre-push verify + single-doc scaffolds)
-  lab <fable|sol|full> [flags] <prompt...> | --file <f> | -   model-delegation hub — 1 instruction/call to a frontier model — fable=Claude Fable 5 · sol=Codex 5.6 · full=BOTH parallel (session backend untouched):
-                                         fable = Claude Fable 5 (headless 'claude -p' · default -m claude-fable-5 · opus fallback FORBIDDEN) · sol = OpenAI Codex 5.6 ('codex exec' · default -m gpt-5.6-sol) · full = BOTH in parallel (── fable ── / ── sol ── sections)
+  lab [fable|sol|full] [flags] <prompt...> | --file <f> | -   model-delegation hub — 1 instruction/call to a frontier model — backend OPTIONAL, omit it = full=BOTH parallel (DEFAULT · session backend untouched):
+                                         full (DEFAULT — omit the backend) = BOTH in parallel (── fable ── / ── sol ── sections) · fable = Claude Fable 5 (headless 'claude -p' · default -m claude-fable-5 · opus fallback FORBIDDEN) · sol = OpenAI Codex 5.6 ('codex exec' · default -m gpt-5.6-sol)
                                          · prompt from argv words/--file/stdin, sent via child stdin — no argv leak/quoting · --json = machine-clean answer on stdout · --dry = print resolved argv · --cwd <dir> · --timeout <s> (default UNLIMITED, exit 124)
                                          · --write = IMPLEMENT tier (fable: bypassPermissions · sol: -s workspace-write); DEFAULT is INVESTIGATE (fable: Write/Edit/NotebookEdit denied · sol: -s read-only) · -c/--continue · -r/--resume <id> · --sources <l> (fable only) · flags after -- go to the backend CLI verbatim
                                          · --bg = fire-and-forget (detached → prints a job id); collect with 'sidecar lab result <id>' (RUNNING=exit3) / 'tail <id>' / 'wait <id> [--timeout s]' / 'list' (~/.sidecar/lab-jobs)
@@ -115,7 +115,7 @@ hook delegates (wire these into your agent's settings.json):
   easy {show|inject|scaffold "<q>"|lint <file|->}
                            easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)
   lab-mode {on [fable|sol|full]|off|status|inject} [--repo]   session-scoped toggle — ON splits per-turn work: DESIGN/ANALYSIS/난제 delegated to the lab target, IMPLEMENTATION done locally
-                                         target (default fable) = the flag file's content · full = both models, caller reconciles
+                                         target (DEFAULT full = both models, caller reconciles) = the flag file's content
                                          scope: repo .harness > host ~/.sidecar (repo target wins); default host-wide · OFF emits nothing
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}

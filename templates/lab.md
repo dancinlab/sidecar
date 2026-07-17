@@ -35,7 +35,7 @@ Exclusive prompt sources: argv words | `--file <f>` | `-` (stdin). Pick exactly 
   - fable: bypassPermissions with NO disallow.
   - sol: `-s workspace-write` (writes within the workspace; NOT `danger-full-access`).
 
-Matches `fable-mode`: the delegated model analyzes, the caller implements — until you opt into `--write`.
+Matches `lab-mode`: the delegated model analyzes, the caller implements — until you opt into `--write`.
 
 ## `--cwd` — where the child runs
 `--cwd <dir>` sets the child's working directory (its tool reach — the files it can grep/edit). Default

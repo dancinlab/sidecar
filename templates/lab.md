@@ -5,15 +5,21 @@ Three backends behind one shared flag surface:
 
 | backend | model | CLI | best at |
 |---------|-------|-----|---------|
+| `full` **(default)** | both | both, in parallel | a two-model consult — compare answers side by side |
 | `fable` | `claude-fable-5` | `claude -p` (headless) | deep design · analysis · hard problems (Anthropic Mythos tier) |
 | `sol`   | `gpt-5.6-sol`   | `codex exec`           | agentic code work · long tool-use runs (OpenAI Codex 5.6) |
-| `full`  | both            | both, in parallel      | a two-model consult — compare answers side by side |
+
+The backend is **optional** — omit it and the prompt goes to `full` (both models). Name one to narrow.
 
 ```
-sidecar lab fable "이 diff 요약"          # → Claude Fable 5
-sidecar lab sol   --file spec.md          # → Codex 5.6
-sidecar lab full  "이 설계안의 허점은?"    # → both, labeled sections
+sidecar lab       "이 설계안의 허점은?"    # → BOTH (default), labeled sections
+sidecar lab fable "이 diff 요약"          # → Claude Fable 5 only
+sidecar lab sol   --file spec.md          # → Codex 5.6 only
 ```
+
+A first word that is a near-miss typo of a backend name (`fabel`) is rejected rather than silently
+sent to both models as prompt text. If such a word really opens your prompt, name the backend
+(`sidecar lab full "fill …"`) or pass the prompt via `--file`/stdin.
 
 ## Prompt channel — always a FILE (never inline)
 The prompt is free text (quotes, parens, backticks, globs). It is ALWAYS fed through the child's

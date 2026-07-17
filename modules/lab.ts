@@ -1,20 +1,24 @@
-// sidecar lab <fable|sol|full> [flags] <prompt...> | --file <f> | -
+// sidecar lab [fable|sol|full] [flags] <prompt...> | --file <f> | -
 //   Model-delegation hub — hand ONE instruction to a frontier model without
 //   switching the whole session backend (per-CALL, not per-session). Three
 //   backends behind one shared flag surface / prompt resolver / bg-job system:
 //     · fable = Anthropic Claude Fable 5 via headless `claude -p`
 //     · sol   = OpenAI Codex 5.6      via `codex exec` (model gpt-5.6-sol)
-//     · full  = BOTH in parallel — answers printed under labeled sections
+//     · full  = BOTH in parallel — answers printed under labeled sections (DEFAULT)
+//
+//   The backend is OPTIONAL: omit it and the prompt goes to `full` (both models),
+//   the answer worth having by default — one call, two independent takes, and the
+//   caller reconciles. Naming a backend narrows it to that one.
 //
 //   The prompt is ALWAYS fed through the child's STDIN (never placed on argv), so
 //   shell quoting, argv length limits, and history leakage are non-issues.
 //   stdout/stderr are inherited: a long generation streams live instead of
 //   looking frozen behind a capture buffer.
 //
+//     sidecar lab "설계안 검토"                 # no backend → BOTH (default full)
 //     sidecar lab fable "이 diff 요약해줘"      # argv words → one prompt
 //     sidecar lab sol --file notes.md           # prompt from a file → Codex 5.6
 //     git diff | sidecar lab fable -            # prompt from stdin
-//     sidecar lab full "설계안 검토"            # ask both models, compare
 //     sidecar lab sol --json "…"                # machine-clean answer on stdout
 //     sidecar lab fable --dry "…"               # print resolved argv, no run
 //     sidecar lab sol "…" -- --add-dir /tmp     # after --, verbatim to codex
@@ -132,13 +136,14 @@ const SOL: Backend = {
 
 const BACKENDS: Record<BackendName, Backend> = { fable: FABLE, sol: SOL };
 
-const USAGE = `usage: sidecar lab <fable|sol|full> [flags] <prompt...> | --file <f> | -
+const USAGE = `usage: sidecar lab [fable|sol|full] [flags] <prompt...> | --file <f> | -
        sidecar lab {result|tail|wait|list} …            async job verbs
 
-delegate ONE instruction to a frontier model (per-CALL — session backend untouched):
+delegate ONE instruction to a frontier model (per-CALL — session backend untouched).
+the backend is OPTIONAL — omit it and the prompt goes to \`full\` (BOTH models):
+  full    BOTH in parallel — answers under ── fable ── / ── sol ── sections   (DEFAULT)
   fable   Claude Fable 5    headless \`claude -p\`  (default -m claude-fable-5 · opus fallback FORBIDDEN)
   sol     OpenAI Codex 5.6  \`codex exec\`          (default -m gpt-5.6-sol)
-  full    BOTH in parallel — answers printed under ── fable ── / ── sol ── sections
 
   -m, --model <id>     override the backend's default model
   -f, --file <path>    prompt from a file   ·   -   prompt from stdin (pipe)
@@ -552,6 +557,32 @@ async function runFull(o: LabOpts, prompt: string): Promise<number> {
   return f.code !== 0 ? f.code : s.code !== 0 ? s.code : 0;
 }
 
+// Backend when the caller names none: BOTH models. One call buys two independent
+// takes and the caller reconciles — the better default than silently picking a
+// side. Narrow it by naming a backend.
+const DEFAULT_BACKEND = "full";
+const BACKEND_WORDS = ["fable", "sol", "full"];
+
+// Same-length words differing by ONE substitution, or by ONE adjacent transposition
+// ("fable"→"fabel" — the most common real typo, which plain Levenshtein scores 2).
+function oneEditApart(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const diff: number[] = [];
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push(i);
+  if (diff.length === 1) return true; // substitution
+  if (diff.length !== 2 || diff[1] !== diff[0] + 1) return false;
+  return a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]]; // transposition
+}
+// A backend-name typo, NOT a prompt. Deliberately NARROW — same length AND same
+// first letter AND one edit — because a false positive would reject a legitimate
+// prompt. That keeps prompts starting with "null"/"table"/"sole" (each one plain
+// edit from a backend name) flowing through to `full` as the prompt text they are.
+function backendTypo(w: string): string | null {
+  if (!/^[A-Za-z]{2,8}$/.test(w)) return null;
+  const lower = w.toLowerCase();
+  return BACKEND_WORDS.find((b) => lower[0] === b[0] && oneEditApart(lower, b)) ?? null;
+}
+
 function dryLine(be: Backend, o: LabOpts): string {
   const argv = be.buildArgv(o, be.name === "sol" && o.json ? "<capture>" : null);
   return `  ${be.bin} ${argv.join(" ")}`;
@@ -573,13 +604,20 @@ export async function runLab(args: string[]): Promise<number> {
     info(USAGE);
     return args.length === 0 ? 1 : 0;
   }
-  if (verb !== "fable" && verb !== "sol" && verb !== "full") {
-    warn(`lab: unknown subcommand '${verb}' — expected fable | sol | full (or a job verb: result·tail·wait·list).`);
-    info(USAGE);
-    return 1;
+  // Backend is OPTIONAL: a first word that isn't one of the three is the START OF
+  // THE PROMPT, not a bad subcommand — the whole argv goes to `full`. The one thing
+  // that must NOT slip through as prompt text is a near-miss TYPO of a backend name
+  // ("fabel"), which would silently prepend a stray word AND fan out to both models.
+  const named = verb === "fable" || verb === "sol" || verb === "full";
+  if (!named) {
+    const typo = backendTypo(verb);
+    if (typo) {
+      warn(`lab: '${verb}' looks like a typo of '${typo}' — did you mean \`sidecar lab ${typo} …\`? If '${verb}' really is the first word of your prompt, name the backend (\`sidecar lab ${DEFAULT_BACKEND} "${verb} …"\`) or pass the prompt via --file/stdin.`);
+      return 1;
+    }
   }
-  const sub = verb as BackendName | "full";
-  const o = parseArgs(sub, args.slice(1));
+  const sub = (named ? verb : DEFAULT_BACKEND) as BackendName | "full";
+  const o = parseArgs(sub, named ? args.slice(1) : args);
   if (!o) {
     info(USAGE);
     return 1;

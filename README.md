@@ -171,7 +171,7 @@ bash .harness-engine/bin/sidecar init
 
 생성 후 `harness.config.json` 의 `verify.checks` · `lockdown.files` 만 repo 에 맞게 채우면 된다.
 
-> 🧪 **프론티어 모델 위임은 `sidecar lab <fable|sol|full>`**: 세션 백엔드를 안 바꾸고 지시 1건을 per-call 위임. **fable**=Claude Fable 5(`claude -p`·claude-fable-5·opus fallback 금지) · **sol**=OpenAI Codex 5.6(`codex exec`·gpt-5.6-sol) · **full**=둘 병렬(`── fable ──`/`── sol ──` 섹션). 프롬프트=argv/`--file`/stdin→자식 stdin(argv 누출 0). 기본 investigate(읽기·분석만)·`--write`=구현 tier · `--bg`→잡ID(`result`/`tail`/`wait`/`list`). `sidecar lab-mode on [fable|sol|full]` 이 매턴 이 명령으로 설계/분석을 위임한다(구현은 로컬).
+> 🧪 **프론티어 모델 위임은 `sidecar lab [fable|sol|full]`**: 세션 백엔드를 안 바꾸고 지시 1건을 per-call 위임. 백엔드는 **선택** — 생략하면 **full**(기본값)=둘 병렬(`── fable ──`/`── sol ──` 섹션) · **fable**=Claude Fable 5(`claude -p`·claude-fable-5·opus fallback 금지) · **sol**=OpenAI Codex 5.6(`codex exec`·gpt-5.6-sol). 백엔드 이름 근접오타(`fabel`)는 프롬프트로 오인 않고 거부. 프롬프트=argv/`--file`/stdin→자식 stdin(argv 누출 0). 기본 investigate(읽기·분석만)·`--write`=구현 tier · `--bg`→잡ID(`result`/`tail`/`wait`/`list`). `sidecar lab-mode on [fable|sol|full]`(기본 full) 이 매턴 이 명령으로 설계/분석을 위임한다(구현은 로컬).
 
 > 수동 설정도 가능: `.harness/*.json` 을 두지 않으면 번들 기본 규칙(`config/*.json`)이 자동 적용된다.
 >

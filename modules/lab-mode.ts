@@ -28,7 +28,12 @@ import { info } from "../lib/log.ts";
 
 type Target = "fable" | "sol" | "full";
 const TARGETS: Target[] = ["fable", "sol", "full"];
-const DEFAULT_TARGET: Target = "fable";
+// Bare `on` = BOTH models, matching `lab`'s own default: one delegation buys two
+// independent takes and the caller reconciles them. Narrow it by naming a target.
+const DEFAULT_TARGET: Target = "full";
+// What a pre-rename `fable-mode` flag file meant — the ONLY thing it could mean.
+// Migration must preserve that, so it does NOT follow DEFAULT_TARGET.
+const LEGACY_TARGET: Target = "fable";
 type Scope = "repo" | "host";
 
 function flagFor(scope: Scope): string {
@@ -57,16 +62,16 @@ function targetAt(scope: Scope): Target | null {
   }
 }
 // One-shot rename of a pre-rename flag file to the canonical one (content
-// "fable" — the only thing the old file could mean), so an already-ON host stays
-// ON across the rename with no user action. Best-effort: a failure must not break
-// the toggle.
+// LEGACY_TARGET — the only thing the old file could mean), so an already-ON host
+// stays ON across the rename with no user action. Best-effort: a failure must not
+// break the toggle.
 function migrateLegacy(scope: Scope): void {
   const legacy = legacyFlagFor(scope);
   if (!existsSync(legacy)) return;
   try {
     if (!existsSync(flagFor(scope))) {
       mkdirSync(dirname(flagFor(scope)), { recursive: true });
-      writeFileSync(flagFor(scope), `${DEFAULT_TARGET}\n`, "utf8");
+      writeFileSync(flagFor(scope), `${LEGACY_TARGET}\n`, "utf8");
     }
     rmSync(legacy);
   } catch {

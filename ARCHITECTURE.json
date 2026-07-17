@@ -1383,7 +1383,7 @@
             "name": "docs.scratchDir = state",
             "role": "산출물 단일 루트 (commons preserve-state 규칙문에 `{scratchDir}` 로 치환주입)",
             "id": "config-docs-scratchdir-state",
-            "detail": "모든 작업 산출물(실험·벤치·verdict·스크래치)을 한 루트로 통일(c5) — 기본 repo-root `state/`, 평면 `<scratchDir>/<id>`. 엔진 무하드코딩: commons `preserve-state` do-줄은 `{scratchDir}` 플레이스홀더 → `commons body()` 가 config 값으로 치환주입 → 루트를 옮긴 repo 가 자기 config 와 모순되는 규칙을 매턴 주입받지 않는다"
+            "detail": "모든 작업 산출물(실험·벤치·verdict·스크래치)을 한 루트로 통일(c5) — 기본 repo-root `state/`, 평면 `<scratchDir>/<id>`. 엔진 무하드코딩: commons `preserve-state` + enforcement 규칙 데이터가 `{scratchDir}` 플레이스홀더 → `commons body()` / `pre.ts loadConfig()` 가 치환 (산문=원값 · 정규식=escape 후 · 예외항목=`{scratchDir}/` 후행슬래시 필수 — bare 값은 부분일치로 가드를 뚫음)."
           },
           {
             "name": "docs.claudeMdSections[]",

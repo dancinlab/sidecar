@@ -71,11 +71,38 @@ interface EnforcementConfig {
   prompt_hints?: PromptHintRule[];
 }
 
+// Rule fields that are compiled to a RegExp (`new RegExp(...)`) rather than shown as prose.
+// A substituted value must be regex-escaped in these, or a scratchDir containing regex
+// metacharacters would silently corrupt the pattern.
+const REGEX_FIELDS = new Set(["match", "path_match", "content_forbidden_pattern"]);
+const REGEX_ARRAY_FIELDS = new Set(["exceptions", "bypass_patterns", "match_patterns"]);
+
+// `{scratchDir}` in rule DATA resolves from docs.scratchDir — the same contract commons.md
+// carries (`commons.ts:body()`). Without it the rule text hardcodes a path: a repo that
+// relocates its scratch root gets a guard aimed at the wrong dir (exempting the old path,
+// warning on the sanctioned one) while its own config, TMP-VOLATILE and the commons
+// preserve-state rule all say otherwise. Prose fields take the value verbatim; regex fields
+// take it escaped (`tmp-guard.ts` is the model).
+function substituteScratchDir<T>(node: T, key?: string): T {
+  const dir = config().docs.scratchDir;
+  if (typeof node === "string") {
+    const value = key && (REGEX_FIELDS.has(key) || REGEX_ARRAY_FIELDS.has(key)) ? dir.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : dir;
+    return node.replaceAll("{scratchDir}", value) as unknown as T;
+  }
+  if (Array.isArray(node)) return node.map((v) => substituteScratchDir(v, key)) as unknown as T;
+  if (node && typeof node === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(node)) out[k] = substituteScratchDir(v, k);
+    return out as T;
+  }
+  return node;
+}
+
 function loadConfig(): EnforcementConfig {
   const cfg = config();
   const file = resolveRuleFile(cfg.enforcementFile, "enforcement.json");
   try {
-    return readJson<EnforcementConfig>(file);
+    return substituteScratchDir(readJson<EnforcementConfig>(file));
   } catch {
     return {};
   }

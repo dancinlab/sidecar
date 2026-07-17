@@ -1270,6 +1270,12 @@
                 "detail": "fallback=block · 낮은 unknown_threshold (strict 기본). bundled config/ 가 base, repo `.harness/` 가 code별 override (errors 가 병합 로드)"
               },
               {
+                "name": "commons.md",
+                "role": "거버넌스 SSOT (프로젝트-무관 do/dont 룰셋)",
+                "id": "data-commons-md",
+                "detail": "bundled `config/commons.md` = base, repo `.harness/commons.md` = **slug별 override** — `commons.ts:body()` 병합 로드 (severity-map 과 같은 규약: repo 가 그 키만 이김). 통째 교체 아님: override slug 만 repo 승 · base 에 없으면 append · 읽기 실패 → base 폴백. `{scratchDir}` 는 병합 후 치환(dont 줄 리터럴 경로 금지 — 자기모순)."
+              },
+              {
                 "name": "harness.config.json",
                 "role": "repo 루트 설정",
                 "id": "data-harness-config-json",

@@ -41,11 +41,14 @@ function styleFile(): string {
 function header(src: string, banner: string, tier: "lean" | "full"): string {
   const lead =
     tier === "lean"
-      ? "Apply the 7-element friendly pattern (per-turn directive below) to user-facing prose this turn — " +
-        "icon · name · alias · plain-line · analogy · ASCII · compare. Full reference (gold examples · 4 ASCII " +
-        "templates · checklist) is injected once at SessionStart/Compact and on-demand via `sidecar easy show`."
+      ? "Top priority (Tier-1, default): a first-use plain-language gloss of EVERY jargon/acronym/hyphenated term " +
+        "in user-facing prose is MANDATORY — `term(=plain meaning)`. Use the full 7-element pattern (icon · name · " +
+        "alias · plain-line · analogy · ASCII · compare) only as Tier-2, when a new concept/tool is itself the " +
+        "subject. See the per-turn directive below. Full reference (before→after · gold examples · templates · " +
+        "checklist) is injected once at SessionStart/Compact and on-demand via `sidecar easy show`."
       : "The full easy-style canonical reference below is injected ONCE this session (cached prefix · survives " +
-        "compaction). The per-turn directive rides UserPromptSubmit. Apply the 7-element pattern to user-facing prose.";
+        "compaction). The per-turn directive rides UserPromptSubmit. Top rule: gloss every jargon term at first " +
+        "use (Tier-1 · default); the 7-element pattern is Tier-2, only for introducing a new concept/tool.";
   return (
     banner +
     `# response style: easy (auto-injected by sidecar easy · ${src})\n\n` +
@@ -140,6 +143,32 @@ function lintRound(text: string): { lines: string[]; warns: number } {
   const unexpanded = acronyms.filter((a) => !new RegExp(`${a}\\s*\\(|\\(\\s*${a}`).test(text));
   pass(unexpanded.length === 0, "acronym-expansion", acronyms.length ? `${acronyms.length - unexpanded.length}/${acronyms.length} 풀어씀` : "약어 없음 (n/a)");
 
+  // bare-jargon first-use gloss (0순위 rule · advisory heuristic · never blocks):
+  // hyphen-joined latin terms (content-reach · full-TERMINAL · GREEN-DIRECTIONAL-STRONG) and
+  // backtick prose terms that appear with NO plain-language gloss within ~100 chars of first use.
+  // Regex can't judge meaning — it flags "looks-like-jargon, ungloss​ed", so it stays advisory.
+  const prose = text.replace(/```[\s\S]*?```/g, " "); // drop code fences (표기-제외)
+  const COMMON_HYPHEN = /^(side-by-side|before-after|step-by-step|follow-up|end-to-end|real-time|open-source|read-only|up-to-date|state-of-the-art|so-called)$/i;
+  // A gloss `=` is followed by 한글 (뜻); an equation `=` is followed by more jargon —
+  // that Korean-after test is what separates `용어(=쉬운 뜻)` from `content-reach = GREEN…`.
+  const glossedAfter = (e: number) => /[=—:]\s*[가-힣]|\(\s*[가-힣=]|즉|뜻|말하자면/.test(prose.slice(e, e + 100));
+  // `쉬운말(용어)` form — plain Korean immediately precedes the parenthesised original name.
+  const glossedBefore = (s: number) => /[가-힣][^()]{0,12}[(（]\s*[`'"]?\s*$/.test(prose.slice(Math.max(0, s - 20), s));
+  const cand = new Map<string, { s: number; e: number }>(); // display → first {start,end}
+  for (const m of prose.matchAll(/[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)+/g)) {
+    const t = m[0];
+    if (COMMON_HYPHEN.test(t)) continue;
+    if (!cand.has(t)) cand.set(t, { s: m.index ?? 0, e: (m.index ?? 0) + t.length });
+  }
+  for (const m of prose.matchAll(/`([^`\n]+)`/g)) {
+    const t = m[1];
+    if (/[\/.]|--|\s/.test(t) || !/[A-Za-z]/.test(t)) continue; // path/flag/command/multiword → skip
+    const key = "`" + t + "`";
+    if (!cand.has(key)) cand.set(key, { s: m.index ?? 0, e: (m.index ?? 0) + m[0].length });
+  }
+  const bare = [...new Set([...cand.entries()].filter(([, p]) => !glossedAfter(p.e) && !glossedBefore(p.s)).map(([t]) => t.replace(/`/g, "")))].slice(0, 5);
+  pass(bare.length === 0, "bare-jargon-gloss", cand.size ? (bare.length ? `${bare.length}건 미풀이 (${bare.join(", ")})` : "은어 모두 풀이됨") : "은어 후보 없음 (n/a)");
+
   const hasTable = /\|.*\|.*\n\s*\|[\s:|-]+\|/.test(text);
   const hasIcon = /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}]/u.test(text);
   const sevenScore = [hasIcon, ANALOGY_RE.test(text), hasAsciiBlock, hasTable].filter(Boolean).length;
@@ -193,7 +222,7 @@ export async function runEasy(args: string[]): Promise<number> {
     const payload = tier === "lean" ? (lean as string) : body;
     const banner =
       event === "UserPromptSubmit" && nlTrigger(prompt)
-        ? "🎓 easy 모드 활성 — 7-요소 패턴 적용 (아이콘·이름·별칭·평이·비유·ASCII·비교)\n\n"
+        ? "🎓 easy 모드 활성 — 은어 첫 등장 즉시 풀이 `용어(=쉬운 뜻)`(0순위·필수) · 새 개념 소개일 때만 7요소\n\n"
         : "";
     const context = header(file, banner, tier) + payload;
     emitInject("easy", event, context);

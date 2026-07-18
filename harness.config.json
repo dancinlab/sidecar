@@ -29,7 +29,8 @@
     "commonsCap": 10300,
     "injectCaps": {
       "config/recommend.md": 6500,
-      "config/recommend.ko.md": 6500
+      "config/recommend.ko.md": 6500,
+      "styles/": 10000
     },
     "injectBudgetBytes": 22883,
     "injectBudgetExtra": [

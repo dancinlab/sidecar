@@ -23,7 +23,7 @@
 //     sidecar lab fable --dry "…"               # print resolved argv, no run
 //     sidecar lab sol "…" -- --add-dir /tmp     # after --, verbatim to codex
 import { spawn } from "node:child_process";
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, rmSync, openSync, writeSync, closeSync } from "node:fs";
 import { join } from "node:path";
 import { homedir, tmpdir } from "node:os";
 import { info, warn, ok } from "../lib/log.ts";
@@ -161,6 +161,9 @@ the backend is OPTIONAL — omit it and the prompt goes to \`full\` (BOTH models
       --sources <l>    [fable only] claude setting sources (default ${DEFAULT_SOURCES} —
                        drops global governance hooks that stall a headless child)
       -- <flags...>    verbatim passthrough to the backend CLI (not with \`full\`)
+
+every foreground run also tees its FULL output to ~/.sidecar/lab/<ts>-<backend>.md
+(path printed on stderr) — a piped/tailed/backgrounded stdout can't lose the answer.
 
 prompt sources are exclusive: argv words | --file | - (stdin).
 full: -c/-r/-- rejected; --sources applies to the fable leg only.
@@ -448,18 +451,82 @@ async function jobTail(id: string): Promise<number> {
   }
 }
 
+// ── durable answer log ───────────────────────────────────────────────────────
+// EVERY foreground lab run (fable/sol/full) tees its FULL output to a timestamped
+// file under ~/.sidecar/lab/ and announces the path on STDERR. This is a pure
+// safety net: stdout behavior is untouched, but a stdout that gets truncated —
+// piped to `tail`, moved to the background by a harness, or lost when the parent
+// exits — can never lose the answer, because a second copy already landed on disk.
+// The announce goes to stderr (via info/ok) so --json stdout stays machine-clean.
+function labLogDir(): string {
+  return join(homedir(), ".sidecar", "lab");
+}
+interface LabLog {
+  path: string;
+  write: (s: string) => void;
+  close: () => void;
+}
+function openLabLog(backend: string, o: LabOpts, promptChars: number): LabLog {
+  const dir = labLogDir();
+  const ts = new Date().toISOString().replace(/[:.]/g, "-"); // 2026-07-18T12-34-56-789Z
+  const path = join(dir, `${ts}-${backend}.md`);
+  let fd: number | null = null;
+  try {
+    mkdirSync(dir, { recursive: true });
+    fd = openSync(path, "a");
+    writeSync(fd, `<!-- sidecar lab ${backend} · model=${o.model ?? "(default)"} · cwd=${o.cwd ?? process.cwd()} · prompt=${promptChars} chars · ${new Date().toISOString()} -->\n\n`);
+  } catch (e) {
+    // A log we cannot open must never break the actual run — degrade to no-op.
+    warn(`lab: durable log unavailable (${e instanceof Error ? e.message : String(e)}) — output not persisted to disk.`);
+    fd = null;
+  }
+  return {
+    path,
+    write: (s) => {
+      if (fd === null) return;
+      try {
+        writeSync(fd, s);
+      } catch {
+        /* best-effort — a write failure mid-run must not abort the run */
+      }
+    },
+    close: () => {
+      if (fd === null) return;
+      try {
+        closeSync(fd);
+      } catch {
+        /* ignore */
+      }
+      fd = null;
+    },
+  };
+}
+
 // ── foreground run of ONE backend ────────────────────────────────────────────
-// Prompt goes through the child's stdin. Default: stdout inherited (streams live).
+// Prompt goes through the child's stdin. Default: stdout teed live to terminal +
+// durable log.
 // sol --json: codex has no single-blob json, so we route the clean final message
 // to a temp file via -o, silence stdout, and print the file on exit 0.
 function runForeground(be: Backend, o: LabOpts, prompt: string): Promise<number> {
   const solJsonCapture = be.name === "sol" && o.json ? join(tmpdir(), `lab-sol-${Date.now().toString(36)}.txt`) : null;
   const argv = be.buildArgv(o, solJsonCapture);
+  const log = openLabLog(be.name, o, prompt.length);
+  info(`lab ${be.name}: durable copy → ${log.path}`);
   return new Promise<number>((resolve) => {
+    // stdout is PIPED (not inherited) so we can tee it to BOTH the real stdout
+    // (live stream preserved) and the durable log. The sol --json path keeps
+    // stdout ignored — its clean answer is captured to a temp file and teed into
+    // the log at settle instead.
     const child = spawn(be.bin, argv, {
       cwd: o.cwd ?? process.cwd(),
-      stdio: ["pipe", solJsonCapture ? "ignore" : "inherit", "inherit"],
+      stdio: ["pipe", solJsonCapture ? "ignore" : "pipe", "inherit"],
     });
+    if (!solJsonCapture) {
+      child.stdout?.on("data", (c: Buffer) => {
+        process.stdout.write(c);
+        log.write(c.toString());
+      });
+    }
     const cap = effTimeoutSec(o);
     let timedOut = false;
     const timer = cap
@@ -471,13 +538,21 @@ function runForeground(be: Backend, o: LabOpts, prompt: string): Promise<number>
     const settle = (code: number) => {
       if (timer) clearTimeout(timer);
       if (solJsonCapture) {
-        if (code === 0 && existsSync(solJsonCapture)) process.stdout.write(readFileSync(solJsonCapture, "utf8"));
+        if (code === 0 && existsSync(solJsonCapture)) {
+          const ans = readFileSync(solJsonCapture, "utf8");
+          process.stdout.write(ans);
+          log.write(ans);
+        }
         try {
           if (existsSync(solJsonCapture)) rmSync(solJsonCapture);
         } catch {
           /* best-effort cleanup */
         }
       }
+      log.close();
+      // Confirm the durable path on stderr once more so it's the last thing the
+      // caller sees even if stdout was piped away — the answer is never lost.
+      (code === 0 ? ok : info)(`lab ${be.name}: output saved → ${log.path}`);
       resolve(code);
     };
     child.on("error", (e: NodeJS.ErrnoException) => {
@@ -550,10 +625,19 @@ async function runFull(o: LabOpts, prompt: string): Promise<number> {
   }
   if (o.sources !== DEFAULT_SOURCES) info(`(--sources ${o.sources}: fable leg only — n/a for sol)`);
   const [f, s] = await Promise.all([runCaptured(FABLE, o, prompt), runCaptured(SOL, o, prompt)]);
-  process.stdout.write(`── fable (${o.model ?? FABLE.defaultModel}) · exit ${f.code} ──\n`);
-  process.stdout.write(f.out.endsWith("\n") ? f.out : f.out + "\n");
-  process.stdout.write(`\n── sol (${o.model ?? SOL.defaultModel}) · exit ${s.code} ──\n`);
-  process.stdout.write(s.out.endsWith("\n") ? s.out : s.out + "\n");
+  // Build both sections once, then write them to stdout AND the durable log — a
+  // truncated/backgrounded stdout (the very failure that motivated this) can never
+  // lose the fable/sol answers.
+  const combined =
+    `── fable (${o.model ?? FABLE.defaultModel}) · exit ${f.code} ──\n` +
+    (f.out.endsWith("\n") ? f.out : f.out + "\n") +
+    `\n── sol (${o.model ?? SOL.defaultModel}) · exit ${s.code} ──\n` +
+    (s.out.endsWith("\n") ? s.out : s.out + "\n");
+  const log = openLabLog("full", o, prompt.length);
+  process.stdout.write(combined);
+  log.write(combined);
+  log.close();
+  ok(`lab full: both sections saved → ${log.path}`);
   return f.code !== 0 ? f.code : s.code !== 0 ? s.code : 0;
 }
 

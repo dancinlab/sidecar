@@ -567,8 +567,8 @@ function runForeground(be: Backend, o: LabOpts, prompt: string): Promise<number>
       }
       settle(code ?? 1);
     });
-    child.stdin.write(prompt);
-    child.stdin.end();
+    child.stdin?.write(prompt);
+    child.stdin?.end();
   });
 }
 
@@ -607,8 +607,8 @@ function runCaptured(be: Backend, o: LabOpts, prompt: string): Promise<{ code: n
       settle(127);
     });
     child.on("close", (code) => settle(code ?? 1));
-    child.stdin.write(prompt);
-    child.stdin.end();
+    child.stdin?.write(prompt);
+    child.stdin?.end();
   });
 }
 

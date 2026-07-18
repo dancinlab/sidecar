@@ -6,15 +6,14 @@
 <!-- easy:lean -->
 ## Per-turn directive (lean — only this block is injected each UserPromptSubmit)
 
-Apply the **7-element friendly pattern** to user-facing prose — for every non-trivial concept:
-🔹 ① icon · ② name · ③ alias · ④ one-line plain description · ⑤ everyday analogy · ⑥ ASCII diagram · ⑦ compare-vs the nearest existing tool.
+**Priority 0 · no bare jargon** — the first time a project term / acronym / jargon word appears in user-facing prose, gloss it **right there**: swap it for a plain word or append `term(=plain meaning)`. Applies to **all prose** — progress reports, summaries, conclusions, error explanations. e.g. `content-reach(=our method actually reached the target point)`.
 
-Pick the ASCII diagram by shape: change/improvement→**before/after**, hierarchy→**tree**, option A·B→**side-by-side**, part flow→**structure sketch**.
+**Two tiers** — ① inline gloss (default · required): most prose just needs the term glossed inline. ② full 7-element pattern (optional · rare): only when a new concept/tool is **itself the subject** — 🔹 icon · name · alias · one-line · everyday analogy · ASCII · compare-vs. (test: is it the paragraph's subject? yes→7-element · no→inline)
+ASCII by shape: change→**before/after** · hierarchy→**tree** · options→**side-by-side** · flow→**structure sketch**.
 
-In scope (Tier-A): interactive chat · narrative stdout/stderr · docs cold entries · error trailers (cause+fix).
-Excluded: code identifiers · math symbols · API names · paths · DOIs · commit SHAs · CI machine JSON/JSONL output.
-
-📖 Gold examples · full 4-template ASCII bodies · the plain-language checklist = **injected once at SessionStart/Compact** + on-demand `sidecar easy show` (never re-dumped per turn).
+In scope (Tier-A): interactive chat · narrative stdout/stderr · docs cold entries · error trailers.
+Notation-excluded (gloss duty remains): code identifiers · math symbols · API names · paths · DOIs · commit SHAs · CI machine JSON/JSONL — the notation may stay as-is, but a **concept name** in the prose that explains them is still glossed on first use.
+📖 Gold · before→after examples · ASCII templates · checklist = **injected once at SessionStart/Compact** + on-demand `sidecar easy show`.
 <!-- /easy:lean -->
 
 ## Surfaces in scope (Tier-A)
@@ -24,14 +23,30 @@ Excluded: code identifiers · math symbols · API names · paths · DOIs · comm
 - docs / README cold-entry
 - error message trailer body (reason + fix lines)
 
-## Out-of-scope
+## Out-of-scope (notation-excluded — the gloss duty remains)
+
+The following may keep their **original notation**. But a **concept name in the prose that explains them** must still be glossed on first use (don't use this list as an escape hatch).
 
 - Code identifiers / math symbols / API names / DOI / commit SHA / file paths
 - CI machine-pipe output (`--format json` / `jsonl`)
 
 ---
 
-## 7-element pattern (gold reference)
+## Two tiers (which one, when)
+
+```
+jargon appears in prose
+├─ is it the paragraph's subject (introducing a new concept/tool)?
+│   └─ yes → full 7-element pattern (heavy · rare)
+└─ no (a term inside a report/summary)  → inline gloss `term(=plain meaning)` (light · default · priority-0)
+```
+
+- **Tier 1 · inline gloss (default · required)** — progress reports, summaries, conclusions, errors. Append `term(=plain meaning)` on first use or swap for a plain word. Correct even with no icon/analogy/ASCII (the goal is delivering the result, not introducing a product).
+- **Tier 2 · full 7-element (optional · rare)** — only when a new concept/tool is **itself the subject**.
+
+---
+
+## 7-element pattern (Tier 2 gold reference)
 
 Every non-trivial concept explanation should hit these 7 elements:
 
@@ -146,16 +161,44 @@ For showing how parts connect and flow. Connect boxes `[ ]` with arrows `──�
 
 ---
 
+## Tier 1 inline-gloss gold (for reports/summaries — not product intros)
+
+Progress reports and session summaries mostly land here. Keep the original name (the user may need it) but **translate it right there** on first use.
+
+### before → after rewrite (a real failure case)
+
+**❌ before — jargon exposed bare (unreadable to a layperson)**
+
+```text
+H_9774 CEMENTING succeeded (#4130 → #4132 → #4136).
+un-gate → reference-match → retract → cement.
+exact-key T=1.0 3-seed independent replication.
+content-reach = GREEN-DIRECTIONAL-STRONG.
+full-TERMINAL remains a statistical ceremony.
+```
+
+**✅ after — keep the names, but gloss on first use**
+
+```text
+Finalized experiment H_9774's verification (`CEMENTING`=the last step that hardens a repeatedly-confirmed result into the reference result) — #4130 → #4132 → #4136. Four steps: unlock (`un-gate`) → cross-check against real code (`reference-match`=open the actual code and confirm, not guess) → retract the wrong earlier verdict (`retract`) → confirm (`cement`).
+
+At T=1.0, three random start values (`3-seed`) gave the same result → not a one-off fluke. The "did we actually reach the target?" item (`content-reach`) got a strong pass grade (`GREEN-DIRECTIONAL-STRONG`=directionally right, strongly green); the bigger final check (`full-TERMINAL`) isn't verdict-changing, just a statistical confirmation.
+```
+
+A good inline gloss tells you **"what this means in this sentence"**, not a dictionary definition — everyday terms too: `cache miss(=couldn't find it in the quick-access shelf, so went back to the source)`.
+
+---
+
 ## Layperson-translation checklist
 
-A quick 5-step pass before you write an explanation:
+A quick 5-step pass before you send prose (item 1 is the priority):
 
 ```
-[ ] 1. Detect jargon — any acronyms (API·CPU) · math symbols (σ·∑·∂) · code/product names?
-[ ] 2. Swap for everyday words — replaced each term with a plain word or analogy? (if you can't, expand it on first use)
-[ ] 3. Apply the 7 elements — does every non-trivial concept carry all 7 (icon…compare)?
-[ ] 4. ASCII ≥1 — where shape matters, added a diagram using one of the 4 templates above?
-[ ] 5. Re-read — would someone seeing this field for the first time get it in one pass?
+[ ] 1. bare-jargon scan — any ungloss​ed project terms · acronyms · hyphenated names · backtick names · symbols left in the prose?
+[ ] 2. gloss on first use — swapped each for a plain word, or glossed `term(=plain meaning)` in place?
+[ ] 3. keep the exact name — kept the original as `name`(=plain meaning) only where the user needs it?
+[ ] 4. tier check — a plain report/summary ended with inline gloss? used the 7 elements only when introducing a new concept?
+[ ] 5. beginner re-read — would someone with no project context understand the result and why it matters?
 ```
 
 ---

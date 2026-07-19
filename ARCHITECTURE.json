@@ -973,7 +973,7 @@
                 "name": "lab",
                 "role": "프론티어 모델에 지시 1건 per-call 위임하는 허브 (fable·sol·full · 기본 full · 세션 백엔드 불변)",
                 "id": "module-lab",
-                "detail": "`lab [fable|sol|full]` 위임 허브. **백엔드=선택 위치인자 · 생략=full(기본·둘 병렬)** · 첫 단어가 백엔드명 근접오타면 프롬프트 오인 없이 거부. 백엔드=데이터(descriptor: bin·defaultModel·buildArgv). 공용 1벌: 프롬프트=argv/--file/stdin→자식 stdin(누출0·배타), bg 잡(--bg→ID·result/tail/wait/list), --dry·--cwd·--timeout(기본무제한·124). **durable-log 안전망: 모든 foreground 실행(fable/sol/full)이 openLabLog()로 전체 출력을 `~/.sidecar/lab/<ts>-<backend>.md`에 tee하고 경로를 stderr에 안내 — stdout이 tail/파이프/백그라운드로 잘려도 답변 무손실(stdout 동작 불변·로그실패=warn 후 no-op·--dry는 미생성).** 주의=lab.md.",
+                "detail": "`lab [fable|sol|full]` 위임 허브. 백엔드=선택 위치인자·생략=full(둘 병렬)·근접오타 거부. 백엔드=데이터(descriptor). 공용 1벌: 프롬프트 argv/--file/stdin→자식 stdin(누출0), bg 잡(--bg→ID·result/tail/wait/list), --dry·--cwd·--timeout(기본무제한). durable-log: foreground 전체 출력을 ~/.sidecar/lab/<ts>-<backend>.md에 tee(잘려도 무손실). 주의=lab.md.",
                 "children": [
                   {
                     "name": "fable 백엔드",

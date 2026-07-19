@@ -42,6 +42,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Owner grants sudo on THIS host + all `pool` hosts — run privileged ops the task needs, no punting for permission (`owner-trust`·`anti-punt`)
 - dont: Asking-back on the owner's own sudo op · sudo on a `shared:false`/foreign host · reckless destructive `sudo` (`git-safety`)
 
+## cloudflare-global-key
+- do: For Cloudflare API auth, use the account Global API Key (`secret get cloudflare.global_api_key` + account email) as the credential
+- dont: Using scoped/limited API tokens where the Global API Key is expected · inlining/logging the key (`git-safety`·`secret` CLI)
+
 ## four-axes
 - do: When recommending, present 4 axes in parallel (completeness·simple·safe·standard); a default fixed axis → ★-mark + auto-pick
 - dont: Collapsing into one weighted-sum winner · dropping/merging axes

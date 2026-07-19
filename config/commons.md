@@ -50,6 +50,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Report FALSIFIED/negative as a result too · if you don't know, say so
 - dont: Skipping/hiding results · fabricating evidence
 
+## no-bare-jargon
+- do: User-facing prose glosses every jargon/acronym/hyphenated/backtick term at FIRST use — plain-word swap or `term(=plain meaning)` · progress reports·summaries·conclusions·error trailers included (`sidecar easy`)
+- dont: Bare project jargon in prose with no gloss · dictionary-defining instead of "what it means HERE" · treating the notation-exempt list (code ids·paths·SHAs·CI JSON) as a gloss-exemption for the CONCEPT names in prose
+
 ## surgical
 - do: Only changes that trace to the request · clean up only orphans you created
 - dont: Arbitrary refactors of adjacent code · deleting unrelated dead code

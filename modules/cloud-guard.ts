@@ -11,7 +11,7 @@
 //
 
 // strip ' and " so a quoted token still resolves to its bare form
-function stripQuotes(s: string): string {
+export function stripQuotes(s: string): string {
   let out = "";
   for (const c of s) if (c !== "'" && c !== '"') out += c;
   return out;
@@ -23,7 +23,7 @@ function stripQuotes(s: string): string {
 // pipe — otherwise `vast`/`runpod` get mis-read as a command head and false-block.
 // (Stripping quotes first then splitting on `|`, the old approach, lost that
 // boundary.) Each returned segment still carries its quotes; callers stripQuotes.
-function segments(raw: string): string[] {
+export function segments(raw: string): string[] {
   const segs: string[] = [];
   let cur = "";
   let q: string | null = null;
@@ -69,7 +69,7 @@ function isHexaBuiltin(cmd: string): boolean {
 // blocked; listing only `runpodctl` left the entire `runpod` CLI surface open.
 const CLI_COMMANDS = new Set(["runpodctl", "runpod", "vastai", "vast"]);
 
-function leadToken(segment: string): { head: string; rest: string[] } {
+export function leadToken(segment: string): { head: string; rest: string[] } {
   let toks = segment.trim().split(/\s+/).filter(Boolean);
   if (toks[0] === "sudo") toks = toks.slice(1);
   while (toks[0] && /^[A-Za-z_][A-Za-z0-9_]*=/.test(toks[0])) toks = toks.slice(1); // env-assignments
@@ -84,22 +84,68 @@ function leadToken(segment: string): { head: string; rest: string[] } {
 //   • provider control endpoints anywhere: api.runpod.io / rest.runpod.io /
 //     api.runpod.ai (serverless) / console.vast.ai
 export function detectRawCloudCli(rawCmd: string): string | null {
-  const cmd = stripQuotes(rawCmd);
-  if (isHexaBuiltin(cmd)) return null;
-
-  // segment on UNQUOTED shell separators only (a `|` inside a quoted regex is data)
+  // SEGMENT-LOCAL sanctioning: sanction only the hexa-builtin SEGMENT, not the whole
+  // command string. A blanket `if (isHexaBuiltin(cmd)) return null` at the top let a
+  // chained `hexa cloud pods; vastai create instance …` sail through — one sanctioned
+  // token exempted the raw-provider tail. Judge each segment on its own head (same
+  // whitelist-too-broad failure mode as VAST_VERBS / BOTH_RUNPOD_CLIS, one level up).
   for (const seg of segments(rawCmd)) {
+    if (isHexaBuiltin(seg)) continue; // this segment is the sanctioned path — skip it
     const { head, rest } = leadToken(seg);
-    if (!head) continue;
-    if (CLI_COMMANDS.has(head)) return `raw provider CLI \`${head}\``;
-    if (head === "cloud" && rest[0] === "rent") return "`cloud rent` (raw provider rent)";
+    if (head) {
+      if (CLI_COMMANDS.has(head)) return `raw provider CLI \`${head}\``;
+      if (head === "cloud" && rest[0] === "rent") return "`cloud rent` (raw provider rent)";
+    }
+    // provider control-plane API endpoints (curl/wget/python hitting them) — anywhere
+    // in a NON-sanctioned segment (a legit `hexa cloud …` arg mentioning one is skipped).
+    const api = /\b(api\.runpod\.io|rest\.runpod\.io|api\.runpod\.ai|console\.vast\.ai)\b/.exec(stripQuotes(seg));
+    if (api) return `provider API endpoint \`${api[1]}\``;
   }
 
-  // provider control-plane API endpoints (curl/wget/python hitting them) — match
-  // anywhere, since the endpoint is the intent regardless of token position.
-  const api = /\b(api\.runpod\.io|rest\.runpod\.io|api\.runpod\.ai|console\.vast\.ai)\b/.exec(cmd);
-  if (api) return `provider API endpoint \`${api[1]}\``;
+  return null;
+}
 
+// A GPU-pod RENT invocation via the sanctioned hexa builtin — `hexa cloud rent` (or
+// alias `hexa cloud up`). This COSTS MONEY, so `pre bash` gates it behind a fresh user
+// consent token (see modules/sign.ts). Two shapes:
+//   • direct   — the rent is a top-level simple command (head-position, quote-aware):
+//                `hexa cloud rent vast …`, `/opt/hexa/bin/hexa cloud up …`,
+//                `VAR=x hexa cloud rent …`. Only THIS shape can be sign-gated + allowed.
+//   • indirect — the rent verb hides inside an execution wrapper (`bash -c '…'`, `eval`,
+//                `ssh host '…'`, `sidecar pool … -- …`) the gate can't see through, so it
+//                is BLOCKED with "issue it directly" — NOT a mere mention (echo/grep of the
+//                words stay null because their segment head is echo/grep, not a wrapper).
+export type RentHit = { kind: "direct"; verb: "rent" | "up" } | { kind: "indirect"; via: string };
+
+function baseName(head: string): string {
+  const s = stripQuotes(head);
+  return s.slice(s.lastIndexOf("/") + 1);
+}
+
+export function detectCloudRent(rawCmd: string): RentHit | null {
+  // direct: a simple-command segment headed by `hexa` (any path) → `cloud rent|up`.
+  for (const seg of segments(rawCmd)) {
+    const { head, rest } = leadToken(seg);
+    if (baseName(head) === "hexa" && rest[0] === "cloud" && (rest[1] === "rent" || rest[1] === "up")) {
+      return { kind: "direct", verb: rest[1] as "rent" | "up" };
+    }
+  }
+  // indirect: the rent string appears, but only flag it inside an EXECUTION wrapper
+  // (so plain echo/grep/commit-message mentions never trip). Require both the wrapper
+  // head AND the rent verb in that same segment's payload.
+  const rentRe = /hexa\s+cloud\s+(rent|up)\b/;
+  if (!rentRe.test(stripQuotes(rawCmd))) return null;
+  for (const seg of segments(rawCmd)) {
+    const { head, rest } = leadToken(seg);
+    const b = baseName(head);
+    const isShellC = ["bash", "sh", "zsh", "dash", "ksh"].includes(b) && rest.includes("-c");
+    const isEval = b === "eval";
+    const isSsh = b === "ssh";
+    const isPool = b === "sidecar" && rest[0] === "pool";
+    if ((isShellC || isEval || isSsh || isPool) && rentRe.test(stripQuotes(seg))) {
+      return { kind: "indirect", via: isSsh ? "an ssh remote command" : isPool ? "a `sidecar pool` remote command" : `a \`${b}${isEval ? "" : " -c"}\` wrapper` };
+    }
+  }
   return null;
 }
 

@@ -19,7 +19,8 @@ import { detectBranchSwitch, detectMainRefMove } from "./git-checkout-guard.ts";
 import { detectAddAll } from "./git-add-guard.ts";
 import { detectDangerousBash } from "./danger-guard.ts";
 import { detectSecretLiteral } from "./secret-guard.ts";
-import { detectRawCloudCli, detectHandrolledShardFanout } from "./cloud-guard.ts";
+import { detectRawCloudCli, detectHandrolledShardFanout, detectCloudRent } from "./cloud-guard.ts";
+import { signFresh, consumeSign, detectSelfMint, signForgeBashTarget, isSignsPath } from "./sign.ts";
 import { worktreeAddAdvisory } from "./worktree.ts";
 import { convergenceForFile } from "./architecture.ts";
 import { docWriteViolation } from "./docs.ts";
@@ -385,6 +386,25 @@ export async function preBash(_args: string[]): Promise<number> {
     );
   }
 
+  // sign-gate self-mint / forge — a user CONSENT token (`!sidecar sign <key>`) is a
+  // HUMAN-only action (the TUI `!` bang bypasses this hook; the agent's own run does
+  // NOT). Block the agent minting or forging one; list/check/clear stay allowed. These
+  // are position-independent hard blocks, so their order vs. the rent gate is moot.
+  const selfMint = detectSelfMint(cmd);
+  if (selfMint) {
+    return emitBlock(
+      "SIGN-SELF-MINT",
+      `\`${selfMint}\` mints a USER consent token — a human-only action; an agent minting it defeats the gate. BLOCKED. Ask the USER to type \`!sidecar sign rent\` in the Claude Code prompt (the TUI \`!\` bang mints; your own run does not). Allowed for you: \`sidecar sign\` (list) · \`sidecar sign check rent\` · \`sidecar sign clear\`. No override.`
+    );
+  }
+  const forge = signForgeBashTarget(cmd, cwd);
+  if (forge) {
+    return emitBlock(
+      "SIGN-FORGE",
+      `writing \`${forge}\` under the sign-token store (~/.sidecar/signs/) forges a USER consent token — the money-gate root of trust. BLOCKED. The token is minted only by the human via \`!sidecar sign rent\`. Inspect/clear with \`sidecar sign\` / \`sidecar sign clear\`. No override.`
+    );
+  }
+
   // worktree-add advisory — non-blocking (stranded-work + branch-reuse hygiene)
   const wtAdv = await worktreeAddAdvisory(cmd).catch(() => "");
   if (wtAdv) emitWarn("WORKTREE-HYGIENE", wtAdv);
@@ -426,8 +446,42 @@ export async function preBash(_args: string[]): Promise<number> {
     if (rule.action === "block") return emitBlock(rule.id, rule.reason);
     if (rule.action === "warn") emitWarn(rule.id, rule.reason);
   }
+
+  // GPU-pod RENT consent gate — LAST blocking check so an earlier guard never burns the
+  // one-shot token. `hexa cloud rent|up` costs real money, so it needs a fresh USER
+  // `rent` sign (minted only via `!sidecar sign rent`; the agent's own mint is blocked
+  // above). Indirect (wrapper-hidden) rents can't be gated → blocked with "run direct".
+  const rent = detectCloudRent(cmd);
+  if (rent?.kind === "indirect") {
+    return emitBlock(
+      "CLOUD-RENT-INDIRECT",
+      `a \`hexa cloud rent|up\` runs inside ${rent.via} — an execution wrapper the consent gate can't see through. BLOCKED. Issue the rent as ONE direct top-level \`hexa cloud rent …\` command so the sign gate can gate it (after the user signs with \`!sidecar sign rent\`).`
+    );
+  }
+  if (rent?.kind === "direct") {
+    // consume-on-admission (atomic one-shot): fresh token → this rent is authorized and
+    // the token is spent; else block with the sign instructions.
+    if (!consumeSign("rent")) return emitBlock("CLOUD-RENT-UNSIGNED", RENT_BLOCK_MSG);
+    emitContext(
+      "sign-gate: user-signed `rent` token consumed (one-shot) — THIS `hexa cloud rent` is authorized. A further rent needs a fresh `!sidecar sign rent`."
+    );
+  }
   return 0;
 }
+
+// The block relayed to the agent when a rent is attempted without a fresh user token.
+// The exact mint string `!sidecar sign rent` sits alone so it survives relay verbatim;
+// cost-first + retry-ONCE + no-loop keep the agent from spinning on the gate.
+const RENT_BLOCK_MSG =
+  "`hexa cloud rent` RENTS A GPU POD — this costs real money and needs the USER's sign-off first. BLOCKED. Do this, in order: " +
+  "(1) tell the user WHAT you intend to rent — provider · GPU type/count · est. $/hr · purpose · expected duration; " +
+  "(2) ask the user to type, in the Claude Code prompt:  !sidecar sign rent  " +
+  "(the sign must come FROM the human — your own `sidecar sign rent` is denied by design); " +
+  "(3) WAIT for their confirmation, then retry the SAME rent command ONCE. " +
+  "The token is ONE-SHOT and valid 10 min: one sign = one rent command. Do NOT retry in a loop — " +
+  "if it blocks again the token expired or was already consumed, go back to step 1. " +
+  "Allowed for you: `sidecar sign check rent` · `sidecar sign` (list) · `hexa cloud status`. " +
+  "No env-var, flag, or inline-marker override exists.";
 
 function checkBypassPatterns(content: string, patterns: string[], exemptions: string[]): string[] {
   const hits: string[] = [];
@@ -468,6 +522,15 @@ export async function preWrite(_args: string[]): Promise<number> {
   const isEditFragment =
     input.content === undefined && (input.new_string !== undefined || editText.length > 0);
   if (!filePath) return 0;
+
+  // sign-token forge guard — a Write/Edit under ~/.sidecar/signs/ forges a USER consent
+  // token (the money-gate root of trust). Human-only via `!sidecar sign rent`; deny.
+  if (isSignsPath(filePath)) {
+    return emitBlock(
+      "SIGN-FORGE",
+      `\`${filePath}\` is inside the sign-token store (~/.sidecar/signs/) — writing here forges a USER consent token. BLOCKED (minted only by the human via \`!sidecar sign rent\`). Inspect/clear with \`sidecar sign\` / \`sidecar sign clear\`. No override.`
+    );
+  }
 
   // convergence-on-touch — surface this file's recorded recurrence-prevention learnings
   // as INJECTED context (additionalContext, not stderr) so the agent doesn't reintroduce

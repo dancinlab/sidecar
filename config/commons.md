@@ -94,6 +94,10 @@ Always-on project-agnostic rules (SSOT). Repo override → `.harness/commons.md`
 - do: Distribute builds/tests/sweeps/long compute across `sidecar pool` hosts · GPU via `hexa cloud`
 - dont: Piling load on one local machine · a `shared:false` host as shared compute
 
+## browse-on-diamond
+- do: Real browsing (browser automation · JS-rendered/login/interactive pages · bot-guarded sites) runs on the `diamond` host via **patchright** (detection-patched playwright) — `ssh diamond '~/browse/.venv/bin/python <script>'` (non-login shell: no node/brew on PATH); plain static reads stay keyless (`sidecar research fetch`/`web`)
+- dont: Launching a browser on this mac or any other pool host · plain playwright/puppeteer/curl against detection-guarded pages · a per-host browser stack
+
 ## no-escape-hatch
 - do: Implement a block/guard/policy as a full block exactly as requested · add an escape hatch only when the user separately asks
 - dont: Inserting hatches before asked (`# *-ok`·opt-out·skip·fallback) · holes in new guards

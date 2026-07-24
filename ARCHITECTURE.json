@@ -72,6 +72,20 @@
         "source": "modules/cloud-guard.ts"
       },
       {
+        "id": "SEGMENT_LOCAL_SANCTION",
+        "state": "pos-conv",
+        "value": "the hexa-builtin sanction in detectRawCloudCli is per-SEGMENT, not whole-command — one `hexa cloud …` token must not exempt a raw-provider tail",
+        "threshold": "a top-level `if (isHexaBuiltin(cmd)) return null` exempted the ENTIRE string, so `hexa cloud pods; vastai create instance` leaked (the sanctioned head whitelisted the chained raw CLI) — same whitelist-too-broad failure mode as VAST_VERBS/BOTH_RUNPOD_CLIS; fix judges each segment on its own head",
+        "source": "modules/cloud-guard.ts"
+      },
+      {
+        "id": "RENT_HUMAN_CONSENT_GATE",
+        "state": "pos-conv",
+        "value": "a GPU-pod rent (`hexa cloud rent|up`) is a real-money action gated on a fresh HUMAN consent token (`!sidecar sign rent`) minted only via the TUI bang — the agent's own `sidecar sign` mint and any write into ~/.sidecar/signs/ are code-blocked (SIGN-SELF-MINT/SIGN-FORGE); one-shot, consumed on admission, TTL/one-shot are code constants (no config opt-out). Gate rests on 'the agent cannot emit a `!` bang', not on the text parser being airtight",
+        "threshold": "renting a pod costs money but nothing forced a human in the loop — the agent could `hexa cloud rent` unilaterally; ports the retired hexa `_sign_guard.hexa` consent gate (old `! sidecar sign commons` pattern). Indirect rents (bash -c/eval/ssh/pool wrapper) are blocked 'run it directly'; structural closure (hexa itself requiring the token) is a documented phase-2",
+        "source": "modules/sign.ts"
+      },
+      {
         "id": "COMPANION_SURFACE_NOT_INJECTED",
         "state": "pos-conv",
         "value": "a sibling CLI (hexa) and its subcommands (cloud/atlas/verify/drill) existed and worked, but the sidecar injected only its OWN command catalog (toolkit) — never the neighbour CLI's surface — so the agent re-probed 'is hexa installed? does cloud exist?' every session",

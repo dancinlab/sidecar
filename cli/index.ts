@@ -31,6 +31,7 @@ import { runVerdict } from "../modules/verdict.ts";
 import { runAtlas } from "../modules/atlas.ts";
 import { runEnd } from "../modules/end.ts";
 import { runSecret } from "../modules/secret.ts";
+import { runSign } from "../modules/sign.ts";
 import { runLsp } from "../modules/lsp.ts";
 import { runWorktree } from "../modules/worktree.ts";
 import { runImagine } from "../modules/imagine.ts";
@@ -143,6 +144,8 @@ hook delegates (wire these into your agent's settings.json):
   mem-guard {status|check|install|uninstall}   OOM prevention — free-RAM preflight before bg-spawn + opt-in launchd notify watchdog
   secret <verb> [args]     passthrough to the secret CLI (Keychain creds · get/set/rotate/list/init/backup/sync)
                            ⚠ \`get\` exposes the value in context — prefer inline \`\$(secret get <k>)\` for tool args
+  sign [<key>|list|check <key>|clear [<key>]]   user-consent gate — a GPU-pod rent (\`hexa cloud rent|up\`) is BLOCKED until the HUMAN mints a one-shot token via the TUI bang \`!sidecar sign rent\`
+                           agent self-mint/forge denied · TTL 10min · consumed on use · list/check/clear agent-safe (minting is human-only — the \`!\` bang bypasses PreToolUse)
   lsp {wire|status|rebuild <file>}   editor LSP wiring (.lsp.json; hexa-lang \`hexa lsp\` for .hexa by default)
                            + background rebuild of prebuilt hexa LSP binaries when their grammar source is edited
   research {arxiv <query|id> [--n N] [--sort relevance|date|updated] | yt <url|id> [lang] | web <query> [--n N] | fetch <url>}   arXiv / YouTube transcript / keyless web search (DuckDuckGo) / page fetch (no key)
@@ -324,6 +327,8 @@ async function main(): Promise<number> {
       return runEnd(rest);
     case "secret":
       return runSecret(rest);
+    case "sign":
+      return runSign(rest);
     case "lsp":
       return runLsp(rest);
     case "worktree":

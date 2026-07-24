@@ -104,8 +104,13 @@ export function detectSelfMint(rawCmd: string): string | null {
       rest = rest.slice(1);
     }
     const base = head.slice(head.lastIndexOf("/") + 1); // ./bin/sidecar, abs paths → sidecar
-    if (base === "sidecar" && rest[0] === "sign" && !MINT_ALLOWED.has(rest[1] ?? "")) {
-      return `sidecar sign ${rest[1]}`;
+    // A mint key is a real WORD token (`rent`, `commons`), not a shell redirect/operator:
+    // `sidecar sign 2>&1` / `sidecar sign >out` / bare `sidecar sign` are LISTs, not mints,
+    // so rest[1] like `2>`/`>out`/undefined must NOT be read as a key (that false-blocked a
+    // routine `sidecar sign 2>/dev/null`). Only a `[A-Za-z]…` key that isn't a read verb mints.
+    const key = rest[1] ?? "";
+    if (base === "sidecar" && rest[0] === "sign" && /^[A-Za-z][\w-]*$/.test(key) && !MINT_ALLOWED.has(key)) {
+      return `sidecar sign ${key}`;
     }
     // shell -c / eval indirection: the inner mint is quoted (masked from the head scan)
     // → scan the raw segment for a non-read `sidecar sign …`.

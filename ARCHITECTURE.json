@@ -82,7 +82,7 @@
         "id": "RENT_HUMAN_CONSENT_GATE",
         "state": "pos-conv",
         "value": "a GPU-pod rent (`hexa cloud rent|up`) is a real-money action gated on a fresh HUMAN consent token (`!sidecar sign rent`) minted only via the TUI bang — the agent's own `sidecar sign` mint and any write into ~/.sidecar/signs/ are code-blocked (SIGN-SELF-MINT/SIGN-FORGE); one-shot, consumed on admission, TTL/one-shot are code constants (no config opt-out). Gate rests on 'the agent cannot emit a `!` bang', not on the text parser being airtight",
-        "threshold": "renting a pod costs money but nothing forced a human in the loop — the agent could `hexa cloud rent` unilaterally; ports the retired hexa `_sign_guard.hexa` consent gate (old `! sidecar sign commons` pattern). Indirect rents (bash -c/eval/ssh/pool wrapper) are blocked 'run it directly'; structural closure (hexa itself requiring the token) is a documented phase-2",
+        "threshold": "renting a pod costs money but nothing forced a human in the loop — the agent could `hexa cloud rent` unilaterally; ports the retired hexa `_sign_guard.hexa` consent gate (old `! sidecar sign commons` pattern). Indirect rents (bash -c/eval/ssh/pool wrapper) are blocked 'run it directly'; structural closure (hexa itself requiring the token) is a documented phase-2. FALSE-POSITIVE fix: detectSelfMint read the token after `sidecar sign` as a mint key even when it was a shell redirect (`sidecar sign 2>/dev/null` → rest[1]=`2>` since segments() splits on unquoted `&`), false-blocking a bare list+redirect — a mint key must now match /^[A-Za-z][\\w-]*/ so operators/empty fall through to ALLOW",
         "source": "modules/sign.ts"
       },
       {

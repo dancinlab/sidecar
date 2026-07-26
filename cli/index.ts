@@ -115,9 +115,9 @@ hook delegates (wire these into your agent's settings.json):
   prefs {show|code|docs|response <lang>|inject}   language prefs (3 axes) + UserPromptSubmit inject
   easy {show|inject|scaffold "<q>"|lint <file|->}
                            easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)
-  lab-mode {on [fable|sol|full]|off|status|inject} [--repo]   session-scoped toggle — ON splits per-turn work: DESIGN/ANALYSIS/난제 delegated to the lab target, IMPLEMENTATION done locally
-                                         target (DEFAULT full = both models, caller reconciles) = the flag file's content
-                                         scope: repo .harness > host ~/.sidecar (repo target wins); default host-wide · OFF emits nothing
+  lab-mode {on [fable|sol|full]|off|status|inject}   PER-REPO toggle (harness.config.json labMode) — ON splits per-turn work: DESIGN/ANALYSIS/난제 → lab target, IMPLEMENTATION stays local
+                                         target (DEFAULT full = both models, caller reconciles) · on/off write the config key in place, siblings preserved (like lockdown add)
+                                         NO host-wide scope — one repo can't enable another; opt each in on its own · UNSET = OFF (default, emits nothing) · pre-config flag files are ignored, swept by on/off
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}
                            4-axis rubric + default mode (repo .harness > global ~/.sidecar > present; fixed axis = auto-pick)

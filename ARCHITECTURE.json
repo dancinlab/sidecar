@@ -1011,9 +1011,9 @@
               },
               {
                 "name": "lab-mode",
-                "role": "리포별 분업 토글 (on [fable|sol|full] · 기본 full / off)",
+                "role": "리포별 분업 토글 (labMode: off|fable|sol|full · 기본 off)",
                 "id": "module-lab-mode",
-                "detail": "리포별 토글. ON이면 매턴 inject 가 분업 지시: **설계·분석·난제=lab <target> 위임**, **구현·빌드·git·ship=로컬**. 타깃 3종·기본 full · 스위치=**그 repo 의 harness.config.json `labMode{enabled,target}`** 하나뿐, **호스트 전역 스코프 없음**(한 repo 가 다른 repo 를 못 켠다) · **미지정=false**(구 플래그도 불참조 · on/off 가 청소) · 3표면 배선."
+                "detail": "리포별 토글. ON이면 매턴 inject 가 분업 지시: **설계·분석·난제=lab <target> 위임**, **구현·빌드·git·ship=로컬**. 스위치=**그 repo 의 harness.config.json `labMode` 문자열 하나**(off|fable|sol|full — 백엔드명이 곧 on 스위치라 모순상태 불가 · bare on=full) · **호스트 전역 스코프 없음**(한 repo 가 다른 repo 를 못 켠다) · **미지정·미인식=off**(구 플래그도 불참조 · on/off 가 청소) · 3표면 배선."
               },
               {
                 "name": "goal-guard",
@@ -1406,10 +1406,10 @@
             "detail": "repo-root CLAUDE.md 필수 헤딩 (기본 `[\"## Project\",\"## Tree\"]` · commit block · `docs.ts`). 각 헤딩 존재+비어있지않은 본문 필수 · tree-계열은 ├─/└─+설명 warn. Project→`NO-DESC`/Tree→`NO-TREE`/기타→`SECTION-MISSING`. `[]`=끔. 깊은 구조 SSOT=ARCHITECTURE.json · do/dont 포맷검사는 이 섹션만 prose 면제(`commons.ts`)"
           },
           {
-            "name": "labMode {enabled,target}",
+            "name": "labMode: \"off\"|\"fable\"|\"sol\"|\"full\"",
             "role": "리포별 프론티어 위임 토글 (lab-mode)",
             "id": "config-labmode",
-            "detail": "그 repo 의 `harness.config.json` 이 유일한 스위치 — **호스트 전역 스코프 없음**(ambient 플래그는 무관한 repo 까지 매턴 지시문을 물렸다 · 한 repo 가 다른 repo 를 못 켠다). **미지정=`{enabled:false,target:\"full\"}`=무주입** · `lab-mode on/off` 가 형제키 보존 write-back."
+            "detail": "그 repo 의 `harness.config.json` 이 유일한 스위치 — **호스트 전역 스코프 없음**(ambient 플래그는 무관한 repo 까지 매턴 지시문을 물렸다 · 한 repo 가 다른 repo 를 못 켠다). 값=문자열 1개 `off|fable|sol|full` · **미지정·미인식=off**=무주입 · `lab-mode on/off` 가 형제키 보존 write-back."
           }
         ]
       },

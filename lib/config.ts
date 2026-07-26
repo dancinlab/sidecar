@@ -309,11 +309,12 @@ export interface SidecarConfig {
   // THIS repo's harness.config.json is the ONLY switch: there is deliberately no
   // host-wide "on everywhere" toggle, because whether a project's work is worth a
   // frontier round-trip is a property of the PROJECT, not of the machine.
-  // enabled=false (the default) → the per-turn inject emits NOTHING, so a repo that
-  // never opts in pays zero context. `target` = which backend the directive delegates
-  // DESIGN/ANALYSIS to (fable | sol | full = both in parallel); the IMPLEMENTATION
-  // always stays local. See modules/lab-mode.ts.
-  labMode: { enabled: boolean; target: "fable" | "sol" | "full" };
+  // ONE value carries the whole state — the backend IS the switch, so no second
+  // field can contradict it. "off" (the default, and anything unrecognized) → the
+  // per-turn inject emits NOTHING, so a repo that never opts in pays zero context.
+  // Otherwise it names the backend the directive delegates DESIGN/ANALYSIS to
+  // (full = both in parallel); the IMPLEMENTATION always stays local. modules/lab-mode.ts.
+  labMode: "off" | "fable" | "sol" | "full";
   // convergenceOnTouch surfaces a file's recorded recurrence-prevention learnings as
   // INJECTED context (PreToolUse additionalContext) the moment the agent Writes/Edits
   // that file, so it can't reintroduce a defect already learned-from. Keyed by the
@@ -424,7 +425,7 @@ const DEFAULTS: SidecarConfig = {
   dangerGuard: { rmRfRoot: false },
   annotationGuard: { enabled: true, file: ".harness/tool-annotations.json" },
   // OFF until a repo opts in — the delegation directive is per-project, never host-wide.
-  labMode: { enabled: false, target: "full" },
+  labMode: "off",
   convergenceOnTouch: true,
 };
 

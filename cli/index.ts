@@ -116,7 +116,7 @@ hook delegates (wire these into your agent's settings.json):
   easy {show|inject|scaffold "<q>"|lint <file|->}
                            easy friendly-response style — inject (lang from prefs) · scaffold = empty 7-element round skeleton · lint = advisory axis score (no LLM)
   lab-mode {on [fable|sol|full]|off|status|inject}   PER-REPO toggle (harness.config.json labMode) — ON splits per-turn work: DESIGN/ANALYSIS/난제 → lab target, IMPLEMENTATION stays local
-                                         target (DEFAULT full = both models, caller reconciles) · on/off write the config key in place, siblings preserved (like lockdown add)
+                                         config value = ONE string, off|fable|sol|full (the backend IS the switch · bare on = full) · on/off write it in place, siblings preserved (like lockdown add)
                                          NO host-wide scope — one repo can't enable another; opt each in on its own · UNSET = OFF (default, emits nothing) · pre-config flag files are ignored, swept by on/off
   load {show|inject}       per-turn macOS resource readout (CPU load + RAM pressure/used% + swap, ⚠️ on danger) — UserPromptSubmit inject
   recommend {inject|show|get-default|set-default <present|auto|axis|axis+axis…> [--global]|clear-default [--global]|resolve-mode <a>}

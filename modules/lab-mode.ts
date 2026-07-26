@@ -7,16 +7,18 @@
 // OFF (the default) emits NOTHING — zero per-turn cost, so the aggregate inject
 // budget is untouched for non-users.
 //
-// The switch is THIS repo's `harness.config.json` → `labMode: {enabled, target}`
-// (lib/config.ts), read like every other sidecar toggle. There is deliberately NO
-// host-wide "on everywhere" scope: whether a project's work is worth a frontier
+// The switch is THIS repo's `harness.config.json` → `labMode: "off"|"fable"|"sol"|
+// "full"` (lib/config.ts), read like every other sidecar toggle. There is deliberately
+// NO host-wide "on everywhere" scope: whether a project's work is worth a frontier
 // round-trip is a property of the PROJECT, not of the machine — an ambient host flag
 // made every unrelated repo pay the directive. One repo can never enable another.
 // `on`/`off` write the key back in place, preserving every sibling key (the same
 // mechanism as `lockdown add`), so activation is committed, team-shared, auditable.
 //
-// The TARGET mirrors `lab` itself: fable (Claude Fable 5) · sol (OpenAI Codex 5.6)
-// · full (both in parallel, reconciled by the caller). `off` keeps the last target.
+// ONE value carries the whole state: the backend IS the on-switch, so there is no
+// second field to contradict it (no `{enabled:false, target:"sol"}` zombie). The
+// targets mirror `lab` itself: fable (Claude Fable 5) · sol (OpenAI Codex 5.6) ·
+// full (both in parallel, reconciled by the caller); "off" is just the fourth value.
 //
 // UNSET = FALSE, strictly: a repo that has not declared `labMode` is OFF, and
 // nothing else can turn it on. The pre-config flag FILES (`.harness/lab-mode` ·
@@ -54,10 +56,11 @@ interface State {
   on: boolean;
   target: Target;
 }
-// The effective state for THIS repo — the config key, nothing else.
-// Unset (or anything that is not exactly `true`) = OFF.
-function resolveState(lm: { enabled?: unknown; target?: unknown } | undefined): State {
-  return { on: lm?.enabled === true, target: parseTarget(lm?.target) ?? DEFAULT_TARGET };
+// The effective state for THIS repo — the config key, nothing else. Unset, "off",
+// and anything unrecognized are all OFF; only a known backend name turns it on.
+function resolveState(lm: unknown): State {
+  const t = parseTarget(lm);
+  return { on: t !== null, target: t ?? DEFAULT_TARGET };
 }
 // Hot path (per-turn inject): the merged config, like every other sidecar toggle.
 function readState(): State {
@@ -69,8 +72,8 @@ function readStateFromDisk(): State {
   return resolveState(rawLabMode());
 }
 
-// The raw (unmerged) config object, so an explicit `enabled:false` is
-// distinguishable from "key absent". `null` = the file exists but is unusable.
+// The raw (unmerged) config object, so a declared value is distinguishable from
+// "key absent". `null` = the file exists but is unusable.
 function readRawConfig(): Record<string, unknown> | null {
   if (!existsSync(CONFIG_PATH)) return {};
   try {
@@ -81,17 +84,15 @@ function readRawConfig(): Record<string, unknown> | null {
     return null;
   }
 }
-function rawLabMode(): { enabled?: unknown; target?: unknown } | undefined {
-  const raw = readRawConfig();
-  const lm = raw?.labMode;
-  return lm && typeof lm === "object" && !Array.isArray(lm) ? (lm as { enabled?: unknown; target?: unknown }) : undefined;
+function rawLabMode(): unknown {
+  return readRawConfig()?.labMode;
 }
 
 // Persist labMode back to harness.config.json (2-space, trailing newline), keeping
 // every sibling key intact, via a temp file + rename so an interrupted write can
 // never leave a half-written config. A malformed/non-object existing config is
 // REFUSED, never silently replaced — that would delete the repo's real settings.
-function writeLabMode(enabled: boolean, target: Target): boolean {
+function writeLabMode(value: Target | "off"): boolean {
   const raw = readRawConfig();
   if (raw === null) {
     loudFail(`harness.config.json is not readable JSON — refusing to overwrite it: ${CONFIG_PATH}`);
@@ -101,7 +102,7 @@ function writeLabMode(enabled: boolean, target: Target): boolean {
   // A repo with no config file yet gets a minimal one seeded with its project name;
   // every other setting still comes from the bundled defaults.
   if (!existsSync(CONFIG_PATH) && !raw.project) raw.project = basename(REPO_ROOT);
-  raw.labMode = { enabled, target };
+  raw.labMode = value;
   const tmp = `${CONFIG_PATH}.tmp`;
   writeFileSync(tmp, JSON.stringify(raw, null, 2) + "\n", "utf8");
   renameSync(tmp, CONFIG_PATH);
@@ -202,24 +203,24 @@ export async function runLabMode(args: string[]): Promise<number> {
   const deprecatedRepo = args.includes("--repo");
 
   if (sub === "on" || sub === "off") {
-    const before = readStateFromDisk();
-    let target = before.target;
+    let value: Target | "off" = "off";
     if (sub === "on") {
       const raw = args.slice(1).find((a) => !a.startsWith("--"));
-      // Bare `on` = the documented default (full); `off` keeps whatever was set.
+      // Bare `on` = the documented default (full).
       const picked = raw ? parseTarget(raw) : DEFAULT_TARGET;
       if (!picked) {
         warn(`unknown target '${raw}' — expected one of: ${TARGETS.join(" | ")}`);
         info(USAGE);
         return 1;
       }
-      target = picked;
+      value = picked;
     }
-    if (!writeLabMode(sub === "on", target)) return 1;
+    if (!writeLabMode(value)) return 1;
     for (const n of sweepLegacyFlags()) info(`  legacy: ${n}`);
     if (deprecatedRepo) info("  note: --repo is a no-op now — per-repo IS the only scope.");
-    info(`lab-mode ${sub} [repo ${basename(REPO_ROOT)} · harness.config.json labMode] → ${sub === "on" ? `ON (${target})` : `OFF (target kept: ${target})`}`);
+    info(`lab-mode ${sub} [repo ${basename(REPO_ROOT)} · harness.config.json labMode] → ${sub === "on" ? `ON (${value})` : 'OFF (labMode: "off")'}`);
     if (sub === "on") {
+      const target = value as Target;
       const to = target === "full" ? "BOTH models in parallel (you reconcile)" : target;
       info(`  ⇒ next turns in THIS repo delegate DESIGN/ANALYSIS/HARD PROBLEMS(난제) to ${to} (file-mediated); IMPLEMENTATION stays local (기본진행).`);
       info("  ⇒ other repos are unaffected — opt each one in on its own.");
@@ -231,8 +232,14 @@ export async function runLabMode(args: string[]): Promise<number> {
     // Read-only: a status command must never rewrite the repo's config.
     const st = readStateFromDisk();
     const declared = rawLabMode();
+    // Anything declared but not a known value is reported as such — a typo must not
+    // read as a deliberate "off".
+    const shown =
+      declared === undefined
+        ? "— (unset → OFF)"
+        : JSON.stringify(declared) + (st.on || declared === "off" ? "" : `  ← unrecognized, treated as OFF (expected: off | ${TARGETS.join(" | ")})`);
     info(`lab-mode: ${st.on ? `ON (${st.target})` : "OFF"}  [repo ${basename(REPO_ROOT)} · per-repo only · no host scope]`);
-    info(`  harness.config.json labMode : ${declared ? JSON.stringify(declared) : "— (unset → default OFF)"}`);
+    info(`  harness.config.json labMode : ${shown}`);
     for (const p of REPO_FLAGS) {
       if (existsSync(p)) info(`  stray repo flag (IGNORED)   : ${p} — pre-config file, no longer a switch; on/off deletes it`);
     }

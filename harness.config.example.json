@@ -122,5 +122,10 @@
   },
   "ledger": {
     "staleSec": 1800
+  },
+  "_labMode": "OPTIONAL — per-repo frontier-model delegation (`sidecar lab-mode on [fable|sol|full]`). Absent = OFF (no per-turn inject). There is no host-wide scope: opt each repo in on its own.",
+  "labMode": {
+    "enabled": false,
+    "target": "full"
   }
 }

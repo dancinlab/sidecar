@@ -63,5 +63,9 @@
   ],
   "ledger": {
     "staleSec": 3600
+  },
+  "labMode": {
+    "enabled": true,
+    "target": "full"
   }
 }

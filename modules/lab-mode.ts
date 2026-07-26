@@ -1,96 +1,139 @@
-// sidecar lab-mode {on [fable|sol|full]|off|status|inject} [--repo]
-// A session-scoped toggle with a SPLIT delegation policy: when ON, the agent
-// delegates the THINKING (design · analysis · research · review · planning ·
-// hard problems) to a frontier model via `sidecar lab <target>`, but does the
-// DOING (actual code implementation · builds · git · commit · ship) LOCALLY
-// itself. The engine here is just a flag file + a per-turn UserPromptSubmit
-// inject that re-asserts that split. OFF (the default) emits NOTHING — zero
-// per-turn cost, so the aggregate inject budget is untouched for non-users.
+// sidecar lab-mode {on [fable|sol|full]|off|status|inject}
+// A PER-REPO toggle with a SPLIT delegation policy: when ON, the agent delegates
+// the THINKING (design · analysis · research · review · planning · hard problems)
+// to a frontier model via `sidecar lab <target>`, but does the DOING (actual code
+// implementation · builds · git · commit · ship) LOCALLY itself. The engine here is
+// just a config key + a per-turn UserPromptSubmit inject that re-asserts that split.
+// OFF (the default) emits NOTHING — zero per-turn cost, so the aggregate inject
+// budget is untouched for non-users.
 //
-// The TARGET mirrors `lab` itself: fable (Claude Fable 5) · sol (OpenAI Codex
-// 5.6) · full (both in parallel, reconciled by the caller). It is stored as the
-// flag file's CONTENT — one file per scope, so a scope can never hold a
-// contradictory multi-target state.
+// The switch is THIS repo's `harness.config.json` → `labMode: {enabled, target}`
+// (lib/config.ts), read like every other sidecar toggle. There is deliberately NO
+// host-wide "on everywhere" scope: whether a project's work is worth a frontier
+// round-trip is a property of the PROJECT, not of the machine — an ambient host flag
+// made every unrelated repo pay the directive. One repo can never enable another.
+// `on`/`off` write the key back in place, preserving every sibling key (the same
+// mechanism as `lockdown add`), so activation is committed, team-shared, auditable.
 //
-// Scope (sidecar has NO native "session" scope — injects can't see a session id):
-//   per-repo  .harness/lab-mode   (committed = team-shared, `--repo`)
-//   > host    ~/.sidecar/lab-mode (host-wide — the default for bare `on`/`off`)
-// ON if EITHER file exists; when both are set the REPO target wins (specific
-// beats ambient). Host-wide is the practical "this agent, right now, until I
-// turn it off" toggle; `--repo` pins it to one project.
-import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
+// The TARGET mirrors `lab` itself: fable (Claude Fable 5) · sol (OpenAI Codex 5.6)
+// · full (both in parallel, reconciled by the caller). `off` keeps the last target.
+//
+// UNSET = FALSE, strictly: a repo that has not declared `labMode` is OFF, and
+// nothing else can turn it on. The pre-config flag FILES (`.harness/lab-mode` ·
+// `~/.sidecar/lab-mode`, and their pre-rename `fable-mode` names) are therefore
+// NEVER consulted — honoring an ambient file is exactly the implicit activation
+// this change removes. They are only reported by `status` as ignored, and cleared
+// by `on`/`off`: repo-scoped ones deleted (the config key now carries the state),
+// host-scoped ones renamed to `*.retired` (kept — the user's own file, not ours).
+import { existsSync, readFileSync, writeFileSync, renameSync, rmSync } from "node:fs";
 import { emitInject } from "../lib/inject.ts";
-import { resolve, dirname } from "node:path";
+import { resolve, basename } from "node:path";
 import { homedir } from "node:os";
 import { REPO_ROOT } from "../lib/paths.ts";
 import { readStdin } from "../lib/exec.ts";
-import { info } from "../lib/log.ts";
+import { config } from "../lib/config.ts";
+import { info, warn, loudFail } from "../lib/log.ts";
 
 type Target = "fable" | "sol" | "full";
 const TARGETS: Target[] = ["fable", "sol", "full"];
 // Bare `on` = BOTH models, matching `lab`'s own default: one delegation buys two
 // independent takes and the caller reconciles them. Narrow it by naming a target.
 const DEFAULT_TARGET: Target = "full";
-// What a pre-rename `fable-mode` flag file meant — the ONLY thing it could mean.
-// Migration must preserve that, so it does NOT follow DEFAULT_TARGET.
-const LEGACY_TARGET: Target = "fable";
-type Scope = "repo" | "host";
 
-function flagFor(scope: Scope): string {
-  return scope === "repo" ? resolve(REPO_ROOT, ".harness", "lab-mode") : resolve(homedir(), ".sidecar", "lab-mode");
+const CONFIG_PATH = resolve(REPO_ROOT, "harness.config.json");
+// Pre-config flag files (incl. their pre-rename `fable-mode` names) — dead state in
+// both scopes now, kept here only so the commands can report and clear them.
+const REPO_FLAGS: string[] = [resolve(REPO_ROOT, ".harness", "lab-mode"), resolve(REPO_ROOT, ".harness", "fable-mode")];
+const HOST_FLAGS: string[] = [resolve(homedir(), ".sidecar", "lab-mode"), resolve(homedir(), ".sidecar", "fable-mode")];
+
+function parseTarget(raw: unknown): Target | null {
+  return typeof raw === "string" && (TARGETS as string[]).includes(raw) ? (raw as Target) : null;
 }
-// Pre-rename flag files (content was a meaningless "on") → migrated to target=fable.
-function legacyFlagFor(scope: Scope): string {
-  return scope === "repo" ? resolve(REPO_ROOT, ".harness", "fable-mode") : resolve(homedir(), ".sidecar", "fable-mode");
+
+interface State {
+  on: boolean;
+  target: Target;
 }
-function scopeOf(args: string[]): Scope {
-  return args.includes("--repo") ? "repo" : "host";
+// The effective state for THIS repo — the config key, nothing else.
+// Unset (or anything that is not exactly `true`) = OFF.
+function resolveState(lm: { enabled?: unknown; target?: unknown } | undefined): State {
+  return { on: lm?.enabled === true, target: parseTarget(lm?.target) ?? DEFAULT_TARGET };
 }
-function parseTarget(raw: string | undefined): Target | null {
-  if (!raw) return null;
-  return (TARGETS as string[]).includes(raw) ? (raw as Target) : null;
+// Hot path (per-turn inject): the merged config, like every other sidecar toggle.
+function readState(): State {
+  return resolveState(config().labMode);
 }
-// Read a scope's target. Unreadable/empty/unrecognized content → DEFAULT_TARGET:
-// the per-turn inject path must never fail over a stray file.
-function targetAt(scope: Scope): Target | null {
-  const f = flagFor(scope);
-  if (!existsSync(f)) return null;
+// Mutation path: re-read from disk — `config()` memoizes per process, and a
+// write may have just changed the file underneath it.
+function readStateFromDisk(): State {
+  return resolveState(rawLabMode());
+}
+
+// The raw (unmerged) config object, so an explicit `enabled:false` is
+// distinguishable from "key absent". `null` = the file exists but is unusable.
+function readRawConfig(): Record<string, unknown> | null {
+  if (!existsSync(CONFIG_PATH)) return {};
   try {
-    return parseTarget(readFileSync(f, "utf8").trim()) ?? DEFAULT_TARGET;
+    const parsed = JSON.parse(readFileSync(CONFIG_PATH, "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
   } catch {
-    return DEFAULT_TARGET;
+    return null;
   }
 }
-// One-shot rename of a pre-rename flag file to the canonical one (content
-// LEGACY_TARGET — the only thing the old file could mean), so an already-ON host
-// stays ON across the rename with no user action. Best-effort: a failure must not
-// break the toggle.
-function migrateLegacy(scope: Scope): void {
-  const legacy = legacyFlagFor(scope);
-  if (!existsSync(legacy)) return;
-  try {
-    if (!existsSync(flagFor(scope))) {
-      mkdirSync(dirname(flagFor(scope)), { recursive: true });
-      writeFileSync(flagFor(scope), `${LEGACY_TARGET}\n`, "utf8");
-    }
-    rmSync(legacy);
-  } catch {
-    /* best-effort */
-  }
+function rawLabMode(): { enabled?: unknown; target?: unknown } | undefined {
+  const raw = readRawConfig();
+  const lm = raw?.labMode;
+  return lm && typeof lm === "object" && !Array.isArray(lm) ? (lm as { enabled?: unknown; target?: unknown }) : undefined;
 }
-// ON if either scope's flag exists. Target precedence: repo > host.
-function readState(): { on: boolean; scopes: Scope[]; target: Target } {
-  for (const s of ["repo", "host"] as Scope[]) migrateLegacy(s);
-  const scopes: Scope[] = [];
-  let target: Target = DEFAULT_TARGET;
-  for (const s of ["host", "repo"] as Scope[]) {
-    const t = targetAt(s);
-    if (t) {
-      scopes.push(s);
-      target = t; // repo read last → repo wins
+
+// Persist labMode back to harness.config.json (2-space, trailing newline), keeping
+// every sibling key intact, via a temp file + rename so an interrupted write can
+// never leave a half-written config. A malformed/non-object existing config is
+// REFUSED, never silently replaced — that would delete the repo's real settings.
+function writeLabMode(enabled: boolean, target: Target): boolean {
+  const raw = readRawConfig();
+  if (raw === null) {
+    loudFail(`harness.config.json is not readable JSON — refusing to overwrite it: ${CONFIG_PATH}`);
+    info("  fix the file (or move it aside), then re-run.");
+    return false;
+  }
+  // A repo with no config file yet gets a minimal one seeded with its project name;
+  // every other setting still comes from the bundled defaults.
+  if (!existsSync(CONFIG_PATH) && !raw.project) raw.project = basename(REPO_ROOT);
+  raw.labMode = { enabled, target };
+  const tmp = `${CONFIG_PATH}.tmp`;
+  writeFileSync(tmp, JSON.stringify(raw, null, 2) + "\n", "utf8");
+  renameSync(tmp, CONFIG_PATH);
+  return true;
+}
+
+// Clear the pre-config flag files now that the config key carries the state.
+// Repo-scoped: removed (dead — the config key is the only switch).
+// Host-scoped: renamed to `*.retired` — also dead, but the user's own file, so it
+// is preserved rather than deleted. Best-effort; a failure must not break the
+// toggle. Explicit commands only — `inject` never mutates anything mid-turn.
+function sweepLegacyFlags(): string[] {
+  const notes: string[] = [];
+  for (const f of REPO_FLAGS) {
+    if (!existsSync(f)) continue;
+    try {
+      rmSync(f);
+      notes.push(`removed dead repo flag ${f} — harness.config.json labMode is the only switch now`);
+    } catch {
+      /* best-effort */
     }
   }
-  return { on: scopes.length > 0, scopes: scopes.sort(), target };
+  for (const p of HOST_FLAGS) {
+    if (!existsSync(p)) continue;
+    try {
+      renameSync(p, `${p}.retired`);
+      notes.push(`retired host-wide flag ${p} → ${p}.retired (it turned EVERY repo on — no longer honored)`);
+    } catch {
+      /* best-effort */
+    }
+  }
+  return notes;
 }
 
 // The per-turn directive — emitted ONLY when ON (opt-in). Kept lean at author
@@ -106,7 +149,7 @@ const THINK_KINDS =
   "design, architecture, analysis, root-cause investigation, research, review, planning/spec, and HARD PROBLEMS (난제 — anything you're stuck on, failed attempts, gnarly bugs/proofs/algorithms)";
 
 function directive(target: Target): string {
-  const off = "`sidecar lab-mode off` to stop";
+  const off = "`sidecar lab-mode off` to stop (this repo)";
   if (target === "full") {
     return (
       `# lab-mode: ON (full) — delegate DESIGN/ANALYSIS/HARD PROBLEMS to BOTH frontier models and reconcile; do the IMPLEMENTATION yourself (MUST FOLLOW · ${off})\n` +
@@ -129,6 +172,8 @@ function directive(target: Target): string {
   );
 }
 
+const USAGE = "usage: sidecar lab-mode {on [fable|sol|full]|off|status|inject}   (PER-REPO · harness.config.json labMode)";
+
 export async function runLabMode(args: string[]): Promise<number> {
   const sub = args[0] ?? "status";
 
@@ -145,46 +190,61 @@ export async function runLabMode(args: string[]): Promise<number> {
     return 0;
   }
 
+  // A host-wide scope no longer exists — fail loudly instead of silently writing
+  // this repo's config when someone reaches for the old global toggle.
+  const globalFlag = args.find((a) => a === "--global" || a === "--host");
+  if (globalFlag) {
+    warn(`lab-mode is PER-REPO — ${globalFlag} is not supported (a host-wide flag turned every repo on).`);
+    info("  run `sidecar lab-mode on` inside each repo that should delegate.");
+    return 1;
+  }
+  // `--repo` was how you asked for repo scope; that is now the only scope.
+  const deprecatedRepo = args.includes("--repo");
+
   if (sub === "on" || sub === "off") {
-    const scope = scopeOf(args);
-    const f = flagFor(scope);
+    const before = readStateFromDisk();
+    let target = before.target;
     if (sub === "on") {
       const raw = args.slice(1).find((a) => !a.startsWith("--"));
-      const target = raw ? parseTarget(raw) : DEFAULT_TARGET;
-      if (!target) {
-        info(`unknown target '${raw}' — expected one of: ${TARGETS.join(" | ")}`);
-        info("usage: sidecar lab-mode {on [fable|sol|full]|off|status|inject} [--repo]");
+      // Bare `on` = the documented default (full); `off` keeps whatever was set.
+      const picked = raw ? parseTarget(raw) : DEFAULT_TARGET;
+      if (!picked) {
+        warn(`unknown target '${raw}' — expected one of: ${TARGETS.join(" | ")}`);
+        info(USAGE);
         return 1;
       }
-      mkdirSync(dirname(f), { recursive: true });
-      writeFileSync(f, `${target}\n`, "utf8"); // update-in-place: re-`on` switches target
-    } else {
-      for (const p of [f, legacyFlagFor(scope)]) if (existsSync(p)) rmSync(p);
+      target = picked;
     }
-    const st = readState();
-    const where = scope === "repo" ? "repo .harness (committed · team-shared)" : "host ~/.sidecar (this machine)";
-    info(`lab-mode ${sub} [${where}] → effective: ${st.on ? `ON (${st.target})` : "OFF"}${st.on ? ` (scopes: ${st.scopes.join("+")})` : ""}`);
-    if (sub === "off" && st.on) {
-      info(`  note: still ON via ${st.scopes.join("+")} — clear it too: sidecar lab-mode off${st.scopes.includes("repo") ? " --repo" : ""}`);
-    }
+    if (!writeLabMode(sub === "on", target)) return 1;
+    for (const n of sweepLegacyFlags()) info(`  legacy: ${n}`);
+    if (deprecatedRepo) info("  note: --repo is a no-op now — per-repo IS the only scope.");
+    info(`lab-mode ${sub} [repo ${basename(REPO_ROOT)} · harness.config.json labMode] → ${sub === "on" ? `ON (${target})` : `OFF (target kept: ${target})`}`);
     if (sub === "on") {
-      const to = st.target === "full" ? "BOTH models in parallel (you reconcile)" : st.target;
-      info(`  ⇒ next turns delegate DESIGN/ANALYSIS/HARD PROBLEMS(난제) to ${to} (file-mediated); IMPLEMENTATION stays local (기본진행).`);
+      const to = target === "full" ? "BOTH models in parallel (you reconcile)" : target;
+      info(`  ⇒ next turns in THIS repo delegate DESIGN/ANALYSIS/HARD PROBLEMS(난제) to ${to} (file-mediated); IMPLEMENTATION stays local (기본진행).`);
+      info("  ⇒ other repos are unaffected — opt each one in on its own.");
     }
     return 0;
   }
 
   if (sub === "status") {
-    const st = readState();
-    info(`lab-mode: ${st.on ? `ON (${st.target})` : "OFF"}${st.on ? ` (scopes: ${st.scopes.join("+")})` : ""}`);
-    const repoT = targetAt("repo");
-    const hostT = targetAt("host");
-    info(`  repo .harness/lab-mode : ${repoT ? `${repoT}${st.on ? " ← effective" : ""}` : "—"}`);
-    info(`  host ~/.sidecar/lab-mode: ${hostT ? `${hostT}${st.on && !repoT ? " ← effective" : ""}` : "—"}`);
+    // Read-only: a status command must never rewrite the repo's config.
+    const st = readStateFromDisk();
+    const declared = rawLabMode();
+    info(`lab-mode: ${st.on ? `ON (${st.target})` : "OFF"}  [repo ${basename(REPO_ROOT)} · per-repo only · no host scope]`);
+    info(`  harness.config.json labMode : ${declared ? JSON.stringify(declared) : "— (unset → default OFF)"}`);
+    for (const p of REPO_FLAGS) {
+      if (existsSync(p)) info(`  stray repo flag (IGNORED)   : ${p} — pre-config file, no longer a switch; on/off deletes it`);
+    }
+    for (const p of HOST_FLAGS) {
+      if (existsSync(p)) info(`  host flag (IGNORED)         : ${p} — retired scope; \`sidecar lab-mode on\` here sweeps it aside`);
+      else if (existsSync(`${p}.retired`)) info(`  host flag (retired)         : ${p}.retired — inert`);
+    }
     if (st.on) info(`  per-turn: design/analysis/hard problems(난제) → ${st.target} · implementation → local (directive on UserPromptSubmit).`);
+    else info("  enable here: sidecar lab-mode on [fable|sol|full]");
     return 0;
   }
 
-  info("usage: sidecar lab-mode {on [fable|sol|full]|off|status|inject} [--repo]");
+  info(USAGE);
   return sub === "help" || sub === "--help" || sub === "-h" ? 0 : 1;
 }

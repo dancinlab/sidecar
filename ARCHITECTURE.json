@@ -1011,9 +1011,9 @@
               },
               {
                 "name": "lab-mode",
-                "role": "세션 스코프 분업 토글 (on [fable|sol|full] · 기본 full / off)",
+                "role": "리포별 분업 토글 (on [fable|sol|full] · 기본 full / off)",
                 "id": "module-lab-mode",
-                "detail": "세션 스코프 토글. ON이면 매턴 inject가 분업 지시: **설계·분석·난제=lab <target> 위임**, **구현·빌드·git·ship=로컬**. 타깃=lab 과 동일 3종 · **기본=full**(둘 병렬→caller가 화해) · **플래그 파일 내용**으로 보관(스코프당 1파일=모순 불가). 스코프=repo > host (둘 다면 repo 우승) · 구 fable-mode 파일은 fable 로 자동이관(기본값 아님=의미보존). OFF=기본·무주입. 3표면 배선."
+                "detail": "리포별 토글. ON이면 매턴 inject 가 분업 지시: **설계·분석·난제=lab <target> 위임**, **구현·빌드·git·ship=로컬**. 타깃 3종·기본 full · 스위치=**그 repo 의 harness.config.json `labMode{enabled,target}`** 하나뿐, **호스트 전역 스코프 없음**(한 repo 가 다른 repo 를 못 켠다) · **미지정=false**(구 플래그도 불참조 · on/off 가 청소) · 3표면 배선."
               },
               {
                 "name": "goal-guard",
@@ -1404,6 +1404,12 @@
             "role": "repo-root CLAUDE.md 필수 섹션 게이트",
             "id": "config-docs-claudemdsections",
             "detail": "repo-root CLAUDE.md 필수 헤딩 (기본 `[\"## Project\",\"## Tree\"]` · commit block · `docs.ts`). 각 헤딩 존재+비어있지않은 본문 필수 · tree-계열은 ├─/└─+설명 warn. Project→`NO-DESC`/Tree→`NO-TREE`/기타→`SECTION-MISSING`. `[]`=끔. 깊은 구조 SSOT=ARCHITECTURE.json · do/dont 포맷검사는 이 섹션만 prose 면제(`commons.ts`)"
+          },
+          {
+            "name": "labMode {enabled,target}",
+            "role": "리포별 프론티어 위임 토글 (lab-mode)",
+            "id": "config-labmode",
+            "detail": "그 repo 의 `harness.config.json` 이 유일한 스위치 — **호스트 전역 스코프 없음**(ambient 플래그는 무관한 repo 까지 매턴 지시문을 물렸다 · 한 repo 가 다른 repo 를 못 켠다). **미지정=`{enabled:false,target:\"full\"}`=무주입** · `lab-mode on/off` 가 형제키 보존 write-back."
           }
         ]
       },

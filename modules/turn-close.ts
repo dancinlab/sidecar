@@ -26,7 +26,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
 import { readStdin, execShell } from "../lib/exec.ts";
-import { inGitRepo } from "../lib/config.ts";
+import { config, inGitRepo } from "../lib/config.ts";
 import { emitInject } from "../lib/inject.ts";
 import { info } from "../lib/log.ts";
 import { lastAssistantText } from "./recommend.ts";
@@ -214,8 +214,28 @@ async function check(): Promise<number> {
   return 0;
 }
 
+// BOOTSTRAP seed — the demand that survives the design SSOT's ABSENCE. Every 🏛️/🧬
+// mechanism is keyed on the file existing (`architecture inject` returns silently without
+// it · `activeLegs` reads the same `designSsot()`), so in a fresh repo the whole discipline
+// is not "off", it is UNASKED-FOR: no inject, no trio line, no forgery check, and nothing
+// anywhere says to create it. ING has no such hole — its store is a git ref that `ing add`
+// creates on the spot, and its demand ships with the engine (commons `ing-board`), so it
+// self-starts. This line is the equivalent engine-shipped demand for the design tree.
+// Emitted ONLY while `!legs.arch` (present → dead branch, zero bytes/turn), rendered whole
+// or not at all (never truncated · inject-lint), opt-out `archSeed: false` (opt-OUT, never
+// opt-IN — a marker-keyed gate is silent-dead in exactly the new repos it is for · config-ts-1).
+// The agent AUTHORS the tree; the hook must never scaffold it, because mere file presence
+// arms the 🏛️/🧬 legs and an engine-written placeholder would gate every reply against
+// fiction (ARCH-PLACEHOLDER blocks that state at the commit gate too).
+const ARCH_SEED =
+  "🌱 설계 SSOT 부재 — repo-root `ARCHITECTURE.json` 이 없어 이 repo 의 🏛️ ARCHITECTURE · 🧬 CONVERGENCE 규율이 통째로 꺼져 있다(파일 존재로 켜짐). " +
+  "코드 repo 면 지금 실제 코드를 읽고 현재상태 트리 + `\"convergence\": {\"records\": []}` 를 담은 `ARCHITECTURE.json` 을 직접 작성하라 " +
+  "— 스캐폴드 placeholder 를 남기면 lint 가 막는다(ARCH-PLACEHOLDER) · 작성 후 `sidecar architecture lint` 로 확인. " +
+  "설계 SSOT 가 필요없는 스크래치/비코드 repo 면 `harness.config.json` 에 `\"archSeed\": false` 로 이 줄을 끈다.";
+
 // inject (UserPromptSubmit) — re-assert the trio contract every turn + snapshot the ING
-// baseline the Stop-time forgery check compares against. Silent when no leg is active.
+// baseline the Stop-time forgery check compares against. Silent when no leg is active
+// AND the repo already has its design SSOT (otherwise the bootstrap seed rides alone).
 async function injectVerb(): Promise<number> {
   let j: { hook_event_name?: string; hookEventName?: string; transcript_path?: string; transcriptPath?: string };
   try {
@@ -227,20 +247,24 @@ async function injectVerb(): Promise<number> {
   if (!ev) return 0;
   if (!inGitRepo()) return 0;
   const legs = await activeLegs();
-  if (!legs.ing && !legs.arch && !legs.conv) return 0;
+  const seed = !legs.arch && config().archSeed !== false ? ARCH_SEED : "";
+  if (!legs.ing && !legs.arch && !legs.conv && !seed) return 0;
   const tp = j.transcript_path ?? j.transcriptPath;
-  if (tp) writeBase(String(tp), await ingRefSha());
+  // ING baseline only matters when a leg is actually gated at Stop; a seed-only turn has
+  // nothing to forgery-check, so it must not disturb the snapshot.
+  if (tp && (legs.ing || legs.arch || legs.conv)) writeBase(String(tp), await ingRefSha());
 
   const lines: string[] = [];
   if (legs.ing) lines.push("`🔄 ING 갱신: <무엇을>` 또는 `🔄 ING: 변동 없음`");
   if (legs.arch) lines.push("`🏛️ ARCHITECTURE 갱신: <무엇을>` 또는 `🏛️ ARCHITECTURE: 변동 없음`");
   if (legs.conv) lines.push("`🧬 CONVERGENCE 기록: <id>` 또는 `🧬 CONVERGENCE: 해당 없음`");
-  const ctx =
-    "⏱️ 턴 마감 트리오 (매 응답 필수 · `turn-close check` 가 누락/위조 시 차단) — 응답 끝에 함께: " +
-    lines.join(" · ") +
-    ". 갱신/기록 주장은 검증된다 (ING=ing ref 전진 · ARCHITECTURE=파일 diff · CONVERGENCE=records[] id + diff). " +
-    "게이트 verdict·실험 결과는 별도 store 없이 ARCHITECTURE.json 해당 노드(type:\"gate\")에 update-in-place 후 🏛️ 갱신으로 보고.";
-  emitInject("turn-close", ev, ctx);
+  const trio = lines.length
+    ? "⏱️ 턴 마감 트리오 (매 응답 필수 · `turn-close check` 가 누락/위조 시 차단) — 응답 끝에 함께: " +
+      lines.join(" · ") +
+      ". 갱신/기록 주장은 검증된다 (ING=ing ref 전진 · ARCHITECTURE=파일 diff · CONVERGENCE=records[] id + diff). " +
+      "게이트 verdict·실험 결과는 별도 store 없이 ARCHITECTURE.json 해당 노드(type:\"gate\")에 update-in-place 후 🏛️ 갱신으로 보고."
+    : "";
+  emitInject("turn-close", ev, [trio, seed].filter(Boolean).join("\n"));
   return 0;
 }
 

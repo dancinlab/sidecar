@@ -82,6 +82,12 @@ export interface SidecarConfig {
     // rather than mangling its semantics. Search matches ids as substrings, so a
     // non-kebab id stays addressable.
     archIdPattern?: string;
+    // leaf cells that are still the SCAFFOLD's fill-me placeholder (ARCH-PLACEHOLDER).
+    // `sidecar init` writes a tree of "(한 줄 프로젝트 설명)"-style stubs, and mere file
+    // PRESENCE arms the 🏛️/🧬 turn-close legs — so an unfilled scaffold would satisfy the
+    // gate with fiction. Exact-match list (never a heuristic), config-exposed so a repo
+    // whose real content legitimately reads that way can drop an entry (config-ts-2).
+    archPlaceholders?: string[];
     // per-inject byte-cap MAP — EACH source sidecar injects to the agent (re-injected
     // every turn/session) gets its OWN size lint (INJECT-OVERSIZED), so prose bloat is
     // caught per inject, not as a lump. Keyed by repo-relative path; a key ending "/"
@@ -320,6 +326,16 @@ export interface SidecarConfig {
   // that file, so it can't reintroduce a defect already learned-from. Keyed by the
   // record's `source` filename (see convergenceForFile). false = no per-touch inject.
   convergenceOnTouch: boolean;
+  // archSeed — the BOOTSTRAP demand for the design SSOT. Every 🏛️/🧬 mechanism is keyed
+  // on repo-root ARCHITECTURE.json EXISTING (architecture inject returns silently without
+  // it; turn-close activeLegs computes arch/conv from the same file), so a fresh repo gets
+  // no inject, no trio line and no forgery check — the discipline never starts. ING has no
+  // such hole: its store is a git ref any `ing add` creates and its demand ships with the
+  // engine (commons `ing-board`). This is that missing engine-shipped demand: `turn-close
+  // inject` emits ONE line per turn WHILE the SSOT is absent, and nothing once it exists
+  // (the branch is keyed on !legs.arch → zero bytes after bootstrap). false = a repo that
+  // deliberately needs no design tree (scratch/non-code) silences it with a tracked diff.
+  archSeed: boolean;
   // companions — sibling-CLI command catalogs surfaced at SessionStart (`sidecar
   // companions inject`). DOMAIN-AGNOSTIC engine: this lists adjacent project CLIs
   // (e.g. `hexa`) by DATA, never hardcoded, so an agent knows their command surface
@@ -349,6 +365,9 @@ const DEFAULTS: SidecarConfig = {
     archCellCap: 300,
     archPiledMax: 6,
     archIdPattern: "^[a-z0-9][a-z0-9-]*$",
+    // the literals `sidecar init` scaffolds (modules/init.ts archTree) — an inited-but-
+    // unfilled tree must not pass as a real design SSOT.
+    archPlaceholders: ["(한 줄 프로젝트 설명)", "(프로젝트 한 줄 역할)", "(컴포넌트별 역할)"],
     // ALWAYS-ON byte cap for every tracked CLAUDE.md (re-injected every turn → context-rot).
     // ~2x a lean governance CLAUDE.md; diff-aware so legacy bloated ones block only on touch.
     claudeMdCap: 8000,
@@ -427,6 +446,9 @@ const DEFAULTS: SidecarConfig = {
   // OFF until a repo opts in — the delegation directive is per-project, never host-wide.
   labMode: "off",
   convergenceOnTouch: true,
+  // ON everywhere: the demand must reach the repos that do NOT yet have the tree (that is
+  // the whole point) — a repo opts OUT with a tracked config line, never opts IN (config-ts-1).
+  archSeed: true,
 };
 
 function deepMerge<T>(base: T, over: Partial<T>): T {

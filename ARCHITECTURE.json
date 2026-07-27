@@ -448,6 +448,13 @@
         "value": "an inject EMITTER that byte-slices content at render time (toolkit makeInject: use.slice(0,140), triggers.slice(0,6)) is a silent truncation that VIOLATES inject-lint and drops content the agent never sees — it hid 'lab full=BOTH parallel' from the SessionStart catalog, so the agent could not learn lab full runs both models in parallel. Fix pattern: the inject carries a COMPLETE-but-lean unit (HELP line 1, emitted verbatim, capped at author time by toolkitUseViolations ≤200B), overflow lives in a JSONL-only detail field; NEVER re-add a .slice in an emitter — trim the SOURCE.",
         "threshold": "재발조건: inject 에미터(renderInject 등)에 .slice(0,N)/tail-cut 재도입. 해결: use는 verbatim emit + author-time toolkitUseViolations 게이트, detail은 JSONL 전용; source(HELP line1)를 trim, 커팅 금지",
         "source": "modules/toolkit.ts"
+      },
+      {
+        "id": "turn-close-ts-1",
+        "state": "pos-conv",
+        "value": "거버넌스 leg 를 '저장소 파일 존재'로 키잉하면 파일 없는 repo 에서 규율이 silent-dead 된다 — config-ts-1(opt-in 마커 키잉)의 같은 결함이 turn-close activeLegs(arch:!!designSsot · conv:!!json)에서 재발했다. 파일 부재 = 게이트 OFF + inject 무음 + 요구를 하는 주체 0 이라, 새 repo 는 ARCHITECTURE/CONVERGENCE 규율을 시작할 경로 자체가 없었다(유일한 씨앗 sidecar init 은 전달 채널이 없음). ING 이 자립하는 이유는 저장소가 자동생성 git ref + 요구가 엔진 동봉 commons 규칙이라는 두 조건이고, 새 메커니즘은 이 둘을 같이 갖춰야 한다: 부재를 견디는 요구(!legs.arch 일 때만 발화하는 씨앗) + 마찰 0 의 저장소 생성 경로. 옵트아웃(archSeed:false)만 허용하고 옵트인 마커는 금지.",
+        "threshold": "재발조건: 새 거버넌스 leg/inject 를 '그 저장소 파일이 있으면 켠다'로 키잉 → 파일 없는 repo(=그 규율이 가장 필요한 신규 repo)에서 요구가 통째로 사라짐. 해결: 부재 상태를 견디는 씨앗(부재일 때만 emit·존재하면 0B)을 매턴 inject 에 함께 걸고, 예외는 옵트아웃 config 로만. 엔진이 대신 파일을 만들어 leg 를 무장시키지 말 것(placeholder 가 게이트를 속임) — authoring 은 에이전트, 스텁 잔존은 lint 로 차단.",
+        "source": "modules/turn-close.ts"
       }
     ]
   },
@@ -649,10 +656,30 @@
                     "detail": "leg 활성 조건 — 🔄=`ing` ref 또는 레거시 ING.jsonl 존재 · 🏛️=ARCHITECTURE.json/.md 존재 · 🧬=ARCHITECTURE.json(레코드 store 는 JSON 트리에만). 3개 다 꺼지면 check 는 exit 0 무음 → 설계트리·보드 없는 평범한 repo 는 게이트 자체가 없다. block reason 도 활성 leg 만 나열."
                   },
                   {
+                    "name": "🌱 arch 부트스트랩 씨앗",
+                    "role": "설계 SSOT 부재를 견디는 유일한 요구 (새 repo 자립)",
+                    "id": "detail-turn-close-arch-seed",
+                    "detail": "🏛️/🧬 는 파일 존재로만 켜져 새 repo 에선 요구 자체가 없다(inject 무음·leg off·아무도 안 시킴). ING 은 ref 자동생성 + commons `ing-board` 로 자립하는데 설계트리엔 그 짝이 없었다.",
+                    "children": [
+                      {
+                        "name": "발화 조건",
+                        "role": "!legs.arch 일 때만 · 매턴",
+                        "id": "detail-arch-seed-when",
+                        "detail": "`turn-close inject` 가 설계 SSOT 부재일 때만 씨앗 1줄(≈500B)을 UserPromptSubmit 마다 발화 — 파일 생기면 죽은 가지(0B/턴). 옵트아웃 `archSeed:false`, 옵트인 마커는 금지(config-ts-1)."
+                      },
+                      {
+                        "name": "엔진은 스캐폴드 금지",
+                        "role": "에이전트가 진짜 트리를 authoring",
+                        "id": "detail-arch-seed-author",
+                        "detail": "훅이 파일을 만들면 존재만으로 🏛️/🧬 leg 가 무장 → placeholder 가 게이트를 속인다(트리 없는 것보다 나쁨). 씨앗은 실제 코드를 읽고 쓰라고 요구하고, 남은 스텁은 `ARCH-PLACEHOLDER`(block)가 커밋게이트에서 잡는다."
+                      }
+                    ]
+                  },
+                  {
                     "name": "turn-close inject (매턴)",
-                    "role": "트리오 지시 + ing 베이스라인 스냅샷",
+                    "role": "트리오 지시 + ing 베이스라인 스냅샷 + arch 씨앗",
                     "id": "detail-turn-close-inject",
-                    "detail": "UserPromptSubmit 마다 트리오 계약 재주입(활성 leg 만 · ~630B · dynamic = 고정 injectBudget 밖) + `ing` ref sha 를 `.harness/logs/turn-close-base.json` 에 스냅샷(Stop 시 ING 위조 대조용 · LOG_DIR mkdir 보장).",
+                    "detail": "UserPromptSubmit 마다 트리오 계약 재주입(활성 leg 만 · ~630B · dynamic = 고정 injectBudget 밖) + `ing` ref sha 를 `.harness/logs/turn-close-base.json` 에 스냅샷(Stop 시 ING 위조 대조용 · LOG_DIR mkdir 보장 · 씨앗만 뜨는 턴은 스냅샷 안 건드림). 트리오·씨앗은 `\\n` 으로 이어 ONE additionalContext.",
                     "children": [
                       {
                         "name": "스냅샷 부재 = 검증 SKIP",
@@ -1141,7 +1168,7 @@
                     "name": "lint (트리 위생 · c4 강제)",
                     "role": "fine-decomposition 게이트",
                     "id": "detail-lint-c4",
-                    "detail": "`architecture lint` = 셀 cap(ARCH-BIG-CELL 300), piled>6(ARCH-PILED), history키(ARCH-HISTORY), rendered노드(name|role|detail) id 부재/중복/형식(ARCH-ID-MISSING/DUPE/FORMAT)=block. rendered 0 비-canonical=ARCH-SCHEMA-UNRECOGNIZED(warn · id게이트 silent no-op). 최상위 `convergence` 제외"
+                    "detail": "`architecture lint` = 셀 cap(ARCH-BIG-CELL 300), piled>6(ARCH-PILED), history키(ARCH-HISTORY), rendered노드(name|role|detail) id 부재/중복/형식(ARCH-ID-MISSING/DUPE/FORMAT), init 스텁 잔존(ARCH-PLACEHOLDER)=block. rendered 0 비-canonical=ARCH-SCHEMA-UNRECOGNIZED(warn). 최상위 `convergence` 제외"
                   },
                   {
                     "name": "search (id 검색)",
@@ -1410,6 +1437,12 @@
             "role": "리포별 프론티어 위임 토글 (lab-mode)",
             "id": "config-labmode",
             "detail": "그 repo 의 `harness.config.json` 이 유일한 스위치 — **호스트 전역 스코프 없음**(ambient 플래그는 무관한 repo 까지 매턴 지시문을 물렸다 · 한 repo 가 다른 repo 를 못 켠다). 값=문자열 1개 `off|fable|sol|full` · **미지정·미인식=off**=무주입 · `lab-mode on/off` 가 형제키 보존 write-back."
+          },
+          {
+            "name": "archSeed: true (기본 ON)",
+            "role": "설계 SSOT 부트스트랩 씨앗 옵트아웃",
+            "id": "config-archseed",
+            "detail": "기본 ON — 요구는 트리가 **없는** repo 에 닿아야 의미가 있으므로 옵트인 마커는 금지(config-ts-1). `false` 면 `turn-close inject` 의 🌱 씨앗 1줄만 끄고 트리오 leg 는 무관. 설계트리가 정말 필요없는 스크래치/비코드 repo 용 · 옵트아웃은 추적되는 diff."
           }
         ]
       },

@@ -27,6 +27,7 @@
       "ARCH-ID-MISSING": "block",
       "ARCH-ID-DUPE": "block",
       "ARCH-ID-FORMAT": "block",
+      "ARCH-PLACEHOLDER": "block",
       "ARCH-SCHEMA-UNRECOGNIZED": "warn",
       "ARCH-NOOP": "block",
       "FOLDER-GUIDE-MISSING": "block",

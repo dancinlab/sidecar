@@ -431,6 +431,15 @@ const ID_PATTERN = new RegExp(config().lint?.archIdPattern ?? "^[a-z0-9][a-z0-9-
 // into one string - it belongs in a list block or nested nodes, not one cell.
 // Config-driven (lint.archPiledMax, default 6 — tightened from 10). 0 = off.
 const MAX_PILED_ITEMS = config().lint?.archPiledMax ?? 6;
+// Leaf cells still carrying the SCAFFOLD's fill-me stub. `sidecar init` writes a tree of
+// "(한 줄 프로젝트 설명)"-shaped placeholders, and the turn-close 🏛️/🧬 legs arm on the file's
+// mere PRESENCE (activeLegs) — so an inited-but-never-filled tree would gate every reply
+// against fiction, which is worse than having no tree at all. Exact match only (never a
+// heuristic that could flag real prose), config-exposed so a repo can drop an entry
+// (lint.archPlaceholders · config-ts-2).
+const PLACEHOLDER_CELLS = new Set(
+  config().lint?.archPlaceholders ?? ["(한 줄 프로젝트 설명)", "(프로젝트 한 줄 역할)", "(컴포넌트별 역할)"],
+);
 // Keys that smuggle change-history into a current-state snapshot tree.
 const HISTORY_KEYS = new Set(["previous", "deprecated", "history", "changelog", "이전"]);
 const PILE_SEP = " · ";
@@ -456,6 +465,13 @@ export function lintArchitectureTree(): ArchLintHit[] {
   let sawTreeNode = false;
   const walk = (node: unknown, path: string): void => {
     if (typeof node === "string") {
+      if (PLACEHOLDER_CELLS.has(node.trim())) {
+        hits.push({
+          rule: "ARCH-PLACEHOLDER",
+          path,
+          msg: `still the \`sidecar init\` scaffold stub "${node.trim()}" — the file's mere presence arms the 🏛️/🧬 turn-close legs, so an unfilled tree gates every reply against fiction; write the REAL current state (or drop the entry from lint.archPlaceholders if this text is genuinely the content)`,
+        });
+      }
       if (MAX_CELL_CHARS > 0 && node.length > MAX_CELL_CHARS) {
         hits.push({
           rule: "ARCH-BIG-CELL",

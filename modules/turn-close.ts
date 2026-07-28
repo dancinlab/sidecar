@@ -214,28 +214,48 @@ async function check(): Promise<number> {
   return 0;
 }
 
-// BOOTSTRAP seed — the demand that survives the design SSOT's ABSENCE. Every 🏛️/🧬
-// mechanism is keyed on the file existing (`architecture inject` returns silently without
-// it · `activeLegs` reads the same `designSsot()`), so in a fresh repo the whole discipline
-// is not "off", it is UNASKED-FOR: no inject, no trio line, no forgery check, and nothing
-// anywhere says to create it. ING has no such hole — its store is a git ref that `ing add`
-// creates on the spot, and its demand ships with the engine (commons `ing-board`), so it
-// self-starts. This line is the equivalent engine-shipped demand for the design tree.
-// Emitted ONLY while `!legs.arch` (present → dead branch, zero bytes/turn), rendered whole
-// or not at all (never truncated · inject-lint), opt-out `archSeed: false` (opt-OUT, never
-// opt-IN — a marker-keyed gate is silent-dead in exactly the new repos it is for · config-ts-1).
-// The agent AUTHORS the tree; the hook must never scaffold it, because mere file presence
-// arms the 🏛️/🧬 legs and an engine-written placeholder would gate every reply against
-// fiction (ARCH-PLACEHOLDER blocks that state at the commit gate too).
+// BOOTSTRAP seeds — the demands that survive their own store's ABSENCE. Every leg here is
+// keyed on a STORE EXISTENCE CHECK (`designSsot()` = repo-root file · `ingBoardActive()` =
+// `refs/heads/ing`), so in a fresh repo the discipline is not "off", it is UNASKED-FOR: no
+// inject, no trio line, no forgery check, and nothing anywhere says to create the store.
+// One seed per absent store, emitted ONLY while it is absent (store appears → dead branch,
+// zero bytes/turn), rendered whole or not at all (never truncated · inject-lint), opt-out
+// `archSeed`/`ingSeed: false` (opt-OUT, never opt-IN — a marker-keyed gate is silent-dead in
+// exactly the new repos it is for · config-ts-1).
+// The agent AUTHORS the store; the hook must never scaffold one, because mere presence arms
+// the leg and an engine-written placeholder would gate every reply against fiction
+// (ARCH-PLACEHOLDER blocks that state at the commit gate too).
 const ARCH_SEED =
   "🌱 설계 SSOT 부재 — repo-root `ARCHITECTURE.json` 이 없어 이 repo 의 🏛️ ARCHITECTURE · 🧬 CONVERGENCE 규율이 통째로 꺼져 있다(파일 존재로 켜짐). " +
   "코드 repo 면 지금 실제 코드를 읽고 현재상태 트리 + `\"convergence\": {\"records\": []}` 를 담은 `ARCHITECTURE.json` 을 직접 작성하라 " +
   "— 스캐폴드 placeholder 를 남기면 lint 가 막는다(ARCH-PLACEHOLDER) · 작성 후 `sidecar architecture lint` 로 확인. " +
   "설계 SSOT 가 필요없는 스크래치/비코드 repo 면 `harness.config.json` 에 `\"archSeed\": false` 로 이 줄을 끈다.";
 
+// MD-ONLY variant — the tree exists as `ARCHITECTURE.md`, so `legs.arch` is armed and
+// ARCH_SEED is silent, but `legs.conv` is NOT: convergence records live in the JSON store
+// only (`activeLegs`), so recurrence learning is still silent-dead. Same seed contract,
+// same `archSeed` knob (one design-SSOT demand, two states of the same store).
+const ARCH_JSON_SEED =
+  "🌱 설계 SSOT 가 `ARCHITECTURE.md` 뿐 — JSON 트리가 없어 🧬 CONVERGENCE(재발방지 학습 store `convergence.records[]`)가 꺼져 있다(JSON 파일에만 존재). " +
+  "md 내용을 읽어 현재상태 트리 + `\"convergence\": {\"records\": []}` 를 담은 `ARCHITECTURE.json` 으로 승격하라 (작성 후 `sidecar architecture lint`). " +
+  "산문 트리로 충분한 repo 면 `harness.config.json` 에 `\"archSeed\": false`.";
+
+// ING board seed — the same absence-tolerant demand for the board. `ing add` does create the
+// store on the spot, but nothing ever tells the agent that THIS repo has no board and that
+// the 🔄 leg is therefore disarmed (`ing inject` is silent with no items · commons
+// `ing-board` is generic, board-state-blind text). CONDITIONAL-imperative by wording: it asks
+// for a board only when the turn actually HAS multi-step work — an unconditional "create a
+// board" would buy the line's silence with a fabricated board, arming the Stop gate against
+// fiction (the ARCH-PLACEHOLDER failure mode, with no lint to catch it).
+const ING_SEED =
+  "🌱 ING 보드 부재 — `refs/heads/ing` 이 없어 이 repo 의 🔄 ING 규율(진행판 · 턴마감 leg)이 꺼져 있다. " +
+  "이번 일이 다단계 작업·인계면 첫 단계로 `sidecar ing add \"<작업>\"` 로 보드를 열어라 — 그 add 가 ref 와 🔄 leg 를 함께 켠다 " +
+  "(작업트리에 `ING.jsonl` 을 손으로 만들지 말 것 · 저장소는 git ref). 줄 하나 끄려고 빈/가짜 항목을 넣지 말고, " +
+  "일회성/스크래치 repo 면 `harness.config.json` 에 `\"ingSeed\": false`.";
+
 // inject (UserPromptSubmit) — re-assert the trio contract every turn + snapshot the ING
 // baseline the Stop-time forgery check compares against. Silent when no leg is active
-// AND the repo already has its design SSOT (otherwise the bootstrap seed rides alone).
+// AND every store already exists (otherwise the bootstrap seeds ride alone).
 async function injectVerb(): Promise<number> {
   let j: { hook_event_name?: string; hookEventName?: string; transcript_path?: string; transcriptPath?: string };
   try {
@@ -247,8 +267,14 @@ async function injectVerb(): Promise<number> {
   if (!ev) return 0;
   if (!inGitRepo()) return 0;
   const legs = await activeLegs();
-  const seed = !legs.arch && config().archSeed !== false ? ARCH_SEED : "";
-  if (!legs.ing && !legs.arch && !legs.conv && !seed) return 0;
+  const cfg = config();
+  // One seed per ABSENT store. arch: no tree at all → ARCH_SEED · tree but no JSON → the
+  // MD-only promote line (🧬 store missing). Both ride the one `archSeed` knob.
+  const seeds = [
+    cfg.archSeed !== false ? (!legs.arch ? ARCH_SEED : !legs.conv ? ARCH_JSON_SEED : "") : "",
+    !legs.ing && cfg.ingSeed !== false ? ING_SEED : "",
+  ].filter(Boolean);
+  if (!legs.ing && !legs.arch && !legs.conv && !seeds.length) return 0;
   const tp = j.transcript_path ?? j.transcriptPath;
   // ING baseline only matters when a leg is actually gated at Stop; a seed-only turn has
   // nothing to forgery-check, so it must not disturb the snapshot.
@@ -264,7 +290,7 @@ async function injectVerb(): Promise<number> {
       ". 갱신/기록 주장은 검증된다 (ING=ing ref 전진 · ARCHITECTURE=파일 diff · CONVERGENCE=records[] id + diff). " +
       "게이트 verdict·실험 결과는 별도 store 없이 ARCHITECTURE.json 해당 노드(type:\"gate\")에 update-in-place 후 🏛️ 갱신으로 보고."
     : "";
-  emitInject("turn-close", ev, [trio, seed].filter(Boolean).join("\n"));
+  emitInject("turn-close", ev, [trio, ...seeds].filter(Boolean).join("\n"));
   return 0;
 }
 

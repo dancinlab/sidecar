@@ -496,6 +496,25 @@ export function config(): SidecarConfig {
   return _cfg;
 }
 
+// Where the repo's config file stands, as the CONFIG BOOTSTRAP SEED needs it (turn-close).
+// `config()` deliberately swallows both absence and malformed JSON — running on defaults is
+// the right call for every OTHER caller — but that same silence is what has to be surfaced:
+// on defaults alone `verify.checks` is empty (so `sidecar ci` is vacuously green, which is
+// worse than a missing check because it REPORTS passing), the changelog + protected-branch
+// lint gates never fire, the L0 set is empty, and the `archSeed`/`ingSeed` opt-outs have
+// nowhere to live. "invalid" is the nastier state of the two: the file is there, so a
+// presence check reads as configured while every value is silently the default.
+export function configFileState(): "ok" | "missing" | "invalid" {
+  const p = resolve(REPO_ROOT, "harness.config.json");
+  if (!existsSync(p)) return "missing";
+  try {
+    JSON.parse(readFileSync(p, "utf8"));
+    return "ok";
+  } catch {
+    return "invalid";
+  }
+}
+
 // Should sidecar governance (ship · ing Stop-gate · commit lint) fire in this repo? The
 // managed-project MARKER is ABOLISHED: governance fires in EVERY git repo unconditionally
 // — no CLAUDE.md / harness.config.json opt-in, so every project (incl. brand-new ones with

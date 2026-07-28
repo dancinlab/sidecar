@@ -671,7 +671,25 @@
                         "name": "씨앗 3종",
                         "role": "arch 부재 · md-only(JSON 승격) · ing 보드 부재",
                         "id": "detail-seed-kinds",
-                        "detail": "①`!legs.arch`=트리 없음 → 트리 작성 요구 ②`legs.arch && !legs.conv`=`ARCHITECTURE.md` 만 → 🧬 store 가 JSON 에만 있으므로 `ARCHITECTURE.json` 승격 요구(①②는 한 knob `archSeed`) ③`!legs.ing`=`refs/heads/ing` 없음 → 다단계 작업일 때 `ing add` 로 개설 요구(`ingSeed`)."
+                        "detail": "①`!legs.arch`=트리 없음 → 트리 작성 요구 ②`legs.arch && !legs.conv`=`ARCHITECTURE.md` 만 → 🧬 store 가 JSON 에만 있으므로 `ARCHITECTURE.json` 승격 요구(①②는 한 knob `archSeed`) ③`!legs.ing`=`refs/heads/ing` 없음 → 다단계 작업일 때 `ing add` 로 개설 요구(`ingSeed`) ④`configFileState()!=ok` → config 씨앗(아래)."
+                      },
+                      {
+                        "name": "config 씨앗 = 뿌리 · 나머지 억제",
+                        "role": "harness.config.json 부재/깨짐 (knob 없음)",
+                        "id": "detail-config-seed",
+                        "detail": "config 없으면 기본값만 남아 `verify.checks`=[] → `sidecar ci` 가 공허한 green(검사 0인데 통과 보고) · changelog/protected-branch 게이트 · L0 전부 OFF. 발화 중엔 ①~③ 을 억제한다 — 그 씨앗들의 옵트아웃(`archSeed`/`ingSeed`)이 바로 이 파일 안에 살고, 열람만 하는 남의 clone 에서 3줄이 영구 반복되는 걸 1줄로 묶기 때문."
+                      },
+                      {
+                        "name": "config 씨앗의 옵트아웃 역설",
+                        "role": "파일 생성 자체가 opt-out",
+                        "id": "detail-config-seed-optout",
+                        "detail": "knob 을 두면 그 knob 이 '없다고 말하는 그 파일' 안에 살게 된다 → 별도 knob 없음. 최소 `{}` 라도 쓰면 씨앗은 죽는다(남의 clone 은 untracked `{}` 로 침묵). host-wide 침묵장치는 정작 새 repo 에서 silent-dead(config-ts-1 한 층 위) 라 금지."
+                      },
+                      {
+                        "name": "깨진 config 변종",
+                        "role": "존재하지만 파싱 실패",
+                        "id": "detail-config-seed-broken",
+                        "detail": "`config()` 는 malformed JSON 을 조용히 삼키고 defaults 로 폴백 → 파일이 있으니 겉보기엔 설정된 repo 인데 값은 전부 기본값. 부재보다 고약해서 별도 문구로 파싱 실패를 지목한다(`configFileState()` = ok|missing|invalid)."
                       },
                       {
                         "name": "ING 씨앗은 조건부 명령",
@@ -684,6 +702,12 @@
                         "role": "에이전트가 진짜 트리를 authoring",
                         "id": "detail-arch-seed-author",
                         "detail": "훅이 파일을 만들면 존재만으로 🏛️/🧬 leg 가 무장 → placeholder 가 게이트를 속인다(트리 없는 것보다 나쁨). 씨앗은 실제 코드를 읽고 쓰라고 요구하고, 남은 스텁은 `ARCH-PLACEHOLDER`(block)가 커밋게이트에서 잡는다."
+                      },
+                      {
+                        "name": "예외: config 는 기계 생성",
+                        "role": "sidecar init --config-only",
+                        "id": "detail-config-scaffold-ok",
+                        "detail": "config 는 repo 에 대한 '주장'이 아니라 스택 감지 데이터라 스캐폴드가 정답 — 단 `--config-only`(config·.harness·gitignore·wrapper·git hooks) 로만. bare `init` 은 placeholder ARCHITECTURE.json 까지 써서 방금 그 함정에 빠진다."
                       }
                     ]
                   },

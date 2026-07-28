@@ -452,8 +452,8 @@
       {
         "id": "turn-close-ts-1",
         "state": "pos-conv",
-        "value": "거버넌스 leg 를 '저장소 파일 존재'로 키잉하면 파일 없는 repo 에서 규율이 silent-dead 된다 — config-ts-1(opt-in 마커 키잉)의 같은 결함이 turn-close activeLegs(arch:!!designSsot · conv:!!json)에서 재발했다. 파일 부재 = 게이트 OFF + inject 무음 + 요구를 하는 주체 0 이라, 새 repo 는 ARCHITECTURE/CONVERGENCE 규율을 시작할 경로 자체가 없었다(유일한 씨앗 sidecar init 은 전달 채널이 없음). ING 이 자립하는 이유는 저장소가 자동생성 git ref + 요구가 엔진 동봉 commons 규칙이라는 두 조건이고, 새 메커니즘은 이 둘을 같이 갖춰야 한다: 부재를 견디는 요구(!legs.arch 일 때만 발화하는 씨앗) + 마찰 0 의 저장소 생성 경로. 옵트아웃(archSeed:false)만 허용하고 옵트인 마커는 금지.",
-        "threshold": "재발조건: 새 거버넌스 leg/inject 를 '그 저장소 파일이 있으면 켠다'로 키잉 → 파일 없는 repo(=그 규율이 가장 필요한 신규 repo)에서 요구가 통째로 사라짐. 해결: 부재 상태를 견디는 씨앗(부재일 때만 emit·존재하면 0B)을 매턴 inject 에 함께 걸고, 예외는 옵트아웃 config 로만. 엔진이 대신 파일을 만들어 leg 를 무장시키지 말 것(placeholder 가 게이트를 속임) — authoring 은 에이전트, 스텁 잔존은 lint 로 차단.",
+        "value": "거버넌스 leg 를 '저장소 존재'로 키잉하면 저장소 없는 repo 에서 규율이 silent-dead 된다 — config-ts-1(opt-in 마커 키잉)의 같은 결함이 turn-close activeLegs 전체(arch:!!designSsot · conv:!!json · ing:!!ing-ref)에서 재발했다. 부재 = 게이트 OFF + inject 무음 + 요구를 하는 주체 0. 저장소 생성이 마찰 0 이어도(ING 은 `ing add` 가 즉석 ref 생성) 자립하지 않는다: commons `ing-board` 는 보드-상태를 모르는 일반 문구라 '이 repo 는 보드가 없고 🔄 leg 이 꺼져 있다'를 아무도 말하지 않았다. 필요한 것은 저장소별 '부재 상태 + 무장 동작' 신호(부재일 때만 발화하는 씨앗) + 마찰 0 의 생성 경로 둘 다. 옵트아웃(archSeed·ingSeed:false)만 허용하고 옵트인 마커는 금지.",
+        "threshold": "재발조건: 새 거버넌스 leg/inject 를 '그 저장소가 있으면 켠다'로 키잉 → 저장소 없는 repo(=그 규율이 가장 필요한 신규 repo)에서 요구가 통째로 사라짐. '생성이 쉬우니 자립한다'는 반례(ING)로 반박됨 — 쉬운 생성경로는 필요조건일 뿐. 해결: 저장소마다 부재-내성 씨앗(부재일 때만 emit·존재하면 0B)을 매턴 inject 에 함께 걸고, 예외는 옵트아웃 config 로만. 엔진이 대신 저장소를 만들어 leg 를 무장시키지 말 것(placeholder 가 게이트를 속임) — authoring 은 에이전트, 스텁 잔존은 lint 로 차단. 무조건 명령 금지: 가짜 항목으로 씨앗을 끄면 게이트가 허구에 무장된다.",
         "source": "modules/turn-close.ts"
       }
     ]
@@ -657,15 +657,27 @@
                   },
                   {
                     "name": "🌱 arch 부트스트랩 씨앗",
-                    "role": "설계 SSOT 부재를 견디는 유일한 요구 (새 repo 자립)",
+                    "role": "저장소 부재를 견디는 유일한 요구 (새 repo 자립)",
                     "id": "detail-turn-close-arch-seed",
-                    "detail": "🏛️/🧬 는 파일 존재로만 켜져 새 repo 에선 요구 자체가 없다(inject 무음·leg off·아무도 안 시킴). ING 은 ref 자동생성 + commons `ing-board` 로 자립하는데 설계트리엔 그 짝이 없었다.",
+                    "detail": "모든 leg 이 '저장소 존재'로만 켜져 새 repo 에선 요구 자체가 없다(inject 무음·leg off·아무도 안 시킴). 부재 저장소 1개당 씨앗 1줄 — 파일검사(`designSsot`) + ref 검사(`ingBoardActive`).",
                     "children": [
                       {
                         "name": "발화 조건",
-                        "role": "!legs.arch 일 때만 · 매턴",
+                        "role": "저장소 부재일 때만 · 매턴",
                         "id": "detail-arch-seed-when",
-                        "detail": "`turn-close inject` 가 설계 SSOT 부재일 때만 씨앗 1줄(≈500B)을 UserPromptSubmit 마다 발화 — 파일 생기면 죽은 가지(0B/턴). 옵트아웃 `archSeed:false`, 옵트인 마커는 금지(config-ts-1)."
+                        "detail": "`turn-close inject` 가 부재 저장소마다 씨앗 1줄(각 ≈300-500B)을 UserPromptSubmit 마다 발화 — 생기면 죽은 가지(0B/턴). 옵트아웃 `archSeed:false`·`ingSeed:false`, 옵트인 마커는 금지(config-ts-1)."
+                      },
+                      {
+                        "name": "씨앗 3종",
+                        "role": "arch 부재 · md-only(JSON 승격) · ing 보드 부재",
+                        "id": "detail-seed-kinds",
+                        "detail": "①`!legs.arch`=트리 없음 → 트리 작성 요구 ②`legs.arch && !legs.conv`=`ARCHITECTURE.md` 만 → 🧬 store 가 JSON 에만 있으므로 `ARCHITECTURE.json` 승격 요구(①②는 한 knob `archSeed`) ③`!legs.ing`=`refs/heads/ing` 없음 → 다단계 작업일 때 `ing add` 로 개설 요구(`ingSeed`)."
+                      },
+                      {
+                        "name": "ING 씨앗은 조건부 명령",
+                        "role": "빈 보드로 줄을 사지 않게",
+                        "id": "detail-ing-seed-conditional",
+                        "detail": "`ing add` 는 즉석 저장소 생성이라 문턱이 없지만, 무조건 '보드를 만들라'면 일회성 repo 가 줄을 끄려고 가짜 항목을 넣고 🔄 게이트가 허구에 무장된다(ARCH-PLACEHOLDER 와 같은 실패, 잡을 lint 도 없음). 그래서 '이번 일이 다단계면' 조건부 + 문구에 빈/가짜 항목 금지 명시."
                       },
                       {
                         "name": "엔진은 스캐폴드 금지",
@@ -677,7 +689,7 @@
                   },
                   {
                     "name": "turn-close inject (매턴)",
-                    "role": "트리오 지시 + ing 베이스라인 스냅샷 + arch 씨앗",
+                    "role": "트리오 지시 + ing 베이스라인 스냅샷 + 부트스트랩 씨앗",
                     "id": "detail-turn-close-inject",
                     "detail": "UserPromptSubmit 마다 트리오 계약 재주입(활성 leg 만 · ~630B · dynamic = 고정 injectBudget 밖) + `ing` ref sha 를 `.harness/logs/turn-close-base.json` 에 스냅샷(Stop 시 ING 위조 대조용 · LOG_DIR mkdir 보장 · 씨앗만 뜨는 턴은 스냅샷 안 건드림). 트리오·씨앗은 `\\n` 으로 이어 ONE additionalContext.",
                     "children": [
@@ -1442,7 +1454,13 @@
             "name": "archSeed: true (기본 ON)",
             "role": "설계 SSOT 부트스트랩 씨앗 옵트아웃",
             "id": "config-archseed",
-            "detail": "기본 ON — 요구는 트리가 **없는** repo 에 닿아야 의미가 있으므로 옵트인 마커는 금지(config-ts-1). `false` 면 `turn-close inject` 의 🌱 씨앗 1줄만 끄고 트리오 leg 는 무관. 설계트리가 정말 필요없는 스크래치/비코드 repo 용 · 옵트아웃은 추적되는 diff."
+            "detail": "기본 ON — 요구는 트리가 **없는** repo 에 닿아야 의미가 있으므로 옵트인 마커는 금지(config-ts-1). `false` 면 `turn-close inject` 의 🌱 씨앗(트리 부재 · md-only JSON 승격)만 끄고 트리오 leg 는 무관. 설계트리가 정말 필요없는 스크래치/비코드 repo 용 · 옵트아웃은 추적되는 diff."
+          },
+          {
+            "name": "ingSeed: true (기본 ON)",
+            "role": "ING 보드 부트스트랩 씨앗 옵트아웃",
+            "id": "config-ingseed",
+            "detail": "기본 ON · archSeed 와 별도 knob(수명이 다름 — arch 는 1회 작성으로 끝, ing 은 보드를 열 때까지 상시 알림). `false` 면 `refs/heads/ing` 부재 repo 에서 🌱 ING 씨앗 1줄만 끈다. 일회성/스크래치 repo 용."
           }
         ]
       },

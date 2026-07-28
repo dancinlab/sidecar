@@ -335,7 +335,18 @@ export interface SidecarConfig {
   // inject` emits ONE line per turn WHILE the SSOT is absent, and nothing once it exists
   // (the branch is keyed on !legs.arch → zero bytes after bootstrap). false = a repo that
   // deliberately needs no design tree (scratch/non-code) silences it with a tracked diff.
+  // Also covers the MD-ONLY variant (tree exists as ARCHITECTURE.md → 🧬 has no store).
   archSeed: boolean;
+  // ingSeed — the same BOOTSTRAP demand for the ING board. `ing add` does create the store
+  // on the spot, but nothing ever tells the agent that THIS repo has no board and that the
+  // 🔄 leg is therefore disarmed: `ing inject` is silent with no items and commons
+  // `ing-board` is generic, board-state-blind text. This is the repo-specific "leg OFF,
+  // here is the arming action" signal, emitted WHILE `refs/heads/ing` is absent (board
+  // exists → dead branch, zero bytes/turn). Conditional-imperative by wording — it asks for
+  // a board only when the turn HAS multi-step work, never a board-for-the-line's-sake
+  // (a fabricated board would arm the Stop gate against fiction · same failure ARCH-PLACEHOLDER
+  // exists to block). false = a one-shot/scratch repo silences it with a tracked diff.
+  ingSeed: boolean;
   // companions — sibling-CLI command catalogs surfaced at SessionStart (`sidecar
   // companions inject`). DOMAIN-AGNOSTIC engine: this lists adjacent project CLIs
   // (e.g. `hexa`) by DATA, never hardcoded, so an agent knows their command surface
@@ -449,6 +460,8 @@ const DEFAULTS: SidecarConfig = {
   // ON everywhere: the demand must reach the repos that do NOT yet have the tree (that is
   // the whole point) — a repo opts OUT with a tracked config line, never opts IN (config-ts-1).
   archSeed: true,
+  // Same reasoning: the demand must reach the repos that do NOT yet have a board.
+  ingSeed: true,
 };
 
 function deepMerge<T>(base: T, over: Partial<T>): T {

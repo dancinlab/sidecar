@@ -26,7 +26,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { REPO_ROOT, LOG_DIR } from "../lib/paths.ts";
 import { readStdin, execShell } from "../lib/exec.ts";
-import { config, inGitRepo } from "../lib/config.ts";
+import { config, configFileState, inGitRepo } from "../lib/config.ts";
 import { emitInject } from "../lib/inject.ts";
 import { info } from "../lib/log.ts";
 import { lastAssistantText } from "./recommend.ts";
@@ -253,6 +253,31 @@ const ING_SEED =
   "(작업트리에 `ING.jsonl` 을 손으로 만들지 말 것 · 저장소는 git ref). 줄 하나 끄려고 빈/가짜 항목을 넣지 말고, " +
   "일회성/스크래치 repo 면 `harness.config.json` 에 `\"ingSeed\": false`.";
 
+// CONFIG seed — the ROOT of the three. Without `harness.config.json` sidecar still runs, but
+// on defaults alone every repo-specific gate is empty: `verify.checks` = [] makes `sidecar ci`
+// VACUOUSLY GREEN (worse than a missing check — it reports passing), the changelog and
+// protected-branch lint gates never fire, the L0 lockdown set is empty, and the `archSeed`/
+// `ingSeed` opt-outs have no file to live in. Unlike the design tree, a config is stack-detected
+// DATA rather than a claim about the repo, so naming the mechanical scaffolder is correct here —
+// but `sidecar init --config-only`, NEVER bare `init`: bare init also scaffolds a placeholder
+// ARCHITECTURE.json, which would arm 🏛️/🧬 against a fiction tree and kill ARCH_SEED by mere
+// presence (the exact failure ARCH_SEED exists to prevent).
+// NO opt-out knob, deliberately: the knob would live inside the very file this seed says is
+// missing, so writing that file — even a minimal `{}` — IS the opt-out. A host-wide silencer
+// would be silent-dead in exactly the new repos the seed is for (config-ts-1, one level up).
+const CONFIG_SEED =
+  "🌱 `harness.config.json` 부재 — 이 repo 는 내장 기본값으로만 돌아 `verify.checks` 가 비어 `sidecar ci` 가 공허한 green(검사 0개인데 통과 보고)이고, " +
+  "changelog·protected-branch lint 게이트와 L0 lockdown 도 꺼져 있다. 작업 대상 repo 면 `sidecar init --config-only` 로 스택 감지 config 를 만들고 `verify.checks` 를 실제 명령으로 채워라 " +
+  "(문서 스캐폴드는 만들지 않는 모드 — bare `init` 은 placeholder 트리까지 써서 🏛️/🧬 를 허구에 무장시킨다). " +
+  "그냥 읽기만 하는 남의 clone 이면 만들지 말 것 — 파일 생성이 곧 이 줄의 opt-out 이다(별도 knob 없음).";
+
+// Same seed, nastier state: the file EXISTS so every presence check reads "configured", while
+// `config()` silently swallowed the parse error and served defaults — a vacuous green that
+// looks intentional. Naming the parse failure is the whole value of this variant.
+const CONFIG_BROKEN_SEED =
+  "🌱 `harness.config.json` 파싱 실패 — 파일은 있는데 JSON 이 깨져 `config()` 가 조용히 전부 기본값으로 폴백했다(파일이 있으니 겉보기엔 설정된 repo · 실제로는 `verify.checks` 등 repo 설정 전무). " +
+  "지금 파일을 열어 JSON 문법을 고쳐라 — 고치기 전까지 이 repo 의 config 는 없는 것과 같다.";
+
 // inject (UserPromptSubmit) — re-assert the trio contract every turn + snapshot the ING
 // baseline the Stop-time forgery check compares against. Silent when no leg is active
 // AND every store already exists (otherwise the bootstrap seeds ride alone).
@@ -270,10 +295,18 @@ async function injectVerb(): Promise<number> {
   const cfg = config();
   // One seed per ABSENT store. arch: no tree at all → ARCH_SEED · tree but no JSON → the
   // MD-only promote line (🧬 store missing). Both ride the one `archSeed` knob.
-  const seeds = [
-    cfg.archSeed !== false ? (!legs.arch ? ARCH_SEED : !legs.conv ? ARCH_JSON_SEED : "") : "",
-    !legs.ing && cfg.ingSeed !== false ? ING_SEED : "",
-  ].filter(Boolean);
+  // The CONFIG seed is the ROOT and SUPPRESSES the other two while it fires: the archSeed /
+  // ingSeed opt-outs live inside the file it demands, so the other seeds' own escape hatches
+  // are unwritable until it exists — and in a repo the user is only READING, all three would
+  // otherwise nag forever at ~1.2KB/turn instead of one line (commons-md-1).
+  const cfgState = configFileState();
+  const seeds =
+    cfgState !== "ok"
+      ? [cfgState === "missing" ? CONFIG_SEED : CONFIG_BROKEN_SEED]
+      : [
+          cfg.archSeed !== false ? (!legs.arch ? ARCH_SEED : !legs.conv ? ARCH_JSON_SEED : "") : "",
+          !legs.ing && cfg.ingSeed !== false ? ING_SEED : "",
+        ].filter(Boolean);
   if (!legs.ing && !legs.arch && !legs.conv && !seeds.length) return 0;
   const tp = j.transcript_path ?? j.transcriptPath;
   // ING baseline only matters when a leg is actually gated at Stop; a seed-only turn has

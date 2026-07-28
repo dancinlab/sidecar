@@ -1,4 +1,4 @@
-// sidecar init [--force] [--dry-run]
+// sidecar init [--force] [--dry-run] [--config-only]
 // One-shot scaffold for a consuming repo:
 //   • harness.config.json     (project name auto-detected from repo dir)
 //   • .harness/{enforcement,keywords,severity-map}.json  (copied from bundled defaults)
@@ -8,6 +8,15 @@
 // every repo. init NEVER writes a per-repo .claude/settings.json (banned: it
 // duplicated the global install and double-injected context). Never overwrites
 // existing files unless --force. With --dry-run, only reports.
+//
+// --config-only writes the CONFIG + wiring (harness.config.json · .harness/*.json ·
+// .gitignore · scripts/sidecar · git hooks) and SKIPS every doc scaffold
+// (ARCHITECTURE.json · CLAUDE.md · CHANGELOG.jsonl · state/ · .github/workflows/ci.yml).
+// This is the mode the 🌱 config bootstrap seed names, and the distinction is load-bearing:
+// the ARCHITECTURE.json stub carries the exact `archPlaceholders` literals and no
+// `convergence` key, so writing it would arm the 🏛️/🧬 legs against a fiction tree and
+// silence the ARCH seed that asks the agent to author a REAL one (turn-close-ts-1). Docs are
+// authored, never scaffolded; config is detected DATA, so scaffolding it is correct.
 import { existsSync, mkdirSync, copyFileSync, readFileSync, writeFileSync, statSync, readdirSync } from "node:fs";
 import { resolve, relative, basename, dirname } from "node:path";
 import { REPO_ROOT, SIDECAR_ROOT, SIDECAR_CONFIG_DIR } from "../lib/paths.ts";
@@ -18,6 +27,7 @@ import { ciWorkflowYaml, defaultCiSetup } from "./ci.ts";
 interface Flags {
   force: boolean;
   dryRun: boolean;
+  configOnly: boolean;
 }
 
 
@@ -147,6 +157,7 @@ export async function runInit(args: string[]): Promise<number> {
   const flags: Flags = {
     force: args.includes("--force"),
     dryRun: args.includes("--dry-run"),
+    configOnly: args.includes("--config-only"),
   };
   const actions: Action[] = [];
   const engineRel = enginePath();
@@ -172,12 +183,14 @@ export async function runInit(args: string[]): Promise<number> {
   // 1b. CI workflow — create-if-absent. Runs `sidecar ci` (verify.checks)
   // on a fast cloud runner so push-time checks stay off the dev machine. Runner/setup
   // from config ci.{runner,setup}; setup falls back to the detected stack.
-  const ciCfg = config().ci;
-  write(
-    resolve(REPO_ROOT, ".github/workflows/ci.yml"),
-    ciWorkflowYaml(basename(REPO_ROOT), ciCfg.runner, ciCfg.setup.length ? ciCfg.setup : defaultCiSetup()),
-    ".github/workflows/ci.yml",
-  );
+  if (!flags.configOnly) {
+    const ciCfg = config().ci;
+    write(
+      resolve(REPO_ROOT, ".github/workflows/ci.yml"),
+      ciWorkflowYaml(basename(REPO_ROOT), ciCfg.runner, ciCfg.setup.length ? ciCfg.setup : defaultCiSetup()),
+      ".github/workflows/ci.yml",
+    );
+  }
 
   // 2. .harness/*.json (copy bundled defaults)
   for (const name of ["enforcement.json", "keywords.json", "severity-map.json"]) {
@@ -211,7 +224,9 @@ export async function runInit(args: string[]): Promise<number> {
   //   ARCHITECTURE.json (current-state SSOT tree · commons single-doc) ·
   //   CHANGELOG.md (append) · CLAUDE.md (entry pointer — NO directory tree;
   //   the tree is the single SSOT in ARCHITECTURE.json) · state/ (산출물 루트).
-  {
+  // Skipped under --config-only: the ARCHITECTURE.json stub is a PLACEHOLDER tree, and its
+  // mere presence arms the 🏛️/🧬 legs + kills the seed that asks for a real one.
+  if (!flags.configOnly) {
     const proj = basename(REPO_ROOT);
     const archTree = {
       schemaVersion: "2.0",
@@ -350,6 +365,11 @@ export async function runInit(args: string[]): Promise<number> {
   info("hooks: GLOBAL-ONLY — run `sidecar install` once per host to wire guards/injects for EVERY repo.");
   info("  (per-repo .claude/settings.json is not used — it duplicated the global install.)");
   info("");
+  if (flags.configOnly) {
+    info("--config-only: doc scaffolds skipped (ARCHITECTURE.json · CLAUDE.md · CHANGELOG.jsonl · state/ · ci.yml)");
+    info("  the design tree is AUTHORED from the real code, never scaffolded — a placeholder tree arms the 🏛️/🧬 gates against fiction.");
+    info("");
+  }
   ok("done. edit harness.config.json → verify.checks, lockdown.files, then `sidecar audit`.");
   return 0;
 }

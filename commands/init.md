@@ -1,6 +1,6 @@
 ---
-description: /init [--force] [--hooks] [--dry-run] — scaffold sidecar into a repo — config + .harness rules + gitignore + wrapper + hooks (strict by default). Triggers — "사이드카 설치", "sidecar init", "repo 에 사이드카", "scaffold sidecar", "/init".
-argument-hint: "[--force] [--hooks] [--dry-run]"
+description: /init [--force] [--dry-run] [--config-only] — scaffold sidecar into a repo — config + .harness rules + gitignore + wrapper (agent hooks stay global). `--config-only` skips the doc scaffolds. Triggers — "사이드카 설치", "sidecar init", "repo 에 사이드카", "scaffold sidecar", "/init".
+argument-hint: "[--force] [--dry-run] [--config-only]"
 allowed-tools: Bash
 ---
 

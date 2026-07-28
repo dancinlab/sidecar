@@ -292,7 +292,7 @@
         "id": "commons-md-1",
         "state": "pos-conv",
         "value": "harness 매턴 inject 누적 = context-rot: 입력 토큰↑ → transformer 어텐션 분산 → 에이전트 열화(Chroma 18-model 실측 200K창이 50K에서 정확도 손실 · 구조적 속성, 학습으로 해결 안 됨). sidecar 는 매턴 ~7.5K tok(commons 14.6K+recommend 5.8K+CLAUDE+ing+easy) 재주입 → INJECT-OVERSIZED 게이트(lint.injectCaps)가 inject 소스별 byte 천장 강제. 잘라내기(emit-truncate) 금지 — 소스를 직접 트림해 통과.",
-        "threshold": "injectCaps 키 부재/빈값=dead gate(무제한 비대). per-source cap 은 한 파일만 막음 → 여러 소스 합 비대(death-by-a-thousand-cuts)는 injectBudgetBytes 총합천장으로 차단. 언어변종은 turn당 1개만 주입 → dir키(styles/)뿐 아니라 file-key 변형셋(foo.md+foo.<lang>.md)도 base별 MAX 1회만 총합계상(injectCapViolations groupMax · injects 리포트도 동일). 재발조건: 새 inject cap/budget 누락 · 변형을 이중계상 · 합이 천장 근접 → 소스 트림 먼저",
+        "threshold": "injectCaps 키 부재/빈값=dead gate(무제한 비대). per-source cap 은 한 파일만 막음 → 여러 소스 합 비대(death-by-a-thousand-cuts)는 injectBudgetBytes 총합천장으로 차단. 언어변종은 turn당 1개만 주입 → dir키(styles/)뿐 아니라 file-key 변형셋(foo.md+foo.<lang>.md)도 base별 MAX 1회만 총합계상(injectCapViolations groupMax · injects 리포트도 동일). 재발조건: 새 inject cap/budget 누락 · 변형을 이중계상 · 합이 천장 근접 → 소스 트림 먼저. ⚠️ cap 게이트는 그 파일이 STAGED 될 때만 발화 → 초과 상태가 조용히 굳고, 다음 편집자가 자기 diff 와 무관한 남의 초과분을 떠안는다(commons 11486B vs cap 10300 = 1186B 초과 방치). 초과가 드러나면 그 자리에서 상한 아래로 되돌리고(문구압축만으론 -2% 뿐 — 근거 괄호를 버리는 실질 감축 필요), 확보한 여유는 injectBudgetBytes 를 실측치+α 로 내려 래칫할 것. 상한 상향은 최후수단.",
         "source": "config/commons.md"
       },
       {

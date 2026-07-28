@@ -32,7 +32,7 @@
       "config/recommend.ko.md": 6500,
       "styles/": 10000
     },
-    "injectBudgetBytes": 22883,
+    "injectBudgetBytes": 20500,
     "injectBudgetExtra": [
       "CLAUDE.md",
       "config/commons.md"
